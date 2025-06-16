@@ -1,12 +1,14 @@
-# Kirby Air Ride APWorld
+# Kirby Air Ride
 
-- [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
-  - [What is this?](#what-is-this)
+- [Kirby Air Ride](#kirby-air-ride)
+  - [Where is the options page?](#where-is-the-options-page)
   - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
   - [Which locations get shuffled?](#which-locations-get-shuffled)
   - [What is the goal of Kirby Air Ride?](#what-is-the-goal-of-kirby-air-ride)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
+  - [I opened the game in Dolphin, but I don't have any of my starting items!](#i-opened-the-game-in-dolphin-but-i-dont-have-any-of-my-starting-items)
+  - [I need help! What do I do?](#i-need-help-what-do-i-do)
   - [Known issues](#known-issues)
   - [Planned Features](#planned-features)
       - [Items](#items)
@@ -16,9 +18,10 @@
       - [Multiplayer](#multiplayer)
 
 
-## What is this?
+## Where is the options page?
 
-This is an APWorld for the Archipelago multi-world, multi-game randomizer: archipelago.gg
+The [player options page for this game](../player-options) contains all the options you need to configure and export a
+config yaml file.
 
 ## What does randomization do to this game?
 
@@ -50,15 +53,22 @@ Items are currently limited to patches and permanent patches. These will be appl
 
 NOTE: you must collect a patch in the city after receving patch items for the stat increases/decreases to take effect. 
 
+## I opened the game in Dolphin, but I don't have any of my starting items!
+
+You must connect to the multiworld room to receive any items. 
+
+## I need help! What do I do?
+
+Try the troubleshooting steps in the [setup guide](/tutorial/Kirby%20Air%20Ride/setup/en). If you are still stuck, please ask in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link](https://discord.com/channels/731205301247803413/1291501105389502554)
+
 ## Known issues
 
 - DeathLink currently only reliably works one-way. The player can trigger DeathLink by dying but can only be killed by DeathLink some of the time/on certain vehicles.
 - DeathLink for killing vehicles just takes health down to ~0 (likely due to floating point stuff)
 - Restarting the game client results in all items being received again.
 - Linux not working due to differences in dolphin memory engine (little endian on linux, read_byte differences)
-- Trap chance option does not currently do anything
 
-Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues here. 
+Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link](https://discord.com/channels/731205301247803413/1291501105389502554)
 
 ## Planned Features
 
