@@ -1,149 +1,93 @@
-# [Archipelago](https://archipelago.gg) ![Discord Shield](https://discordapp.com/api/guilds/731205301247803413/widget.png?style=shield) | [Install](https://github.com/ArchipelagoMW/Archipelago/releases)
+# Kirby Air Ride APWorld
 
-Archipelago provides a generic framework for developing multiworld capability for game randomizers. In all cases,
-presently, Archipelago is also the randomizer itself.
+- [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
+  - [What is this?](#what-is-this)
+  - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
+  - [Which locations get shuffled?](#which-locations-get-shuffled)
+  - [What is the goal of Kirby Air Ride?](#what-is-the-goal-of-kirby-air-ride)
+  - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
+  - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
+  - [Known issues](#known-issues)
+  - [Planned Features](#planned-features)
+      - [Items](#items)
+      - [Randomization](#randomization)
+      - [Progression](#progression)
+      - [Air Ride and Top Ride](#air-ride-and-top-ride)
+      - [Multiplayer](#multiplayer)
 
-Currently, the following games are supported:
 
-* The Legend of Zelda: A Link to the Past
-* Factorio
-* Subnautica
-* Risk of Rain 2
-* The Legend of Zelda: Ocarina of Time
-* Timespinner
-* Super Metroid
-* Secret of Evermore
-* Final Fantasy
-* VVVVVV
-* Raft
-* Super Mario 64
-* Meritous
-* Super Metroid/Link to the Past combo randomizer (SMZ3)
-* ChecksFinder
-* Hollow Knight
-* The Witness
-* Sonic Adventure 2: Battle
-* Starcraft 2
-* Dark Souls 3
-* Super Mario World
-* Pokémon Red and Blue
-* Hylics 2
-* Overcooked! 2
-* Zillion
-* Lufia II Ancient Cave
-* Blasphemous
-* Wargroove
-* Stardew Valley
-* The Legend of Zelda
-* The Messenger
-* Kingdom Hearts 2
-* The Legend of Zelda: Link's Awakening DX
-* Adventure
-* DLC Quest
-* Noita
-* Undertale
-* Bumper Stickers
-* Mega Man Battle Network 3: Blue Version
-* Muse Dash
-* DOOM 1993
-* Terraria
-* Lingo
-* Pokémon Emerald
-* DOOM II
-* Shivers
-* Heretic
-* Landstalker: The Treasures of King Nole
-* Final Fantasy Mystic Quest
-* TUNIC
-* Kirby's Dream Land 3
-* Celeste 64
-* Castlevania 64
-* A Short Hike
-* Yoshi's Island
-* Mario & Luigi: Superstar Saga
-* Bomb Rush Cyberfunk
-* Aquaria
-* Yu-Gi-Oh! Ultimate Masters: World Championship Tournament 2006
-* A Hat in Time
-* Old School Runescape
-* Kingdom Hearts 1
-* Mega Man 2
-* Yacht Dice
-* Faxanadu
-* Saving Princess
-* Castlevania: Circle of the Moon
-* Inscryption
-* Civilization VI
-* The Legend of Zelda: The Wind Waker
-* Jak and Daxter: The Precursor Legacy
-* Super Mario Land 2: 6 Golden Coins
-* shapez
-* Paint
-* Celeste (Open World)
-* Choo-Choo Charles
-* APQuest
-* Satisfactory
-* EarthBound
-* Mega Man 3
-* Gauntlet Legends
+## What is this?
 
-For setup and instructions check out our [tutorials page](https://archipelago.gg/tutorial/).
-Downloads can be found at [Releases](https://github.com/ArchipelagoMW/Archipelago/releases), including compiled
-windows binaries.
+This is an APWorld for the Archipelago multi-world, multi-game randomizer: archipelago.gg
 
-## History
+## What does randomization do to this game?
 
-Archipelago is built upon a strong legacy of brilliant hobbyists. We want to honor that legacy by showing it here.
-The repositories which Archipelago is built upon, inspired by, or otherwise owes its gratitude to are:
+Currently, randomization affects nothing in the game except the rewards you receive for completing City Trial checkboxes.
 
-* [bonta0's MultiWorld](https://github.com/Bonta0/ALttPEntranceRandomizer/tree/multiworld_31)
-* [AmazingAmpharos' Entrance Randomizer](https://github.com/AmazingAmpharos/ALttPEntranceRandomizer)
-* [VT Web Randomizer](https://github.com/sporchia/alttp_vt_randomizer)
-* [Dessyreqt's alttprandomizer](https://github.com/Dessyreqt/alttprandomizer)
-* [Zarby89's](https://github.com/Ijwu/Enemizer/commits?author=Zarby89)
-  and [sosuke3's](https://github.com/Ijwu/Enemizer/commits?author=sosuke3) contributions to Enemizer, which make up the
-  vast majority of Enemizer contributions.
+## Which locations get shuffled?
 
-We recognize that there is a strong community of incredibly smart people that have come before us and helped pave the
-path. Just because one person's name may be in a repository title does not mean that only one person made that project
-happen. We can't hope to perfectly cover every single contribution that lead up to Archipelago, but we hope to honor
-them fairly.
+No locations are currently shuffled.
 
-### Path to the Archipelago
+## What is the goal of Kirby Air Ride?
 
-Archipelago was directly forked from bonta0's `multiworld_31` branch of ALttPEntranceRandomizer (this project has a
-long legacy of its own, please check it out linked above) on January 12, 2020. The repository was then named to
-_MultiWorld-Utilities_ to better encompass its intended function. As Archipelago matured, then known as
-"Berserker's MultiWorld" by some, we found it necessary to transform our repository into a root level repository
-(as opposed to a 'forked repo') and change the name (which came later) to better reflect our project.
+Have fun! There are also a few pre-selected archipelago goals for the game, all related to City Trial:
+- Fill in over 100 Checklist Boxes!
+  - this allows you to unlock viewing the game's ending
+- Fill in N Checklist Boxes!
+  - fill in as many checklist boxes as you want
+- In one match, complete both Dragoon and Hydra
+- Stadium: VS. KING DEDEDE KO King Dedede in less than a minute!
 
-## Running Archipelago
+In general, all goals are related to completing checklist boxes.
 
-For most people, all you need to do is head over to
-the [releases page](https://github.com/ArchipelagoMW/Archipelago/releases), then download and run the appropriate
-installer, or AppImage for Linux-based systems.
+## What does another world's item look like in Kirby Air Ride?
 
-If you are a developer or are running on a platform with no compiled releases available, please see our doc on
-[running Archipelago from source](docs/running%20from%20source.md).
+There is no change in the graphical appearance of other's items.
 
-## Related Repositories
+## What happens when the player receives an item?
 
-This project makes use of multiple other projects. We wouldn't be here without these other repositories and the
-contributions of their developers, past and present.
+Items are currently limited to patches and permanent patches. These will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patches are applied at the beginning of every City Trial run.
 
-* [z3randomizer](https://github.com/ArchipelagoMW/z3randomizer)
-* [Enemizer](https://github.com/Ijwu/Enemizer)
-* [Ocarina of Time Randomizer](https://github.com/TestRunnerSRL/OoT-Randomizer)
+NOTE: you must collect a patch in the city after receving patch items for the stat increases/decreases to take effect. 
 
-## Contributing
+## Known issues
 
-To contribute to Archipelago, including the WebHost, core program, or by adding a new game, see our
-[Contributing guidelines](/docs/contributing.md).
+- DeathLink currently only reliably works one-way. The player can trigger DeathLink by dying but can only be killed by DeathLink some of the time/on certain vehicles.
+- DeathLink for killing vehicles just takes health down to ~0 (likely due to floating point stuff)
+- Restarting the game client results in all items being received again.
+- Linux not working due to differences in dolphin memory engine (little endian on linux, read_byte differences)
+- Trap chance option does not currently do anything
 
-## FAQ
+Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues here. 
 
-For Frequently asked questions, please see the website's [FAQ Page](https://archipelago.gg/faq/en/).
+## Planned Features
 
-## Code of Conduct
+Much of the planned features are gated by progress on modding the game itself or finding proper memory addresses to read/write to. 
 
-Please refer to our [code of conduct](/docs/code_of_conduct.md).
+#### Items
+- permanent increase/decrease item spawn rates as useful/filler/trap items
+- food items as filler/useful
+- kirby abilities as useful/filler/trap items
+- kirby effects (such as "run amok") as useful/filler/trap items
+- city trial events as useful/filler/trap items
+- spawning boxes as filler/useful items
+- checklist box fillers as progression item
+
+#### Randomization
+- randomization of checklist box rewards
+- randomization of starting air ride machine
+
+#### Progression
+- "progressive stadium" items for City Trial, required to advance to the next stadium
+- progressive kirby color unlocks
+- progressive kirby ability unlocks
+- progressive air ride machine unlocks
+- progressive city trial event unlock items
+
+#### Air Ride and Top Ride
+- Air Ride checklist and items
+- Top Ride checklist and items
+
+
+#### Multiplayer
+- All players receiving items
