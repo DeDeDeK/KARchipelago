@@ -2,11 +2,12 @@
 
 - [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
   - [What is this?](#what-is-this)
-  - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
-  - [Which locations get shuffled?](#which-locations-get-shuffled)
-  - [What is the goal of Kirby Air Ride?](#what-is-the-goal-of-kirby-air-ride)
+  - [Where do I get the apworld?](#where-do-i-get-the-apworld)
+  - [What is the goal of Kirby Air Ride in Archipelago?](#what-is-the-goal-of-kirby-air-ride-in-archipelago)
+  - [What does randomization do to this game? Which locations get shuffled?](#what-does-randomization-do-to-this-game-which-locations-get-shuffled)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
+  - [I need help! What do I do?](#i-need-help-what-do-i-do)
   - [Known issues](#known-issues)
   - [Planned Features](#planned-features)
       - [Items](#items)
@@ -14,41 +15,48 @@
       - [Progression](#progression)
       - [Air Ride and Top Ride](#air-ride-and-top-ride)
       - [Multiplayer](#multiplayer)
+  - [Contributing](#contributing)
 
 
 ## What is this?
 
 This is an APWorld for the Archipelago multi-world, multi-game randomizer: archipelago.gg
 
-## What does randomization do to this game?
+## Where do I get the apworld?
 
-Currently, randomization affects nothing in the game except the rewards you receive for completing City Trial checkboxes.
+You can get the apworld file and an example player configuration yaml in the [releases page.](https://github.com/DeDeDeK/KARchipelago/releases)
 
-## Which locations get shuffled?
+## What is the goal of Kirby Air Ride in Archipelago?
 
-No locations are currently shuffled.
-
-## What is the goal of Kirby Air Ride?
-
-Have fun! There are also a few pre-selected archipelago goals for the game, all related to City Trial:
+Besides having fun, there are also a few pre-selected archipelago goals for the game, all related to City Trial, that will result in a "game complete":
 - Fill in over 100 Checklist Boxes!
-  - this allows you to unlock viewing the game's ending
+  - in the base game, this allows you to unlock viewing the game's ending
 - Fill in N Checklist Boxes!
-  - fill in as many checklist boxes as you want
+  - fill in as many checklist boxes as you want, you can configure the number from 1-120.
 - In one match, complete both Dragoon and Hydra
 - Stadium: VS. KING DEDEDE KO King Dedede in less than a minute!
 
 In general, all goals are related to completing checklist boxes.
 
+## What does randomization do to this game? Which locations get shuffled?
+
+Currently, randomization affects nothing in the game except the AP items you receive for completing City Trial checkboxes or from other worlds.
+
+No locations are currently shuffled. Eventually, all checkboxes will be able to be randomized. 
+
 ## What does another world's item look like in Kirby Air Ride?
 
-There is no change in the graphical appearance of other's items.
+There is no change in the graphical appearance of other's items. Completing checkboxes will earn whatever item is attached to that checkbox.
 
 ## What happens when the player receives an item?
 
-Items are currently limited to patches and permanent patches. These will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patches are applied at the beginning of every City Trial run.
+Items are currently limited to patches (top speed up, offense up, etc.) and permanent patch increases. These both will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run. 
 
-NOTE: you must collect a patch in the city after receving patch items for the stat increases/decreases to take effect. 
+NOTE: you must collect any patch in the city after receiving patch items for the stat increases/decreases to take effect. 
+
+## I need help! What do I do?
+
+Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md). If you are still stuck, please ask in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link](https://discord.com/channels/731205301247803413/1291501105389502554)
 
 ## Known issues
 
@@ -62,7 +70,7 @@ Feel free to report any other issues or suggest improvements in the "Kirby Air R
 
 ## Planned Features
 
-Much of the planned features are gated by progress on modding the game itself or finding proper memory addresses to read/write to. 
+Much of the planned features are gated by progress on modding the game itself or finding proper memory addresses to read/write to. Contributions are very welcome!
 
 #### Items
 - permanent increase/decrease item spawn rates as useful/filler/trap items
@@ -72,6 +80,10 @@ Much of the planned features are gated by progress on modding the game itself or
 - city trial events as useful/filler/trap items
 - spawning boxes as filler/useful items
 - checklist box fillers as progression item
+- 1 hp trap items
+- drop patches trap item
+- physics-based trap items (altitude increase/decrease, teleport forward/backward/random location, gravity changes, etc.)
+- energy pool system for spending energy for patches
 
 #### Randomization
 - randomization of checklist box rewards
@@ -83,11 +95,17 @@ Much of the planned features are gated by progress on modding the game itself or
 - progressive kirby ability unlocks
 - progressive air ride machine unlocks
 - progressive city trial event unlock items
+- progressive hot dogs/food items
+- other progressive rng-related items
 
 #### Air Ride and Top Ride
 - Air Ride checklist and items
 - Top Ride checklist and items
 
-
 #### Multiplayer
 - All players receiving items
+
+
+## Contributing
+
+Feel free to [raise an issue](https://github.com/DeDeDeK/KARchipelago/issues) or [submit a PR](https://github.com/DeDeDeK/KARchipelago/pulls)!  
