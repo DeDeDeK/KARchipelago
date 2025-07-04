@@ -100,6 +100,18 @@ class KARCommandProcessor(ClientCommandProcessor):
             )
             logger.info("Deathlink enabled.")
 
+    def _cmd_energylink(self) -> None:
+        """
+        Toggle energylink features.
+        """
+        if isinstance(self.ctx, KARContext):
+            if self.ctx.energy_link_enabled:
+                self.ctx.energy_link_enabled = False
+                logger.info("EnergyLink disabled.")
+            else:
+                self.ctx.energy_link_enabled = True
+                logger.info("EnergyLink enabled.")
+
 
 class KARContext(CommonContext):
     """
@@ -128,6 +140,18 @@ class KARContext(CommonContext):
         self.goal: str = ""
         self.goal_checklist_amount: int = 0
         self.transitioned_time: float = 0
+        self.energy_link_enabled: bool = False
+        self.player_1_patches: dict = {
+            "TOP SPEED": 0,
+            "OFFENSE": 0,
+            "WEIGHT": 0,
+            "HP": 0,
+            "GLIDE": 0,
+            "DEFENSE": 0,
+            "CHARGE": 0,
+            "BOOST": 0,
+            "TURN": 0,
+        }
 
     async def disconnect(self, allow_autoreconnect: bool = False) -> None:
         """
@@ -165,6 +189,12 @@ class KARContext(CommonContext):
                 self.goal = args["slot_data"]["goal"]
             if "checklist_amount" in args["slot_data"]:
                 self.goal_checklist_amount = int(args["slot_data"]["checklist_amount"])
+            if "energy_link" in args["slot_data"]:
+                self.energy_link_enabled = bool(args["slot_data"]["energy_link"])
+                if self.energy_link_enabled:
+                    self.set_notify(f"EnergyLink{self.team}")
+                if self.ui:
+                    self.ui.enable_energy_link()
             # reset local location checks so that a client that has already won its game but hasn't closed can't connect to a server
             # and accidentally auto-win. This doesn't solve the problem of using a save file that already has won, but does solve this smaller problem.
             self.locations_checked.clear()
@@ -361,6 +391,65 @@ class KARContext(CommonContext):
             self.transitioned = False
 
         return self.transitioned
+
+    async def update_energy_link(self) -> None:
+        """
+        Check if the player has received patches and update the energy link value accordingly.
+        """
+        if self.check_ingame_city_trial():
+            patch_amount = read_float(PLAYER_1_STAT_TOP_SPEED_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["TOP SPEED"]:
+                # update energylink value
+                pass
+            self.player_1_patches["TOP SPEED"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_OFFENSE_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["OFFENSE"]:
+                # update energylink value
+                pass
+            self.player_1_patches["OFFENSE"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_WEIGHT_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["WEIGHT"]:
+                # update energylink value
+                pass
+            self.player_1_patches["WEIGHT"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_HP_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["HP"]:
+                # update energylink value
+                pass
+            self.player_1_patches["HP"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_GLIDE_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["GLIDE"]:
+                # update energylink value
+                pass
+            self.player_1_patches["GLIDE"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_DEFENSE_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["DEFENSE"]:
+                # update energylink value
+                pass
+            self.player_1_patches["DEFENSE"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_CHARGE_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["CHARGE"]:
+                # update energylink value
+                pass
+            self.player_1_patches["CHARGE"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_BOOST_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["BOOST"]:
+                # update energylink value
+                pass
+            self.player_1_patches["BOOST"] = patch_amount
+
+            patch_amount = read_float(PLAYER_1_STAT_TURN_PATCH_AMOUNT)
+            if patch_amount > self.player_1_patches["TURN"]:
+                # update energylink value
+                pass
+            self.player_1_patches["TURN"] = patch_amount
 
     def check_ingame_city_trial(self) -> bool:
         """
@@ -562,6 +651,8 @@ async def handle_connected_state(ctx: "KARContext") -> None:
         if ctx.check_ingame_city_trial() and time.time() >= ctx.transitioned_time + 6:
             if "DeathLink" in ctx.tags:
                 await ctx.check_death()
+
+        await ctx.update_energy_link()
 
         await ctx.send_check_locations()
 

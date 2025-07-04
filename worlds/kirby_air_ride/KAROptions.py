@@ -114,6 +114,17 @@ class ProgressionFreeRun(Toggle):
     display_name = "Free Run checkboxes are progression"
 
 
+class EnergyLink(Toggle):
+    """
+    This enables or disables EnergyLink features. This means that collected items and patches will send energy
+    to the collective energy pool of the Multiworld. You can spend some of this energy to get specific patches
+    immediately.
+    """
+
+    default = 0
+    display_name = "Energy Link"
+
+
 @dataclass
 class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     """
@@ -130,6 +141,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     permanent_patches: PermanentPatches
     permanent_patch_progression: PermanentPatchProgression
     free_run_progression: ProgressionFreeRun
+    energy_link: EnergyLink
 
     def get_output_dict(self) -> dict[str, Any]:
         """
@@ -153,6 +165,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "permanent_patch_progression",
             "free_run_progression",
             "death_link",
+            "energy_link",
         )
 
 
