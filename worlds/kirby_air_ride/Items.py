@@ -112,6 +112,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
     "Weight Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 55, 5, None),
     "HP Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 56, 5, None),
     "All Up": KARItemData("Patch", ItemClassification.useful, 57, 5, 0x14),
+    # 5 progressive stadiums to match the 5 unlockable stadiums
+    "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
+    "1 HP": KARItemData("Effect", ItemClassification.trap, 59, 10, None),
     # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
     # "Speed Down": KARItemData("Patch", ItemClassification.trap, 49, 20, 0x16),
     # "Attack Up": KARItemData("Patch", ItemClassification.useful, 50, 20, 0x17),
