@@ -165,6 +165,9 @@ class KARContext(CommonContext):
                 self.goal = args["slot_data"]["goal"]
             if "checklist_amount" in args["slot_data"]:
                 self.goal_checklist_amount = int(args["slot_data"]["checklist_amount"])
+            # reset local location checks so that a client that has already won its game but hasn't closed can't connect to a server
+            # and accidentally auto-win. This doesn't solve the problem of using a save file that already has won, but does solve this smaller problem.
+            self.locations_checked.clear()
 
         # ReceivedItems is a list of items that are in a guaranteed order.
         # {"index": 0, "items": [{"item_1"}, {"item_2"}]}
@@ -255,6 +258,7 @@ class KARContext(CommonContext):
                     # 00 = locked, not visible
                     # 01 = flagged for unlocking
                     # 10 = locked, visible
+                    # TODO: there seems to be one additional value the game uses sometimes that isn't included here
                     checked = bool(read_byte(data.mem_address) not in [0x00, 0x01, 0x10])
 
             if checked:
@@ -299,7 +303,7 @@ class KARContext(CommonContext):
         :param item_name: Name of the item to give.
         :return: Whether the item was successfully given.
         """
-        if not self.check_ingame_city_trial() or time.time() < self.transitioned_time + 5:
+        if not (self.check_ingame_city_trial() or time.time() < self.transitioned_time + 6):
             return False
 
         item_data = ITEM_TABLE[item_name]
@@ -310,6 +314,16 @@ class KARContext(CommonContext):
                 increment_player_patch(item_name, 1)
             if "Down" in item_name:
                 increment_player_patch(item_name, -1)
+        # Handle checkbox unlocks
+        if item_data.type == "Checkbox Reward":
+            pass
+        # Handle progressive stadiums
+        if item_data.type == "Progressive Stadium":
+            # write 01 to the checkbox location corresponding to the next stadium unlock
+            pass
+        # Handle effects
+        if "Effect" in item_data.type:
+            apply_effect_item(item_name)
 
         return True
 
@@ -334,15 +348,14 @@ class KARContext(CommonContext):
         Check if the player has transitioned in or out of City Trial. If transitioning in, give the player any
         permanent patches they've collected.
         """
-        in_city_trial = read_short(CURR_STAGE_ID_ADDR + 2) == 0x0009
+        in_city_trial = self.check_ingame_city_trial()
         if in_city_trial and not self.transitioned:
+            logger.debug("transition into city trial detected")
             self.transitioned = True
             self.transitioned_time = time.time()
-            logger.debug("transition into city trial detected")
-            await asyncio.sleep(5)
             logger.debug("applying permanent patches...")
             # TODO: fix this giving the player items again if they close and reopen the client.
-            await self.give_items(self.items_received, True)
+            Utils.async_start(self.give_items(self.items_received, True))
         elif not in_city_trial and self.transitioned:
             logger.debug("transition out of city trial detected")
             self.transitioned = False
@@ -517,6 +530,11 @@ def increment_player_patch(item_name: str, delta: int) -> None:
         write_float(PLAYER_1_STAT_TURN_PATCH_AMOUNT, current_amount + delta)
 
 
+def apply_effect_item(item_name: str) -> None:
+    if item_name == "1 HP":
+        write_float(PLAYER_1_CURRENT_MACHINE_HP_ADDRESS, 1)
+
+
 def check_alive() -> bool:
     """
     Check if the player is currently alive in-game.
@@ -536,6 +554,50 @@ def check_game_running() -> bool:
     return dolphin_memory_engine.read_bytes(0x80000000, 6) == b"GKYE01"
 
 
+async def handle_connected_state(ctx: "KARContext") -> None:
+    """Handle the logic when Dolphin is connected."""
+    if ctx.slot is not None:
+        await ctx.check_transitioned()
+
+        if ctx.check_ingame_city_trial() and time.time() >= ctx.transitioned_time + 6:
+            if "DeathLink" in ctx.tags:
+                await ctx.check_death()
+
+        await ctx.send_check_locations()
+
+
+async def handle_disconnected_state(ctx: "KARContext") -> None:
+    """Handle the logic when Dolphin is disconnected."""
+    if ctx.dolphin_status != CONNECTION_CONNECTED_STATUS:
+        logger.info(CONNECTION_LOST_STATUS)
+        ctx.dolphin_status = CONNECTION_LOST_STATUS
+
+    logger.info("Attempting to connect to Dolphin...")
+    await attempt_dolphin_connection(ctx)
+
+
+async def attempt_dolphin_connection(ctx: "KARContext") -> bool:
+    """Try to establish a connection to Dolphin and return whether successful."""
+    dolphin_memory_engine.hook()
+
+    if dolphin_memory_engine.is_hooked():
+        if not check_game_running():
+            logger.info(CONNECTION_REFUSED_GAME_STATUS)
+            ctx.dolphin_status = CONNECTION_REFUSED_GAME_STATUS
+            dolphin_memory_engine.un_hook()
+            await asyncio.sleep(5)
+            return False
+
+        logger.info(CONNECTION_CONNECTED_STATUS)
+        ctx.dolphin_status = CONNECTION_CONNECTED_STATUS
+        return True
+
+    logger.info(CONNECTION_LOST_STATUS)
+    ctx.dolphin_status = CONNECTION_LOST_STATUS
+    await asyncio.sleep(5)
+    return False
+
+
 async def dolphin_sync_task(ctx: KARContext) -> None:
     """
     The task loop for managing the connection to Dolphin.
@@ -545,52 +607,26 @@ async def dolphin_sync_task(ctx: KARContext) -> None:
     :param ctx: Kirby Air Ride client context.
     """
     logger.info("Starting Dolphin connector. Use /dolphin for status information.")
-    sleep_time = 0.0
+
     while not ctx.exit_event.is_set():
-        if sleep_time > 0.0:
-            try:
-                # ctx.watcher_event gets set when receiving ReceivedItems or LocationInfo, or when shutting down.
-                await asyncio.wait_for(ctx.watcher_event.wait(), sleep_time)
-            except asyncio.TimeoutError:
-                pass
-            sleep_time = 0.0
-        ctx.watcher_event.clear()
+        try:
+            # ctx.watcher_event gets set when receiving ReceivedItems or LocationInfo, or when shutting down.
+            await asyncio.wait_for(ctx.watcher_event.wait(), 1)
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            ctx.watcher_event.clear()
+
         try:
             if dolphin_memory_engine.is_hooked() and ctx.dolphin_status == CONNECTION_CONNECTED_STATUS:
-                if ctx.slot is not None:
-                    await ctx.check_transitioned()
-                    # wait 5 seconds after transitioning into City Trial to start checking for death
-                    if ctx.transitioned_time > 0 and time.time() >= ctx.transitioned_time + 5:
-                        if "DeathLink" in ctx.tags:
-                            await ctx.check_death()
-                    await ctx.send_check_locations()
-                sleep_time = 1
+                await handle_connected_state(ctx)
             else:
-                if ctx.dolphin_status == CONNECTION_CONNECTED_STATUS:
-                    logger.info(CONNECTION_LOST_STATUS)
-                    ctx.dolphin_status = CONNECTION_LOST_STATUS
-                logger.info("Attempting to connect to Dolphin...")
-                dolphin_memory_engine.hook()
-                if dolphin_memory_engine.is_hooked():
-                    if not check_game_running():
-                        logger.info(CONNECTION_REFUSED_GAME_STATUS)
-                        ctx.dolphin_status = CONNECTION_REFUSED_GAME_STATUS
-                        dolphin_memory_engine.un_hook()
-                        sleep_time = 5
-                    else:
-                        logger.info(CONNECTION_CONNECTED_STATUS)
-                        ctx.dolphin_status = CONNECTION_CONNECTED_STATUS
-                else:
-                    logger.info(CONNECTION_LOST_STATUS)
-                    ctx.dolphin_status = CONNECTION_LOST_STATUS
-                    sleep_time = 5
-                    continue
+                await handle_disconnected_state(ctx)
         except Exception:
             dolphin_memory_engine.un_hook()
             logger.info(CONNECTION_LOST_STATUS)
             ctx.dolphin_status = CONNECTION_LOST_STATUS
             logger.error(traceback.format_exc())
-            sleep_time = 5
             continue
 
 
@@ -617,7 +653,6 @@ def main(connect: Optional[str] = None, password: Optional[str] = None) -> None:
         # Wake the sync task, if it is currently sleeping, so it can start shutting down when it sees that the
         # exit_event is set.
         ctx.watcher_event.set()
-        ctx.server_address = None
 
         await ctx.shutdown()
 
