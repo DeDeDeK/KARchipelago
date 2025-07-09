@@ -14,6 +14,7 @@
       - [Progression](#progression)
       - [Air Ride and Top Ride](#air-ride-and-top-ride)
       - [Multiplayer](#multiplayer)
+      - [Code/misc](#codemisc)
   - [Contributing](#contributing)
 
 
@@ -59,7 +60,6 @@ Try the troubleshooting steps in the [setup guide](/tutorial/Kirby%20Air%20Ride/
 - DeathLink currently only reliably works one-way. The player can trigger DeathLink by dying but can only be killed by DeathLink some of the time/on certain vehicles.
 - DeathLink for killing vehicles just takes health down to ~0 (likely due to floating point stuff)
 - Restarting the game client results in all items being received again.
-- Linux not working due to differences in dolphin memory engine (little endian on linux, read_byte differences)
 - Trap chance option does not currently do anything
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues here.
@@ -76,7 +76,6 @@ Much of the planned features are gated by progress on modding the game itself or
 - city trial events as useful/filler/trap items
 - spawning boxes as filler/useful items
 - checklist box fillers as progression item
-- 1 hp trap items
 - drop patches trap item
 - physics-based trap items (altitude increase/decrease, teleport forward/backward/random location, gravity changes, etc.)
 - energy pool system for spending energy for patches
@@ -101,6 +100,8 @@ Much of the planned features are gated by progress on modding the game itself or
 #### Multiplayer
 - All players receiving items
 
+#### Code/misc
+- more fine-grained options for which traps are enabled
 
 ## Contributing
 
