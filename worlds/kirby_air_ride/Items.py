@@ -113,8 +113,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     "HP Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 56, 5, None),
     "All Up": KARItemData("Patch", ItemClassification.useful, 57, 5, 0x14),
     # 5 progressive stadiums to match the 5 unlockable stadiums
-    "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
-    "1 HP": KARItemData("Effect", ItemClassification.trap, 59, 10, None),
+    # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
+    "1 HP": KARItemData("Effect", ItemClassification.trap, 58, 10, None),
     # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
     # "Speed Down": KARItemData("Patch", ItemClassification.trap, 49, 20, 0x16),
     # "Attack Up": KARItemData("Patch", ItemClassification.useful, 50, 20, 0x17),
@@ -213,11 +213,12 @@ item_name_groups = {
     #     "Green Box",
     #     "Red Box",
     # },
-    # "Effects": {
-    #     "Run Amok",
-    #     "No Charge",
-    #     "Invincible Candy",
-    # },
+    "Effects": {
+        # "Run Amok",
+        # "No Charge",
+        # "Invincible Candy",
+        "1 HP",
+    },
     # "Air Ride Machines": {
     #     "Warpstar",
     #     "Compact Star",
