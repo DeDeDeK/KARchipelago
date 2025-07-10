@@ -40,7 +40,7 @@ on the website, this will be `archipelago.gg:<port>`, where `<port>` is the port
 ## Troubleshooting
 
 * Ensure you are running the same version of Archipelago on which the multiworld was generated.
-* Ensure `kirby_air_ride.apworld` is not in your Archipelago installation's `custom_worlds` folder.
+* Ensure `kirby_air_ride.apworld` is in your Archipelago installation's `custom_worlds` folder.
 * Do not run the Archipelago Launcher or Dolphin as an administrator on Windows.
 * Ensure that you do not have any Dolphin cheats or codes enabled. Some cheats or codes can unexpectedly interfere with
   emulation and make troubleshooting errors difficult. Some gecko or action replay codes may work, but they may also break
