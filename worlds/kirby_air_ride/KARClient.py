@@ -173,6 +173,8 @@ class KARContext(CommonContext):
         if not self.dolphin_interface.check_alive():
             logger.debug("player is not alive")
             # in city trial, give the player 2 minutes to get back on an air ride machine until death is sent again
+            # TODO: configurable option for length of time?
+            # TODO: player can keep sending death by not getting on a vehicle. turn this into a trigger
             if time.time() >= self.last_death_link + DEATH_LINK_COOLDOWN and self.slot is not None:
                 await self.send_death(self.player_names[self.slot] + " exploded.")
             else:
@@ -218,13 +220,20 @@ class KARContext(CommonContext):
                 checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10])
 
             if checked:
+                # TODO: can gate stadium unlocks and other locations by checking if we've received a "progressive stadium"
+                # or similar item, and then re-writing the checked value to 0 if we haven't gotten that item yet.
+                # if not [LOOKUP_ID_TO_NAME[item.item] for item in self.items_received]:
+                #     logger.debug("player has not received the progressive stadium required to progress. re-locking...")
+                #     checked = False
+                #     self.dolphin_interface.write_byte(data.mem_address, 0x00)
+                #     continue
+
                 # Check for victory condition location
                 if location == self.goal and not self.finished_game:
                     logger.info(f"Victory location found: {location}")
                     self.finished_game = True
                     await self.send_victory()
 
-                # Add location to checked list if it has a code
                 if data.code is not None:
                     self.locations_checked.add(data.code)
 
@@ -269,6 +278,7 @@ class KARContext(CommonContext):
 
         # Handle progressive stadiums
         if item_data.type == "Progressive Stadium":
+            # determine the next progressive stadium in logic
             # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
             pass
 
@@ -317,7 +327,8 @@ class KARContext(CommonContext):
         if self.dolphin_interface.check_transition():
             logger.debug("queueing permanent patches...")
             # TODO: fix this giving the player items again if they close and reopen the client.
-            items = [item for item in self.items_received if "Permanent" in LOOKUP_ID_TO_NAME[item.item]]
+            # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
+            items = [item for item in self.items_received if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue]
             self.items_queue.extend(items)
 
         # check if any items are in the items queue and apply them if we're in game
