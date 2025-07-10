@@ -32,6 +32,8 @@ PLAYER_1_CURRENT_MACHINE_HP_ADDRESS = 0x8055AA30
 # maybe read only? is overwritten every frame but can still use to check actual current player HP
 # is 0 for the entire time the player is off of a machine
 PLAYER_1_CURRENT_HP_ADDRESS = 0x8055AA24
+# max health of the player. overwritten every frame, so effectively read-only. float value.
+PLAYER_1_CURRENT_MAX_HP_ADDRESS = 0x8055AA28
 
 # Game state addresses
 # Address that holds the currently selected menu
@@ -220,7 +222,7 @@ class DolphinInterface:
             logger.warning(MEMORY_READ_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)))
             return None
 
-    def write_pointer(self, console_address: int, offset: int, value: int) -> bool:
+    def write_pointer_byte(self, console_address: int, offset: int, value: int) -> bool:
         """
         Follow the pointer at console_address and apply the given offset, then write the value to it.
 
@@ -236,6 +238,27 @@ class DolphinInterface:
             address = dolphin_memory_engine.follow_pointers(console_address, [0])
             address += offset
             dolphin_memory_engine.write_bytes(address, value.to_bytes(1, byteorder="big"))
+            return True
+        except Exception as e:
+            logger.warning(MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)))
+            return False
+
+    def write_pointer_float(self, console_address: int, offset: int, value: float) -> bool:
+        """
+        Follow the pointer at console_address and apply the given offset, then write the value to it.
+
+        Args:
+            console_address: Address of the pointer
+            offset: Offset to apply when reading from the pointed location
+            value: value to write (float)
+
+        Returns:
+            Whether the write operation was successful
+        """
+        try:
+            address = dolphin_memory_engine.follow_pointers(console_address, [0])
+            address += offset
+            dolphin_memory_engine.write_float(address, value)
             return True
         except Exception as e:
             logger.warning(MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)))
@@ -273,8 +296,12 @@ class DolphinInterface:
         Args:
             item_name: Name of the effect item to apply
         """
-        if item_name == "1 HP":
-            self.write_pointer(PLAYER_1_CURRENT_MACHINE_HP_ADDRESS, 0xA78, 1)
+        match item_name:
+            case "1 HP":
+                self.write_pointer_float(PLAYER_1_CURRENT_MACHINE_HP_ADDRESS, 0xA78, 1)
+            case "Full Heal":
+                current_max_hp = self.read_float(PLAYER_1_CURRENT_MAX_HP_ADDRESS)
+                self.write_pointer_float(PLAYER_1_CURRENT_MACHINE_HP_ADDRESS, 0xA78, current_max_hp)
 
     def check_alive(self) -> bool:
         """
@@ -287,7 +314,7 @@ class DolphinInterface:
 
     def give_death(self) -> None:
         """Trigger the player's death in-game by setting their current health to zero."""
-        self.write_pointer(PLAYER_1_CURRENT_MACHINE_HP_ADDRESS, 0xA78, 0)
+        self.write_pointer_float(PLAYER_1_CURRENT_MACHINE_HP_ADDRESS, 0xA78, 0)
 
     def check_game_running(self) -> bool:
         """
