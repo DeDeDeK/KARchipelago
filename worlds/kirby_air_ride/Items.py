@@ -115,6 +115,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # 5 progressive stadiums to match the 5 unlockable stadiums
     # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
     "1 HP": KARItemData("Effect", ItemClassification.trap, 58, 10, None),
+    "Full Heal": KARItemData("Effect", ItemClassification.useful, 59, 10, None),
     # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
     # "Speed Down": KARItemData("Patch", ItemClassification.trap, 49, 20, 0x16),
     # "Attack Up": KARItemData("Patch", ItemClassification.useful, 50, 20, 0x17),
@@ -218,6 +219,7 @@ item_name_groups = {
         # "No Charge",
         # "Invincible Candy",
         "1 HP",
+        "Full Heal",
     },
     # "Air Ride Machines": {
     #     "Warpstar",
