@@ -267,24 +267,18 @@ class KARContext(CommonContext):
         """
         item_data = ITEM_TABLE[item_name]
 
-        # Handle patches
-        if item_data.type == "Patch":
-            delta = 1 if "Up" in item_name else -1
-            self.dolphin_interface.increment_player_patch(item_name, delta)
-
-        # Handle checkbox unlocks
-        if item_data.type == "Checkbox Reward":
-            pass
-
-        # Handle progressive stadiums
-        if item_data.type == "Progressive Stadium":
-            # determine the next progressive stadium in logic
-            # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
-            pass
-
-        # Handle effects
-        if "Effect" in item_data.type:
-            self.dolphin_interface.apply_effect_item(item_name)
+        match item_data.type:
+            case "Patch":
+                delta = 1 if "Up" in item_name else -1
+                self.dolphin_interface.increment_player_patch(item_name, delta)
+            case "Checkbox Reward":
+                pass
+            case "Progressive Stadium":
+                # determine the next progressive stadium in logic
+                # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
+                pass
+            case "Effect":
+                self.dolphin_interface.apply_effect_item(item_name)
 
     async def give_items(self, items: List[NetworkItem]) -> None:
         """
