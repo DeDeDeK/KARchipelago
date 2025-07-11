@@ -3,7 +3,6 @@ from typing import Any, Callable, ClassVar, Dict, Set
 
 from BaseClasses import CollectionState, ItemClassification, Region, Tutorial
 from Fill import FillError
-
 from worlds.AutoWorld import WebWorld, World
 from worlds.generic.Rules import set_rule
 from worlds.LauncherComponents import (
@@ -112,12 +111,9 @@ class KARWorld(World):
 
         # Override certain items to be useful depending on user options.
         override_as_useful = []
-
         # if permanent patches are not progression but are enabled, override as useful
         if self.options.permanent_patches and not self.options.permanent_patch_progression:
-            for item_name, item_data in ITEM_TABLE.items():
-                if "Permanent" in item_name:
-                    override_as_useful.append(item_name)
+            override_as_useful.extend([item_name for item_name in ITEM_TABLE.keys() if "Permanent" in item_name])
 
         for item_name in override_as_useful:
             self.item_classification_overrides[item_name] = ItemClassification.useful
@@ -369,24 +365,24 @@ class KARWorld(World):
         progression_pool: list[str] = []
 
         # assign progression, useful, and filler items to the pools
-        for item, data in ITEM_TABLE.items():
-            classification = self.item_classification_overrides.get(item, data.classification)
+        for item_name, item_data in ITEM_TABLE.items():
+            classification = self.item_classification_overrides.get(item_name, item_data.classification)
 
             # don't add checkbox reward items to the pool, they are already placed as locked if the option is enabled
-            if data.type == "Checkbox Reward":
+            if item_data.type == "Checkbox Reward":
                 continue
             # don't add permanent patches to the pool if the option disables them
-            if not self.options.permanent_patches and "Permanent" in item:
+            if not self.options.permanent_patches and "Permanent" in item_name:
                 continue
 
             if classification == ItemClassification.progression:
-                progression_pool.extend([item] * data.quantity)
+                progression_pool.extend([item_name] * item_data.quantity)
             elif classification == ItemClassification.useful:
-                self.useful_pool.add(item)
+                self.useful_pool.add(item_name)
             elif classification == ItemClassification.trap:
-                self.trap_pool.add(item)
+                self.trap_pool.add(item_name)
             elif classification == ItemClassification.filler:
-                self.filler_pool.add(item)
+                self.filler_pool.add(item_name)
 
         # Add filler items to place into excluded locations.
         pool.extend([self.get_filler_item_name() for _ in self.options.exclude_locations])
@@ -419,14 +415,13 @@ class KARWorld(World):
         """
         This method is called when the item pool needs to be filled with additional items to match the location count.
 
-        :param strict: Whether the item should be one strictly classified as filler. Defaults to `True`.
         :return: The name of a filler item from this world.
         """
-        if self.options.traps_enabled:
-            # TODO: weight based on trap chance
-            return self.random.choices(list(self.filler_pool | self.useful_pool | self.trap_pool), k=1)[0]
-        else:
-            return self.random.choices(list(self.filler_pool | self.useful_pool), k=1)[0]
+        if self.options.traps_enabled and self.options.trap_chance.value > 0:
+            if self.random.random() * 100 < self.options.trap_chance.value:
+                return self.random.choices(list(self.trap_pool), k=1)[0]
+
+        return self.random.choices(list(self.filler_pool | self.useful_pool), k=1)[0]
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         """
