@@ -364,7 +364,7 @@ class KARWorld(World):
         pool: list[str] = []
         progression_pool: list[str] = []
 
-        # assign progression, useful, and filler items to the pools
+        # assign progression, useful, filler and trap items to the pools
         for item_name, item_data in ITEM_TABLE.items():
             classification = self.item_classification_overrides.get(item_name, item_data.classification)
 
@@ -373,6 +373,9 @@ class KARWorld(World):
                 continue
             # don't add permanent patches to the pool if the option disables them
             if not self.options.permanent_patches and "Permanent" in item_name:
+                continue
+            # don't add effect items to the pool if they are not enabled
+            if not self.options.effect_items_enabled and item_data.type == "Effect":
                 continue
 
             if classification == ItemClassification.progression:
