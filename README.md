@@ -64,7 +64,6 @@ Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KA
 - DeathLink currently only reliably works one-way. The player can trigger DeathLink by dying but can only be killed by DeathLink some of the time/on certain vehicles.
 - DeathLink for killing vehicles just takes health down to ~0 (likely due to floating point stuff)
 - Restarting the game client results in all items being received again.
-- Trap chance option does not currently do anything
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues here. 
 
