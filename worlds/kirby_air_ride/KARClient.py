@@ -23,9 +23,8 @@ from .Locations import (
 )
 
 # Connection status messages
-CONNECTION_REFUSED_GAME_STATUS = "Dolphin failed to connect. Please load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
-CONNECTION_LOST_STATUS = (
-    "Dolphin connection was lost. Please restart your emulator and make sure Kirby Air Ride is running. Trying again in 5 seconds..."
+CONNECTION_REFUSED_GAME_STATUS = (
+    "Dolphin failed to connect. Please make sure your emulator is running and load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
 )
 CONNECTION_CONNECTED_STATUS = "Dolphin connected successfully."
 CONNECTION_INITIAL_STATUS = "Dolphin connection has not been initiated."
@@ -342,8 +341,6 @@ class KARContext(CommonContext):
 
     async def handle_disconnected_state(self) -> None:
         """Handle the logic when Dolphin is disconnected."""
-        if self.dolphin_status != CONNECTION_CONNECTED_STATUS:
-            logger.info(self.dolphin_status)
 
         logger.info("Attempting to connect to Dolphin...")
         await self.attempt_dolphin_connection()
@@ -368,7 +365,7 @@ class KARContext(CommonContext):
             logger.info(self.dolphin_status)
             return True
 
-        self.dolphin_status = CONNECTION_LOST_STATUS
+        self.dolphin_status = CONNECTION_REFUSED_GAME_STATUS
         logger.info(self.dolphin_status)
         await asyncio.sleep(DOLPHIN_RECONNECT_DELAY)
         return False
@@ -399,7 +396,7 @@ class KARContext(CommonContext):
             except Exception as e:
                 if self.dolphin_interface.is_hooked():
                     self.dolphin_interface.unhook()
-                self.dolphin_status = CONNECTION_LOST_STATUS
+                self.dolphin_status = CONNECTION_REFUSED_GAME_STATUS
                 logger.info(self.dolphin_status)
                 logger.error(f"Error in dolphin sync task: {e}")
                 logger.error(traceback.format_exc())
