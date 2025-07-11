@@ -45,6 +45,15 @@ class TrapChance(Range):
     range_end = 100
 
 
+class EffectItemsEnabled(Toggle):
+    """
+    This controls whether "effect" items such as "1 HP" trap, "Full Heal", etc. will be placed into the item pool.
+    """
+
+    display_name = "Effect Items Enabled"
+    default = 0
+
+
 class CheckListAmount(Range):
     """
     This sets the number of checklist boxes for the 'Fill in N Checklist Boxes!' goal.
@@ -123,6 +132,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     goal: Goal
     traps_enabled: TrapsEnabled
     trap_chance: TrapChance
+    effect_items_enabled: EffectItemsEnabled
     checklist_amount: CheckListAmount
     checkbox_reward_items: CheckboxRewardsItems
     progression_high_effort: ProgressionHighEffort
@@ -145,6 +155,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "goal",
             "traps_enabled",
             "trap_chance",
+            "effect_items_enabled",
             "checklist_amount",
             "checkbox_reward_items",
             "progression_high_effort",
@@ -168,6 +179,12 @@ kar_option_groups = [
     ),
     OptionGroup(
         "Items Options",
-        [TrapsEnabled, TrapChance, CheckboxRewardsItems, PermanentPatches],
+        [
+            TrapsEnabled,
+            TrapChance,
+            EffectItemsEnabled,
+            CheckboxRewardsItems,
+            PermanentPatches,
+        ],
     ),
 ]
