@@ -7,6 +7,7 @@
   - [What does randomization do to this game? Which locations get shuffled?](#what-does-randomization-do-to-this-game-which-locations-get-shuffled)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
+    - [EnergyLink](#energylink)
   - [I need help! What do I do?](#i-need-help-what-do-i-do)
   - [Known issues](#known-issues)
   - [Planned Features](#planned-features)
@@ -29,31 +30,45 @@ You can get the apworld file and an example player configuration yaml in the [re
 
 ## What is the goal of Kirby Air Ride in Archipelago?
 
-Besides having fun, there are also a few pre-selected archipelago goals for the game, all related to City Trial, that will result in a "game complete":
+Besides having fun being a part of a multiworld with friends, there are also a few pre-selected archipelago goals for the game, all related to City Trial, that will result in a "game complete":
+
 - Fill in over 100 Checklist Boxes!
   - in the base game, this allows you to unlock viewing the game's ending
 - Fill in N Checklist Boxes!
   - fill in as many checklist boxes as you want, you can configure the number from 1-120.
-- In one match, complete both Dragoon and Hydra
+- In one match, complete both Dragoon and Hydra!
+  - this is the standard checkbox from the base game
 - Stadium: VS. KING DEDEDE KO King Dedede in less than a minute!
 
-In general, all goals are related to completing checklist boxes.
+You can also specify the name of any checklist box to set that as your specific goal.
 
 ## What does randomization do to this game? Which locations get shuffled?
 
-Currently, randomization affects nothing in the game except the AP items you receive for completing City Trial checkboxes or from other worlds.
+Currently, randomization affects nothing in the game except the AP items you receive for completing City Trial checkboxes or receive from other worlds.
 
 No locations are currently shuffled. Eventually, all checkboxes will be able to be randomized. 
 
 ## What does another world's item look like in Kirby Air Ride?
 
-There is no change in the graphical appearance of other's items. Completing checkboxes will earn whatever item is attached to that checkbox.
+There is no change in the graphical appearance of other's items. Completing checkboxes in City Trial checklist will earn whatever item is attached to that checkbox.
 
 ## What happens when the player receives an item?
 
-Items are currently limited to patches (top speed up, offense up, etc.) and permanent patch increases. These both will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run. 
+Current items players are able to receive are:
+- Patches (Top Speed Up, Boost Up, etc.)
+- Trap Patches ("Top Speed Down, Boost Down, etc.)
+- Permanent +1 Patch Increases
+- "Effect" items
+  - 1 HP Trap
+  - Full Heal
+  
+Any items will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run (after a few seconds have elapsed). 
 
 NOTE: you must collect any patch in the city after receiving patch items for the stat increases/decreases to take effect. 
+
+### EnergyLink
+
+If you have EnergyLink enabled in your yaml or if you enabled it in the client, gathering patches in the City will add to the collective energy pool of the multiworld. You can spend this gathered energy to receive any item immediately! Use `/energylink` and `/energylink_spend` in the Kirby Air Ride Client.
 
 ## I need help! What do I do?
 
@@ -103,7 +118,10 @@ Much of the planned features are gated by progress on modding the game itself or
 - All players receiving items
 
 #### Code/misc
-- more fine-grained options for which traps are enabled
+- more fine-grained options for which traps or patches are enabled
+- option to reveal (but not unlock) the whole checklist at game start by writing 10 to every checkbox?
+- fully unlock every checkbox on game complete?
+- yaml option to sync the local checklist state with the server checked locations upon connection. for people who don't care about saves being edited/wiped and want the convenience of not having to juggle save files for each lobby
 
 ## Contributing
 
