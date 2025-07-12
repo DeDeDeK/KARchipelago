@@ -105,7 +105,7 @@ class DolphinInterface:
         self.transitioned_time: float = time.time()
         self.transition_wait: int = 6
         self.transitioned: bool = False
-        pass
+        self.player_1_patches: dict[PatchType, float] = {key: 0 for key in PATCH_ADDRESS_MAP.keys()}
 
     def hook(self) -> bool:
         """
@@ -288,6 +288,13 @@ class DolphinInterface:
             if addr is not None:
                 current = self.read_float(addr)
                 self.write_float(addr, current + delta)
+
+    def update_player_patch_counts(self) -> None:
+        """
+        Read in the current player patch counts to self.player_1_patches.
+        """
+        for patch_type in self.player_1_patches:
+            self.player_1_patches[patch_type] = self.read_float(PATCH_ADDRESS_MAP[patch_type])
 
     def apply_effect_item(self, item_name: str) -> None:
         """
