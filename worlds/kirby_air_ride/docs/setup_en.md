@@ -3,23 +3,47 @@
 Welcome to Kirby Air Ride Archipelago! This guide will help you set up the game and play your first multiworld.
 If you're playing Kirby Air Ride, you must follow a few simple steps to get started.
 
+- [Setup Guide for Kirby Air Ride Archipelago](#setup-guide-for-kirby-air-ride-archipelago)
+  - [Requirements](#requirements)
+  - [Setting Up a YAML](#setting-up-a-yaml)
+  - [Save files](#save-files)
+  - [Connecting to a Room](#connecting-to-a-room)
+  - [Troubleshooting](#troubleshooting)
+
 ## Requirements
 
 You'll need the following components to be able to play Kirby Air Ride:
 * Install [Dolphin Emulator](https://dolphin-emu.org/download/). **We recommend using the latest release.**
     * Linux users can use the flatpak package
     [available on Flathub](https://flathub.org/apps/org.DolphinEmu.dolphin-emu).
-* A Kirby Air Ride ISO (GKYE01) (North American version, NTSC-U), probably named "Kirby Air Ride (USA).iso".
+* A Kirby Air Ride ISO (GKYE01) (North American version, NTSC-U), probably named "Kirby Air Ride (USA).iso"
   * CRC32: f1a3e7a2
   * MD5: bd936616ba7f998d8d0a1eb3f553b634
   * SHA-1: b57132b1d0990264c271a1ad2168aa75b93b2f92
-
+* The Archipelago launcher
+  * https://github.com/ArchipelagoMW/Archipelago/releases/latest
+* The Kirby Air Ride APWorld
+  * https://github.com/DeDeDeK/KARchipelago/releases/latest
+  * download the `kirby_air_ride.apworld` and `kirby_air_ride.yaml` files from the "Assets" section
+  * place the `kirby_air_ride.apworld` file into your `custom_worlds` folder in your Archipelago installation folder
 
 ## Setting Up a YAML
 
 All players playing Kirby Air Ride must provide the room host with a YAML file containing the settings for their world.
 Visit the [Kirby Air Ride options page](/games/Kirby%20Air%20Ride/player-options) to generate a YAML with your desired
-options. Once you're happy with your settings, provide the room host with your YAML file and proceed to the next step.
+options, or edit the `kirby_air_ride.yaml` example YAML from above. Once you're happy with your settings, provide the room host with your YAML file and proceed to the next step.
+
+## Save files
+
+Every new multiworld you join should be done with a fresh Kirby Air Ride save file! This is very important, as if you
+have a completed save file and connect to a multiworld with it, you will complete your game immediately. 
+
+Unfortunately, Kirby Air Ride only has one save slot in-game. But no worries if you want to keep your save - Dolphin can export save files that can be re-loaded later.
+
+To make sure you have a fresh save file:
+
+* In Dolphin, go to `Tools -> Memory Card Manager`
+* If you have Kirby Air Ride data in this menu, click on it and click `Export as` if you wish to keep the save file for later, or `Delete` if you wish to wipe the save
 
 ## Connecting to a Room
 
@@ -41,6 +65,7 @@ on the website, this will be `archipelago.gg:<port>`, where `<port>` is the port
 
 * Ensure you are running the same version of Archipelago on which the multiworld was generated.
 * Ensure `kirby_air_ride.apworld` is in your Archipelago installation's `custom_worlds` folder.
+  * make sure you have restarted the launcher if you moved the .apworld into the `custom_worlds` folder
 * Do not run the Archipelago Launcher or Dolphin as an administrator on Windows.
 * Ensure that you do not have any Dolphin cheats or codes enabled. Some cheats or codes can unexpectedly interfere with
   emulation and make troubleshooting errors difficult. Some gecko or action replay codes may work, but they may also break
