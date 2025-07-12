@@ -1,7 +1,7 @@
 import asyncio
 import time
 import traceback
-from typing import Any, List, Optional, cast
+from typing import Any, List, Optional
 
 import Utils
 from CommonClient import (
@@ -14,7 +14,7 @@ from CommonClient import (
 )
 from NetUtils import ClientStatus, NetworkItem
 
-from .DolphinInterface import DolphinInterface
+from .DolphinInterface import DolphinInterface, PatchType, get_patch_type_from_item_name
 from .Items import ITEM_TABLE, LOOKUP_ID_TO_NAME
 from .Locations import (
     CITY_TRIAL_LOCATION_TABLE,
@@ -32,6 +32,7 @@ CONNECTION_INITIAL_STATUS = "Dolphin connection has not been initiated."
 # Constants for game state
 DEATH_LINK_COOLDOWN = 120  # seconds
 DOLPHIN_RECONNECT_DELAY = 5  # seconds
+ENERGYLINK_ITEM_COST = 10  # Joules
 
 
 class KARCommandProcessor(ClientCommandProcessor):
@@ -56,15 +57,35 @@ class KARCommandProcessor(ClientCommandProcessor):
             logger.info(f"Dolphin Status: {self.ctx.dolphin_status}")
 
     def _cmd_deathlink(self) -> None:
-        """Toggle DeathLink from client. Overrides default setting."""
-        ctx = cast(KARContext, self.ctx)  # Type hint for better IDE support
+        """Toggle DeathLink."""
+        if isinstance(self.ctx, KARContext):
+            if "DeathLink" in self.ctx.tags:
+                Utils.async_start(self.ctx.update_death_link(False))
+                logger.info("Deathlink disabled.")
+            else:
+                Utils.async_start(self.ctx.update_death_link(True))
+                logger.info("Deathlink enabled.")
 
-        if "DeathLink" in ctx.tags:
-            Utils.async_start(ctx.update_death_link(False))
-            logger.info("Deathlink disabled.")
-        else:
-            Utils.async_start(ctx.update_death_link(True))
-            logger.info("Deathlink enabled.")
+    def _cmd_energylink(self) -> None:
+        """Toggle EnergyLink features."""
+        if isinstance(self.ctx, KARContext):
+            if self.ctx.energy_link_enabled:
+                self.ctx.energy_link_enabled = False
+                logger.info("EnergyLink disabled.")
+            else:
+                self.ctx.energy_link_enabled = True
+                self.ctx.set_notify(f"EnergyLink{self.ctx.team}")
+                if self.ctx.ui:
+                    self.ctx.ui.enable_energy_link()
+                logger.info("EnergyLink enabled.")
+
+    def _cmd_energylink_spend(self, item_name: str, amount: str) -> None:
+        """Spend energy from EnergyLink on patches or other items. Specify items like: /energylink_spend "Top Speed Up" 1"""
+        if isinstance(self.ctx, KARContext):
+            if self.ctx.energy_link_enabled:
+                Utils.async_start(self.ctx.energy_link_spend(item_name, amount))
+            else:
+                logger.info("You must enable energylink first with /energylink.")
 
 
 class KARContext(CommonContext):
@@ -94,6 +115,8 @@ class KARContext(CommonContext):
         self.goal: str = ""
         self.goal_checklist_amount: int = 0
         self.items_queue: List[NetworkItem] = []
+        self.energy_link_enabled: bool = False
+        self.energy_link_items_queue: list[int] = []
 
     async def disconnect(self, allow_autoreconnect: bool = False) -> None:
         """
@@ -136,6 +159,14 @@ class KARContext(CommonContext):
             if "checklist_amount" in args["slot_data"]:
                 self.goal_checklist_amount = int(args["slot_data"]["checklist_amount"])
 
+            if "energy_link" in args["slot_data"]:
+                self.energy_link_enabled = bool(args["slot_data"]["energy_link"])
+                if self.energy_link_enabled:
+                    self.set_notify(f"EnergyLink{self.team}")
+                    if self.ui:
+                        self.ui.enable_energy_link()
+                    logger.info("EnergyLink enabled.")
+
             # reset local location checks so that a client that has already won its game but hasn't closed can't connect to a server
             # and accidentally auto-win. This doesn't solve the problem of using a save file that already has won, but does solve this smaller problem.
             self.locations_checked.clear()
@@ -149,7 +180,7 @@ class KARContext(CommonContext):
                 self.items_queue.extend(args["items"])
 
         # SetReply is sent when a server data storage key was updated by us with Set(), and we requested a
-        # reply afterwards.
+        # reply afterwards. Also received when SetNotify was requested for a certain key.
         if cmd == "SetReply":
             logger.debug(f"Got SetReply from the server: {args}")
 
@@ -300,6 +331,91 @@ class KARContext(CommonContext):
         # Continue with parent shutdown
         await super().shutdown()
 
+    async def send_energy(self, value: int) -> None:
+        """
+        Adds the given amount of energy to energylink.
+        """
+        Utils.async_start(
+            self.send_msgs([{"cmd": "Set", "key": f"EnergyLink{self.team}", "operations": [{"operation": "add", "value": value}]}])
+        )
+
+    async def remove_energy(self, value: int) -> None:
+        """
+        Removes the given amount of energy for energy link.
+        """
+        if self.current_energy_link_value is not None:
+            Utils.async_start(
+                self.send_msgs(
+                    [
+                        {
+                            "cmd": "Set",
+                            "key": f"EnergyLink{self.team}",
+                            "operations": [{"operation": "add", "value": -value}, {"operation": "max", "value": 0}],
+                        }
+                    ]
+                )
+            )
+
+    async def update_energy_link(self) -> None:
+        """
+        Check if the player has received patches and update the energy link value accordingly. Additionally,
+        add spent items to the item queue.
+
+        Energylink value is increased for each patch a player collects.
+        """
+        # shallow copy of original to preserve old count values
+        old_counts = dict(self.dolphin_interface.player_1_patches)
+
+        # get new player patch counts
+        self.dolphin_interface.update_player_patch_counts()
+
+        # TODO: fix this giving energy from items received from /energylink_spend
+        # TODO: fix this (sometimes) giving energy for permanent patches when transitioning into City Trial
+        # (likely races with item_give after transition?)
+        diff = 0
+        for patch_type, patch_count in self.dolphin_interface.player_1_patches.items():
+            if patch_count > old_counts[patch_type]:
+                diff += patch_count - old_counts[patch_type]
+        if diff > 0:
+            Utils.async_start(self.send_energy(int(diff)))
+
+        # if there are items that have been aquired by spending energy, queue those to be received
+        if len(self.energy_link_items_queue) > 0:
+            for item_id in self.energy_link_items_queue:
+                self.items_queue.append(NetworkItem(item_id, 0, 0, 0))
+            self.energy_link_items_queue.clear()
+
+    async def energy_link_spend(self, item_name: str, amount: str) -> None:
+        """
+        Spends EnergyLink energy on the requested amount of an item.
+        """
+
+        if self.current_energy_link_value is None:
+            logger.info(f"No energy in pool. Current value: {self.current_energy_link_value}")
+            return
+
+        if int(amount) > 20:
+            logger.info("The max amount of items you can purchase at once is 20.")
+            return
+
+        item_data = ITEM_TABLE.get(item_name)
+        if not item_data or not item_data.code:
+            logger.info(f"Invalid item name: {item_name}")
+            return
+
+        cost = ENERGYLINK_ITEM_COST * int(amount)
+        if get_patch_type_from_item_name(item_name) == PatchType.ALL:
+            # ALL patches cost 9x as much
+            cost = ENERGYLINK_ITEM_COST * 9 * int(amount)
+
+        if self.current_energy_link_value < cost:
+            logger.info(f"Not enough energy. Current value: {self.current_energy_link_value} Need: {cost}")
+            return
+
+        self.energy_link_items_queue.extend([item_data.code] * int(amount))
+        Utils.async_start(self.remove_energy(cost))
+        logger.info(f"Spent {cost} energy on {amount} {item_name}.")
+
     def make_gui(self):
         """
         Initialize the GUI for Kirby Air Ride client.
@@ -308,7 +424,7 @@ class KARContext(CommonContext):
             The client's GUI.
         """
         ui = super().make_gui()
-        ui.base_title = "Archipelago Kirby Air Ride Client (v0.0.1)"
+        ui.base_title = "Archipelago Kirby Air Ride Client (v0.2.0)"
         return ui
 
     async def handle_connected_state(self) -> None:
@@ -317,12 +433,18 @@ class KARContext(CommonContext):
             return
 
         # check for transition into city trial and queue up permanent patches if transition has occurred
+        # TODO: fix this giving the player items again if they close and reopen the client.
         if self.dolphin_interface.check_transition():
             logger.debug("queueing permanent patches...")
-            # TODO: fix this giving the player items again if they close and reopen the client.
             # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
             items = [item for item in self.items_received if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue]
             self.items_queue.extend(items)
+
+        # check for patch count diffs/queue items spent for energylink
+        if self.energy_link_enabled:
+            if self.dolphin_interface.is_in_city_trial() and self.dolphin_interface.transition_waited():
+                logger.debug("in energylink update...")
+                await self.update_energy_link()
 
         # check if any items are in the items queue and apply them if we're in game
         if len(self.items_queue) > 0:
@@ -331,9 +453,9 @@ class KARContext(CommonContext):
                 await self.give_items(self.items_queue)
                 self.items_queue.clear()
 
-        # Only check death and locations when in city trial and past transition period
-        if self.dolphin_interface.is_in_city_trial() and self.dolphin_interface.transition_waited():
-            if "DeathLink" in self.tags:
+        # check for death when in city trial and past transition period
+        if "DeathLink" in self.tags:
+            if self.dolphin_interface.is_in_city_trial() and self.dolphin_interface.transition_waited():
                 logger.debug("in deathlink check...")
                 await self.check_death()
 
