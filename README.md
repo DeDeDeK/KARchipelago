@@ -81,7 +81,6 @@ Much of the planned features are gated by progress on modding the game itself or
 - checklist box fillers as progression item
 - drop patches trap item
 - physics-based trap items (altitude increase/decrease, teleport forward/backward/random location, gravity changes, etc.)
-- energylink system for spending energy for patches
 
 #### Randomization
 - randomization of checklist box rewards
