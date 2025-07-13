@@ -64,8 +64,7 @@ NOTE: you must collect any patch in the city after receiving patch items for the
 
 ### EnergyLink
 
-If you have EnergyLink enabled in your yaml or if you enabled it in the client, gathering patches in the City will add to the collective energy pool of the multiworld. You can spend this gathered energy to receive any item immediately! Use `/energylink` and `/energylink_spend` in the Kirby Air Ride Client.
-
+If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
 
 ## I need help! What do I do?
 
@@ -75,7 +74,9 @@ Try the troubleshooting steps in the [setup guide](/tutorial/Kirby%20Air%20Ride/
 
 - DeathLink currently only reliably works one-way. The player can trigger DeathLink by dying but can only be killed by DeathLink some of the time/on certain vehicles.
 - DeathLink for killing vehicles just takes health down to ~0 (likely due to floating point stuff)
-- Restarting the game client results in all items being received again.
+- Restarting the game client results in all permanent patches being received again
+- Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
+- Energylink is occasionally flaky with adding multiple items at once (via `amount` argument)
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues here.
 
