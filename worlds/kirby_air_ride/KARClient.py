@@ -152,7 +152,6 @@ class KARContext(CommonContext):
             if "death_link" in args["slot_data"]:
                 Utils.async_start(self.update_death_link(bool(args["slot_data"]["death_link"])))
 
-            # get the goal location from the slot data, which is included during generation
             if "goal" in args["slot_data"]:
                 self.goal = args["slot_data"]["goal"]
 
@@ -331,7 +330,7 @@ class KARContext(CommonContext):
         # Continue with parent shutdown
         await super().shutdown()
 
-    async def send_energy(self, value: int) -> None:
+    async def send_energy(self, value: float) -> None:
         """
         Adds the given amount of energy to energylink.
         """
@@ -377,7 +376,15 @@ class KARContext(CommonContext):
             if patch_count > old_counts[patch_type]:
                 diff += patch_count - old_counts[patch_type]
         if diff > 0:
-            Utils.async_start(self.send_energy(int(diff)))
+            Utils.async_start(self.send_energy(diff))
+
+        # give energy for destroying things
+        old_count = self.dolphin_interface.destruction_count
+        self.dolphin_interface.update_destruction_count()
+        if self.dolphin_interface.destruction_count > old_count:
+            # send .1 Joules of energy for every thing destroyed
+            energy = (self.dolphin_interface.destruction_count - old_count) / 10
+            Utils.async_start(self.send_energy(energy))
 
         # if there are items that have been aquired by spending energy, queue those to be received
         if len(self.energy_link_items_queue) > 0:
