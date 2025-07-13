@@ -35,6 +35,11 @@ PLAYER_1_CURRENT_HP_ADDRESS = 0x8055AA24
 # max health of the player. overwritten every frame, so effectively read-only. float value.
 PLAYER_1_CURRENT_MAX_HP_ADDRESS = 0x8055AA28
 
+# number of things destroyed:
+# trees, rocks, coral, houses, star pole, volcano entrances, underground walls
+# Byte value. Starts at 00. Reset only when entering City Trial.
+PLAYER_1_DESTRUCTION_COUNT_ADDRESS = 0x8055B2A3
+
 # Game state addresses
 # Address that holds the currently selected menu
 # This address is used to check the stage name to verify that the player is in-game before sending items.
@@ -106,6 +111,7 @@ class DolphinInterface:
         self.transition_wait: int = 6
         self.transitioned: bool = False
         self.player_1_patches: dict[PatchType, float] = {key: 0 for key in PATCH_ADDRESS_MAP.keys()}
+        self.destruction_count: int = 0
 
     def hook(self) -> bool:
         """
@@ -295,6 +301,12 @@ class DolphinInterface:
         """
         for patch_type in self.player_1_patches:
             self.player_1_patches[patch_type] = self.read_float(PATCH_ADDRESS_MAP[patch_type])
+
+    def update_destruction_count(self) -> None:
+        """
+        Read the current number of destroyed objects into self.destruction_count.
+        """
+        self.destruction_count = self.read_byte(PLAYER_1_DESTRUCTION_COUNT_ADDRESS)
 
     def apply_effect_item(self, item_name: str) -> None:
         """
