@@ -16,6 +16,7 @@ from NetUtils import ClientStatus, NetworkItem
 
 from .DolphinInterface import DolphinInterface, PatchType, get_patch_type_from_item_name
 from .Items import ITEM_TABLE, LOOKUP_ID_TO_NAME
+from .KAROptions import CityTrialGoal
 from .Locations import (
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_LOOKUP_ID_TO_NAME,
@@ -23,9 +24,7 @@ from .Locations import (
 )
 
 # Connection status messages
-CONNECTION_REFUSED_GAME_STATUS = (
-    "Dolphin failed to connect. Please make sure your emulator is running and load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
-)
+CONNECTION_REFUSED_GAME_STATUS = "Dolphin failed to connect. Please make sure your emulator is running and load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
 CONNECTION_CONNECTED_STATUS = "Dolphin connected successfully."
 CONNECTION_INITIAL_STATUS = "Dolphin connection has not been initiated."
 
@@ -112,8 +111,10 @@ class KARContext(CommonContext):
         self.dolphin_interface = DolphinInterface()
         self.dolphin_sync_task: Optional[asyncio.Task[None]] = None
         self.dolphin_status: str = CONNECTION_INITIAL_STATUS
-        self.goal: str = ""
-        self.goal_checklist_amount: int = 0
+        self.city_trial_goal: str = ""
+        self.air_ride_goal: str = ""
+        self.city_trial_goal_checklist_amount: int = 0
+        self.air_ride_goal_checklist_amount: int = 0
         self.items_queue: List[NetworkItem] = []
         self.energy_link_enabled: bool = False
         self.energy_link_items_queue: list[int] = []
@@ -152,12 +153,6 @@ class KARContext(CommonContext):
             if "death_link" in args["slot_data"]:
                 Utils.async_start(self.update_death_link(bool(args["slot_data"]["death_link"])))
 
-            if "goal" in args["slot_data"]:
-                self.goal = args["slot_data"]["goal"]
-
-            if "checklist_amount" in args["slot_data"]:
-                self.goal_checklist_amount = int(args["slot_data"]["checklist_amount"])
-
             if "energy_link" in args["slot_data"]:
                 self.energy_link_enabled = bool(args["slot_data"]["energy_link"])
                 if self.energy_link_enabled:
@@ -165,6 +160,18 @@ class KARContext(CommonContext):
                     if self.ui:
                         self.ui.enable_energy_link()
                     logger.info("EnergyLink enabled.")
+
+            if "city_trial_goal" in args["slot_data"]:
+                self.city_trial_goal = args["slot_data"]["city_trial_goal"]
+
+            if "air_ride_goal" in args["slot_data"]:
+                self.air_ride_goal = args["slot_data"]["air_ride_goal"]
+
+            if "city_trial_checklist_amount" in args["slot_data"]:
+                self.city_trial_goal_checklist_amount = int(args["slot_data"]["city_trial_checklist_amount"])
+
+            if "air_ride_checklist_amount" in args["slot_data"]:
+                self.air_ride_goal_checklist_amount = int(args["slot_data"]["air_ride_checklist_amount"])
 
             # reset local location checks so that a client that has already won its game but hasn't closed can't connect to a server
             # and accidentally auto-win. This doesn't solve the problem of using a save file that already has won, but does solve this smaller problem.
@@ -258,7 +265,7 @@ class KARContext(CommonContext):
                 #     continue
 
                 # Check for victory condition location
-                if location == self.goal and not self.finished_game:
+                if location == self.city_trial_goal and not self.finished_game:
                     logger.info(f"Victory location found: {location}")
                     self.finished_game = True
                     await self.send_victory()
@@ -266,13 +273,15 @@ class KARContext(CommonContext):
                 if data.code is not None:
                     self.locations_checked.add(data.code)
 
-        # Check for N checklist boxes filled victory condition
+        # Check for N checklist blocks filled victory condition
         if (
-            self.goal == "Fill in N Checklist Boxes!"
-            and len(self.locations_checked) >= self.goal_checklist_amount
+            self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks
+            and len(self.locations_checked) >= self.city_trial_goal_checklist_amount
             and not self.finished_game
         ):
-            logger.info(f"Checklist victory condition met: {len(self.locations_checked)} >= {self.goal_checklist_amount}")
+            logger.info(
+                f"N Checklist blocks victory: {len(self.locations_checked)} locations checked. Goal: {self.city_trial_goal_checklist_amount}"
+            )
             self.finished_game = True
             await self.send_victory()
 
@@ -335,7 +344,9 @@ class KARContext(CommonContext):
         Adds the given amount of energy to energylink.
         """
         Utils.async_start(
-            self.send_msgs([{"cmd": "Set", "key": f"EnergyLink{self.team}", "operations": [{"operation": "add", "value": value}]}])
+            self.send_msgs(
+                [{"cmd": "Set", "key": f"EnergyLink{self.team}", "operations": [{"operation": "add", "value": value}]}]
+            )
         )
 
     async def remove_energy(self, value: int) -> None:
@@ -444,7 +455,11 @@ class KARContext(CommonContext):
         if self.dolphin_interface.check_transition():
             logger.debug("queueing permanent patches...")
             # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
-            items = [item for item in self.items_received if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue]
+            items = [
+                item
+                for item in self.items_received
+                if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue
+            ]
             self.items_queue.extend(items)
 
         # check for patch count diffs/queue items spent for energylink

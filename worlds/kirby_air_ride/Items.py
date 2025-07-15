@@ -115,7 +115,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # 5 progressive stadiums to match the 5 unlockable stadiums
     # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
     "1 HP": KARItemData("Effect", ItemClassification.trap, 58, 10, None),
-    "Full Heal": KARItemData("Effect", ItemClassification.useful, 59, 10, None),
+    "Full Heal": KARItemData("Effect", ItemClassification.filler, 59, 10, None),
     # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
     # "Speed Down": KARItemData("Patch", ItemClassification.trap, 49, 20, 0x16),
     # "Attack Up": KARItemData("Patch", ItemClassification.useful, 50, 20, 0x17),
@@ -169,7 +169,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
 # update the item table with chekcbox reward items. use a 500 offset to avoid colliding with item_table items
 ITEM_TABLE.update(
     {
-        location_data.reward: KARItemData("Checkbox Reward", ItemClassification.progression, location_data.code + 500, 1, None)
+        location_data.reward: KARItemData(
+            "Checkbox Reward", ItemClassification.progression, location_data.code + 500, 1, None
+        )
         for location_name, location_data in CITY_TRIAL_LOCATION_TABLE.items()
         if location_data.code is not None and location_data.reward != "None"
     }
