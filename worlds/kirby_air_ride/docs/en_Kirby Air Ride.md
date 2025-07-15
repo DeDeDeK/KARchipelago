@@ -77,6 +77,7 @@ Try the troubleshooting steps in the [setup guide](/tutorial/Kirby%20Air%20Ride/
 - Restarting the game client results in all permanent patches being received again
 - Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
 - Energylink is occasionally flaky with adding multiple items at once (via `amount` argument)
+- If traps are disabled and effect items are disabled, gen will fail because we have no other filler items
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues here.
 
@@ -120,7 +121,9 @@ Much of the planned features are gated by progress on modding the game itself or
 - option to reveal (but not unlock) the whole checklist at game start by writing 10 to every checkbox?
 - fully unlock every checkbox on game complete?
 - yaml option to sync the local checklist state with the server checked locations upon connection. for people who don't care about saves being edited/wiped and want the convenience of not having to juggle save files for each lobby
-
+- options presets that set goals for different "game modes" (killing enemies focused checkboxes, collecting items focused, etc.)
+- enable lists of locations as goals. get every checkbox on the list to complete your game. Allows for making custom games, essentially
+- energylink for air ride: laps completed, enemies killed, 
 
 ## Contributing
 
