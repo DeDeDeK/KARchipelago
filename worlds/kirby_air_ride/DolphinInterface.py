@@ -225,7 +225,9 @@ class DolphinInterface:
             address += offset
             return self.read_bytes(address, byte_count)
         except Exception as e:
-            logger.warning(MEMORY_READ_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)))
+            logger.warning(
+                MEMORY_READ_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
+            )
             return None
 
     def write_pointer_byte(self, console_address: int, offset: int, value: int) -> bool:
@@ -246,7 +248,9 @@ class DolphinInterface:
             dolphin_memory_engine.write_bytes(address, value.to_bytes(1, byteorder="big"))
             return True
         except Exception as e:
-            logger.warning(MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)))
+            logger.warning(
+                MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
+            )
             return False
 
     def write_pointer_float(self, console_address: int, offset: int, value: float) -> bool:
@@ -267,7 +271,9 @@ class DolphinInterface:
             dolphin_memory_engine.write_float(address, value)
             return True
         except Exception as e:
-            logger.warning(MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)))
+            logger.warning(
+                MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
+            )
             return False
 
     def increment_player_patch(self, item_name: str, delta: int) -> None:
