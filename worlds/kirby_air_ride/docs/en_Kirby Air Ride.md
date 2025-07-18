@@ -95,6 +95,7 @@ Much of the planned features are gated by progress on modding the game itself or
 - checklist box fillers as progression item
 - drop patches trap item
 - physics-based trap items (altitude increase/decrease, teleport forward/backward/random location, gravity changes, etc.)
+- air ride speed increase item (permanent speed increases?)
 
 #### Randomization
 - randomization of checklist box rewards
@@ -124,6 +125,9 @@ Much of the planned features are gated by progress on modding the game itself or
 - options presets that set goals for different "game modes" (killing enemies focused checkboxes, collecting items focused, etc.)
 - enable lists of locations as goals. get every checkbox on the list to complete your game. Allows for making custom games, essentially
 - energylink for air ride: laps completed, enemies killed, 
+- ItemLink
+- performance pass on location checking
+- kirby gets bigger as energylink grows?
 
 ## Contributing
 
