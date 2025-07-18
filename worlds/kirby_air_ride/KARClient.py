@@ -14,10 +14,11 @@ from CommonClient import (
 )
 from NetUtils import ClientStatus, NetworkItem
 
-from .DolphinInterface import DolphinInterface, PatchType, get_patch_type_from_item_name
+from .DolphinInterface import DolphinInterface, PatchType, StageType, get_patch_type_from_item_name
 from .Items import ITEM_TABLE, LOOKUP_ID_TO_NAME
-from .KAROptions import CityTrialGoal
+from .KAROptions import AirRideGoal, CityTrialGoal
 from .Locations import (
+    AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_LOOKUP_ID_TO_NAME,
     KARLocationType,
@@ -32,6 +33,8 @@ CONNECTION_INITIAL_STATUS = "Dolphin connection has not been initiated."
 DEATH_LINK_COOLDOWN = 120  # seconds
 DOLPHIN_RECONNECT_DELAY = 5  # seconds
 ENERGYLINK_ITEM_COST = 10  # Joules
+
+CLIENT_VERSION = "v0.3.0"
 
 
 class KARCommandProcessor(ClientCommandProcessor):
@@ -111,13 +114,18 @@ class KARContext(CommonContext):
         self.dolphin_interface = DolphinInterface()
         self.dolphin_sync_task: Optional[asyncio.Task[None]] = None
         self.dolphin_status: str = CONNECTION_INITIAL_STATUS
+        self.city_trial_enabled: bool = False
         self.city_trial_goal: str = ""
-        self.air_ride_goal: str = ""
         self.city_trial_goal_checklist_amount: int = 0
+        self.city_trial_goal_acheived: bool = False
+        self.air_ride_enabled: bool = False
+        self.air_ride_goal: str = ""
         self.air_ride_goal_checklist_amount: int = 0
+        self.air_ride_goal_acheived: bool = False
         self.items_queue: List[NetworkItem] = []
         self.energy_link_enabled: bool = False
         self.energy_link_items_queue: list[int] = []
+        self.death_link_enabled: bool = False
 
     async def disconnect(self, allow_autoreconnect: bool = False) -> None:
         """
@@ -151,7 +159,8 @@ class KARContext(CommonContext):
         """
         if cmd == "Connected":
             if "death_link" in args["slot_data"]:
-                Utils.async_start(self.update_death_link(bool(args["slot_data"]["death_link"])))
+                self.death_link_enabled = bool(args["slot_data"]["death_link"])
+                Utils.async_start(self.update_death_link(self.death_link_enabled))
 
             if "energy_link" in args["slot_data"]:
                 self.energy_link_enabled = bool(args["slot_data"]["energy_link"])
@@ -163,9 +172,13 @@ class KARContext(CommonContext):
 
             if "city_trial_goal" in args["slot_data"]:
                 self.city_trial_goal = args["slot_data"]["city_trial_goal"]
+                if self.city_trial_goal != CityTrialGoal.option_none:
+                    self.city_trial_enabled = True
 
             if "air_ride_goal" in args["slot_data"]:
                 self.air_ride_goal = args["slot_data"]["air_ride_goal"]
+                if self.air_ride_goal != AirRideGoal.option_none:
+                    self.air_ride_enabled = True
 
             if "city_trial_checklist_amount" in args["slot_data"]:
                 self.city_trial_goal_checklist_amount = int(args["slot_data"]["city_trial_checklist_amount"])
@@ -198,7 +211,8 @@ class KARContext(CommonContext):
             data: The data associated with the DeathLink event.
         """
         super().on_deathlink(data)
-        if self.dolphin_interface.is_in_city_trial() and self.dolphin_interface.transition_waited():
+        # TODO: queue up a deathlink if the player is not in a stage when it happens
+        if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
             self.dolphin_interface.give_death()
 
     async def check_death(self) -> None:
@@ -245,45 +259,99 @@ class KARContext(CommonContext):
         Check all locations and notify the server of any newly checked locations.
         If the goal has been completed, notify the server of victory.
         """
-        # Check locations from the checklist
-        for location, data in CITY_TRIAL_LOCATION_TABLE.items():
-            checked = False
-            if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
-                # 00 = locked, not visible
-                # 01 = flagged for unlocking
-                # 10 = locked, visible
-                # TODO: there seems to be one additional value the game uses sometimes that isn't included here
-                checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10])
+        # Check City Trial Checklist if City Trial is enabled
+        if self.city_trial_enabled:
+            for location, data in CITY_TRIAL_LOCATION_TABLE.items():
+                checked = False
+                if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
+                    # 00 = locked, not visible
+                    # 01 = flagged for unlocking
+                    # 10 = locked, visible
+                    # TODO: there seems to be one additional value the game uses sometimes that isn't included here
+                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10])
 
-            if checked:
-                # TODO: can gate stadium unlocks and other locations by checking if we've received a "progressive stadium"
-                # or similar item, and then re-writing the checked value to 0 if we haven't gotten that item yet.
-                # if not [LOOKUP_ID_TO_NAME[item.item] for item in self.items_received]:
-                #     logger.debug("player has not received the progressive stadium required to progress. re-locking...")
-                #     checked = False
-                #     self.dolphin_interface.write_byte(data.mem_address, 0x00)
-                #     continue
+                if checked:
+                    # TODO: can gate stadium unlocks and other locations by checking if we've received a "progressive stadium"
+                    # or similar item, and then re-writing the checked value to 0 if we haven't gotten that item yet.
+                    # if not [LOOKUP_ID_TO_NAME[item.item] for item in self.items_received]:
+                    #     logger.debug("player has not received the progressive stadium required to progress. re-locking...")
+                    #     checked = False
+                    #     self.dolphin_interface.write_byte(data.mem_address, 0x00)
+                    #     continue
+                    if data.code is not None:
+                        self.locations_checked.add(data.code)
 
+            # check goals
+            if not (self.city_trial_goal_acheived or self.finished_game):
                 # Check for victory condition location
-                if location == self.city_trial_goal and not self.finished_game:
-                    logger.info(f"Victory location found: {location}")
-                    self.finished_game = True
-                    await self.send_victory()
+                if self.city_trial_goal != CityTrialGoal.option_n_checklist_blocks:
+                    if CITY_TRIAL_LOCATION_TABLE[self.city_trial_goal].code in self.locations_checked:
+                        logger.info(f"Victory location found for City Trial: {location}")
+                        self.city_trial_goal_acheived = True
 
-                if data.code is not None:
-                    self.locations_checked.add(data.code)
+                # check for n checklist blocks goal victory
+                if (
+                    self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks
+                    and len(self.locations_checked) >= self.city_trial_goal_checklist_amount
+                ):
+                    logger.info(
+                        f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {len(self.locations_checked)} goal amount: {self.city_trial_goal_checklist_amount} "
+                    )
+                    self.city_trial_goal_acheived = True
 
-        # Check for N checklist blocks filled victory condition
-        if (
-            self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks
-            and len(self.locations_checked) >= self.city_trial_goal_checklist_amount
-            and not self.finished_game
-        ):
-            logger.info(
-                f"N Checklist blocks victory: {len(self.locations_checked)} locations checked. Goal: {self.city_trial_goal_checklist_amount}"
-            )
-            self.finished_game = True
-            await self.send_victory()
+        # Check Air Ride Checklist if Air Ride is enabled
+        if self.air_ride_enabled:
+            for location, data in AIR_RIDE_LOCATION_TABLE.items():
+                checked = False
+                if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
+                    # 00 = locked, not visible
+                    # 01 = flagged for unlocking
+                    # 10 = locked, visible
+                    # TODO: there seems to be one additional value the game uses sometimes that isn't included here
+                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10])
+
+                if checked:
+                    if data.code is not None:
+                        self.locations_checked.add(data.code)
+
+            # check goals
+            if not (self.air_ride_goal_acheived or self.finished_game):
+                # Check for victory condition location
+                if self.air_ride_goal != AirRideGoal.option_n_checklist_blocks:
+                    if AIR_RIDE_LOCATION_TABLE[self.air_ride_goal].code in self.locations_checked:
+                        logger.info(f"Victory location found for Air Ride: {location}")
+                        self.air_ride_goal_acheived = True
+
+                # check for n checklist blocks goal victory
+                if (
+                    self.air_ride_goal == AirRideGoal.option_n_checklist_blocks
+                    and len(self.locations_checked) >= self.air_ride_goal_checklist_amount
+                ):
+                    logger.info(
+                        f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {len(self.locations_checked)} goal amount: {self.air_ride_goal_checklist_amount} "
+                    )
+                    self.air_ride_goal_acheived = True
+
+        # determine if overall goal has been acheived
+        if not self.finished_game:
+            if self.city_trial_enabled:
+                if self.air_ride_enabled:
+                    if self.city_trial_goal_acheived and self.air_ride_goal_acheived:
+                        self.finished_game = True
+                        await self.send_victory()
+                else:
+                    if self.city_trial_goal_acheived:
+                        self.finished_game = True
+                        await self.send_victory()
+            if self.air_ride_enabled:
+                if self.city_trial_enabled:
+                    if self.air_ride_goal_acheived and self.city_trial_goal_acheived:
+                        self.finished_game = True
+                        await self.send_victory()
+                else:
+                    if self.air_ride_goal_acheived:
+                        self.finished_game = True
+                        await self.send_victory()
 
         # Send newly checked locations to the server
         new_locations_checked = await self.check_locations(self.locations_checked)
@@ -293,22 +361,22 @@ class KARContext(CommonContext):
                 [f"{LOCATION_LOOKUP_ID_TO_NAME[location_id]} ({location_id})" for location_id in new_locations_checked],
             )
 
-    def give_item(self, item_name: str) -> None:
+    def give_item(self, item: NetworkItem) -> None:
         """
-        Give an item to the player in-game.
+        Give an item to the player in-game. Removes the item from the item queue only if it was given.
 
         Args:
-            item_name: Name of the item to give.
-
-        Returns:
-            Whether the item was successfully given.
+            item: NetworkItems
         """
+        item_name = LOOKUP_ID_TO_NAME[item.item]
         item_data = ITEM_TABLE[item_name]
 
         match item_data.type:
             case "Patch":
-                delta = 1 if "Up" in item_name else -1
-                self.dolphin_interface.increment_player_patch(item_name, delta)
+                if self.dolphin_interface.current_stage == StageType.CITY_TRIAL:
+                    delta = 1 if "Up" in item_name else -1
+                    self.dolphin_interface.increment_player_patch(item_name, delta)
+                    self.items_queue.remove(item)
             case "Checkbox Reward":
                 pass
             case "Progressive Stadium":
@@ -316,7 +384,17 @@ class KARContext(CommonContext):
                 # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
                 pass
             case "Effect":
-                self.dolphin_interface.apply_effect_item(item_name)
+                if self.dolphin_interface.current_stage in (
+                    StageType.CITY_TRIAL,
+                    StageType.STADIUM_DESTRUCTION_DERBY_1,
+                    StageType.STADIUM_DESTRUCTION_DERBY_2,
+                    StageType.STADIUM_DESTRUCTION_DERBY_3,
+                    StageType.STADIUM_DESTRUCTION_DERBY_4,
+                    StageType.STADIUM_DESTRUCTION_DERBY_5,
+                    StageType.STADIUM_VS_KING_DEDEDE,
+                ):
+                    self.dolphin_interface.apply_effect_item(item_name)
+                    self.items_queue.remove(item)
 
     async def give_items(self, items: List[NetworkItem]) -> None:
         """
@@ -324,11 +402,9 @@ class KARContext(CommonContext):
 
         Args:
             items: The list of NetworkItems from the server.
-            permanent_only: Whether to give only permanent patch increase items.
         """
         for item in items:
-            item_name = LOOKUP_ID_TO_NAME[item.item]
-            self.give_item(item_name)
+            self.give_item(item)
 
     async def shutdown(self) -> None:
         """Shutdown the client and clean up resources."""
@@ -351,7 +427,7 @@ class KARContext(CommonContext):
 
     async def remove_energy(self, value: int) -> None:
         """
-        Removes the given amount of energy for energy link.
+        Removes the given amount of energy for energylink.
         """
         if self.current_energy_link_value is not None:
             Utils.async_start(
@@ -373,28 +449,35 @@ class KARContext(CommonContext):
 
         Energylink value is increased for each patch a player collects.
         """
-        # shallow copy of original to preserve old count values
-        old_counts = dict(self.dolphin_interface.player_1_patches)
+        energy = 0
 
-        # get new player patch counts
-        self.dolphin_interface.update_player_patch_counts()
+        if self.dolphin_interface.current_stage == StageType.CITY_TRIAL:
+            # shallow copy of original to preserve old count values
+            old_counts = dict(self.dolphin_interface.player_1_patches)
 
-        # TODO: fix this giving energy from items received from /energylink_spend
-        # TODO: fix this (sometimes) giving energy for permanent patches when transitioning into City Trial
-        # (likely races with item_give after transition?)
-        diff = 0
-        for patch_type, patch_count in self.dolphin_interface.player_1_patches.items():
-            if patch_count > old_counts[patch_type]:
-                diff += patch_count - old_counts[patch_type]
-        if diff > 0:
-            Utils.async_start(self.send_energy(diff))
+            # get new player patch counts
+            self.dolphin_interface.update_player_patch_counts()
+
+            # TODO: fix this giving energy from items received from /energylink_spend
+            # TODO: fix this (sometimes) giving energy for permanent patches when transitioning into City Trial
+            # (likely races with item_give after transition?)
+            diff = 0
+            for patch_type, patch_count in self.dolphin_interface.player_1_patches.items():
+                if patch_count > old_counts[patch_type]:
+                    diff += patch_count - old_counts[patch_type]
+            if diff > 0:
+                energy += diff
 
         # give energy for destroying things
         old_count = self.dolphin_interface.destruction_count
         self.dolphin_interface.update_destruction_count()
         if self.dolphin_interface.destruction_count > old_count:
             # send .1 Joules of energy for every thing destroyed
-            energy = (self.dolphin_interface.destruction_count - old_count) / 10
+            destruction_energy = (self.dolphin_interface.destruction_count - old_count) / 10
+            energy += destruction_energy
+
+        # send energy to the server
+        if energy > 0:
             Utils.async_start(self.send_energy(energy))
 
         # if there are items that have been aquired by spending energy, queue those to be received
@@ -442,7 +525,7 @@ class KARContext(CommonContext):
             The client's GUI.
         """
         ui = super().make_gui()
-        ui.base_title = "Archipelago Kirby Air Ride Client (v0.2.0)"
+        ui.base_title = f"Archipelago Kirby Air Ride Client ({CLIENT_VERSION})"
         return ui
 
     async def handle_connected_state(self) -> None:
@@ -450,37 +533,41 @@ class KARContext(CommonContext):
         if self.slot is None:
             return
 
-        # check for transition into city trial and queue up permanent patches if transition has occurred
-        # TODO: fix this giving the player items again if they close and reopen the client.
-        if self.dolphin_interface.check_transition():
-            logger.debug("queueing permanent patches...")
-            # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
-            items = [
-                item
-                for item in self.items_received
-                if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue
-            ]
-            self.items_queue.extend(items)
+        # update current_stage and check if a transition into a stage has happend
+        stage_type, transition_trigger = self.dolphin_interface.check_transition()
+        if transition_trigger:
+            # queue up permanent patches if player has transitioned into City Trial
+            # TODO: fix this giving the player items again if they close and reopen the client.
+            if stage_type == StageType.CITY_TRIAL:
+                logger.debug("queueing permanent patches...")
+                # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
+                items = [
+                    item
+                    for item in self.items_received
+                    if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue
+                ]
+                self.items_queue.extend(items)
 
-        # check for patch count diffs/queue items spent for energylink
+        # handle energylink for the current stage
         if self.energy_link_enabled:
-            if self.dolphin_interface.is_in_city_trial() and self.dolphin_interface.transition_waited():
+            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
                 logger.debug("in energylink update...")
                 await self.update_energy_link()
 
-        # check if any items are in the items queue and apply them if we're in game
-        if len(self.items_queue) > 0:
-            if self.dolphin_interface.is_in_city_trial() and self.dolphin_interface.transition_waited():
-                logger.debug("in items give...")
-                await self.give_items(self.items_queue)
-                self.items_queue.clear()
-
-        # check for death when in city trial and past transition period
-        if "DeathLink" in self.tags:
-            if self.dolphin_interface.is_in_city_trial() and self.dolphin_interface.transition_waited():
+        # check for death when in any stage and past transition period
+        if self.death_link_enabled:
+            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
                 logger.debug("in deathlink check...")
                 await self.check_death()
 
+        # check if any items are in the items queue and apply them if we're in game
+        if len(self.items_queue) > 0:
+            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
+                logger.debug("in items give...")
+                await self.give_items(self.items_queue)
+                # self.items_queue.clear()
+
+        # check locations
         await self.send_check_locations()
 
     async def handle_disconnected_state(self) -> None:
