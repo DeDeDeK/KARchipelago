@@ -127,7 +127,9 @@ Much of the planned features are gated by progress on modding the game itself or
 - yaml option to sync the local checklist state with the server checked locations upon connection. for people who don't care about saves being edited/wiped and want the convenience of not having to juggle save files for each lobby
 - options presets that set goals for different "game modes" (killing enemies focused checkboxes, collecting items focused, etc.)
 - enable lists of locations as goals. get every checkbox on the list to complete your game. Allows for making custom games, essentially
-- - energylink for air ride: laps completed, enemies killed, 
+- energylink for air ride: laps completed, enemies killed, 
+- ItemLink
+- performance pass on location checking
 
 ## Contributing
 
