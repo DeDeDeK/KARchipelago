@@ -1,10 +1,12 @@
 import time
 from enum import Enum
-from typing import Optional
+from typing import NamedTuple, Optional, Tuple
 
 import dolphin_memory_engine
 
 from CommonClient import logger
+
+KAR_GAME_ID = b"GKYE01"
 
 # Player 1 stat patch addresses
 # Number of patches for player 1 is stored at these addresses. Values start at -2 float except for HP, which starts at 0
@@ -40,18 +42,70 @@ PLAYER_1_CURRENT_MAX_HP_ADDRESS = 0x8055AA28
 # Byte value. Starts at 00. Reset only when entering City Trial.
 PLAYER_1_DESTRUCTION_COUNT_ADDRESS = 0x8055B2A3
 
-# Game state addresses
+# number of total laps in the current Air Ride course.
+# Byte value. Initialized as 1, then 0 when choosing courses, then the value of laps for the course.
+PLAYER_1_AIR_RIDE_TOTAL_LAP_COUNT_ADDRESS = 0x80536472
+
 # Address that holds the currently selected menu
 # This address is used to check the stage name to verify that the player is in-game before sending items.
 # 00 = Air Ride, 01 = Top Ride, 02 = City Trial, 03 = Options, 04 = LAN
 MENU_STAGE_ID_ADDR = 0x80535A0C
-# this will be 9 for city trial, and only when in city trial
-CURR_STAGE_ID_ADDR = 0x81333A64
 
-# Constants for memory checking
-CITY_TRIAL_MENU_SELECTION = 0x0200
-CITY_TRIAL_STAGE_ID = 0x0009
-KAR_GAME_ID = b"GKYE01"
+# the current stage the player is in
+# this is a pointer to a 4 byte word. an offset of 4 needs to be applied to get to the address of the current stage.
+# TODO: this pointer hops around all over the place, but does always end up pointing to the right thing. Solve this
+# by doing a rolling average of the last 5 or 6 readings and maybe put them into a set or something and test if there
+# is only one unique value in it to guarantee we are in a stage. Have to think about transitioning out of stages too though,
+# that needs to be quicker. Alternative is finding the pointed-to address for every stage, as those seem to be the same
+# every time.
+# before main menu: very high positive or negative numbers, jumping around
+# on main menu: 22
+# after main menu but not in a stage: uninitialized
+# after exiting a stage: 0, but can randomly be high positive or negative numbers at any time
+CURR_STAGE_ID_ADDR = 0x805DD6CC
+
+# menu selection IDs for all stages
+AIR_RIDE_MENU_SELECTION = 0x00
+TOP_RIDE_MENU_SELECTION = 0x01
+CITY_TRIAL_MENU_SELECTION = 0x02
+
+# stage IDs for all stages
+MAIN_MENU_STAGE_ID = 22
+CITY_TRIAL_STAGE_ID = 9
+STADIUM_DRAG_RACE_1_STAGE_ID = 13
+STADIUM_DRAG_RACE_2_STAGE_ID = 11
+STADIUM_DRAG_RACE_3_STAGE_ID = 10
+STADIUM_DRAG_RACE_4_STAGE_ID = 12
+STADIUM_HIGH_JUMP_STAGE_ID = 18
+STADIUM_TARGET_FLIGHT_STAGE_ID = 19
+STADIUM_AIR_GLIDER_STAGE_ID = 20
+STADIUM_DESTRUCTION_DERBY_1_STAGE_ID = 15
+STADIUM_DESTRUCTION_DERBY_2_STAGE_ID = 16
+STADIUM_DESTRUCTION_DERBY_3_STAGE_ID = 21
+STADIUM_DESTRUCTION_DERBY_4_STAGE_ID = 9  # this will cause a conflict
+STADIUM_DESTRUCTION_DERBY_5_STAGE_ID = 9  # this will cause a conflict
+STADIUM_KIRBY_MELEE_1_STAGE_ID = 14
+STADIUM_KIRBY_MELEE_2_STAGE_ID = 17
+# STADIUM_SINGLE_RACE_1_STAGE_ID = 0x00000000
+STADIUM_SINGLE_RACE_2_STAGE_ID = 1
+STADIUM_SINGLE_RACE_3_STAGE_ID = 2
+STADIUM_SINGLE_RACE_4_STAGE_ID = 8
+STADIUM_SINGLE_RACE_5_STAGE_ID = 7
+STADIUM_SINGLE_RACE_6_STAGE_ID = 4
+STADIUM_SINGLE_RACE_7_STAGE_ID = 5
+STADIUM_SINGLE_RACE_8_STAGE_ID = 3
+STADIUM_SINGLE_RACE_9_STAGE_ID = 6
+STADIUM_VS_KING_DEDEDE_STAGE_ID = 15
+# FANTASY_MEADOWS_STAGE_ID = 0x00000000
+CELESTIAL_VALLEY_STAGE_ID = 4
+SKY_SANDS_STAGE_ID = 2
+FROZEN_HILLSIDE_STAGE_ID = 8
+MAGMA_FLOWS_STAGE_ID = 1
+BEANSTALK_PARK_STAGE_ID = 7
+MACHINE_PASSAGE_STAGE_ID = 5
+CHECKER_KNIGHTS_STAGE_ID = 3
+NEBULA_BELT_STAGE_ID = 6
+
 
 # Memory access error messages
 MEMORY_READ_ERROR = "Failed to read {type} at {addr}: {error}"
@@ -73,7 +127,7 @@ class PatchType(Enum):
     ALL = "All"
 
 
-PATCH_ADDRESS_MAP = {
+PATCH_ADDRESS_MAP: dict[PatchType, int] = {
     PatchType.TURN: PLAYER_1_STAT_TURN_PATCH_AMOUNT,
     PatchType.BOOST: PLAYER_1_STAT_BOOST_PATCH_AMOUNT,
     PatchType.CHARGE: PLAYER_1_STAT_CHARGE_PATCH_AMOUNT,
@@ -84,6 +138,113 @@ PATCH_ADDRESS_MAP = {
     PatchType.OFFENSE: PLAYER_1_STAT_OFFENSE_PATCH_AMOUNT,
     PatchType.TOP_SPEED: PLAYER_1_STAT_TOP_SPEED_PATCH_AMOUNT,
 }
+
+
+class StageType(Enum):
+    """Types of stages in the game"""
+
+    CITY_TRIAL = NamedTuple("CITY_TRIAL", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, CITY_TRIAL_STAGE_ID
+    )
+    STADIUM_DRAG_RACE_1 = NamedTuple("STADIUM_DRAG_RACE_1", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_DRAG_RACE_1_STAGE_ID
+    )
+    STADIUM_DRAG_RACE_2 = NamedTuple("STADIUM_DRAG_RACE_2", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_DRAG_RACE_2_STAGE_ID
+    )
+    STADIUM_DRAG_RACE_3 = NamedTuple("STADIUM_DRAG_RACE_3", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_DRAG_RACE_3_STAGE_ID
+    )
+    STADIUM_DRAG_RACE_4 = NamedTuple("STADIUM_DRAG_RACE_4", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_DRAG_RACE_4_STAGE_ID
+    )
+    STADIUM_HIGH_JUMP = NamedTuple("STADIUM_HIGH_JUMP", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_HIGH_JUMP_STAGE_ID
+    )
+    STADIUM_TARGET_FLIGHT = NamedTuple("STADIUM_TARGET_FLIGHT", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_TARGET_FLIGHT_STAGE_ID
+    )
+    STADIUM_AIR_GLIDER = NamedTuple("STADIUM_AIR_GLIDER", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_AIR_GLIDER_STAGE_ID
+    )
+    STADIUM_DESTRUCTION_DERBY_1 = NamedTuple(
+        "STADIUM_DESTRUCTION_DERBY_1", [("menu_selection_id", int), ("stage_id", int)]
+    )(CITY_TRIAL_MENU_SELECTION, STADIUM_DESTRUCTION_DERBY_1_STAGE_ID)
+    STADIUM_DESTRUCTION_DERBY_2 = NamedTuple(
+        "STADIUM_DESTRUCTION_DERBY_2", [("menu_selection_id", int), ("stage_id", int)]
+    )(CITY_TRIAL_MENU_SELECTION, STADIUM_DESTRUCTION_DERBY_2_STAGE_ID)
+    STADIUM_DESTRUCTION_DERBY_3 = NamedTuple(
+        "STADIUM_DESTRUCTION_DERBY_3", [("menu_selection_id", int), ("stage_id", int)]
+    )(CITY_TRIAL_MENU_SELECTION, STADIUM_DESTRUCTION_DERBY_3_STAGE_ID)
+    STADIUM_DESTRUCTION_DERBY_4 = NamedTuple(
+        "STADIUM_DESTRUCTION_DERBY_4", [("menu_selection_id", int), ("stage_id", int)]
+    )(CITY_TRIAL_MENU_SELECTION, STADIUM_DESTRUCTION_DERBY_4_STAGE_ID)
+    STADIUM_DESTRUCTION_DERBY_5 = NamedTuple(
+        "STADIUM_DESTRUCTION_DERBY_5", [("menu_selection_id", int), ("stage_id", int)]
+    )(CITY_TRIAL_MENU_SELECTION, STADIUM_DESTRUCTION_DERBY_5_STAGE_ID)
+    STADIUM_KIRBY_MELEE_1 = NamedTuple("STADIUM_KIRBY_MELEE_1", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_KIRBY_MELEE_1_STAGE_ID
+    )
+    STADIUM_KIRBY_MELEE_2 = NamedTuple("STADIUM_KIRBY_MELEE_2", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_KIRBY_MELEE_2_STAGE_ID
+    )
+    # STADIUM_SINGLE_RACE_1 = NamedTuple("STADIUM_SINGLE_RACE_1", [("menu_selection_id", int), ("stage_id", int)])(
+    #    CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_1_STAGE_ID
+    # )
+    STADIUM_SINGLE_RACE_2 = NamedTuple("STADIUM_SINGLE_RACE_2", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_2_STAGE_ID
+    )
+    STADIUM_SINGLE_RACE_3 = NamedTuple("STADIUM_SINGLE_RACE_3", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_3_STAGE_ID
+    )
+    STADIUM_SINGLE_RACE_4 = NamedTuple("STADIUM_SINGLE_RACE_4", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_4_STAGE_ID
+    )
+    STADIUM_SINGLE_RACE_5 = NamedTuple("STADIUM_SINGLE_RACE_5", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_5_STAGE_ID
+    )
+    STADIUM_SINGLE_RACE_6 = NamedTuple("STADIUM_SINGLE_RACE_6", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_6_STAGE_ID
+    )
+    STADIUM_SINGLE_RACE_7 = NamedTuple("STADIUM_SINGLE_RACE_7", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_7_STAGE_ID
+    )
+    STADIUM_SINGLE_RACE_8 = NamedTuple("STADIUM_SINGLE_RACE_8", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_8_STAGE_ID
+    )
+    STADIUM_SINGLE_RACE_9 = NamedTuple("STADIUM_SINGLE_RACE_9", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_SINGLE_RACE_9_STAGE_ID
+    )
+    STADIUM_VS_KING_DEDEDE = NamedTuple("STADIUM_VS_KING_DEDEDE", [("menu_selection_id", int), ("stage_id", int)])(
+        CITY_TRIAL_MENU_SELECTION, STADIUM_VS_KING_DEDEDE_STAGE_ID
+    )
+    MAGMA_FLOWS = NamedTuple("MAGMA_FLOWS", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, MAGMA_FLOWS_STAGE_ID
+    )
+    # FANTASY_MEADOWS = NamedTuple("FANTASY_MEADOWS", [("menu_selection_id", int), ("stage_id", int)])(
+    #    AIR_RIDE_MENU_SELECTION, FANTASY_MEADOWS_STAGE_ID
+    # )
+    CELESTIAL_VALLEY = NamedTuple("CELESTIAL_VALLEY", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, CELESTIAL_VALLEY_STAGE_ID
+    )
+    BEANSTALK_PARK = NamedTuple("BEANSTALK_PARK", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, BEANSTALK_PARK_STAGE_ID
+    )
+    FROZEN_HILLSIDE = NamedTuple("FROZEN_HILLSIDE", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, FROZEN_HILLSIDE_STAGE_ID
+    )
+    MACHINE_PASSAGE = NamedTuple("MACHINE_PASSAGE", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, MACHINE_PASSAGE_STAGE_ID
+    )
+    SKY_SANDS = NamedTuple("SKY_SANDS", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, SKY_SANDS_STAGE_ID
+    )
+    CHECKER_KNIGHTS = NamedTuple("CHECKER_KNIGHTS", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, CHECKER_KNIGHTS_STAGE_ID
+    )
+    NEBULA_BELT = NamedTuple("NEBULA_BELT", [("menu_selection_id", int), ("stage_id", int)])(
+        AIR_RIDE_MENU_SELECTION, NEBULA_BELT_STAGE_ID
+    )
 
 
 def get_patch_type_from_item_name(item_name: str) -> Optional[PatchType]:
@@ -112,6 +273,7 @@ class DolphinInterface:
         self.transitioned: bool = False
         self.player_1_patches: dict[PatchType, float] = {key: 0 for key in PATCH_ADDRESS_MAP.keys()}
         self.destruction_count: int = 0
+        self.current_stage: StageType | None = None
 
     def hook(self) -> bool:
         """
@@ -224,6 +386,9 @@ class DolphinInterface:
             address = dolphin_memory_engine.follow_pointers(console_address, [0])
             address += offset
             return self.read_bytes(address, byte_count)
+        except RuntimeError:
+            # pointer is not initialized yet in-game, ignore this
+            return None
         except Exception as e:
             logger.warning(
                 MEMORY_READ_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
@@ -310,9 +475,10 @@ class DolphinInterface:
 
     def update_destruction_count(self) -> None:
         """
-        Read the current number of destroyed objects into self.destruction_count.
+        Read the current number of destroyed objects into self.destruction_count. Clamps the value
+        to be >= 0.
         """
-        self.destruction_count = self.read_byte(PLAYER_1_DESTRUCTION_COUNT_ADDRESS)
+        self.destruction_count = max(0, self.read_byte(PLAYER_1_DESTRUCTION_COUNT_ADDRESS))
 
     def apply_effect_item(self, item_name: str) -> None:
         """
@@ -350,42 +516,53 @@ class DolphinInterface:
         """
         return self.read_bytes(0x80000000, 6) == KAR_GAME_ID
 
-    def is_in_city_trial(self) -> bool:
+    def get_current_stage(self) -> StageType | None:
         """
-        Check if the player is currently in City Trial mode.
+        Check which stage the player is currently in in-game. Returns None if the player is not in a stage.
+        """
+        menu_selection = self.read_byte(MENU_STAGE_ID_ADDR)
+        current_stage = self.read_pointer(CURR_STAGE_ID_ADDR, 0x4, 4)
+
+        if current_stage is not None:
+            current_stage = int.from_bytes(current_stage, byteorder="big")
+            if current_stage not in range(0, 22):
+                return None
+        else:
+            return None
+
+        for stage_type in StageType:
+            if stage_type.value.menu_selection_id == menu_selection and stage_type.value.stage_id == current_stage:
+                logger.info(f"Current stage: {stage_type}")
+                return stage_type
+
+    def check_transition(self) -> Tuple[StageType | None, bool]:
+        """
+        Detect a transition into a stage. Sets the current stage once a transition into that stage is detected.
 
         Returns:
-            True if in City Trial, False otherwise
-        """
-        menu_selection = self.read_short(MENU_STAGE_ID_ADDR) == CITY_TRIAL_MENU_SELECTION
-        current_stage = self.read_short(CURR_STAGE_ID_ADDR + 2) == CITY_TRIAL_STAGE_ID
-
-        return menu_selection and current_stage
-
-    def check_transition(self) -> bool:
-        """
-        Detect a transition into city trial.
-
-        Returns:
-            True ONLY IF a transition INTO City Trial has happened.
+            The stage type of the stage transitioned into (this will be None if no transition has happened).
+            True ONLY IF a transition INTO the stage has happened.
         """
         trigger = False
-        # Detect transition into City Trial
-        if self.is_in_city_trial() and not self.transitioned:
-            logger.debug("transition into city trial detected")
+        # Detect transition into the stage
+        stage = self.get_current_stage()
+        if stage is not None and stage != self.current_stage and not self.transitioned:
+            logger.info(f"transition into stage {stage.name} detected")
             trigger = True
             self.transitioned = True
             self.transitioned_time = time.time()
-        # Detect transition out of City Trial
-        elif not self.is_in_city_trial() and self.transitioned:
-            logger.debug("transition out of city trial detected")
+            self.current_stage = stage
+        # Detect transition out of the stage
+        elif stage is None and stage != self.current_stage and self.transitioned:
+            logger.info(f"transition out of stage {self.current_stage} detected")
             self.transitioned = False
+            self.current_stage = None
 
-        return trigger
+        return stage, trigger
 
     def transition_waited(self) -> bool:
         """
-        Check if the transition time wait after entering City Trial has elapsed.
+        Check if the stage transition time wait after entering a stage has elapsed.
 
         Returns:
             True if the wait time has elapsed.
