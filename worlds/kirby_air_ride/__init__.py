@@ -78,7 +78,7 @@ class KARWorld(World):
     }
     location_name_to_id: ClassVar[dict[str, int]] = {
         location_name: location_data.code
-        for location_name, location_data in CITY_TRIAL_LOCATION_TABLE.items()
+        for location_name, location_data in (CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE).items()
         if location_data.code is not None
     }
 
@@ -742,11 +742,11 @@ class KARWorld(World):
 
         # Determine excluded locations. Add in City Trial or Air Ride excluded locations only if they are enabled,
         # as the locations won't exist in the multiworld if they haven't been enabled.
-        excluded_locations = list(self.options.exclude_locations)
+        excluded_locations = set(self.options.exclude_locations)
         if self.options.city_trial_goal.value != self.options.city_trial_goal.option_none:
-            excluded_locations.extend(list(self.city_trial_excluded_locations))
+            excluded_locations |= self.city_trial_excluded_locations
         if self.options.air_ride_goal.value != self.options.air_ride_goal.option_none:
-            excluded_locations.extend(list(self.air_ride_excluded_locations))
+            excluded_locations |= self.air_ride_excluded_locations
 
         nonexcluded_locations = [
             location
