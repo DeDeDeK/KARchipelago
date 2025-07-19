@@ -119,10 +119,12 @@ class KARContext(CommonContext):
         self.city_trial_goal: str = ""
         self.city_trial_goal_checklist_amount: int = 0
         self.city_trial_goal_acheived: bool = False
+        self.city_trial_num_locations_checked: int = 0
         self.air_ride_enabled: bool = False
         self.air_ride_goal: str = ""
         self.air_ride_goal_checklist_amount: int = 0
         self.air_ride_goal_acheived: bool = False
+        self.air_ride_num_locations_checked: int = 0
         self.items_queue: List[NetworkItem] = []
         self.energy_link_enabled: bool = False
         self.energy_link_items_queue: list[int] = []
@@ -190,6 +192,11 @@ class KARContext(CommonContext):
             # reset local location checks so that a client that has already won its game but hasn't closed can't connect to a server
             # and accidentally auto-win. This doesn't solve the problem of using a save file that already has won, but does solve this smaller problem.
             self.locations_checked.clear()
+
+            # also reset goals acheived for the same reason
+            self.city_trial_goal_acheived = False
+            self.air_ride_goal_acheived = False
+            self.finished_game = False
 
         # ReceivedItems is a list of items that are in a guaranteed order.
         # {"index": 0, "items": [{"item_1"}, {"item_2"}]}
@@ -262,6 +269,7 @@ class KARContext(CommonContext):
         """
         # Check City Trial Checklist if City Trial is enabled
         if self.city_trial_enabled:
+            self.city_trial_num_locations_checked = 0
             for location, data in CITY_TRIAL_LOCATION_TABLE.items():
                 checked = False
                 if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
@@ -280,6 +288,7 @@ class KARContext(CommonContext):
                     #     self.dolphin_interface.write_byte(data.mem_address, 0x00)
                     #     continue
                     if data.code is not None:
+                        self.city_trial_num_locations_checked += 1
                         self.locations_checked.add(data.code)
 
             # check goals
@@ -293,7 +302,7 @@ class KARContext(CommonContext):
                 # check for n checklist blocks goal victory
                 if (
                     self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks
-                    and len(self.locations_checked) >= self.city_trial_goal_checklist_amount
+                    and self.city_trial_num_locations_checked >= self.city_trial_goal_checklist_amount
                 ):
                     logger.info(
                         f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {len(self.locations_checked)} goal amount: {self.city_trial_goal_checklist_amount} "
@@ -302,6 +311,7 @@ class KARContext(CommonContext):
 
         # Check Air Ride Checklist if Air Ride is enabled
         if self.air_ride_enabled:
+            self.air_ride_num_locations_checked = 0
             for location, data in AIR_RIDE_LOCATION_TABLE.items():
                 checked = False
                 if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
@@ -313,6 +323,7 @@ class KARContext(CommonContext):
 
                 if checked:
                     if data.code is not None:
+                        self.air_ride_num_locations_checked += 1
                         self.locations_checked.add(data.code)
 
             # check goals
@@ -326,7 +337,7 @@ class KARContext(CommonContext):
                 # check for n checklist blocks goal victory
                 if (
                     self.air_ride_goal == AirRideGoal.option_n_checklist_blocks
-                    and len(self.locations_checked) >= self.air_ride_goal_checklist_amount
+                    and self.air_ride_num_locations_checked >= self.air_ride_goal_checklist_amount
                 ):
                     logger.info(
                         f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {len(self.locations_checked)} goal amount: {self.air_ride_goal_checklist_amount} "
@@ -513,7 +524,7 @@ class KARContext(CommonContext):
 
         cost = ENERGYLINK_ITEM_COST * int(amount)
         patch_type = get_patch_type_from_item_name(item_name)
-        if patch_type == PatchType.ALL_UP:
+        if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
             # ALL patches cost 9x as much
             cost = ENERGYLINK_ITEM_COST * 9 * int(amount)
 
