@@ -1,8 +1,20 @@
+from enum import StrEnum
 from typing import NamedTuple, Optional
 
 from BaseClasses import Item, ItemClassification
 
-from .Locations import CITY_TRIAL_LOCATION_TABLE
+from .KARData import EffectType, PatchType
+from .Locations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE
+
+# NOTE: .value is needed here due to AP needing base string class for anything that gets into multidata. StrEnums are not
+# converted to base str by AP.
+
+
+class KARItemType(StrEnum):
+    PATCH = "Patch"
+    EFFECT = "Effect"
+    CHECKBOX_REWARD = "Checkbox Reward"
+    PROGRESSIVE_STADIUM = "Progressive Stadium"
 
 
 class KARItemData(NamedTuple):
@@ -84,38 +96,57 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # "Blue Box": KARItemData("Box", ItemClassification.filler, 27, 20, 0x00),
     # "Green Box": KARItemData("Box", ItemClassification.filler, 28, 20, 0x01),
     # "Red Box": KARItemData("Box", ItemClassification.filler, 29, 20, 0x02),
-    "Boost Up": KARItemData("Patch", ItemClassification.useful, 30, 10, 0x03),
-    "Boost Down": KARItemData("Patch", ItemClassification.trap, 31, 10, 0x04),
-    "Top Speed Up": KARItemData("Patch", ItemClassification.useful, 32, 10, 0x05),
-    "Top Speed Down": KARItemData("Patch", ItemClassification.trap, 33, 10, 0x06),
-    "Offense Up": KARItemData("Patch", ItemClassification.useful, 34, 10, 0x07),
-    "Offense Down": KARItemData("Patch", ItemClassification.trap, 35, 10, 0x08),
-    "Defense Up": KARItemData("Patch", ItemClassification.useful, 36, 10, 0x09),
-    "Defense Down": KARItemData("Patch", ItemClassification.trap, 37, 10, 0x0A),
-    "Turn Up": KARItemData("Patch", ItemClassification.useful, 38, 10, 0x0B),
-    "Turn Down": KARItemData("Patch", ItemClassification.trap, 39, 10, 0x0C),
-    "Glide Up": KARItemData("Patch", ItemClassification.useful, 40, 10, 0x0D),
-    "Glide Down": KARItemData("Patch", ItemClassification.trap, 41, 10, 0x0E),
-    "Charge Up": KARItemData("Patch", ItemClassification.useful, 42, 10, 0x0F),
-    "Charge Down": KARItemData("Patch", ItemClassification.trap, 43, 10, 0x10),
-    "Weight Up": KARItemData("Patch", ItemClassification.useful, 44, 10, 0x11),
-    "Weight Down": KARItemData("Patch", ItemClassification.trap, 45, 10, 0x12),
-    "HP Up": KARItemData("Patch", ItemClassification.useful, 46, 10, 0x13),
-    "HP Down": KARItemData("Patch", ItemClassification.trap, 47, 10, None),
-    "Boost Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 48, 5, None),
-    "Top Speed Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 49, 5, None),
-    "Offense Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 50, 5, None),
-    "Defense Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 51, 5, None),
-    "Turn Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 52, 5, None),
-    "Glide Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 53, 5, None),
-    "Charge Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 54, 5, None),
-    "Weight Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 55, 5, None),
-    "HP Up: Permanent +1": KARItemData("Patch", ItemClassification.progression, 56, 5, None),
-    "All Up": KARItemData("Patch", ItemClassification.useful, 57, 5, 0x14),
+    PatchType.BOOST_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 30, 10, 0x03),
+    PatchType.BOOST_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 31, 10, 0x04),
+    PatchType.TOP_SPEED_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 32, 10, 0x05),
+    PatchType.TOP_SPEED_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 33, 10, 0x06),
+    PatchType.OFFENSE_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 34, 10, 0x07),
+    PatchType.OFFENSE_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 35, 10, 0x08),
+    PatchType.DEFENSE_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 36, 10, 0x09),
+    PatchType.DEFENSE_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 37, 10, 0x0A),
+    PatchType.TURN_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 38, 10, 0x0B),
+    PatchType.TURN_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 39, 10, 0x0C),
+    PatchType.GLIDE_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 40, 10, 0x0D),
+    PatchType.GLIDE_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 41, 10, 0x0E),
+    PatchType.CHARGE_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 42, 10, 0x0F),
+    PatchType.CHARGE_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 43, 10, 0x10),
+    PatchType.WEIGHT_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 44, 10, 0x11),
+    PatchType.WEIGHT_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 45, 10, 0x12),
+    PatchType.HP_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 46, 10, 0x13),
+    PatchType.HP_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 47, 10, None),
+    PatchType.ALL_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 48, 5, 0x14),
+    PatchType.ALL_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 49, 5, 0x14),
+    PatchType.BOOST_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 50, 5, None
+    ),
+    PatchType.TOP_SPEED_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 51, 5, None
+    ),
+    PatchType.OFFENSE_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 52, 5, None
+    ),
+    PatchType.DEFENSE_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 53, 5, None
+    ),
+    PatchType.TURN_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 54, 5, None
+    ),
+    PatchType.GLIDE_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 55, 5, None
+    ),
+    PatchType.CHARGE_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 56, 5, None
+    ),
+    PatchType.WEIGHT_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 57, 5, None
+    ),
+    PatchType.HP_UP_PERMANENT_PLUS_ONE.value: KARItemData(
+        KARItemType.PATCH.value, ItemClassification.progression, 58, 5, None
+    ),
+    EffectType.ONE_HP.value: KARItemData(KARItemType.EFFECT.value, ItemClassification.trap, 59, 10, None),
+    EffectType.FULL_HEAL.value: KARItemData(KARItemType.EFFECT.value, ItemClassification.filler, 60, 10, None),
     # 5 progressive stadiums to match the 5 unlockable stadiums
     # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
-    "1 HP": KARItemData("Effect", ItemClassification.trap, 58, 10, None),
-    "Full Heal": KARItemData("Effect", ItemClassification.filler, 59, 10, None),
     # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
     # "Speed Down": KARItemData("Patch", ItemClassification.trap, 49, 20, 0x16),
     # "Attack Up": KARItemData("Patch", ItemClassification.useful, 50, 20, 0x17),
@@ -170,9 +201,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
 ITEM_TABLE.update(
     {
         location_data.reward: KARItemData(
-            "Checkbox Reward", ItemClassification.progression, location_data.code + 500, 1, None
+            KARItemType.CHECKBOX_REWARD, ItemClassification.progression, location_data.code + 500, 1, None
         )
-        for location_name, location_data in CITY_TRIAL_LOCATION_TABLE.items()
+        for location_data in (CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE).values()
         if location_data.code is not None and location_data.reward != "None"
     }
 )
@@ -220,8 +251,8 @@ item_name_groups = {
         # "Run Amok",
         # "No Charge",
         # "Invincible Candy",
-        "1 HP",
-        "Full Heal",
+        EffectType.ONE_HP.value,
+        EffectType.FULL_HEAL.value,
     },
     # "Air Ride Machines": {
     #     "Warpstar",
@@ -252,37 +283,39 @@ item_name_groups = {
     #     "King Dedede VS Wheelie",
     # },
     "Patches": {
-        "Boost Up",
-        "Boost Down",
-        "Top Speed Up",
-        "Top Speed Down",
-        "Offense Up",
-        "Offense Down",
-        "Defense Up",
-        "Defense Down",
-        "Turn Up",
-        "Turn Down",
-        "Glide Up",
-        "Glide Down",
-        "Charge Up",
-        "Charge Down",
-        "Weight Up",
-        "Weight Down",
-        "HP Up",
-        "All Up",
+        PatchType.BOOST_UP.value,
+        PatchType.BOOST_DOWN.value,
+        PatchType.TOP_SPEED_UP.value,
+        PatchType.TOP_SPEED_DOWN.value,
+        PatchType.OFFENSE_UP.value,
+        PatchType.OFFENSE_DOWN.value,
+        PatchType.DEFENSE_UP.value,
+        PatchType.DEFENSE_DOWN.value,
+        PatchType.TURN_UP.value,
+        PatchType.TURN_DOWN.value,
+        PatchType.GLIDE_UP.value,
+        PatchType.GLIDE_DOWN.value,
+        PatchType.CHARGE_UP.value,
+        PatchType.CHARGE_DOWN.value,
+        PatchType.WEIGHT_UP.value,
+        PatchType.WEIGHT_DOWN.value,
+        PatchType.HP_UP.value,
+        PatchType.HP_DOWN.value,
+        PatchType.ALL_UP.value,
+        PatchType.ALL_DOWN.value,
+        PatchType.BOOST_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.TOP_SPEED_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.OFFENSE_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.DEFENSE_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.TURN_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.GLIDE_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.CHARGE_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.WEIGHT_UP_PERMANENT_PLUS_ONE.value,
+        PatchType.HP_UP_PERMANENT_PLUS_ONE.value,
         # "Speed Up",
         # "Speed Down",
         # "Attack Up",
         # "Attack Down",
-        "Boost Up: Permanent +1",
-        "Top Speed Up: Permanent +1",
-        "Offense Up: Permanent +1",
-        "Defense Up: Permanent +1",
-        "Turn Up: Permanent +1",
-        "Glide Up: Permanent +1",
-        "Charge Up: Permanent +1",
-        "Weight Up: Permanent +1",
-        "HP Up: Permanent +1",
     },
     # "Fake Patches": {
     #     "Fake Boost",

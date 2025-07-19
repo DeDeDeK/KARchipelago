@@ -82,6 +82,11 @@ Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KA
 - Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
 - Energylink is occasionally flaky with adding multiple items at once (via `amount` argument)
 - If traps are disabled and effect items are disabled, gen will fail because we have no other filler items
+- Players can not receive items on the following stages due to stage ID conflicts: 
+  - Stadium: DESTRUCTION DERBY 4
+  - Stadium: DESTRUCTION DERBY 5
+  - Stadium: SINGLE RACE 1
+  - FANTASY MEADOWS
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues here. 
 

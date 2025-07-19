@@ -14,8 +14,9 @@ from CommonClient import (
 )
 from NetUtils import ClientStatus, NetworkItem
 
-from .DolphinInterface import DolphinInterface, PatchType, StageType, get_patch_type_from_item_name
-from .Items import ITEM_TABLE, LOOKUP_ID_TO_NAME
+from .DolphinInterface import DolphinInterface, PatchType
+from .Items import ITEM_TABLE, LOOKUP_ID_TO_NAME, KARItemType
+from .KARData import StageName, get_effect_type_from_item_name, get_patch_type_from_item_name
 from .KAROptions import AirRideGoal, CityTrialGoal
 from .Locations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -366,34 +367,40 @@ class KARContext(CommonContext):
         Give an item to the player in-game. Removes the item from the item queue only if it was given.
 
         Args:
-            item: NetworkItems
+            item: NetworkItem
         """
         item_name = LOOKUP_ID_TO_NAME[item.item]
         item_data = ITEM_TABLE[item_name]
 
         match item_data.type:
-            case "Patch":
-                if self.dolphin_interface.current_stage == StageType.CITY_TRIAL:
+            case KARItemType.PATCH.value:
+                if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
                     delta = 1 if "Up" in item_name else -1
-                    self.dolphin_interface.increment_player_patch(item_name, delta)
+                    patch_type = get_patch_type_from_item_name(item_name)
+                    if patch_type is not None:
+                        self.dolphin_interface.increment_player_patch(patch_type, delta)
                     self.items_queue.remove(item)
-            case "Checkbox Reward":
+            case KARItemType.CHECKBOX_REWARD.value:
+                self.items_queue.remove(item)
                 pass
-            case "Progressive Stadium":
+            case KARItemType.PROGRESSIVE_STADIUM.value:
                 # determine the next progressive stadium in logic
                 # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
+                self.items_queue.remove(item)
                 pass
-            case "Effect":
+            case KARItemType.EFFECT.value:
                 if self.dolphin_interface.current_stage in (
-                    StageType.CITY_TRIAL,
-                    StageType.STADIUM_DESTRUCTION_DERBY_1,
-                    StageType.STADIUM_DESTRUCTION_DERBY_2,
-                    StageType.STADIUM_DESTRUCTION_DERBY_3,
-                    StageType.STADIUM_DESTRUCTION_DERBY_4,
-                    StageType.STADIUM_DESTRUCTION_DERBY_5,
-                    StageType.STADIUM_VS_KING_DEDEDE,
+                    StageName.CITY_TRIAL,
+                    StageName.STADIUM_DESTRUCTION_DERBY_1,
+                    StageName.STADIUM_DESTRUCTION_DERBY_2,
+                    StageName.STADIUM_DESTRUCTION_DERBY_3,
+                    StageName.STADIUM_VS_KING_DEDEDE,
+                    StageName.STADIUM_KIRBY_MELEE_1,
+                    StageName.STADIUM_KIRBY_MELEE_2,
                 ):
-                    self.dolphin_interface.apply_effect_item(item_name)
+                    effect_type = get_effect_type_from_item_name(item_name)
+                    if effect_type is not None:
+                        self.dolphin_interface.apply_effect_item(effect_type)
                     self.items_queue.remove(item)
 
     async def give_items(self, items: List[NetworkItem]) -> None:
@@ -451,7 +458,7 @@ class KARContext(CommonContext):
         """
         energy = 0
 
-        if self.dolphin_interface.current_stage == StageType.CITY_TRIAL:
+        if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
             # shallow copy of original to preserve old count values
             old_counts = dict(self.dolphin_interface.player_1_patches)
 
@@ -468,13 +475,13 @@ class KARContext(CommonContext):
             if diff > 0:
                 energy += diff
 
-        # give energy for destroying things
-        old_count = self.dolphin_interface.destruction_count
-        self.dolphin_interface.update_destruction_count()
-        if self.dolphin_interface.destruction_count > old_count:
-            # send .1 Joules of energy for every thing destroyed
-            destruction_energy = (self.dolphin_interface.destruction_count - old_count) / 10
-            energy += destruction_energy
+            # give energy for destroying things
+            old_count = self.dolphin_interface.destruction_count
+            self.dolphin_interface.update_destruction_count()
+            if self.dolphin_interface.destruction_count > old_count:
+                # send .1 Joules of energy for every thing destroyed
+                destruction_energy = (self.dolphin_interface.destruction_count - old_count) / 10
+                energy += destruction_energy
 
         # send energy to the server
         if energy > 0:
@@ -505,7 +512,8 @@ class KARContext(CommonContext):
             return
 
         cost = ENERGYLINK_ITEM_COST * int(amount)
-        if get_patch_type_from_item_name(item_name) == PatchType.ALL:
+        patch_type = get_patch_type_from_item_name(item_name)
+        if patch_type == PatchType.ALL_UP:
             # ALL patches cost 9x as much
             cost = ENERGYLINK_ITEM_COST * 9 * int(amount)
 
@@ -534,11 +542,11 @@ class KARContext(CommonContext):
             return
 
         # update current_stage and check if a transition into a stage has happend
-        stage_type, transition_trigger = self.dolphin_interface.check_transition()
+        stage_name, transition_trigger = self.dolphin_interface.check_transition()
         if transition_trigger:
             # queue up permanent patches if player has transitioned into City Trial
             # TODO: fix this giving the player items again if they close and reopen the client.
-            if stage_type == StageType.CITY_TRIAL:
+            if stage_name == StageName.CITY_TRIAL:
                 logger.debug("queueing permanent patches...")
                 # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
                 items = [
@@ -565,7 +573,6 @@ class KARContext(CommonContext):
             if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
                 logger.debug("in items give...")
                 await self.give_items(self.items_queue)
-                # self.items_queue.clear()
 
         # check locations
         await self.send_check_locations()
