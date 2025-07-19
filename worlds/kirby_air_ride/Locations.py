@@ -277,7 +277,7 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 4 + 1,
     ),
-    "Free Run: Drive for a total of 10 minutes or more!": KARLocationData(
+    "City Trial: Free Run: Drive for a total of 10 minutes or more!": KARLocationData(
         33,
         "City Trial: Free Run",
         "None",
@@ -452,7 +452,7 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 104 + 1,
     ),
-    "Unlock Dragoon Parts A, B, and C on the Checklist!": KARLocationData(
+    "City Trial: Unlock Dragoon Parts A, B, and C on the Checklist!": KARLocationData(
         58,
         "City Trial",
         "Dragoon: Select in Free Run mode",
@@ -480,14 +480,14 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 2,
     ),
-    "Free Run: Change Air Ride Machines 10 times or more!": KARLocationData(
+    "City Trial: Free Run: Change Air Ride Machines 10 times or more!": KARLocationData(
         62,
         "City Trial: Free Run",
         "Sound Test: Legendary Air Ride Machine",
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 4 + 2,
     ),
-    "Free Run: Drive for a total of 30 minutes or more!": KARLocationData(
+    "City Trial: Free Run: Drive for a total of 30 minutes or more!": KARLocationData(
         63,
         "City Trial: Free Run",
         "Sound Test: City Trial",
@@ -662,7 +662,7 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 104 + 2,
     ),
-    "Unlock Hydra Parts X, Y, and Z on the Checklist!": KARLocationData(
+    "City Trial: Unlock Hydra Parts X, Y, and Z on the Checklist!": KARLocationData(
         88,
         "City Trial",
         "Hydra: Select in Free Run mode",
@@ -697,7 +697,7 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 4 + 3,
     ),
-    "Free Run: Drive for a total of 2 hours or more!": KARLocationData(
+    "City Trial: Free Run: Drive for a total of 2 hours or more!": KARLocationData(
         93,
         "City Trial: Free Run",
         "Check off an empty box of your choice!",
@@ -774,7 +774,7 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 48 + 3,
     ),
-    "Fill in over 100 Checklist blocks! (City Trial)": KARLocationData(
+    "City Trial: Fill in over 100 Checklist blocks!": KARLocationData(
         104,
         "City Trial",
         "Ending: view with the A button",
@@ -886,7 +886,7 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         CITY_TRIAL_BASE_CHECKLIST_ADDRESS + 112 + 3,
     ),
-    "In one match, complete both Dragoon and Hydra!": KARLocationData(
+    "City Trial: In one match, complete both Dragoon and Hydra!": KARLocationData(
         120,
         "City Trial",
         "White Kirby:(X or Y button on player entry)",
@@ -896,21 +896,21 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
 }
 
 AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
-    "Race over 100 laps!": KARLocationData(
+    "Air Ride: Race over 100 laps!": KARLocationData(
         121,
         "Air Ride",
         "New Course: Nebula Belt",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS,
     ),
-    "Defeat over 300 of your enemies!": KARLocationData(
+    "Air Ride: Defeat over 300 of your enemies!": KARLocationData(
         122,
         "Air Ride",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 4,
     ),
-    "Swallow Sword Knight (sword-wielding enemy) 3 time or more and take 1st place!": KARLocationData(
+    "Air Ride: Swallow Sword Knight (sword-wielding enemy) 3 time or more and take 1st place!": KARLocationData(
         123,
         "Air Ride",
         "Green Kirby: (X or Y Button on Player Entry)",
@@ -938,21 +938,21 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 20,
     ),
-    "Fill in over 100 Checklist blocks! (Air Ride)": KARLocationData(
+    "Air Ride: Fill in over 100 Checklist blocks!": KARLocationData(
         127,
         "Air Ride",
         "Ending: View with the A button",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 24,
     ),
-    "Sword Challenge: During a race, swing your sword exactly 10 times and take 1st!": KARLocationData(
+    "Air Ride: Sword Challenge: During a race, swing your sword exactly 10 times and take 1st!": KARLocationData(
         128,
         "Air Ride",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 28,
     ),
-    "Hit 20 or more rivals with your Quick Spin!": KARLocationData(
+    "Air Ride: Hit 20 or more rivals with your Quick Spin!": KARLocationData(
         129,
         "Air Ride",
         "None",
@@ -973,77 +973,77 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 40,
     ),
-    "Time Attack: FANTASY MEADOWS Finish in under 01:00:00!": KARLocationData(
+    "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:00:00!": KARLocationData(
         132,
         "Time Attack: FANTASY MEADOWS",
         "Music: Meadows (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 44,
     ),
-    "Time Attack: SKY SANDS Finish in under 02:40:00!": KARLocationData(
+    "Air Ride: Time Attack: SKY SANDS Finish in under 02:40:00!": KARLocationData(
         133,
         "Time Attack: SKY SANDS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 48,
     ),
-    "Time Attack: MAGMA FLOWS Finish in under 03:04:00!": KARLocationData(
+    "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:04:00!": KARLocationData(
         134,
         "Time Attack: MAGMA FLOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 52,
     ),
-    "Time Attack: MACHINE PASSAGE Finish in under 02:48:00!": KARLocationData(
+    "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 02:48:00!": KARLocationData(
         135,
         "Time Attack: MACHINE PASSAGE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 56,
     ),
-    "Free Run: FANTASY MEADOWS Finish 1 lap in under 00:21:00!": KARLocationData(
+    "Air Ride: Free Run: FANTASY MEADOWS Finish 1 lap in under 00:21:00!": KARLocationData(
         136,
         "Free Run: FANTASY MEADOWS",
         "Sound Test: FANTASY MEADOWS",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 60,
     ),
-    "Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!": KARLocationData(
+    "Air Ride: Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!": KARLocationData(
         137,
         "Free Run: CELESTIAL VALLEY",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 64,
     ),
-    "Free Run: FROZEN HILLSIDE Finish 1 lap in under 01:10:00!": KARLocationData(
+    "Air Ride: Free Run: FROZEN HILLSIDE Finish 1 lap in under 01:10:00!": KARLocationData(
         138,
         "Free Run: FROZEN HILLSIDE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 68,
     ),
-    "Free Run: MAGMA FLOWS Finish 1 lap in under 01:01:00!": KARLocationData(
+    "Air Ride: Free Run: MAGMA FLOWS Finish 1 lap in under 01:01:00!": KARLocationData(
         139,
         "Free Run: MAGMA FLOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 72,
     ),
-    "Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!": KARLocationData(
+    "Air Ride: Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!": KARLocationData(
         140,
         "Free Run: BEANSTALK PARK",
         "Sound Test: BEANSTALK PARK",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 76,
     ),
-    "Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:35:00!": KARLocationData(
+    "Air Ride: Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:35:00!": KARLocationData(
         141,
         "Free Run: CHECKER KNIGHTS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 80,
     ),
-    "Race all of the standard Air Ride courses!": KARLocationData(
+    "Air Ride: Race all of the standard Air Ride courses!": KARLocationData(
         142,
         "Air Ride",
         "New Machine: WHEELIE BIKE",
@@ -1064,63 +1064,63 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 92,
     ),
-    "FANTASY MEADOWS: Race 1 lap without dropping below 20 mph!": KARLocationData(
+    "Air Ride: FANTASY MEADOWS: Race 1 lap without dropping below 20 mph!": KARLocationData(
         145,
         "Air Ride: FANTASY MEADOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 96,
     ),
-    "CHECKER KNIGHTS: Break at least 2 walls and finish in 1st place!": KARLocationData(
+    "Air Ride: CHECKER KNIGHTS: Break at least 2 walls and finish in 1st place!": KARLocationData(
         146,
         "Air Ride: CHECKER KNIGHTS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 100,
     ),
-    "SKY SANDS: Enter the quicksand 3 times and finish in 1st place!": KARLocationData(
+    "Air Ride: SKY SANDS: Enter the quicksand 3 times and finish in 1st place!": KARLocationData(
         147,
         "Air Ride: SKY SANDS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 104,
     ),
-    "Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!": KARLocationData(
+    "Air Ride: Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!": KARLocationData(
         148,
         "Time Attack: SKY SANDS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 108,
     ),
-    "MAGMA FLOWS: Use all of the Boost Panels and finish in 1st place!": KARLocationData(
+    "Air Ride: MAGMA FLOWS: Use all of the Boost Panels and finish in 1st place!": KARLocationData(
         149,
         "Air Ride: MAGMA FLOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 112,
     ),
-    "CELESTIAL VALLEY: Use the Copy Chance Wheel on top of the tree!": KARLocationData(
+    "Air Ride: CELESTIAL VALLEY: Use the Copy Chance Wheel on top of the tree!": KARLocationData(
         150,
         "Air Ride: CELESTIAL VALLEY",
         "Check off an empty box of your choice!",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 116,
     ),
-    "Race over 300 laps!": KARLocationData(
+    "Air Ride: Race over 300 laps!": KARLocationData(
         151,
         "Air Ride",
         "Music: Nebula (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 1,
     ),
-    "Defeat over 1,000 of your enemies!": KARLocationData(
+    "Air Ride: Defeat over 1,000 of your enemies!": KARLocationData(
         152,
         "Air Ride",
         "KING DEDEDE: Available on normal courses",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 4 + 1,
     ),
-    "Swallow Wheelie (motorcycle enemy) 3 times or more and take 1st place!": KARLocationData(
+    "Air Ride: Swallow Wheelie (motorcycle enemy) 3 times or more and take 1st place!": KARLocationData(
         153,
         "Air Ride",
         "None",
@@ -1183,70 +1183,70 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 40 + 1,
     ),
-    "Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!": KARLocationData(
+    "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!": KARLocationData(
         162,
         "Time Attack: CELESTIAL VALLEY",
         "New Machine: BULK STAR",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 44 + 1,
     ),
-    "Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!": KARLocationData(
+    "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!": KARLocationData(
         163,
         "Time Attack: FROZEN HILLSIDE",
         "New Machine: FORMULA STAR",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 48 + 1,
     ),
-    "Time Attack: BEANSTALK PARK Finish in under 03:10:00!": KARLocationData(
+    "Air Ride: Time Attack: BEANSTALK PARK Finish in under 03:10:00!": KARLocationData(
         164,
         "Time Attack: BEANSTALK PARK",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 52 + 1,
     ),
-    "Time Attack: CHECKER KNIGHTS Finish in under 04:30:00!": KARLocationData(
+    "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 04:30:00!": KARLocationData(
         165,
         "Time Attack: CHECKER KNIGHTS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 56 + 1,
     ),
-    "Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!": KARLocationData(
+    "Air Ride: Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!": KARLocationData(
         166,
         "Free Run: FANTASY MEADOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 60 + 1,
     ),
-    "Free Run: SKY SANDS Finish 1 lap in under 01:05:00!": KARLocationData(
+    "Air Ride: Free Run: SKY SANDS Finish 1 lap in under 01:05:00!": KARLocationData(
         167,
         "Free Run: SKY SANDS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 64 + 1,
     ),
-    "Free Run: FROZEN HILLSIDE Finish 1 lap in under 00:58:00!": KARLocationData(
+    "Air Ride: Free Run: FROZEN HILLSIDE Finish 1 lap in under 00:58:00!": KARLocationData(
         168,
         "Free Run: FROZEN HILLSIDE",
         "Sound Test: FROZEN HILLSIDE",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 68 + 1,
     ),
-    "Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!": KARLocationData(
+    "Air Ride: Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!": KARLocationData(
         169,
         "Free Run: MAGMA FLOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 72 + 1,
     ),
-    "Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!": KARLocationData(
+    "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!": KARLocationData(
         170,
         "Free Run: MACHINE PASSAGE",
         "New Machine: ROCKET STAR",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 76 + 1,
     ),
-    "Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:20:00!": KARLocationData(
+    "Air Ride: Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:20:00!": KARLocationData(
         171,
         "Free Run: CHECKER KNIGHTS",
         "None",
@@ -1267,77 +1267,77 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 88 + 1,
     ),
-    "Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!": KARLocationData(
+    "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!": KARLocationData(
         174,
         "Time Attack: FANTASY MEADOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 92 + 1,
     ),
-    "BEANSTALK PARK: Race over 3 laps without riding the Ferris wheel!": KARLocationData(
+    "Air Ride: BEANSTALK PARK: Race over 3 laps without riding the Ferris wheel!": KARLocationData(
         175,
         "Air Ride: BEANSTALK PARK",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 96 + 1,
     ),
-    "CHECKER KNIGHTS: Swallow over 20 enemies and finish in 1st place!": KARLocationData(
+    "Air Ride: CHECKER KNIGHTS: Swallow over 20 enemies and finish in 1st place!": KARLocationData(
         176,
         "Air Ride: CHECKER KNIGHTS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 100 + 1,
     ),
-    "Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!": KARLocationData(
+    "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!": KARLocationData(
         177,
         "Time Attack: CELESTIAL VALLEY",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 104 + 1,
     ),
-    "MACHINE PASSAGE: Finish in 1st place without touching the walls even once!": KARLocationData(
+    "Air Ride: MACHINE PASSAGE: Finish in 1st place without touching the walls even once!": KARLocationData(
         178,
         "Air Ride: MACHINE PASSAGE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 108 + 1,
     ),
-    "Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!": KARLocationData(
+    "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!": KARLocationData(
         179,
         "Time Attack: FROZEN HILLSIDE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 112 + 1,
     ),
-    "Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!": KARLocationData(
+    "Air Ride: Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!": KARLocationData(
         180,
         "Time Attack: BEANSTALK PARK",
         "Sound Test: NEBULA BELT",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 116 + 1,
     ),
-    "Glide for more than 30 minutes!": KARLocationData(
+    "Air Ride: Glide for more than 30 minutes!": KARLocationData(
         181,
         "Air Ride",
         "META KNIGHT: Available on normal courses",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 2,
     ),
-    "Swallow Chilly (snowman enemy) 3 or more times and take 1st place!": KARLocationData(
+    "Air Ride: Swallow Chilly (snowman enemy) 3 or more times and take 1st place!": KARLocationData(
         182,
         "Air Ride",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 4 + 2,
     ),
-    "In any mode other than Free Run, reach the goal a total of 3 times!": KARLocationData(
+    "Air Ride: In any mode other than Free Run, reach the goal a total of 3 times!": KARLocationData(
         183,
         "Air Ride",
         "New Machine: WAGON STAR",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 8 + 2,
     ),
-    "Swallow 200 or more enemies!": KARLocationData(
+    "Air Ride: Swallow 200 or more enemies!": KARLocationData(
         184,
         "Air Ride",
         "Check off an empty box of your choice!",
@@ -1365,7 +1365,7 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 24 + 2,
     ),
-    "Tornado Challenge: Defeat over 15 enemies as Tornado Kirby and finish in 1st place!": KARLocationData(
+    "Air Ride: Tornado Challenge: Defeat over 15 enemies as Tornado Kirby and finish in 1st place!": KARLocationData(
         188,
         "Air Ride",
         "None",
@@ -1393,70 +1393,70 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 40 + 2,
     ),
-    "Time Attack: CELESTIAL VALLEY Finish in under 02:56:00!": KARLocationData(
+    "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 02:56:00!": KARLocationData(
         192,
         "Time Attack: CELESTIAL VALLEY",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 44 + 2,
     ),
-    "Time Attack: FROZEN HILLSIDE Finish in under 02:50:00!": KARLocationData(
+    "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 02:50:00!": KARLocationData(
         193,
         "Time Attack: FROZEN HILLSIDE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 48 + 2,
     ),
-    "Time Attack: BEANSTALK PARK Finish in under 02:55:00!": KARLocationData(
+    "Air Ride: Time Attack: BEANSTALK PARK Finish in under 02:55:00!": KARLocationData(
         194,
         "Time Attack: BEANSTALK PARK",
         "Music: Beanstalk (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 52 + 2,
     ),
-    "Time Attack: CHECKER KNIGHTS Finish in under 04:00:00!": KARLocationData(
+    "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 04:00:00!": KARLocationData(
         195,
         "Time Attack: CHECKER KNIGHTS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 56 + 2,
     ),
-    "Free Run: CELESTIAL VALLEY Finish 1 lap in under 01:10:00!": KARLocationData(
+    "Air Ride: Free Run: CELESTIAL VALLEY Finish 1 lap in under 01:10:00!": KARLocationData(
         196,
         "Free Run: CELESTIAL VALLEY",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 60 + 2,
     ),
-    "Free Run: SKY SANDS Finish 1 lap in under 00:53:00!": KARLocationData(
+    "Air Ride: Free Run: SKY SANDS Finish 1 lap in under 00:53:00!": KARLocationData(
         197,
         "Free Run: SKY SANDS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 64 + 2,
     ),
-    "Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!": KARLocationData(
+    "Air Ride: Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!": KARLocationData(
         198,
         "Free Run: FROZEN HILLSIDE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 68 + 2,
     ),
-    "Free Run: BEANSTALK PARK Finish 1 lap in under 01:07:00!": KARLocationData(
+    "Air Ride: Free Run: BEANSTALK PARK Finish 1 lap in under 01:07:00!": KARLocationData(
         199,
         "Free Run: BEANSTALK PARK",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 72 + 2,
     ),
-    "Free Run: MACHINE PASSAGE Finish 1 lap in under 00:56:00!": KARLocationData(
+    "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 00:56:00!": KARLocationData(
         200,
         "Free Run: MACHINE PASSAGE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 76 + 2,
     ),
-    "Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!": KARLocationData(
+    "Air Ride: Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!": KARLocationData(
         201,
         "Free Run: CHECKER KNIGHTS",
         "None",
@@ -1477,63 +1477,63 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 88 + 2,
     ),
-    "In one game, drop from the cliffs 3 times!": KARLocationData(
+    "Air Ride: In one game, drop from the cliffs 3 times!": KARLocationData(
         204,
         "Air Ride",
         "Check off an empty box of your choice!",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 92 + 2,
     ),
-    "BEANSTALK PARK: Swallow over 20 enemies and take 1st place!": KARLocationData(
+    "Air Ride: BEANSTALK PARK: Swallow over 20 enemies and take 1st place!": KARLocationData(
         205,
         "Air Ride: BEANSTALK PARK",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 96 + 2,
     ),
-    "FROZEN HILLSIDE: Split at least 20 ice platforms and finish in 1st place!": KARLocationData(
+    "Air Ride: FROZEN HILLSIDE: Split at least 20 ice platforms and finish in 1st place!": KARLocationData(
         206,
         "Air Ride: FROZEN HILLSIDE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 100 + 2,
     ),
-    "SKY SANDS: Open the trapdoor exactly 3 times and finish in 1st place!": KARLocationData(
+    "Air Ride: SKY SANDS: Open the trapdoor exactly 3 times and finish in 1st place!": KARLocationData(
         207,
         "Air Ride: SKY SANDS",
         "Music: Sky Sands (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 104 + 2,
     ),
-    "MAGMA FLOWS: Use all the volcano rails and finish in 1st place!": KARLocationData(
+    "Air Ride: MAGMA FLOWS: Use all the volcano rails and finish in 1st place!": KARLocationData(
         208,
         "Air Ride: MAGMA FLOWS",
         "New Machine: TURBO STAR",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 108 + 2,
     ),
-    "CELESTIAL VALLEY: Over one race, ride on both the left and right bridge railings!": KARLocationData(
+    "Air Ride: CELESTIAL VALLEY: Over one race, ride on both the left and right bridge railings!": KARLocationData(
         209,
         "Air Ride: CELESTIAL VALLEY",
         "Music: Celestial (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 112 + 2,
     ),
-    "Time Attack: MACHINE PASSAGE Finish in under 02:50:00 on Rex Wheelie!": KARLocationData(
+    "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 02:50:00 on Rex Wheelie!": KARLocationData(
         210,
         "Time Attack: MACHINE PASSAGE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 116 + 2,
     ),
-    "Glide for more than 1 hour!": KARLocationData(
+    "Air Ride: Glide for more than 1 hour!": KARLocationData(
         211,
         "Air Ride",
         "Bonus Movie: Special machine intros",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 3,
     ),
-    "Swallow Plasma Wisp (electrical enemy) 3 or more times and take 1st place!": KARLocationData(
+    "Air Ride: Swallow Plasma Wisp (electrical enemy) 3 or more times and take 1st place!": KARLocationData(
         212,
         "Air Ride",
         "None",
@@ -1547,7 +1547,7 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 8 + 3,
     ),
-    "Defeat 100 or more enemies with exhaled stars!": KARLocationData(
+    "Air Ride: Defeat 100 or more enemies with exhaled stars!": KARLocationData(
         214,
         "Air Ride",
         "New Machine: REX WHEELIE",
@@ -1575,7 +1575,7 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 24 + 3,
     ),
-    "Defeat 10 or more enemies using the Quick Spin!": KARLocationData(
+    "Air Ride: Defeat 10 or more enemies using the Quick Spin!": KARLocationData(
         218,
         "Air Ride",
         "New Machine: SHADOW STAR",
@@ -1596,77 +1596,77 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 36 + 3,
     ),
-    "Time Attack: FANTASY MEADOWS Finish in under 01:12:00!": KARLocationData(
+    "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:12:00!": KARLocationData(
         221,
         "Time Attack: FANTASY MEADOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 40 + 3,
     ),
-    "Time Attack: SKY SANDS Finish in under 03:10:00!": KARLocationData(
+    "Air Ride: Time Attack: SKY SANDS Finish in under 03:10:00!": KARLocationData(
         222,
         "Time Attack: SKY SANDS",
         "Sound Test: SKY SANDS",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 44 + 3,
     ),
-    "Time Attack: MAGMA FLOWS Finish in under 03:20:00!": KARLocationData(
+    "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:20:00!": KARLocationData(
         223,
         "Time Attack: MAGMA FLOWS",
         "Music: Magma (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 48 + 3,
     ),
-    "Time Attack: MACHINE PASSAGE Finish in under 03:10:00!": KARLocationData(
+    "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 03:10:00!": KARLocationData(
         224,
         "Time Attack: MACHINE PASSAGE",
         "Sound Test: MACHINE PASSAGE",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 52 + 3,
     ),
-    "Free Run: FANTASY MEADOWS Finish 1 lap in under 00:24:00!": KARLocationData(
+    "Air Ride: Free Run: FANTASY MEADOWS Finish 1 lap in under 00:24:00!": KARLocationData(
         225,
         "Free Run: FANTASY MEADOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 56 + 3,
     ),
-    "Free Run: CELESTIAL VALLEY Finish 1 lap in under 00:57:00!": KARLocationData(
+    "Air Ride: Free Run: CELESTIAL VALLEY Finish 1 lap in under 00:57:00!": KARLocationData(
         226,
         "Free Run: CELESTIAL VALLEY",
         "Sound Test: CELESTIAL VALLEY",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 60 + 3,
     ),
-    "Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!": KARLocationData(
+    "Air Ride: Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!": KARLocationData(
         227,
         "Free Run: SKY SANDS",
         "Brown Kirby: (X or Y Button on Player Entry)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 64 + 3,
     ),
-    "Free Run: MAGMA FLOWS Finish 1 lap in under 01:10:00!": KARLocationData(
+    "Air Ride: Free Run: MAGMA FLOWS Finish 1 lap in under 01:10:00!": KARLocationData(
         228,
         "Free Run: MAGMA FLOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 68 + 3,
     ),
-    "Free Run: BEANSTALK PARK Finish 1 lap in under 00:58:00!": KARLocationData(
+    "Air Ride: Free Run: BEANSTALK PARK Finish 1 lap in under 00:58:00!": KARLocationData(
         229,
         "Free Run: BEANSTALK PARK",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 72 + 3,
     ),
-    "Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!": KARLocationData(
+    "Air Ride: Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!": KARLocationData(
         230,
         "Free Run: MACHINE PASSAGE",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 76 + 3,
     ),
-    "Make your lap time's last two digits the same!": KARLocationData(
+    "Air Ride: Make your lap time's last two digits the same!": KARLocationData(
         231,
         "Air Ride",
         "Sound Test: Results Screen",
@@ -1687,49 +1687,49 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 88 + 3,
     ),
-    "FANTASY MEADOWS: Swallow over 20 enemies and take 1st place!": KARLocationData(
+    "Air Ride: FANTASY MEADOWS: Swallow over 20 enemies and take 1st place!": KARLocationData(
         234,
         "Air Ride: FANTASY MEADOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 92 + 3,
     ),
-    "CHECKER KNIGHTS: Use spin panels 7 times or more and take 1st place!": KARLocationData(
+    "Air Ride: CHECKER KNIGHTS: Use spin panels 7 times or more and take 1st place!": KARLocationData(
         235,
         "Air Ride: CHECKER KNIGHTS",
         "Music: Checker (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 96 + 3,
     ),
-    "SKY SANDS: Break all of the coral and finish in 1st place!": KARLocationData(
+    "Air Ride: SKY SANDS: Break all of the coral and finish in 1st place!": KARLocationData(
         236,
         "Air Ride: SKY SANDS",
         "Check off an empty box of your choice!",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 100 + 3,
     ),
-    "MACHINE PASSAGE: Shoot 3 characters out of the cannon at one time!": KARLocationData(
+    "Air Ride: MACHINE PASSAGE: Shoot 3 characters out of the cannon at one time!": KARLocationData(
         237,
         "Air Ride: MACHINE PASSAGE",
         "Music: Machine (X or Y Button on Select Course)",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 104 + 3,
     ),
-    "MAGMA FLOWS: Bump into a flaming dragon!": KARLocationData(
+    "Air Ride: MAGMA FLOWS: Bump into a flaming dragon!": KARLocationData(
         238,
         "Air Ride: MAGMA FLOWS",
         "Check off an empty box of your choice!",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 108 + 3,
     ),
-    "Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!": KARLocationData(
+    "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!": KARLocationData(
         239,
         "Time Attack: MAGMA FLOWS",
         "None",
         KARLocationType.CHECKLISTBOX,
         AIR_RIDE_BASE_CHECKLIST_ADDRESS + 112 + 3,
     ),
-    "Time Attack: CHECKER KNIGHTS Finish in under 03:55:00 on Warpstar!": KARLocationData(
+    "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 03:55:00 on Warpstar!": KARLocationData(
         240,
         "Time Attack: CHECKER KNIGHTS",
         "None",
@@ -1799,10 +1799,10 @@ location_name_groups = {
         "Stadium: DRAG RACE 3 Finish in less than 00:28:00 on Swerve Star!",
     },
     "City Trial: Free Run": {
-        "Free Run: Drive for a total of 2 hours or more!",
-        "Free Run: Drive for a total of 30 minutes or more!",
-        "Free Run: Drive for a total of 10 minutes or more!",
-        "Free Run: Change Air Ride Machines 10 times or more!",
+        "City Trial: Free Run: Drive for a total of 2 hours or more!",
+        "City Trial: Free Run: Drive for a total of 30 minutes or more!",
+        "City Trial: Free Run: Drive for a total of 10 minutes or more!",
+        "City Trial: Free Run: Change Air Ride Machines 10 times or more!",
     },
     "City Trial: Multiplayer": {
         "City Trial: Let time run out while all players are on the rails!",
@@ -1846,11 +1846,11 @@ location_name_groups = {
         "City Trial: break more than 1000 boxes!",
         "City Trial: pick up a total of over 1000 items!",
         "City Trial: Pick up a total of over 3000 items!",
-        "Free Run: Drive for a total of 2 hours or more!",
-        "Free Run: Drive for a total of 30 minutes or more!",
-        "Free Run: Drive for a total of 10 minutes or more!",
-        "In one match, complete both Dragoon and Hydra!",
-        "Fill in over 100 Checklist blocks! (City Trial)",
+        "City Trial: Free Run: Drive for a total of 2 hours or more!",
+        "City Trial: Free Run: Drive for a total of 30 minutes or more!",
+        "City Trial: Free Run: Drive for a total of 10 minutes or more!",
+        "City Trial: In one match, complete both Dragoon and Hydra!",
+        "City Trial: Fill in over 100 Checklist blocks!",
     },
     "Air Ride: Races": {
         "Air Ride: MAGMA FLOWS Race over 4,800 feet in 2 minutes!",
@@ -1888,172 +1888,172 @@ location_name_groups = {
         "Air Ride: Finish in 1st place with Needle ability!",
     },
     "Air Ride: Free Run": {
-        "Free Run: FANTASY MEADOWS Finish 1 lap in under 00:21:00!",
-        "Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!",
-        "Free Run: FROZEN HILLSIDE Finish 1 lap in under 01:10:00!",
-        "Free Run: MAGMA FLOWS Finish 1 lap in under 01:01:00!",
-        "Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!",
-        "Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:35:00!",
-        "Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!",
-        "Free Run: SKY SANDS Finish 1 lap in under 01:05:00!",
-        "Free Run: FROZEN HILLSIDE Finish 1 lap in under 00:58:00!",
-        "Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!",
-        "Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!",
-        "Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:20:00!",
-        "Free Run: CELESTIAL VALLEY Finish 1 lap in under 01:10:00!",
-        "Free Run: SKY SANDS Finish 1 lap in under 00:53:00!",
-        "Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!",
-        "Free Run: BEANSTALK PARK Finish 1 lap in under 01:07:00!",
-        "Free Run: MACHINE PASSAGE Finish 1 lap in under 00:56:00!",
-        "Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!",
-        "Free Run: FANTASY MEADOWS Finish 1 lap in under 00:24:00!",
-        "Free Run: CELESTIAL VALLEY Finish 1 lap in under 00:57:00!",
-        "Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!",
-        "Free Run: MAGMA FLOWS Finish 1 lap in under 01:10:00!",
-        "Free Run: BEANSTALK PARK Finish 1 lap in under 00:58:00!",
-        "Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!",
+        "Air Ride: Free Run: FANTASY MEADOWS Finish 1 lap in under 00:21:00!",
+        "Air Ride: Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!",
+        "Air Ride: Free Run: FROZEN HILLSIDE Finish 1 lap in under 01:10:00!",
+        "Air Ride: Free Run: MAGMA FLOWS Finish 1 lap in under 01:01:00!",
+        "Air Ride: Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!",
+        "Air Ride: Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:35:00!",
+        "Air Ride: Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!",
+        "Air Ride: Free Run: SKY SANDS Finish 1 lap in under 01:05:00!",
+        "Air Ride: Free Run: FROZEN HILLSIDE Finish 1 lap in under 00:58:00!",
+        "Air Ride: Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!",
+        "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!",
+        "Air Ride: Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:20:00!",
+        "Air Ride: Free Run: CELESTIAL VALLEY Finish 1 lap in under 01:10:00!",
+        "Air Ride: Free Run: SKY SANDS Finish 1 lap in under 00:53:00!",
+        "Air Ride: Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!",
+        "Air Ride: Free Run: BEANSTALK PARK Finish 1 lap in under 01:07:00!",
+        "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 00:56:00!",
+        "Air Ride: Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!",
+        "Air Ride: Free Run: FANTASY MEADOWS Finish 1 lap in under 00:24:00!",
+        "Air Ride: Free Run: CELESTIAL VALLEY Finish 1 lap in under 00:57:00!",
+        "Air Ride: Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!",
+        "Air Ride: Free Run: MAGMA FLOWS Finish 1 lap in under 01:10:00!",
+        "Air Ride: Free Run: BEANSTALK PARK Finish 1 lap in under 00:58:00!",
+        "Air Ride: Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!",
     },
     "Air Ride: Time Attack": {
-        "Time Attack: FANTASY MEADOWS Finish in under 01:00:00!",
-        "Time Attack: SKY SANDS Finish in under 02:40:00!",
-        "Time Attack: MAGMA FLOWS Finish in under 03:04:00!",
-        "Time Attack: MACHINE PASSAGE Finish in under 02:48:00!",
-        "Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!",
-        "Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!",
-        "Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!",
-        "Time Attack: BEANSTALK PARK Finish in under 03:10:00!",
-        "Time Attack: CHECKER KNIGHTS Finish in under 04:30:00!",
-        "Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!",
-        "Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!",
-        "Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!",
-        "Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!",
-        "Time Attack: CELESTIAL VALLEY Finish in under 02:56:00!",
-        "Time Attack: FROZEN HILLSIDE Finish in under 02:50:00!",
-        "Time Attack: BEANSTALK PARK Finish in under 02:55:00!",
-        "Time Attack: CHECKER KNIGHTS Finish in under 04:00:00!",
-        "Time Attack: MACHINE PASSAGE Finish in under 02:50:00 on Rex Wheelie!",
-        "Time Attack: FANTASY MEADOWS Finish in under 01:12:00!",
-        "Time Attack: SKY SANDS Finish in under 03:10:00!",
-        "Time Attack: MAGMA FLOWS Finish in under 03:20:00!",
-        "Time Attack: MACHINE PASSAGE Finish in under 03:10:00!",
-        "Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!",
-        "Time Attack: CHECKER KNIGHTS Finish in under 03:55:00 on Warpstar!",
+        "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:00:00!",
+        "Air Ride: Time Attack: SKY SANDS Finish in under 02:40:00!",
+        "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:04:00!",
+        "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 02:48:00!",
+        "Air Ride: Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!",
+        "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!",
+        "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!",
+        "Air Ride: Time Attack: BEANSTALK PARK Finish in under 03:10:00!",
+        "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 04:30:00!",
+        "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!",
+        "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!",
+        "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!",
+        "Air Ride: Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!",
+        "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 02:56:00!",
+        "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 02:50:00!",
+        "Air Ride: Time Attack: BEANSTALK PARK Finish in under 02:55:00!",
+        "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 04:00:00!",
+        "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 02:50:00 on Rex Wheelie!",
+        "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:12:00!",
+        "Air Ride: Time Attack: SKY SANDS Finish in under 03:10:00!",
+        "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:20:00!",
+        "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 03:10:00!",
+        "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!",
+        "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 03:55:00 on Warpstar!",
     },
     "Air Ride: MAGMA FLOWS": {
         "Air Ride: MAGMA FLOWS Race over 4,800 feet in 2 minutes!",
-        "Time Attack: MAGMA FLOWS Finish in under 03:04:00!",
-        "Free Run: MAGMA FLOWS Finish 1 lap in under 01:01:00!",
-        "MAGMA FLOWS: Use all of the Boost Panels and finish in 1st place!",
+        "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:04:00!",
+        "Air Ride: Free Run: MAGMA FLOWS Finish 1 lap in under 01:01:00!",
+        "Air Ride: MAGMA FLOWS: Use all of the Boost Panels and finish in 1st place!",
         "Air Ride: MAGMA FLOWS Finish 2 laps in under 02:20:00!",
-        "Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!",
-        "MAGMA FLOWS: Use all the volcano rails and finish in 1st place!",
+        "Air Ride: Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!",
+        "Air Ride: MAGMA FLOWS: Use all the volcano rails and finish in 1st place!",
         "Air Ride: MAGMA FLOWS Finish 2 laps in under 02:01:00!",
-        "Time Attack: MAGMA FLOWS Finish in under 03:20:00!",
-        "Free Run: MAGMA FLOWS Finish 1 lap in under 01:10:00!",
-        "MAGMA FLOWS: Bump into a flaming dragon!",
-        "Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!",
+        "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:20:00!",
+        "Air Ride: Free Run: MAGMA FLOWS Finish 1 lap in under 01:10:00!",
+        "Air Ride: MAGMA FLOWS: Bump into a flaming dragon!",
+        "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!",
     },
     "Air Ride: FANTASY MEADOWS": {
         "Air Ride: FANTASY MEADOWS Race over 4,500 feet in 2 minutes!",
-        "Time Attack: FANTASY MEADOWS Finish in under 01:00:00!",
-        "Free Run: FANTASY MEADOWS Finish 1 lap in under 00:21:00!",
-        "FANTASY MEADOWS: Race 1 lap without dropping below 20 mph!",
+        "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:00:00!",
+        "Air Ride: Free Run: FANTASY MEADOWS Finish 1 lap in under 00:21:00!",
+        "Air Ride: FANTASY MEADOWS: Race 1 lap without dropping below 20 mph!",
         "Air Ride: FANTASY MEADOWS Finish 3 laps in under 01:20:00!",
-        "Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!",
-        "Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!",
+        "Air Ride: Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!",
+        "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!",
         "Air Ride: FANTASY MEADOWS Finish 3 laps in under 01:03:00!",
-        "Time Attack: FANTASY MEADOWS Finish in under 01:12:00!",
-        "Free Run: FANTASY MEADOWS Finish 1 lap in under 00:24:00!",
-        "FANTASY MEADOWS: Swallow over 20 enemies and take 1st place!",
+        "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:12:00!",
+        "Air Ride: Free Run: FANTASY MEADOWS Finish 1 lap in under 00:24:00!",
+        "Air Ride: FANTASY MEADOWS: Swallow over 20 enemies and take 1st place!",
     },
     "Air Ride: SKY SANDS": {
-        "Time Attack: SKY SANDS Finish in under 02:40:00!",
-        "SKY SANDS: Enter the quicksand 3 times and finish in 1st place!",
-        "Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!",
+        "Air Ride: Time Attack: SKY SANDS Finish in under 02:40:00!",
+        "Air Ride: SKY SANDS: Enter the quicksand 3 times and finish in 1st place!",
+        "Air Ride: Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!",
         "Air Ride: SKY SANDS Finish 2 laps in under 01:45:00!",
-        "Free Run: SKY SANDS Finish 1 lap in under 01:05:00!",
+        "Air Ride: Free Run: SKY SANDS Finish 1 lap in under 01:05:00!",
         "Air Ride: SKY SANDS Race over 4,000 feet in 2 minutes!",
-        "Free Run: SKY SANDS Finish 1 lap in under 00:53:00!",
-        "SKY SANDS: Open the trapdoor exactly 3 times and finish in 1st place!",
+        "Air Ride: Free Run: SKY SANDS Finish 1 lap in under 00:53:00!",
+        "Air Ride: SKY SANDS: Open the trapdoor exactly 3 times and finish in 1st place!",
         "Air Ride: SKY SANDS Finish 2 laps in under 02:05:00!",
-        "Time Attack: SKY SANDS Finish in under 03:10:00!",
-        "Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!",
-        "SKY SANDS: Break all of the coral and finish in 1st place!",
+        "Air Ride: Time Attack: SKY SANDS Finish in under 03:10:00!",
+        "Air Ride: Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!",
+        "Air Ride: SKY SANDS: Break all of the coral and finish in 1st place!",
     },
     "Air Ride: MACHINE PASSAGE": {
-        "Time Attack: MACHINE PASSAGE Finish in under 02:48:00!",
+        "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 02:48:00!",
         "Air Ride: MACHINE PASSAGE Race over 4,500 feet in 2 minutes!",
         "Air Ride: MACHINE PASSAGE Finish 2 laps in under 01:48:00!",
-        "Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!",
-        "MACHINE PASSAGE: Finish in 1st place without touching the walls even once!",
+        "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!",
+        "Air Ride: MACHINE PASSAGE: Finish in 1st place without touching the walls even once!",
         "Air Ride: MACHINE PASSAGE Finish 2 laps in under 02:10:00!",
-        "Free Run: MACHINE PASSAGE Finish 1 lap in under 00:56:00!",
-        "Time Attack: MACHINE PASSAGE Finish in under 02:50:00 on Rex Wheelie!",
-        "Time Attack: MACHINE PASSAGE Finish in under 03:10:00!",
-        "Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!",
-        "MACHINE PASSAGE: Shoot 3 characters out of the cannon at one time!",
+        "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 00:56:00!",
+        "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 02:50:00 on Rex Wheelie!",
+        "Air Ride: Time Attack: MACHINE PASSAGE Finish in under 03:10:00!",
+        "Air Ride: Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!",
+        "Air Ride: MACHINE PASSAGE: Shoot 3 characters out of the cannon at one time!",
     },
     "Air Ride: CELESTIAL VALLEY": {
         "Air Ride: CELESTIAL VALLEY Finish 2 laps in under 01:56:00!",
-        "Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!",
-        "CELESTIAL VALLEY: Use the Copy Chance Wheel on top of the tree!",
+        "Air Ride: Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!",
+        "Air Ride: CELESTIAL VALLEY: Use the Copy Chance Wheel on top of the tree!",
         "Air Ride: CELESTIAL VALLEY Race over 6,000 feet in 2 minutes!",
-        "Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!",
-        "Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!",
+        "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!",
+        "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!",
         "Air Ride: CELESTIAL VALLEY Finish 2 laps in under 02:20:00!",
-        "Time Attack: CELESTIAL VALLEY Finish in under 02:56:00!",
-        "Free Run: CELESTIAL VALLEY Finish 1 lap in under 01:10:00!",
-        "CELESTIAL VALLEY: Over one race, ride on both the left and right bridge railings!",
-        "Free Run: CELESTIAL VALLEY Finish 1 lap in under 00:57:00!",
+        "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 02:56:00!",
+        "Air Ride: Free Run: CELESTIAL VALLEY Finish 1 lap in under 01:10:00!",
+        "Air Ride: CELESTIAL VALLEY: Over one race, ride on both the left and right bridge railings!",
+        "Air Ride: Free Run: CELESTIAL VALLEY Finish 1 lap in under 00:57:00!",
     },
     "Air Ride: FROZEN HILLSIDE": {
-        "Free Run: FROZEN HILLSIDE Finish 1 lap in under 01:10:00!",
+        "Air Ride: Free Run: FROZEN HILLSIDE Finish 1 lap in under 01:10:00!",
         "Air Ride: FROZEN HILLSIDE Race 2 laps in under 02:20:00!",
-        "Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!",
-        "Free Run: FROZEN HILLSIDE Finish 1 lap in under 00:58:00!",
-        "Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!",
+        "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!",
+        "Air Ride: Free Run: FROZEN HILLSIDE Finish 1 lap in under 00:58:00!",
+        "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!",
         "Air Ride: FROZEN HILLSIDE Finish 2 laps in under 01:56:00!",
-        "Time Attack: FROZEN HILLSIDE Finish in under 02:50:00!",
-        "Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!",
-        "FROZEN HILLSIDE: Split at least 20 ice platforms and finish in 1st place!",
+        "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 02:50:00!",
+        "Air Ride: Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!",
+        "Air Ride: FROZEN HILLSIDE: Split at least 20 ice platforms and finish in 1st place!",
         "Air Ride: FROZEN HILLSIDE Race over 5,300 feet in 2 minutes!",
     },
     "Air Ride: BEANSTALK PARK": {
         "Air Ride: BEANSTALK PARK Finish 2 laps in under 01:56:00!",
-        "Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!",
+        "Air Ride: Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!",
         "Air Ride: BEANSTALK PARK Finish 2 laps in under 02:18:00!",
-        "Time Attack: BEANSTALK PARK Finish in under 03:10:00!",
-        "BEANSTALK PARK: Race over 3 laps without riding the Ferris wheel!",
-        "Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!",
+        "Air Ride: Time Attack: BEANSTALK PARK Finish in under 03:10:00!",
+        "Air Ride: BEANSTALK PARK: Race over 3 laps without riding the Ferris wheel!",
+        "Air Ride: Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!",
         "Air Ride: BEANSTALK PARK Race over 5,500 feet in 2 minutes!",
-        "Time Attack: BEANSTALK PARK Finish in under 02:55:00!",
-        "Free Run: BEANSTALK PARK Finish 1 lap in under 01:07:00!",
-        "BEANSTALK PARK: Swallow over 20 enemies and take 1st place!",
-        "Free Run: BEANSTALK PARK Finish 1 lap in under 00:58:00!",
+        "Air Ride: Time Attack: BEANSTALK PARK Finish in under 02:55:00!",
+        "Air Ride: Free Run: BEANSTALK PARK Finish 1 lap in under 01:07:00!",
+        "Air Ride: BEANSTALK PARK: Swallow over 20 enemies and take 1st place!",
+        "Air Ride: Free Run: BEANSTALK PARK Finish 1 lap in under 00:58:00!",
     },
     "Air Ride: CHECKER KNIGHTS": {
-        "Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:35:00!",
-        "CHECKER KNIGHTS: Break at least 2 walls and finish in 1st place!",
-        "Time Attack: CHECKER KNIGHTS Finish in under 04:30:00!",
-        "Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:20:00!",
-        "CHECKER KNIGHTS: Swallow over 20 enemies and finish in 1st place!",
+        "Air Ride: Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:35:00!",
+        "Air Ride: CHECKER KNIGHTS: Break at least 2 walls and finish in 1st place!",
+        "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 04:30:00!",
+        "Air Ride: Free Run: CHECKER KNIGHTS Finish 1 lap in under 01:20:00!",
+        "Air Ride: CHECKER KNIGHTS: Swallow over 20 enemies and finish in 1st place!",
         "Air Ride: CHECKER KNIGHTS Finish 2 laps in under 02:40:00!",
-        "Time Attack: CHECKER KNIGHTS Finish in under 04:00:00!",
-        "Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!",
+        "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 04:00:00!",
+        "Air Ride: Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!",
         "Air Ride: CHECKER KNIGHTS Race over 5,500 feet in 2 minutes!",
         "Air Ride: CHECKER KNIGHTS Finish 2 laps in under 03:05:00!",
-        "CHECKER KNIGHTS: Use spin panels 7 times or more and take 1st place!",
-        "Time Attack: CHECKER KNIGHTS Finish in under 03:55:00 on Warpstar!",
+        "Air Ride: CHECKER KNIGHTS: Use spin panels 7 times or more and take 1st place!",
+        "Air Ride: Time Attack: CHECKER KNIGHTS Finish in under 03:55:00 on Warpstar!",
     },
     "Air Ride: High Effort": {
-        "Defeat 100 or more enemies with exhaled stars!",
-        "Glide for more than 1 hour!",
-        "Swallow 200 or more enemies!",
-        "Glide for more than 30 minutes!",
-        "Defeat over 1,000 of your enemies!",
-        "Race over 300 laps!",
-        "Fill in over 100 Checklist blocks! (Air Ride)",
-        "Defeat over 300 of your enemies!",
-        "Race over 100 laps!",
+        "Air Ride: Defeat 100 or more enemies with exhaled stars!",
+        "Air Ride: Glide for more than 1 hour!",
+        "Air Ride: Swallow 200 or more enemies!",
+        "Air Ride: Glide for more than 30 minutes!",
+        "Air Ride: Defeat over 1,000 of your enemies!",
+        "Air Ride: Race over 300 laps!",
+        "Air Ride: Fill in over 100 Checklist blocks!",
+        "Air Ride: Defeat over 300 of your enemies!",
+        "Air Ride: Race over 100 laps!",
     },
 }
