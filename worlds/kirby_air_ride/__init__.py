@@ -345,10 +345,6 @@ class KARWorld(World):
                     air_ride_region.name, self.player
                 ) and state.can_reach_location(str(self.options.city_trial_goal.value), self.player)
 
-        from Utils import visualize_regions
-
-        visualize_regions(self.multiworld.get_region("Menu", self.player), "my_world.puml", show_entrance_names=True)
-
     def connect_city_trial_region(self, city_trial_region: Region) -> None:
         # free run region
         free_run = Region("City Trial: Free Run", self.player, self.multiworld)
