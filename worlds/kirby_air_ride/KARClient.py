@@ -462,10 +462,10 @@ class KARContext(CommonContext):
 
     async def update_energy_link(self) -> None:
         """
-        Check if the player has received patches and update the energy link value accordingly. Additionally,
-        add spent items to the item queue.
+        Check if the player has created energy and update the energy link value accordingly.
+        Additionally, add spent items to the item queue.
 
-        Energylink value is increased for each patch a player collects.
+        Energylink value is increased for each patch a player collects and for each object destroyed in City Trial.
         """
         energy = 0
 
