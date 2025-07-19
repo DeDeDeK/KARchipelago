@@ -4,6 +4,8 @@
   - [What is this?](#what-is-this)
   - [Where do I get the apworld?](#where-do-i-get-the-apworld)
   - [What is the goal of Kirby Air Ride in Archipelago?](#what-is-the-goal-of-kirby-air-ride-in-archipelago)
+    - [City Trial](#city-trial)
+    - [Air Ride](#air-ride)
   - [What does randomization do to this game? Which locations get shuffled?](#what-does-randomization-do-to-this-game-which-locations-get-shuffled)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
@@ -14,7 +16,7 @@
       - [Items](#items)
       - [Randomization](#randomization)
       - [Progression](#progression)
-      - [Air Ride and Top Ride](#air-ride-and-top-ride)
+      - [Top Ride](#top-ride)
       - [Multiplayer](#multiplayer)
       - [Code/misc](#codemisc)
   - [Contributing](#contributing)
@@ -30,8 +32,9 @@ You can get the apworld file and an example player configuration yaml in the [re
 
 ## What is the goal of Kirby Air Ride in Archipelago?
 
-Besides having fun being a part of a multiworld with friends, there are also a few pre-selected archipelago goals for the game, all related to City Trial, that will result in a "game complete":
+Besides having fun being a part of a multiworld with friends, there are also a few pre-selected archipelago goals for the game that will result in a "game complete":
 
+### City Trial
 - Fill in over 100 Checklist Boxes!
   - in the base game, this allows you to unlock viewing the game's ending
 - Fill in N Checklist Boxes!
@@ -39,18 +42,31 @@ Besides having fun being a part of a multiworld with friends, there are also a f
 - In one match, complete both Dragoon and Hydra!
   - this is the standard checkbox from the base game
 - Stadium: VS. KING DEDEDE KO King Dedede in less than a minute!
+- You can also specify the name of any checklist box to set that as your specific goal for City Trial.
+- None
+  - this disables City Trial from being a part of your world. No locations for City Trial will exist to be checked.
 
-You can also specify the name of any checklist box to set that as your specific goal.
+### Air Ride
+- Fill in over 100 Checklist Boxes!
+  - in the base game, this allows you to unlock viewing the game's ending
+- Fill in N Checklist Boxes!
+  - fill in as many checklist boxes as you want, you can configure the number from 1-120.
+- You can also specify the name of any checklist box to set that as your specific goal for Air Ride.
+- None
+  - this disables Air Ride from being a part of your world. No locations for Air Ride will exist to be checked.
+
+
+You can mix and match goals between City Trial and Air Ride. If there is a goal for both City Trial and Air ride, you can only complete your game by completing both goals.
 
 ## What does randomization do to this game? Which locations get shuffled?
 
-Currently, randomization affects nothing in the game except the AP items you receive for completing City Trial checkboxes or receive from other worlds.
+Currently, randomization affects nothing in the game except the AP items you receive for completing checkboxes or receive from other worlds.
 
 No locations are currently shuffled. Eventually, all checkboxes will be able to be randomized. 
 
 ## What does another world's item look like in Kirby Air Ride?
 
-There is no change in the graphical appearance of other's items. Completing checkboxes in City Trial checklist will earn whatever item is attached to that checkbox.
+There is no change in the graphical appearance of other's items. Completing checkboxes will earn whatever item is attached to that checkbox.
 
 ## What happens when the player receives an item?
 
@@ -65,6 +81,8 @@ Current items players are able to receive are:
 Any items will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run (after a few seconds have elapsed). 
 
 NOTE: you must collect any patch in the city after receiving patch items for the stat increases/decreases to take effect. 
+
+NOTE: There are currently no items that apply to Air Ride mode, but you can earn items for City Trial by completing Air Ride checkboxes.
 
 ### EnergyLink
 
@@ -118,8 +136,7 @@ Much of the planned features are gated by progress on modding the game itself or
 - progressive hot dogs/food items
 - other progressive rng-related items
 
-#### Air Ride and Top Ride
-- Air Ride checklist and items
+#### Top Ride
 - Top Ride checklist and items
 
 #### Multiplayer
