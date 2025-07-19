@@ -53,6 +53,9 @@ class MemoryAddress(IntEnum):
     # after exiting a stage: 0, but can randomly be high positive or negative numbers at any time
     CURR_STAGE_ID_ADDR = 0x805DD6CC
 
+    CITY_TRIAL_BASE_CHECKLIST_ADDRESS = 0x805369FC
+    AIR_RIDE_BASE_CHECKLIST_ADDRESS = 0x805367BC
+
 
 class MenuSelectionID(IntEnum):
     AIR_RIDE = 0

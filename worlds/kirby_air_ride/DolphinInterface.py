@@ -23,7 +23,9 @@ class DolphinInterface:
         self.transition_wait: int = 6
         self.transitioned: bool = False
         self.player_1_patches: dict[PatchType, float] = {
-            patch_type: 0 for patch_type in PATCH_MAP if "Up" in patch_type and "Permanent" not in patch_type
+            patch_type: 0
+            for patch_type in PATCH_MAP
+            if "Up" in patch_type.value and "Permanent" not in patch_type.value
         }
         self.destruction_count: int = 0
         self.current_stage: StageName | None = None
