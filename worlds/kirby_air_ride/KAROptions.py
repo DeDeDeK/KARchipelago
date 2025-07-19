@@ -70,9 +70,9 @@ class CityTrialGoal(TextChoice):
     """
 
     display_name = "City Trial Goal"
-    option_100_checklist_blocks = "Fill in over 100 Checklist blocks! (City Trial)"
-    option_n_checklist_blocks = "Fill in N Checklist blocks! (City Trial)"
-    option_hydra_and_dragoon = "In one match, complete both Dragoon and Hydra!"
+    option_100_checklist_blocks = "City Trial: Fill in over 100 Checklist blocks!"
+    option_n_checklist_blocks = "City Trial: Fill in N Checklist blocks!"
+    option_hydra_and_dragoon = "City Trial: In one match, complete both Dragoon and Hydra!"
     option_beat_king_dedede = "Stadium: VS. KING DEDEDE KO King Dedede in less than a minute!"
     option_none = "None"
     default = option_100_checklist_blocks
@@ -144,8 +144,8 @@ class AirRideGoal(TextChoice):
     """
 
     display_name = "Air Ride Goal"
-    option_100_checklist_blocks = "Fill in over 100 Checklist blocks! (Air Ride)"
-    option_n_checklist_blocks = "Fill in N Checklist blocks! (Air Ride)"
+    option_100_checklist_blocks = "Air Ride: Fill in over 100 Checklist blocks!"
+    option_n_checklist_blocks = "Air Ride: Fill in N Checklist blocks!"
     option_none = "None"
     default = option_none
 
