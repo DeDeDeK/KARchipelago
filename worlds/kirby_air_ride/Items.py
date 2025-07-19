@@ -6,9 +6,6 @@ from BaseClasses import Item, ItemClassification
 from .KARData import EffectType, PatchType
 from .Locations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE
 
-# NOTE: .value is needed here due to AP needing base string class for anything that gets into multidata. StrEnums are not
-# converted to base str by AP.
-
 
 class KARItemType(StrEnum):
     PATCH = "Patch"
@@ -65,6 +62,9 @@ class KARItem(Item):
         self.type = data.type
         self.item_id = data.item_id
 
+
+# NOTE: .value is needed here due to AP needing base string class for anything that gets into multidata. StrEnums are not
+# converted to base str by AP.
 
 ITEM_TABLE: dict[str, KARItemData] = {
     # "Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 1, 1, 0x0000),
