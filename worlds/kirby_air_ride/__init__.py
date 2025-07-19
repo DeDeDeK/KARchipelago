@@ -13,7 +13,7 @@ from worlds.LauncherComponents import (
     launch_subprocess,
 )
 
-from .Items import ITEM_TABLE, KARItem, item_name_groups
+from .Items import ITEM_TABLE, KARItem, KARItemType, item_name_groups
 from .KAROptions import KAROptions, kar_option_groups
 from .Locations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, KARLocation, location_name_groups
 
@@ -527,7 +527,9 @@ class KARWorld(World):
         air_ride_region.connect(air_ride_sky_sands)
         air_ride_region.connect(air_ride_checker_knights)
         air_ride_region.connect(
-            air_ride_nebula_belt, None, lambda state: state.can_reach_location("Race over 100 laps!", self.player)
+            air_ride_nebula_belt,
+            None,
+            lambda state: state.can_reach_location("Air Ride: Race over 100 laps!", self.player),
         )
 
         # connect courses to time attack
@@ -540,7 +542,9 @@ class KARWorld(World):
         time_attack_region.connect(time_attack_sky_sands)
         time_attack_region.connect(time_attack_checker_knights)
         time_attack_region.connect(
-            time_attack_nebula_belt, None, lambda state: state.can_reach_location("Race over 100 laps!", self.player)
+            time_attack_nebula_belt,
+            None,
+            lambda state: state.can_reach_location("Air Ride: Race over 100 laps!", self.player),
         )
 
         # connect courses to free run
@@ -553,7 +557,9 @@ class KARWorld(World):
         free_run_region.connect(free_run_sky_sands)
         free_run_region.connect(free_run_checker_knights)
         free_run_region.connect(
-            free_run_nebula_belt, None, lambda state: state.can_reach_location("Race over 100 laps!", self.player)
+            free_run_nebula_belt,
+            None,
+            lambda state: state.can_reach_location("Air Ride: Race over 100 laps!", self.player),
         )
 
     def set_rules(self) -> None:
@@ -577,7 +583,7 @@ class KARWorld(World):
 
         # City Trial Rules
         set_rule_if_exists(
-            "Unlock Hydra Parts X, Y, and Z on the Checklist!",
+            "City Trial: Unlock Hydra Parts X, Y, and Z on the Checklist!",
             lambda state: state.can_reach_location(
                 "City Trial: Destroy all of the dilapidated houses!", self.player
             )  # X
@@ -588,7 +594,7 @@ class KARWorld(World):
         )
 
         set_rule_if_exists(
-            "Unlock Dragoon Parts A, B, and C on the Checklist!",
+            "City Trial: Unlock Dragoon Parts A, B, and C on the Checklist!",
             lambda state: state.can_reach_location("Stadium: HIGH JUMP Jump higher than 1,000 feet!", self.player)  # A
             and state.can_reach_location(
                 "Stadium: DESTRUCTION DERBY (All) KO enemies over 150 times!", self.player
@@ -597,103 +603,107 @@ class KARWorld(World):
         )
 
         set_rule_if_exists(
-            "In one match, complete both Dragoon and Hydra!",
-            lambda state: state.can_reach_location("Unlock Hydra Parts X, Y, and Z on the Checklist!", self.player)
-            and state.can_reach_location("Unlock Dragoon Parts A, B, and C on the Checklist!", self.player),
+            "City Trial: In one match, complete both Dragoon and Hydra!",
+            lambda state: state.can_reach_location(
+                "City Trial: Unlock Hydra Parts X, Y, and Z on the Checklist!", self.player
+            )
+            and state.can_reach_location("City Trial: Unlock Dragoon Parts A, B, and C on the Checklist!", self.player),
         )
 
         # Air Ride Rules
         set_rule_if_exists(
-            "Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!",
-            lambda state: state.can_reach_location("Defeat 10 or more enemies using the Quick Spin!", self.player),
-        )
-
-        set_rule_if_exists(
-            "Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!",
+            "Air Ride: Time Attack: MAGMA FLOWS Finish in under 03:15:00 on Shadow Star!",
             lambda state: state.can_reach_location(
-                "In any mode other than Free Run, reach the goal a total of 3 times!", self.player
+                "Air Ride: Defeat 10 or more enemies using the Quick Spin!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!",
+            "Air Ride: Time Attack: SKY SANDS Finish in under 02:40:00 on Wagon Star!",
             lambda state: state.can_reach_location(
-                "In any mode other than Free Run, reach the goal a total of 3 times!", self.player
+                "Air Ride: In any mode other than Free Run, reach the goal a total of 3 times!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!",
+            "Air Ride: Free Run: FANTASY MEADOWS Do 1 lap under 00:23:00 on Wagon Star!",
             lambda state: state.can_reach_location(
-                "Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!", self.player
+                "Air Ride: In any mode other than Free Run, reach the goal a total of 3 times!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!",
+            "Air Ride: Free Run: FROZEN HILLSIDE Do 1 lap under 01:10:00 on Formula Star!",
             lambda state: state.can_reach_location(
-                "Air Ride: CHECKER KNIGHTS Finish 2 laps in under 03:05:00!", self.player
+                "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:14:00!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!",
+            "Air Ride: Free Run: CELESTIAL VALLEY Do 1 lap under 01:02:00 on Slick Star!",
             lambda state: state.can_reach_location(
                 "Air Ride: CHECKER KNIGHTS Finish 2 laps in under 03:05:00!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!",
+            "Air Ride: Time Attack: FANTASY MEADOWS Finish in under 01:05:00 on Slick Star!",
             lambda state: state.can_reach_location(
-                "MAGMA FLOWS: Use all the volcano rails and finish in 1st place!", self.player
+                "Air Ride: CHECKER KNIGHTS Finish 2 laps in under 03:05:00!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!",
+            "Air Ride: Free Run: MAGMA FLOWS Do 1 lap under 01:02:00 on Turbo Star!",
             lambda state: state.can_reach_location(
-                "MAGMA FLOWS: Use all the volcano rails and finish in 1st place!", self.player
+                "Air Ride: MAGMA FLOWS: Use all the volcano rails and finish in 1st place!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!",
+            "Air Ride: Time Attack: FROZEN HILLSIDE Finish in under 03:10:00 on Turbo Star!",
             lambda state: state.can_reach_location(
-                "Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!", self.player
+                "Air Ride: MAGMA FLOWS: Use all the volcano rails and finish in 1st place!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!",
+            "Air Ride: Time Attack: BEANSTALK PARK Finish in under 03:00:00 on Rocket Star!",
             lambda state: state.can_reach_location(
-                "Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!", self.player
+                "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!",
+            "Air Ride: Free Run: CHECKER KNIGHTS Do 1 lap under 01:25:00 on Rocket Star!",
+            lambda state: state.can_reach_location(
+                "Air Ride: Free Run: MACHINE PASSAGE Finish 1 lap in under 01:05:00!", self.player
+            ),
+        )
+
+        set_rule_if_exists(
+            "Air Ride: Free Run: BEANSTALK PARK Do 1 lap under 00:58:00 on Winged Star!",
             lambda state: state.can_reach_location(
                 "Air Ride: Finish in 1st place while flying through the air!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!",
+            "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 02:58:00 on Jet Star!",
             lambda state: state.can_reach_location(
                 "Air Ride: MACHINE PASSAGE Race over 4,500 feet in 2 minutes!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!",
+            "Air Ride: Free Run: SKY SANDS Do 1 lap under 01:05:00 on Bulk Star!",
             lambda state: state.can_reach_location(
-                "Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!", self.player
+                "Air Ride: Time Attack: CELESTIAL VALLEY Finish in under 03:20:00!", self.player
             ),
         )
 
         set_rule_if_exists(
-            "Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!",
+            "Air Ride: Free Run: MACHINE PASSAGE Do 1 lap under 00:57:00 on Swerve Star!",
             lambda state: state.can_reach_location("Air Ride: SKY SANDS Finish 2 laps in under 02:05:00!", self.player),
         )
 
@@ -722,13 +732,13 @@ class KARWorld(World):
             classification = self.item_classification_overrides.get(item_name, item_data.classification)
 
             # don't add checkbox reward items to the pool, they are already placed as locked if the option is enabled
-            if item_data.type == "Checkbox Reward":
+            if item_data.type == KARItemType.CHECKBOX_REWARD.value:
                 continue
             # don't add permanent patches to the pool if the option disables them
             if not self.options.city_trial_permanent_patches and "Permanent" in item_name:
                 continue
             # don't add effect items to the pool if they are not enabled
-            if not self.options.effect_items_enabled and item_data.type == "Effect":
+            if not self.options.effect_items_enabled and item_data.type == KARItemType.EFFECT.value:
                 continue
 
             if classification & ItemClassification.progression:
