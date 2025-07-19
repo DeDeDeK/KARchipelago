@@ -292,7 +292,6 @@ class DolphinInterface:
 
         for stage in STAGE_MAP.values():
             if stage.menu_selection == menu_selection and stage.stage_id == current_stage:
-                logger.info(f"Current stage: {stage.name}")
                 return stage.name
 
     def check_transition(self) -> Tuple[StageName | None, bool]:
@@ -307,14 +306,14 @@ class DolphinInterface:
         # Detect transition into the stage
         stage = self.get_current_stage()
         if stage is not None and stage != self.current_stage and not self.transitioned:
-            logger.info(f"transition into stage {stage.name} detected")
+            logger.debug(f"transition into stage {stage.value} detected")
             trigger = True
             self.transitioned = True
             self.transitioned_time = time.time()
             self.current_stage = stage
         # Detect transition out of the stage
         elif stage is None and stage != self.current_stage and self.transitioned:
-            logger.info(f"transition out of stage {self.current_stage} detected")
+            logger.debug(f"transition out of stage {self.current_stage} detected")
             self.transitioned = False
             self.current_stage = None
 
