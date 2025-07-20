@@ -12,6 +12,7 @@ class KARItemType(StrEnum):
     EFFECT = "Effect"
     CHECKBOX_REWARD = "Checkbox Reward"
     PROGRESSIVE_STADIUM = "Progressive Stadium"
+    FILLER = "Filler"
 
 
 class KARItemData(NamedTuple):
@@ -145,6 +146,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     EffectType.ONE_HP.value: KARItemData(KARItemType.EFFECT.value, ItemClassification.trap, 59, 10, None),
     EffectType.FULL_HEAL.value: KARItemData(KARItemType.EFFECT.value, ItemClassification.filler, 60, 10, None),
+    KARItemType.FILLER.value: KARItemData(KARItemType.FILLER.value, ItemClassification.filler, 61, 10, None),
     # 5 progressive stadiums to match the 5 unlockable stadiums
     # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
     # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
