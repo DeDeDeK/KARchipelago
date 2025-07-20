@@ -99,7 +99,6 @@ Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KA
 - Restarting the game client results in all permanent patches being received again
 - Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
 - Energylink is occasionally flaky with adding multiple items at once (via `amount` argument)
-- If traps are disabled and effect items are disabled, gen will fail because we have no other filler items
 - Players can not receive items on the following stages due to stage ID conflicts: 
   - Stadium: DESTRUCTION DERBY 4
   - Stadium: DESTRUCTION DERBY 5

@@ -37,7 +37,7 @@ class EffectItemsEnabled(Toggle):
     """
 
     display_name = "Effect Items Enabled"
-    default = 0
+    default = 1
 
 
 class CheckboxRewardItems(Toggle):
@@ -57,7 +57,7 @@ class EnergyLink(Toggle):
     energy to get specific patches or other items immediately.
     """
 
-    default = 0
+    default = 1
     display_name = "Energy Link"
 
 
