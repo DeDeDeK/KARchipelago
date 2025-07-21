@@ -228,12 +228,14 @@ class KARContext(CommonContext):
         Check if the player is currently dead in-game.
         If DeathLink is on, notify the server of the player's death.
         """
-        if not self.dolphin_interface.check_alive():
+        if not self.dolphin_interface.check_alive() and self.slot is not None:
             logger.debug("player is not alive")
             # in city trial, give the player 2 minutes to get back on an air ride machine until death is sent again
             # TODO: configurable option for length of time?
             # TODO: player can keep sending death by not getting on a vehicle. turn this into a trigger
-            if time.time() >= self.last_death_link + DEATH_LINK_COOLDOWN and self.slot is not None:
+            # TODO: currently, receiving a death also will reset this cooldown. might want to separate this from
+            # self.last_death_link
+            if time.time() >= self.last_death_link + DEATH_LINK_COOLDOWN:
                 await self.send_death(self.player_names[self.slot] + " exploded.")
             else:
                 logger.debug("did not send death (cooldown not elapsed)")
@@ -573,9 +575,12 @@ class KARContext(CommonContext):
                 logger.debug("in energylink update...")
                 await self.update_energy_link()
 
-        # check for death when in any stage and past transition period
+        # check for death when in City Trial and past transition period
         if self.death_link_enabled:
-            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
+            if (
+                self.dolphin_interface.current_stage == StageName.CITY_TRIAL
+                and self.dolphin_interface.transition_waited()
+            ):
                 logger.debug("in deathlink check...")
                 await self.check_death()
 
