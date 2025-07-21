@@ -266,7 +266,7 @@ class DolphinInterface:
         self.write_pointer_float(
             MemoryAddress.PLAYER_1_CURRENT_MACHINE_POINTER_ADDRESS.value,
             MemoryAddress.PLAYER_1_CURRENT_MACHINE_HP_OFFSET.value,
-            0,
+            0.0,
         )
 
     def check_game_running(self) -> bool:
