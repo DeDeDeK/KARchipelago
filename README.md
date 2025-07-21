@@ -86,7 +86,14 @@ NOTE: There are currently no items that apply to Air Ride mode, but you can earn
 
 ### EnergyLink
 
-If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
+If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any (archipelago) item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
+
+Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, except for All patches which cost 90.
+
+For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend):
+
+`/energylink_spend "Top Speed Up" 5`
+
 
 ## I need help! What do I do?
 
