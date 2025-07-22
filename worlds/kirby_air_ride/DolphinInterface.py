@@ -7,18 +7,15 @@ from CommonClient import logger
 
 from .KARData import PATCH_MAP, STAGE_MAP, EffectType, MemoryAddress, PatchType, StageName
 
-KAR_GAME_ID = b"GKYE01"
-
-# Memory access error messages
-MEMORY_READ_ERROR = "Failed to read {type} at {addr}: {error}"
-MEMORY_WRITE_ERROR = "Failed to write {type} at {addr}: {error}"
-
 
 class DolphinInterface:
     """Interface for all interactions with the Dolphin emulator."""
 
     def __init__(self) -> None:
         """Initialize the Dolphin interface with default values."""
+        self.kar_game_id = b"GKYE01"
+        self.memory_read_error_fmt = "Failed to read {type} at {addr}: {error}"
+        self.memory_write_error_fmt = "Failed to write {type} at {addr}: {error}"
         self.transitioned_time: float = time.time()
         self.transition_wait: int = 6
         self.transitioned: bool = False
@@ -67,7 +64,7 @@ class DolphinInterface:
             # returns an int
             return dolphin_memory_engine.read_byte(console_address)
         except Exception as e:
-            logger.warning(MEMORY_READ_ERROR.format(type="byte", addr=hex(console_address), error=str(e)))
+            logger.warning(self.memory_read_error_fmt.format(type="byte", addr=hex(console_address), error=str(e)))
             return 0
 
     def read_bytes(self, console_address: int, num_bytes: int) -> bytes:
@@ -76,7 +73,9 @@ class DolphinInterface:
             # returns bytes
             return dolphin_memory_engine.read_bytes(console_address, num_bytes)
         except Exception as e:
-            logger.warning(MEMORY_READ_ERROR.format(type=f"{num_bytes} bytes", addr=hex(console_address), error=str(e)))
+            logger.warning(
+                self.memory_read_error_fmt.format(type=f"{num_bytes} bytes", addr=hex(console_address), error=str(e))
+            )
             return b""
 
     def read_short(self, console_address: int) -> int:
@@ -84,7 +83,7 @@ class DolphinInterface:
         try:
             return int.from_bytes(dolphin_memory_engine.read_bytes(console_address, 2), byteorder="big")
         except Exception as e:
-            logger.warning(MEMORY_READ_ERROR.format(type="short", addr=hex(console_address), error=str(e)))
+            logger.warning(self.memory_read_error_fmt.format(type="short", addr=hex(console_address), error=str(e)))
             return 0
 
     def read_float(self, console_address: int) -> float:
@@ -93,7 +92,7 @@ class DolphinInterface:
             # returns a float
             return dolphin_memory_engine.read_float(console_address)
         except Exception as e:
-            logger.warning(MEMORY_READ_ERROR.format(type="float", addr=hex(console_address), error=str(e)))
+            logger.warning(self.memory_read_error_fmt.format(type="float", addr=hex(console_address), error=str(e)))
             return 0.0
 
     def write_short(self, console_address: int, value: int) -> bool:
@@ -107,7 +106,7 @@ class DolphinInterface:
             dolphin_memory_engine.write_bytes(console_address, value.to_bytes(2, byteorder="big"))
             return True
         except Exception as e:
-            logger.warning(MEMORY_WRITE_ERROR.format(type="short", addr=hex(console_address), error=str(e)))
+            logger.warning(self.memory_write_error_fmt.format(type="short", addr=hex(console_address), error=str(e)))
             return False
 
     def write_float(self, console_address: int, value: float) -> bool:
@@ -122,7 +121,7 @@ class DolphinInterface:
             dolphin_memory_engine.write_float(console_address, value)
             return True
         except Exception as e:
-            logger.warning(MEMORY_WRITE_ERROR.format(type="float", addr=hex(console_address), error=str(e)))
+            logger.warning(self.memory_write_error_fmt.format(type="float", addr=hex(console_address), error=str(e)))
             return False
 
     def read_pointer(self, console_address: int, offset: int, byte_count: int) -> Optional[bytes]:
@@ -146,7 +145,7 @@ class DolphinInterface:
             return None
         except Exception as e:
             logger.warning(
-                MEMORY_READ_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
+                self.memory_read_error_fmt.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
             )
             return None
 
@@ -169,7 +168,9 @@ class DolphinInterface:
             return True
         except Exception as e:
             logger.warning(
-                MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
+                self.memory_write_error_fmt.format(
+                    type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)
+                )
             )
             return False
 
@@ -192,7 +193,9 @@ class DolphinInterface:
             return True
         except Exception as e:
             logger.warning(
-                MEMORY_WRITE_ERROR.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
+                self.memory_write_error_fmt.format(
+                    type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)
+                )
             )
             return False
 
@@ -276,7 +279,7 @@ class DolphinInterface:
         Returns:
             True if the game is running, False otherwise
         """
-        return self.read_bytes(0x80000000, 6) == KAR_GAME_ID
+        return self.read_bytes(MemoryAddress.BASE_MEMORY_ADDRESS.value, 6) == self.kar_game_id
 
     def get_current_stage(self) -> StageName | None:
         """
