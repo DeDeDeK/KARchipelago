@@ -278,8 +278,8 @@ class KARContext(CommonContext):
                     # 00 = locked, not visible
                     # 01 = flagged for unlocking
                     # 10 = locked, visible
-                    # TODO: there seems to be one additional value the game uses sometimes that isn't included here
-                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10])
+                    # 11 = visible, flagged for unlocking
+                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10, 0x11])
 
                 if checked:
                     # TODO: can gate stadium unlocks and other locations by checking if we've received a "progressive stadium"
@@ -375,9 +375,9 @@ class KARContext(CommonContext):
                 [f"{LOCATION_LOOKUP_ID_TO_NAME[location_id]} ({location_id})" for location_id in new_locations_checked],
             )
 
-    def give_item(self, item: NetworkItem) -> None:
+    def give_item(self, item: NetworkItem) -> NetworkItem | None:
         """
-        Give an item to the player in-game. Removes the item from the item queue only if it was given.
+        Give an item to the player in-game. Returns the item if it was successfully given.
 
         Args:
             item: NetworkItem
@@ -392,15 +392,13 @@ class KARContext(CommonContext):
                     patch_type = get_patch_type_from_item_name(item_name)
                     if patch_type is not None:
                         self.dolphin_interface.increment_player_patch(patch_type, delta)
-                    self.items_queue.remove(item)
+                    return item
             case KARItemType.CHECKBOX_REWARD.value:
-                self.items_queue.remove(item)
-                pass
+                return item
             case KARItemType.PROGRESSIVE_STADIUM.value:
                 # determine the next progressive stadium in logic
                 # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
-                self.items_queue.remove(item)
-                pass
+                return item
             case KARItemType.EFFECT.value:
                 if self.dolphin_interface.current_stage in (
                     StageName.CITY_TRIAL,
@@ -414,17 +412,23 @@ class KARContext(CommonContext):
                     effect_type = get_effect_type_from_item_name(item_name)
                     if effect_type is not None:
                         self.dolphin_interface.apply_effect_item(effect_type)
-                    self.items_queue.remove(item)
+                    return item
 
-    async def give_items(self, items: List[NetworkItem]) -> None:
+    async def give_items(self, items: List[NetworkItem]) -> List[NetworkItem]:
         """
-        Give the player all outstanding items they have yet to receive.
+        Give the player all outstanding items they have yet to receive. Returns the list of items successfully given.
 
         Args:
             items: The list of NetworkItems from the server.
         """
-        for item in items:
-            self.give_item(item)
+        given_items: list[NetworkItem] = []
+        # create a copy of the list to avoid iterating over a possibly changing item list
+        for item in list(items):
+            item_given = self.give_item(item)
+            if item_given is not None:
+                given_items.append(item_given)
+
+        return given_items
 
     async def shutdown(self) -> None:
         """Shutdown the client and clean up resources."""
@@ -559,6 +563,11 @@ class KARContext(CommonContext):
         if transition_trigger:
             # queue up permanent patches if player has transitioned into City Trial
             # TODO: fix this giving the player items again if they close and reopen the client.
+            # TODO: this will not give players permanent patches if they are off of a vehicle when the patches
+            # are given. The game resets the patches to 0 when off of a vehicle, and then seems to set the values
+            # back to whatever the value was when they got off of the vehicle
+            # MEGA TODO: getting on a different vehicle uses different addresses for patches?? Do patch values need
+            # to follow a pointer??
             if stage_name == StageName.CITY_TRIAL:
                 logger.debug("queueing permanent patches...")
                 # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
@@ -588,7 +597,9 @@ class KARContext(CommonContext):
         if len(self.items_queue) > 0:
             if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
                 logger.debug("in items give...")
-                await self.give_items(self.items_queue)
+                given_items = await self.give_items(self.items_queue)
+                for item in given_items:
+                    self.items_queue.remove(item)
 
         # check locations
         await self.send_check_locations()
