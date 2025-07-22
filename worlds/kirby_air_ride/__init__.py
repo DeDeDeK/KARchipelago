@@ -13,10 +13,9 @@ from worlds.LauncherComponents import (
     launch_subprocess,
 )
 
-from .Items import ITEM_TABLE, KARItem, KARItemType, item_name_groups
-from .KARData import EffectType
+from .KARItems import ITEM_TABLE, KARItem, KARItemType, item_name_groups
+from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, KARLocation, location_name_groups
 from .KAROptions import KAROptions, kar_option_groups
-from .Locations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, KARLocation, location_name_groups
 
 
 def run_client() -> None:

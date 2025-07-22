@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 
 class MemoryAddress(IntEnum):
+    BASE_MEMORY_ADDRESS = 0x80000000
     # Player 1 stat patch addresses
     # Number of patches for player 1 is stored at these addresses. Values start at -2 float except for HP, which starts at 0
     PLAYER_1_STAT_BOOST_PATCH_AMOUNT = 0x81578630
