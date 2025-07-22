@@ -15,27 +15,17 @@ from CommonClient import (
 from NetUtils import ClientStatus, NetworkItem
 
 from .DolphinInterface import DolphinInterface, PatchType
-from .Items import ITEM_TABLE, LOOKUP_ID_TO_NAME, KARItemType
 from .KARData import StageName, get_effect_type_from_item_name, get_patch_type_from_item_name
-from .KAROptions import AirRideGoal, CityTrialGoal
-from .Locations import (
+from .KARItems import ITEM_TABLE, LOOKUP_ID_TO_NAME, KARItemType
+from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_LOOKUP_ID_TO_NAME,
     KARLocationType,
 )
+from .KAROptions import AirRideGoal, CityTrialGoal
 
-# Connection status messages
-CONNECTION_REFUSED_GAME_STATUS = "Dolphin failed to connect. Please make sure your emulator is running and load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
-CONNECTION_CONNECTED_STATUS = "Dolphin connected successfully."
-CONNECTION_INITIAL_STATUS = "Dolphin connection has not been initiated."
-
-# Constants for game state
-DEATH_LINK_COOLDOWN = 120  # seconds
-DOLPHIN_RECONNECT_DELAY = 5  # seconds
-ENERGYLINK_ITEM_COST = 10  # Joules
-
-CLIENT_VERSION = "v0.3.0"
+CLIENT_VERSION = "v0.3.1"
 
 
 class KARCommandProcessor(ClientCommandProcessor):
@@ -112,9 +102,13 @@ class KARContext(CommonContext):
             password: Password for server authentication.
         """
         super().__init__(server_address, password)
+        self.connection_refused_game_status = "Dolphin failed to connect. Please make sure your emulator is running and load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
+        self.connection_connected_game_status = "Dolphin connected successfully."
+        self.connection_initial_status = "Dolphin connection has not been initiated."
         self.dolphin_interface = DolphinInterface()
         self.dolphin_sync_task: Optional[asyncio.Task[None]] = None
-        self.dolphin_status: str = CONNECTION_INITIAL_STATUS
+        self.dolphin_status: str = self.connection_initial_status
+        self.dolphin_reconnect_delay: int = 5
         self.city_trial_enabled: bool = False
         self.city_trial_goal: str = ""
         self.city_trial_goal_checklist_amount: int = 0
@@ -128,7 +122,9 @@ class KARContext(CommonContext):
         self.items_queue: List[NetworkItem] = []
         self.energy_link_enabled: bool = False
         self.energy_link_items_queue: list[int] = []
+        self.energy_link_item_cost: int = 10
         self.death_link_enabled: bool = False
+        self.death_link_cooldown: int = 120
 
     async def disconnect(self, allow_autoreconnect: bool = False) -> None:
         """
@@ -235,7 +231,7 @@ class KARContext(CommonContext):
             # TODO: player can keep sending death by not getting on a vehicle. turn this into a trigger
             # TODO: currently, receiving a death also will reset this cooldown. might want to separate this from
             # self.last_death_link
-            if time.time() >= self.last_death_link + DEATH_LINK_COOLDOWN:
+            if time.time() >= self.last_death_link + self.death_link_cooldown:
                 await self.send_death(self.player_names[self.slot] + " exploded.")
             else:
                 logger.debug("did not send death (cooldown not elapsed)")
@@ -528,11 +524,11 @@ class KARContext(CommonContext):
             logger.info(f"Invalid item name: {item_name}")
             return
 
-        cost = ENERGYLINK_ITEM_COST * int(amount)
+        cost = self.energy_link_item_cost * int(amount)
         patch_type = get_patch_type_from_item_name(item_name)
         if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
             # ALL patches cost 9x as much
-            cost = ENERGYLINK_ITEM_COST * 9 * int(amount)
+            cost = self.energy_link_item_cost * 9 * int(amount)
 
         if self.current_energy_link_value < cost:
             logger.info(f"Not enough energy. Current value: {self.current_energy_link_value} Need: {cost}")
@@ -621,18 +617,18 @@ class KARContext(CommonContext):
         if self.dolphin_interface.is_hooked():
             if not self.dolphin_interface.check_game_running():
                 self.dolphin_interface.unhook()
-                self.dolphin_status = CONNECTION_REFUSED_GAME_STATUS
+                self.dolphin_status = self.connection_refused_game_status
                 logger.info(self.dolphin_status)
-                await asyncio.sleep(DOLPHIN_RECONNECT_DELAY)
+                await asyncio.sleep(self.dolphin_reconnect_delay)
                 return False
 
-            self.dolphin_status = CONNECTION_CONNECTED_STATUS
+            self.dolphin_status = self.connection_connected_game_status
             logger.info(self.dolphin_status)
             return True
 
-        self.dolphin_status = CONNECTION_REFUSED_GAME_STATUS
+        self.dolphin_status = self.connection_refused_game_status
         logger.info(self.dolphin_status)
-        await asyncio.sleep(DOLPHIN_RECONNECT_DELAY)
+        await asyncio.sleep(self.dolphin_reconnect_delay)
         return False
 
     async def run_dolphin_sync(self) -> None:
@@ -652,7 +648,7 @@ class KARContext(CommonContext):
                 if (
                     self.dolphin_interface.is_hooked()
                     and self.dolphin_interface.check_game_running()
-                    and self.dolphin_status == CONNECTION_CONNECTED_STATUS
+                    and self.dolphin_status == self.connection_connected_game_status
                 ):
                     await self.handle_connected_state()
                 else:
@@ -661,7 +657,7 @@ class KARContext(CommonContext):
             except Exception as e:
                 if self.dolphin_interface.is_hooked():
                     self.dolphin_interface.unhook()
-                self.dolphin_status = CONNECTION_REFUSED_GAME_STATUS
+                self.dolphin_status = self.connection_refused_game_status
                 logger.info(self.dolphin_status)
                 logger.error(f"Error in dolphin sync task: {e}")
                 logger.error(traceback.format_exc())
