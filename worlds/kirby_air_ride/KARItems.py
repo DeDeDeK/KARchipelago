@@ -4,7 +4,7 @@ from typing import NamedTuple, Optional
 from BaseClasses import Item, ItemClassification
 
 from .KARData import EffectType, PatchType
-from .Locations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE
+from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE
 
 
 class KARItemType(StrEnum):
