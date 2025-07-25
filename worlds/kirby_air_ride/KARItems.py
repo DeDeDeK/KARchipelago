@@ -4,7 +4,7 @@ from typing import NamedTuple, Optional
 from BaseClasses import Item, ItemClassification
 
 from .KARData import EffectType, PatchType
-from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE
+from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
 
 
 class KARItemType(StrEnum):
@@ -205,7 +205,7 @@ ITEM_TABLE.update(
         location_data.reward: KARItemData(
             KARItemType.CHECKBOX_REWARD, ItemClassification.progression, location_data.code + 500, 1, None
         )
-        for location_data in (CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE).values()
+        for location_data in (CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE).values()
         if location_data.code is not None and location_data.reward != "None"
     }
 )
