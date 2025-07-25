@@ -21,9 +21,10 @@ from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_LOOKUP_ID_TO_NAME,
+    TOP_RIDE_LOCATION_TABLE,
     KARLocationType,
 )
-from .KAROptions import AirRideGoal, CityTrialGoal
+from .KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
 
 CLIENT_VERSION = "v0.3.1"
 
@@ -112,13 +113,19 @@ class KARContext(CommonContext):
         self.city_trial_enabled: bool = False
         self.city_trial_goal: str = ""
         self.city_trial_goal_checklist_amount: int = 0
-        self.city_trial_goal_acheived: bool = False
+        self.city_trial_goal_achieved: bool = False
         self.city_trial_num_locations_checked: int = 0
         self.air_ride_enabled: bool = False
         self.air_ride_goal: str = ""
         self.air_ride_goal_checklist_amount: int = 0
-        self.air_ride_goal_acheived: bool = False
+        self.air_ride_goal_achieved: bool = False
         self.air_ride_num_locations_checked: int = 0
+        self.top_ride_enabled: bool = False
+        self.top_ride_goal: str = ""
+        self.top_ride_goal_checklist_amount: int = 0
+        self.top_ride_goal_achieved: bool = False
+        self.top_ride_num_locations_checked: int = 0
+        self.enabled_modes: tuple[str, ...] = ()
         self.items_queue: List[NetworkItem] = []
         self.energy_link_enabled: bool = False
         self.energy_link_items_queue: list[int] = []
@@ -179,19 +186,32 @@ class KARContext(CommonContext):
                 if self.air_ride_goal != AirRideGoal.option_none:
                     self.air_ride_enabled = True
 
+            if "top_ride_goal" in args["slot_data"]:
+                self.top_ride_goal = args["slot_data"]["top_ride_goal"]
+                if self.top_ride_goal != TopRideGoal.option_none:
+                    self.top_ride_enabled = True
+
             if "city_trial_checklist_amount" in args["slot_data"]:
                 self.city_trial_goal_checklist_amount = int(args["slot_data"]["city_trial_checklist_amount"])
 
             if "air_ride_checklist_amount" in args["slot_data"]:
                 self.air_ride_goal_checklist_amount = int(args["slot_data"]["air_ride_checklist_amount"])
 
+            if "top_ride_checklist_amount" in args["slot_data"]:
+                self.top_ride_goal_checklist_amount = int(args["slot_data"]["top_ride_checklist_amount"])
+
+            self.enabled_modes = tuple(
+                mode for mode in ("city_trial", "air_ride", "top_ride") if getattr(self, f"{mode}_enabled")
+            )
+
             # reset local location checks so that a client that has already won its game but hasn't closed can't connect to a server
             # and accidentally auto-win. This doesn't solve the problem of using a save file that already has won, but does solve this smaller problem.
             self.locations_checked.clear()
 
-            # also reset goals acheived for the same reason
-            self.city_trial_goal_acheived = False
-            self.air_ride_goal_acheived = False
+            # also reset goals achieved for the same reason
+            self.city_trial_goal_achieved = False
+            self.air_ride_goal_achieved = False
+            self.top_ride_goal_achieved = False
             self.finished_game = False
 
         # ReceivedItems is a list of items that are in a guaranteed order.
@@ -290,12 +310,12 @@ class KARContext(CommonContext):
                         self.locations_checked.add(data.code)
 
             # check goals
-            if not (self.city_trial_goal_acheived or self.finished_game):
+            if not (self.city_trial_goal_achieved or self.finished_game):
                 # Check for victory condition location
                 if self.city_trial_goal != CityTrialGoal.option_n_checklist_blocks:
                     if CITY_TRIAL_LOCATION_TABLE[self.city_trial_goal].code in self.locations_checked:
                         logger.info(f"Victory location found for City Trial: {location}")
-                        self.city_trial_goal_acheived = True
+                        self.city_trial_goal_achieved = True
 
                 # check for n checklist blocks goal victory
                 if (
@@ -303,9 +323,9 @@ class KARContext(CommonContext):
                     and self.city_trial_num_locations_checked >= self.city_trial_goal_checklist_amount
                 ):
                     logger.info(
-                        f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {len(self.locations_checked)} goal amount: {self.city_trial_goal_checklist_amount} "
+                        f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}"
                     )
-                    self.city_trial_goal_acheived = True
+                    self.city_trial_goal_achieved = True
 
         # Check Air Ride Checklist if Air Ride is enabled
         if self.air_ride_enabled:
@@ -316,8 +336,8 @@ class KARContext(CommonContext):
                     # 00 = locked, not visible
                     # 01 = flagged for unlocking
                     # 10 = locked, visible
-                    # TODO: there seems to be one additional value the game uses sometimes that isn't included here
-                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10])
+                    # 11 = visible, flagged for unlocking
+                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10, 0x11])
 
                 if checked:
                     if data.code is not None:
@@ -325,12 +345,12 @@ class KARContext(CommonContext):
                         self.locations_checked.add(data.code)
 
             # check goals
-            if not (self.air_ride_goal_acheived or self.finished_game):
+            if not (self.air_ride_goal_achieved or self.finished_game):
                 # Check for victory condition location
                 if self.air_ride_goal != AirRideGoal.option_n_checklist_blocks:
                     if AIR_RIDE_LOCATION_TABLE[self.air_ride_goal].code in self.locations_checked:
                         logger.info(f"Victory location found for Air Ride: {location}")
-                        self.air_ride_goal_acheived = True
+                        self.air_ride_goal_achieved = True
 
                 # check for n checklist blocks goal victory
                 if (
@@ -338,30 +358,48 @@ class KARContext(CommonContext):
                     and self.air_ride_num_locations_checked >= self.air_ride_goal_checklist_amount
                 ):
                     logger.info(
-                        f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {len(self.locations_checked)} goal amount: {self.air_ride_goal_checklist_amount} "
+                        f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}"
                     )
-                    self.air_ride_goal_acheived = True
+                    self.air_ride_goal_achieved = True
 
-        # determine if overall goal has been acheived
+        # Check Top Ride Checklist if Top Ride is enabled
+        if self.top_ride_enabled:
+            self.top_ride_num_locations_checked = 0
+            for location, data in TOP_RIDE_LOCATION_TABLE.items():
+                checked = False
+                if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
+                    # 00 = locked, not visible
+                    # 01 = flagged for unlocking
+                    # 10 = locked, visible
+                    # 11 = visible, flagged for unlocking
+                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10, 0x11])
+
+                if checked:
+                    if data.code is not None:
+                        self.top_ride_num_locations_checked += 1
+                        self.locations_checked.add(data.code)
+
+            # check goals
+            if not (self.top_ride_goal_achieved or self.finished_game):
+                # Check for victory condition location
+                if self.top_ride_goal != TopRideGoal.option_n_checklist_blocks:
+                    if TOP_RIDE_LOCATION_TABLE[self.top_ride_goal].code in self.locations_checked:
+                        logger.info(f"Victory location found for Top Ride: {location}")
+                        self.top_ride_goal_achieved = True
+
+                # check for n checklist blocks goal victory
+                if (
+                    self.top_ride_goal == TopRideGoal.option_n_checklist_blocks
+                    and self.top_ride_num_locations_checked >= self.top_ride_goal_checklist_amount
+                ):
+                    logger.info(
+                        f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}"
+                    )
+                    self.top_ride_goal_achieved = True
+
+        # determine if overall goal has been achieved
         if not self.finished_game:
-            if self.city_trial_enabled:
-                if self.air_ride_enabled:
-                    if self.city_trial_goal_acheived and self.air_ride_goal_acheived:
-                        self.finished_game = True
-                        await self.send_victory()
-                else:
-                    if self.city_trial_goal_acheived:
-                        self.finished_game = True
-                        await self.send_victory()
-            if self.air_ride_enabled:
-                if self.city_trial_enabled:
-                    if self.air_ride_goal_acheived and self.city_trial_goal_acheived:
-                        self.finished_game = True
-                        await self.send_victory()
-                else:
-                    if self.air_ride_goal_acheived:
-                        self.finished_game = True
-                        await self.send_victory()
+            await self.determine_goal_achieved()
 
         # Send newly checked locations to the server
         new_locations_checked = await self.check_locations(self.locations_checked)
@@ -370,6 +408,11 @@ class KARContext(CommonContext):
                 "New locations checked and sent to server: %s",
                 [f"{LOCATION_LOOKUP_ID_TO_NAME[location_id]} ({location_id})" for location_id in new_locations_checked],
             )
+
+    async def determine_goal_achieved(self) -> None:
+        if all(getattr(self, f"{mode}_goal_achieved") for mode in self.enabled_modes):
+            self.finished_game = True
+            await self.send_victory()
 
     def give_item(self, item: NetworkItem) -> NetworkItem | None:
         """
