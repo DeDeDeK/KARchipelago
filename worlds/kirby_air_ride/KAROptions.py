@@ -64,8 +64,8 @@ class EnergyLink(Toggle):
 class CityTrialGoal(TextChoice):
     """
     This sets the Goal for the run. You can also input a custom location from the location list as a goal.
-    You can have a goal for both City Trial and Air Ride if you wish.
-    If you have goals on both, both will need to be acheived in order to complete your game.
+    You can have a goal for each game mode if you wish.
+    If you have goals on multiple game modes, all goals will need to be achieved in order to complete your game.
     Select "None" if you wish to disable City Trial in your game.
     """
 
@@ -138,8 +138,8 @@ class CityTrialProgressionFreeRun(Toggle):
 class AirRideGoal(TextChoice):
     """
     This sets the Goal for the run. You can also input a custom location from the location list as a goal.
-    You can have a goal for both City Trial and Air Ride if you wish.
-    If you have goals on both, both will need to be acheived in order to complete your game.
+    You can have a goal for each game mode if you wish.
+    If you have goals on multiple game modes, all goals will need to be achieved in order to complete your game.
     Select "None" if you wish to disable Air Ride in your game.
     """
 
@@ -188,6 +188,68 @@ class AirRideProgressionHighEffort(Toggle):
     display_name = "Air Ride Long/High effort checkboxes are progression"
 
 
+class TopRideGoal(TextChoice):
+    """
+    This sets the Goal for the run. You can also input a custom location from the location list as a goal.
+    You can have a goal for each game mode if you wish.
+    If you have goals on multiple game modes, all goals will need to be achieved in order to complete your game.
+    Select "None" if you wish to disable Top Ride in your game.
+    """
+
+    display_name = "Top Ride Goal"
+    option_100_checklist_blocks = "Top Ride: Fill in over 100 Checklist blocks!"
+    option_n_checklist_blocks = "Top Ride: Fill in N Checklist blocks!"
+    option_none = "None"
+    default = option_none
+
+
+class TopRideCheckListAmount(Range):
+    """
+    This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for Top Ride.
+    """
+
+    display_name = "Number of Checklist Boxes for Top Ride"
+    default = 60
+    range_start = 1
+    range_end = 120
+
+
+class TopRideProgressionFreeRun(Toggle):
+    """
+    This controls whether Free Run checkboxes are a part of progression. This applies to Top Ride only.
+    """
+
+    default = 0
+    display_name = "Top Ride Free Run checkboxes are progression"
+
+
+class TopRideProgressionTimeAttack(Toggle):
+    """
+    This controls whether Time Attack checkboxes are a part of progression. This applies to Top Ride only.
+    """
+
+    default = 0
+    display_name = "Top Ride Time Attack checkboxes are progression"
+
+
+class TopRideProgressionHighEffort(Toggle):
+    """
+    This controls whether difficult or extremely high effort checkboxes are counted in progression. This applies to Top Ride only.
+    """
+
+    default = 0
+    display_name = "Top Ride Long/High effort checkboxes are progression"
+
+
+class TopRideProgressionMultiplayer(Toggle):
+    """
+    This controls whether checkboxes that require multiple players are a part of progression. This applies to Top Ride only.
+    """
+
+    default = 0
+    display_name = "Top Ride Multiplayer checkboxes are progression"
+
+
 @dataclass
 class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     """
@@ -211,6 +273,12 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     air_ride_progression_high_effort: AirRideProgressionHighEffort
     air_ride_progression_free_run: AirRideProgressionFreeRun
     air_ride_progression_time_attack: AirRideProgressionTimeAttack
+    top_ride_goal: TopRideGoal
+    top_ride_checklist_amount: TopRideCheckListAmount
+    top_ride_progression_high_effort: TopRideProgressionHighEffort
+    top_ride_progression_free_run: TopRideProgressionFreeRun
+    top_ride_progression_time_attack: TopRideProgressionTimeAttack
+    top_ride_progression_multiplayer: TopRideProgressionMultiplayer
 
     def get_output_dict(self) -> dict[str, Any]:
         """
@@ -236,6 +304,12 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "air_ride_progression_high_effort",
             "air_ride_progression_free_run",
             "air_ride_progression_time_attack",
+            "top_ride_goal",
+            "top_ride_checklist_amount",
+            "top_ride_progression_high_effort",
+            "top_ride_progression_free_run",
+            "top_ride_progression_time_attack",
+            "top_ride_progression_multiplayer",
         )
 
 
@@ -261,6 +335,17 @@ kar_option_groups = [
             AirRideProgressionFreeRun,
             AirRideProgressionTimeAttack,
             AirRideProgressionHighEffort,
+        ],
+    ),
+    OptionGroup(
+        "Top Ride Options",
+        [
+            TopRideGoal,
+            TopRideCheckListAmount,
+            TopRideProgressionFreeRun,
+            TopRideProgressionTimeAttack,
+            TopRideProgressionHighEffort,
+            TopRideProgressionMultiplayer,
         ],
     ),
 ]
