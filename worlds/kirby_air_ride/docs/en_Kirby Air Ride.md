@@ -1,7 +1,9 @@
 # Kirby Air Ride
 
 - [Kirby Air Ride](#kirby-air-ride)
-  - [Where is the options page?](#where-is-the-options-page)
+  - [What is this?](#what-is-this)
+  - [Where do I get the apworld and yaml file?](#where-do-i-get-the-apworld-and-yaml-file)
+  - [How do I set this up?](#how-do-i-set-this-up)
   - [What is the goal of Kirby Air Ride in Archipelago?](#what-is-the-goal-of-kirby-air-ride-in-archipelago)
     - [City Trial](#city-trial)
     - [Air Ride](#air-ride)
@@ -18,14 +20,21 @@
       - [Progression](#progression)
       - [Top Ride](#top-ride-1)
       - [Air Ride](#air-ride-1)
+      - [Multiplayer](#multiplayer)
       - [Code/misc](#codemisc)
   - [Contributing](#contributing)
 
+## What is this?
 
-## Where is the options page?
+This is an APWorld for the Archipelago multi-world, multi-game randomizer: [archipelago.gg](https://archipelago.gg/)
 
-The [player options page for this game](../player-options) contains all the options you need to configure and export a
-config yaml file.
+## Where do I get the apworld and yaml file?
+
+You can get the apworld file and an example player configuration yaml in the [releases page.](https://github.com/DeDeDeK/KARchipelago/releases)
+
+## How do I set this up?
+
+Follow the [setup guide (webhost link)](/tutorial/Kirby%20Air%20Ride/setup/en) or [setup guide (github)](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md).
 
 ## What is the goal of Kirby Air Ride in Archipelago?
 
@@ -101,10 +110,9 @@ For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend
 
 `/energylink_spend "Top Speed Up" 5`
 
-
 ## I need help! What do I do?
 
-Try the troubleshooting steps in the [setup guide](/tutorial/Kirby%20Air%20Ride/setup/en). If you are still stuck, please ask in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link](https://discord.com/channels/731205301247803413/1291501105389502554)
+Try the troubleshooting steps in the [setup guide (webhost link)](/tutorial/Kirby%20Air%20Ride/setup/en) or [(github link)](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md). If you are still stuck, please ask in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link.](https://discord.com/channels/731205301247803413/1291501105389502554)
 
 ## Known issues
 
@@ -161,6 +169,9 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 #### Air Ride
 - Air Ride items
 
+#### Multiplayer
+- All players receiving items
+
 #### Code/misc
 - more fine-grained options for which traps or patches are enabled
 - option to reveal (but not unlock) the whole checklist at game start by writing 10 to every checkbox?
@@ -174,6 +185,7 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 - ItemLink
 - performance pass on location checking
 - possible variable deathlink cooldown?
+- colored text for goal completion
 
 ## Contributing
 
