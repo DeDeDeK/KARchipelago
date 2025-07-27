@@ -26,7 +26,7 @@ from .KARLocations import (
 )
 from .KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
 
-CLIENT_VERSION = "v0.3.1"
+CLIENT_VERSION = "v0.4.1"
 
 
 class KARCommandProcessor(ClientCommandProcessor):
