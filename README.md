@@ -2,7 +2,8 @@
 
 - [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
   - [What is this?](#what-is-this)
-  - [Where do I get the apworld?](#where-do-i-get-the-apworld)
+  - [Where do I get the apworld and yaml file?](#where-do-i-get-the-apworld-and-yaml-file)
+  - [How do I set this up?](#how-do-i-set-this-up)
   - [What is the goal of Kirby Air Ride in Archipelago?](#what-is-the-goal-of-kirby-air-ride-in-archipelago)
     - [City Trial](#city-trial)
     - [Air Ride](#air-ride)
@@ -26,11 +27,15 @@
 
 ## What is this?
 
-This is an APWorld for the Archipelago multi-world, multi-game randomizer: archipelago.gg
+This is an APWorld for the Archipelago multi-world, multi-game randomizer: [archipelago.gg](https://archipelago.gg/)
 
-## Where do I get the apworld?
+## Where do I get the apworld and yaml file?
 
 You can get the apworld file and an example player configuration yaml in the [releases page.](https://github.com/DeDeDeK/KARchipelago/releases)
+
+## How do I set this up?
+
+Follow the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md).
 
 ## What is the goal of Kirby Air Ride in Archipelago?
 
@@ -104,10 +109,9 @@ For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend
 
 `/energylink_spend "Top Speed Up" 5`
 
-
 ## I need help! What do I do?
 
-Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md). If you are still stuck, please ask in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link](https://discord.com/channels/731205301247803413/1291501105389502554)
+Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md). If you are still stuck, please ask in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link.](https://discord.com/channels/731205301247803413/1291501105389502554)
 
 ## Known issues
 
@@ -178,6 +182,7 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 - ItemLink
 - performance pass on location checking
 - possible variable deathlink cooldown?
+- colored text for goal completion
 
 ## Contributing
 
