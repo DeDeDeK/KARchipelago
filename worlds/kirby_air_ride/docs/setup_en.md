@@ -29,9 +29,13 @@ You'll need the following components to be able to play Kirby Air Ride:
 
 ## Setting Up a YAML
 
-All players playing Kirby Air Ride must provide the room host with a YAML file containing the settings for their world.
-Visit the [Kirby Air Ride options page](/games/Kirby%20Air%20Ride/player-options) to generate a YAML with your desired
-options, or edit the `kirby_air_ride.yaml` example YAML from above. Once you're happy with your settings, provide the room host with your YAML file and proceed to the next step.
+All players playing Kirby Air Ride must provide the room host with a YAML file containing the settings for their world. 
+
+On the web host, you can visit the [Kirby Air Ride options page](/games/Kirby%20Air%20Ride/player-options) to generate a YAML with your desired options. Click the export button to save your yaml file. 
+
+Alternatively, you can manually edit the `kirby_air_ride.yaml` template YAML from the [releases page](https://github.com/DeDeDeK/KARchipelago/releases/latest), or you can run "Generate Template Options" from the Archipelago Launcher, and then edit the Kirby Air Ride yaml file in your `Players/` directory. 
+
+Once you're happy with your settings, provide the room host with your YAML file and proceed to the next step.
 
 ## Save files
 
