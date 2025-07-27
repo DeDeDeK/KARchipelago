@@ -459,7 +459,7 @@ def determine_goal(world: "KARWorld") -> None:
             collection_state_list.append(lambda state: state.can_reach_region("City Trial", world.player))
         case _:
             collection_state_list.append(
-                lambda state: state.can_reach_location(str(world.options.air_ride_goal.value), world.player)
+                lambda state: state.can_reach_location(str(world.options.city_trial_goal.value), world.player)
             )
 
     match world.options.air_ride_goal.value:
