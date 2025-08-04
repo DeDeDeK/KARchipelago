@@ -93,18 +93,19 @@ Current items players are able to receive are:
 - "Effect" items
   - 1 HP Trap
   - Full Heal
+- Checkbox filler items
   
 Any items will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run (after a few seconds have elapsed). 
 
 NOTE: you must collect any patch in the city after receiving patch items for the stat increases/decreases to take effect. 
 
-NOTE: There are currently no items that apply to Air Ride or Top Ride mode, but you can earn items for City Trial by completing Air Ride or Top Ride checkboxes.
+NOTE: There are currently no items that apply to Air Ride or Top Ride mode (other than checkbox fillers), but you can earn items for City Trial by completing Air Ride or Top Ride checkboxes.
 
 ### EnergyLink
 
 If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any (archipelago) item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
 
-Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, except for All patches which cost 90.
+Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, except for All patches which cost 90, and Checkbox fillers cost 500.
 
 For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend):
 
@@ -129,6 +130,8 @@ Try the troubleshooting steps in the [setup guide (webhost link)](/tutorial/Kirb
 - Top Ride currently does not support items until a memory address is found that reflects whether we're in game in top
   ride or not
 - Patch items for City Trial are not guaranteed to work depending on what vehicle you are on. They always work on compact star.
+- 100 checklist blocks goal will misidentify itself as hydra + dragoon goal. Possibly others as well. This could also result
+  in a game complete not being sent. 
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues [here](https://github.com/DeDeDeK/KARchipelago/issues).
 
@@ -144,18 +147,19 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 - kirby effects (such as "run amok") as useful/filler/trap items
 - city trial events as useful/filler/trap items
 - spawning boxes as filler/useful items
-- checklist box fillers as progression item
 - drop patches trap item
 - physics-based trap items (altitude increase/decrease, teleport forward/backward/random location, gravity changes, etc.)
-- air ride speed increase item (permanent speed increases?)
-- other air ride items
+- generic trap or other items that work for any mode (e.g. "stun trap", which will apply sleep, freeze, etc. based on mode)
 
 #### Randomization
 - randomization of checklist box rewards
 - randomization of starting air ride machine
 
 #### Progression
-- "progressive stadium" items for City Trial, required to advance to the next stadium
+- progressive stadium items, required to advance to the next stadium
+- progressive patch max - unlock higher patch count maximums with items
+- progressive item spawn rate increases
+- progressive box color/type unlocks
 - progressive kirby color unlocks
 - progressive kirby ability unlocks
 - progressive air ride machine unlocks
@@ -168,24 +172,30 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 
 #### Air Ride
 - Air Ride items
+  - air ride speed increase item (permanent speed increases?)
 
 #### Multiplayer
-- All players receiving items
+- All players receiving items in all modes
 
 #### Code/misc
 - more fine-grained options for which traps or patches are enabled
 - option to reveal (but not unlock) the whole checklist at game start by writing 10 to every checkbox?
-- fully unlock every checkbox on game complete?
-- yaml option to sync the local checklist state with the server checked locations upon connection. for people who don't care about saves being edited/wiped and want the convenience of not having to juggle save files for each lobby
+- option to fully unlock every checkbox on game complete?
+  - does this make sense to have? how does this work with games that don't have collect on?
+- option to sync the local checklist state with the server checked locations upon connection. 
+  - for people who don't care about saves being edited/wiped and want the convenience of not having to juggle save files for each lobby
+  - this may have a conflict if players can get checks "offline"? But the client currently requires that they be connected? need to avoid this removing checks players do when not connected to the server?
 - options presets that set goals for different "game modes" (killing enemies focused checkboxes, collecting items focused, etc.)
 - enable lists of locations as goals. get every checkbox on the list to complete your game. Allows for making custom games, essentially
 - energylink for air ride: laps completed, enemies killed
-- energylink for top ride: laps completed
+- energylink for top ride: laps completed, environment destroyed/interacted with
 - kirby gets bigger as energylink grows?
-- ItemLink
+- ItemLink with other Kirby Air Ride worlds
 - performance pass on location checking
+  - use checked_locations, missing_locaitons, server_locations as caches
 - possible variable deathlink cooldown?
 - colored text for goal completion
+
 
 ## Contributing
 
