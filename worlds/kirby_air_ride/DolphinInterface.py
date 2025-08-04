@@ -5,7 +5,7 @@ import dolphin_memory_engine
 
 from CommonClient import logger
 
-from .KARData import PATCH_MAP, STAGE_MAP, EffectType, MemoryAddress, PatchType, StageName
+from .KARData import PATCH_MAP, STAGE_MAP, CheckboxFillerType, EffectType, MemoryAddress, PatchType, StageName
 
 
 class DolphinInterface:
@@ -94,6 +94,20 @@ class DolphinInterface:
         except Exception as e:
             logger.warning(self.memory_read_error_fmt.format(type="float", addr=hex(console_address), error=str(e)))
             return 0.0
+
+    def write_byte(self, console_address: int, value: int) -> bool:
+        """
+        Write a byte to Dolphin memory.
+
+        Returns:
+            Whether the write operation was successful
+        """
+        try:
+            dolphin_memory_engine.write_bytes(console_address, value.to_bytes(1, byteorder="big"))
+            return True
+        except Exception as e:
+            logger.warning(self.memory_write_error_fmt.format(type="byte", addr=hex(console_address), error=str(e)))
+            return False
 
     def write_short(self, console_address: int, value: int) -> bool:
         """
@@ -254,6 +268,39 @@ class DolphinInterface:
                     MemoryAddress.PLAYER_1_CURRENT_MACHINE_HP_OFFSET.value,
                     current_max_hp,
                 )
+
+    def apply_checkbox_filler(self, type: CheckboxFillerType) -> None:
+        """
+        Apply checkbox filler items to the appropriate checklist.
+        """
+        match type:
+            case CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER:
+                current_value = self.read_byte(MemoryAddress.CITY_TRIAL_CHECKLIST_BOX_FILLER_NUM.value)
+                current_list_length = self.read_byte(MemoryAddress.CITY_TRIAL_CHECKLIST_BOX_FILLER_LIST_LENGTH.value)
+                self.write_byte(MemoryAddress.CITY_TRIAL_CHECKLIST_BOX_FILLER_NUM.value, current_value + 1)
+                if current_list_length <= 4:
+                    # increase list length to ensure checkbox filler is visible and useable. this caps out at 5
+                    self.write_byte(
+                        MemoryAddress.CITY_TRIAL_CHECKLIST_BOX_FILLER_LIST_LENGTH.value, current_list_length + 1
+                    )
+            case CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER:
+                current_value = self.read_byte(MemoryAddress.AIR_RIDE_CHECKLIST_BOX_FILLER_NUM.value)
+                current_list_length = self.read_byte(MemoryAddress.AIR_RIDE_CHECKLIST_BOX_FILLER_LIST_LENGTH.value)
+                self.write_byte(MemoryAddress.AIR_RIDE_CHECKLIST_BOX_FILLER_NUM.value, current_value + 1)
+                if current_list_length <= 4:
+                    # increase list length to ensure checkbox filler is visible and useable. this caps out at 5
+                    self.write_byte(
+                        MemoryAddress.AIR_RIDE_CHECKLIST_BOX_FILLER_LIST_LENGTH.value, current_list_length + 1
+                    )
+            case CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER:
+                current_value = self.read_byte(MemoryAddress.TOP_RIDE_CHECKLIST_BOX_FILLER_NUM.value)
+                current_list_length = self.read_byte(MemoryAddress.TOP_RIDE_CHECKLIST_BOX_FILLER_LIST_LENGTH.value)
+                self.write_byte(MemoryAddress.TOP_RIDE_CHECKLIST_BOX_FILLER_NUM.value, current_value + 1)
+                if current_list_length <= 4:
+                    # increase list length to ensure checkbox filler is visible and useable. this caps out at 5
+                    self.write_byte(
+                        MemoryAddress.TOP_RIDE_CHECKLIST_BOX_FILLER_LIST_LENGTH.value, current_list_length + 1
+                    )
 
     def check_alive(self) -> bool:
         """

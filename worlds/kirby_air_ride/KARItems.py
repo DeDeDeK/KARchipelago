@@ -3,7 +3,7 @@ from typing import NamedTuple, Optional
 
 from BaseClasses import Item, ItemClassification
 
-from .KARData import EffectType, PatchType
+from .KARData import CheckboxFillerType, EffectType, PatchType
 from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
 
 
@@ -11,6 +11,7 @@ class KARItemType(StrEnum):
     PATCH = "Patch"
     EFFECT = "Effect"
     CHECKBOX_REWARD = "Checkbox Reward"
+    CHECKBOX_FILLER = "Checkbox Filler"
     PROGRESSIVE_STADIUM = "Progressive Stadium"
     FILLER = "Filler"
 
@@ -68,35 +69,6 @@ class KARItem(Item):
 # converted to base str by AP.
 
 ITEM_TABLE: dict[str, KARItemData] = {
-    # "Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 1, 1, 0x0000),
-    # "Compact Star": KARItemData("Air Ride Machine", ItemClassification.progression, 2, 1, 0x0001),
-    # "Winged Star": KARItemData("Air Ride Machine", ItemClassification.progression, 3, 1, 0x0002),
-    # "Shadow Star": KARItemData("Air Ride Machine", ItemClassification.progression, 4, 1, 0x0003),
-    # "Hydra Star": KARItemData("Air Ride Machine", ItemClassification.progression, 5, 1, 0x0004),
-    # "Bulk Star": KARItemData("Air Ride Machine", ItemClassification.progression, 6, 1, 0x0005),
-    # "Slick Star": KARItemData("Air Ride Machine", ItemClassification.progression, 7, 1, 0x0006),
-    # "Formula Star": KARItemData("Air Ride Machine", ItemClassification.progression, 8, 1, 0x0007),
-    # "Dragoon Star": KARItemData("Air Ride Machine", ItemClassification.progression, 9, 1, 0x0008),
-    # "Wagon Star": KARItemData("Air Ride Machine", ItemClassification.progression, 10, 1, 0x0009),
-    # "Rocket Star": KARItemData("Air Ride Machine", ItemClassification.progression, 11, 1, 0x000A),
-    # "Swerve Star": KARItemData("Air Ride Machine", ItemClassification.progression, 12, 1, 0x000B),
-    # "Turbo Star": KARItemData("Air Ride Machine", ItemClassification.progression, 13, 1, 0x000C),
-    # "Jet Star": KARItemData("Air Ride Machine", ItemClassification.progression, 14, 1, 0x000D),
-    # "Flight Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 15, 1, 0x000E),
-    # "Free Star": KARItemData("Air Ride Machine", ItemClassification.progression, 16, 1, 0x000F),
-    # "Steer Star": KARItemData("Air Ride Machine", ItemClassification.progression, 17, 1, 0x0010),
-    # "Invisible Star (Kirby)": KARItemData("Air Ride Machine", ItemClassification.progression, 18, 1, 0x0011),
-    # "Invisible Star (Meta Knight)": KARItemData("Air Ride Machine", ItemClassification.progression, 19, 1, 0x0012),
-    # "Beta Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 20, 1, 0x1000),
-    # "Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 21, 1, 0x1001),
-    # "Wheelie Bike": KARItemData("Air Ride Machine", ItemClassification.progression, 22, 1, 0x1002),
-    # "Rex Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 23, 1, 0x1003),
-    # "Wheelie Scooter": KARItemData("Air Ride Machine", ItemClassification.progression, 24, 1, 0x1004),
-    # "King Dedede Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 25, 1, 0x1005),
-    # "King Dedede VS Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 26, 1, 0x1006),
-    # "Blue Box": KARItemData("Box", ItemClassification.filler, 27, 20, 0x00),
-    # "Green Box": KARItemData("Box", ItemClassification.filler, 28, 20, 0x01),
-    # "Red Box": KARItemData("Box", ItemClassification.filler, 29, 20, 0x02),
     PatchType.BOOST_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 30, 10, 0x03),
     PatchType.BOOST_DOWN.value: KARItemData(KARItemType.PATCH.value, ItemClassification.trap, 31, 10, 0x04),
     PatchType.TOP_SPEED_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 32, 10, 0x05),
@@ -147,8 +119,46 @@ ITEM_TABLE: dict[str, KARItemData] = {
     EffectType.ONE_HP.value: KARItemData(KARItemType.EFFECT.value, ItemClassification.trap, 59, 10, None),
     EffectType.FULL_HEAL.value: KARItemData(KARItemType.EFFECT.value, ItemClassification.filler, 60, 10, None),
     KARItemType.FILLER.value: KARItemData(KARItemType.FILLER.value, ItemClassification.filler, 61, 10, None),
+    CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value: KARItemData(
+        KARItemType.CHECKBOX_FILLER.value, ItemClassification.progression, 62, 10, None
+    ),
+    CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value: KARItemData(
+        KARItemType.CHECKBOX_FILLER.value, ItemClassification.progression, 63, 10, None
+    ),
+    CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value: KARItemData(
+        KARItemType.CHECKBOX_FILLER.value, ItemClassification.progression, 64, 10, None
+    ),
     # 5 progressive stadiums to match the 5 unlockable stadiums
     # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
+    # "Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 1, 1, 0x0000),
+    # "Compact Star": KARItemData("Air Ride Machine", ItemClassification.progression, 2, 1, 0x0001),
+    # "Winged Star": KARItemData("Air Ride Machine", ItemClassification.progression, 3, 1, 0x0002),
+    # "Shadow Star": KARItemData("Air Ride Machine", ItemClassification.progression, 4, 1, 0x0003),
+    # "Hydra Star": KARItemData("Air Ride Machine", ItemClassification.progression, 5, 1, 0x0004),
+    # "Bulk Star": KARItemData("Air Ride Machine", ItemClassification.progression, 6, 1, 0x0005),
+    # "Slick Star": KARItemData("Air Ride Machine", ItemClassification.progression, 7, 1, 0x0006),
+    # "Formula Star": KARItemData("Air Ride Machine", ItemClassification.progression, 8, 1, 0x0007),
+    # "Dragoon Star": KARItemData("Air Ride Machine", ItemClassification.progression, 9, 1, 0x0008),
+    # "Wagon Star": KARItemData("Air Ride Machine", ItemClassification.progression, 10, 1, 0x0009),
+    # "Rocket Star": KARItemData("Air Ride Machine", ItemClassification.progression, 11, 1, 0x000A),
+    # "Swerve Star": KARItemData("Air Ride Machine", ItemClassification.progression, 12, 1, 0x000B),
+    # "Turbo Star": KARItemData("Air Ride Machine", ItemClassification.progression, 13, 1, 0x000C),
+    # "Jet Star": KARItemData("Air Ride Machine", ItemClassification.progression, 14, 1, 0x000D),
+    # "Flight Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 15, 1, 0x000E),
+    # "Free Star": KARItemData("Air Ride Machine", ItemClassification.progression, 16, 1, 0x000F),
+    # "Steer Star": KARItemData("Air Ride Machine", ItemClassification.progression, 17, 1, 0x0010),
+    # "Invisible Star (Kirby)": KARItemData("Air Ride Machine", ItemClassification.progression, 18, 1, 0x0011),
+    # "Invisible Star (Meta Knight)": KARItemData("Air Ride Machine", ItemClassification.progression, 19, 1, 0x0012),
+    # "Beta Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 20, 1, 0x1000),
+    # "Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 21, 1, 0x1001),
+    # "Wheelie Bike": KARItemData("Air Ride Machine", ItemClassification.progression, 22, 1, 0x1002),
+    # "Rex Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 23, 1, 0x1003),
+    # "Wheelie Scooter": KARItemData("Air Ride Machine", ItemClassification.progression, 24, 1, 0x1004),
+    # "King Dedede Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 25, 1, 0x1005),
+    # "King Dedede VS Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 26, 1, 0x1006),
+    # "Blue Box": KARItemData("Box", ItemClassification.filler, 27, 20, 0x00),
+    # "Green Box": KARItemData("Box", ItemClassification.filler, 28, 20, 0x01),
+    # "Red Box": KARItemData("Box", ItemClassification.filler, 29, 20, 0x02),
     # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
     # "Speed Down": KARItemData("Patch", ItemClassification.trap, 49, 20, 0x16),
     # "Attack Up": KARItemData("Patch", ItemClassification.useful, 50, 20, 0x17),
