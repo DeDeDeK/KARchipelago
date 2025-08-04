@@ -15,7 +15,12 @@ from CommonClient import (
 from NetUtils import ClientStatus, NetworkItem
 
 from .DolphinInterface import DolphinInterface, PatchType
-from .KARData import StageName, get_effect_type_from_item_name, get_patch_type_from_item_name
+from .KARData import (
+    StageName,
+    get_checkbox_filler_type_from_item_name,
+    get_effect_type_from_item_name,
+    get_patch_type_from_item_name,
+)
 from .KARItems import ITEM_TABLE, LOOKUP_ID_TO_NAME, KARItemType
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -129,9 +134,14 @@ class KARContext(CommonContext):
         self.items_queue: List[NetworkItem] = []
         self.energy_link_enabled: bool = False
         self.energy_link_items_queue: list[int] = []
-        self.energy_link_item_cost: int = 10
+        self.energy_link_base_item_cost: int = 10
         self.death_link_enabled: bool = False
         self.death_link_cooldown: int = 120
+        # 00 = locked, not visible
+        # 01 = flagged for unlocking
+        # 10 = locked, visible
+        # 11 = visible, flagged for unlocking
+        self.excluded_checkbox_bytes: tuple[int, ...] = (0x00, 0x01, 0x10, 0x11)
 
     async def disconnect(self, allow_autoreconnect: bool = False) -> None:
         """
@@ -285,36 +295,29 @@ class KARContext(CommonContext):
         Check all locations and notify the server of any newly checked locations.
         If the goal has been completed, notify the server of victory.
         """
-        # Check City Trial Checklist if City Trial is enabled
+        # check City Trial Checklist if City Trial is enabled
         if self.city_trial_enabled:
             self.city_trial_num_locations_checked = 0
             for location, data in CITY_TRIAL_LOCATION_TABLE.items():
-                checked = False
                 if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
-                    # 00 = locked, not visible
-                    # 01 = flagged for unlocking
-                    # 10 = locked, visible
-                    # 11 = visible, flagged for unlocking
-                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10, 0x11])
-
-                if checked:
-                    # TODO: can gate stadium unlocks and other locations by checking if we've received a "progressive stadium"
-                    # or similar item, and then re-writing the checked value to 0 if we haven't gotten that item yet.
-                    # if not [LOOKUP_ID_TO_NAME[item.item] for item in self.items_received]:
-                    #     logger.debug("player has not received the progressive stadium required to progress. re-locking...")
-                    #     checked = False
-                    #     self.dolphin_interface.write_byte(data.mem_address, 0x00)
-                    #     continue
-                    if data.code is not None:
-                        self.city_trial_num_locations_checked += 1
-                        self.locations_checked.add(data.code)
+                    if self.dolphin_interface.read_byte(data.mem_address) not in self.excluded_checkbox_bytes:
+                        # TODO: can gate stadium unlocks and other locations by checking if we've received a "progressive stadium"
+                        # or similar item, and then re-writing the checked value to 0 if we haven't gotten that item yet.
+                        # if not [LOOKUP_ID_TO_NAME[item.item] for item in self.items_received]:
+                        #     logger.debug("player has not received the progressive stadium required to progress. re-locking...")
+                        #     checked = False
+                        #     self.dolphin_interface.write_byte(data.mem_address, 0x00)
+                        #     continue
+                        if data.code is not None:
+                            self.city_trial_num_locations_checked += 1
+                            self.locations_checked.add(data.code)
 
             # check goals
             if not (self.city_trial_goal_achieved or self.finished_game):
-                # Check for victory condition location
+                # check for victory condition location
                 if self.city_trial_goal != CityTrialGoal.option_n_checklist_blocks:
                     if CITY_TRIAL_LOCATION_TABLE[self.city_trial_goal].code in self.locations_checked:
-                        logger.info(f"Victory location found for City Trial: {location}")
+                        logger.info(f"Victory location found for City Trial: {self.city_trial_goal}")
                         self.city_trial_goal_achieved = True
 
                 # check for n checklist blocks goal victory
@@ -327,29 +330,22 @@ class KARContext(CommonContext):
                     )
                     self.city_trial_goal_achieved = True
 
-        # Check Air Ride Checklist if Air Ride is enabled
+        # check Air Ride Checklist if Air Ride is enabled
         if self.air_ride_enabled:
             self.air_ride_num_locations_checked = 0
             for location, data in AIR_RIDE_LOCATION_TABLE.items():
-                checked = False
                 if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
-                    # 00 = locked, not visible
-                    # 01 = flagged for unlocking
-                    # 10 = locked, visible
-                    # 11 = visible, flagged for unlocking
-                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10, 0x11])
-
-                if checked:
-                    if data.code is not None:
-                        self.air_ride_num_locations_checked += 1
-                        self.locations_checked.add(data.code)
+                    if self.dolphin_interface.read_byte(data.mem_address) not in self.excluded_checkbox_bytes:
+                        if data.code is not None:
+                            self.air_ride_num_locations_checked += 1
+                            self.locations_checked.add(data.code)
 
             # check goals
             if not (self.air_ride_goal_achieved or self.finished_game):
-                # Check for victory condition location
+                # check for victory condition location
                 if self.air_ride_goal != AirRideGoal.option_n_checklist_blocks:
                     if AIR_RIDE_LOCATION_TABLE[self.air_ride_goal].code in self.locations_checked:
-                        logger.info(f"Victory location found for Air Ride: {location}")
+                        logger.info(f"Victory location found for Air Ride: {self.air_ride_goal}")
                         self.air_ride_goal_achieved = True
 
                 # check for n checklist blocks goal victory
@@ -362,29 +358,22 @@ class KARContext(CommonContext):
                     )
                     self.air_ride_goal_achieved = True
 
-        # Check Top Ride Checklist if Top Ride is enabled
+        # check Top Ride Checklist if Top Ride is enabled
         if self.top_ride_enabled:
             self.top_ride_num_locations_checked = 0
             for location, data in TOP_RIDE_LOCATION_TABLE.items():
-                checked = False
                 if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
-                    # 00 = locked, not visible
-                    # 01 = flagged for unlocking
-                    # 10 = locked, visible
-                    # 11 = visible, flagged for unlocking
-                    checked = bool(self.dolphin_interface.read_byte(data.mem_address) not in [0x00, 0x01, 0x10, 0x11])
-
-                if checked:
-                    if data.code is not None:
-                        self.top_ride_num_locations_checked += 1
-                        self.locations_checked.add(data.code)
+                    if self.dolphin_interface.read_byte(data.mem_address) not in self.excluded_checkbox_bytes:
+                        if data.code is not None:
+                            self.top_ride_num_locations_checked += 1
+                            self.locations_checked.add(data.code)
 
             # check goals
             if not (self.top_ride_goal_achieved or self.finished_game):
-                # Check for victory condition location
+                # check for victory condition location
                 if self.top_ride_goal != TopRideGoal.option_n_checklist_blocks:
                     if TOP_RIDE_LOCATION_TABLE[self.top_ride_goal].code in self.locations_checked:
-                        logger.info(f"Victory location found for Top Ride: {location}")
+                        logger.info(f"Victory location found for Top Ride: {self.top_ride_goal}")
                         self.top_ride_goal_achieved = True
 
                 # check for n checklist blocks goal victory
@@ -431,9 +420,14 @@ class KARContext(CommonContext):
                     patch_type = get_patch_type_from_item_name(item_name)
                     if patch_type is not None:
                         self.dolphin_interface.increment_player_patch(patch_type, delta)
-                    return item
+                        return item
             case KARItemType.CHECKBOX_REWARD.value:
                 return item
+            case KARItemType.CHECKBOX_FILLER.value:
+                checkbox_filler_type = get_checkbox_filler_type_from_item_name(item_name)
+                if checkbox_filler_type is not None:
+                    self.dolphin_interface.apply_checkbox_filler(checkbox_filler_type)
+                    return item
             case KARItemType.PROGRESSIVE_STADIUM.value:
                 # determine the next progressive stadium in logic
                 # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
@@ -451,7 +445,7 @@ class KARContext(CommonContext):
                     effect_type = get_effect_type_from_item_name(item_name)
                     if effect_type is not None:
                         self.dolphin_interface.apply_effect_item(effect_type)
-                    return item
+                        return item
 
     async def give_items(self, items: List[NetworkItem]) -> List[NetworkItem]:
         """
@@ -521,9 +515,8 @@ class KARContext(CommonContext):
             # get new player patch counts
             self.dolphin_interface.update_player_patch_counts()
 
-            # TODO: fix this giving energy from items received from /energylink_spend
-            # TODO: fix this (sometimes) giving energy for permanent patches when transitioning into City Trial
-            # (likely races with item_give after transition?)
+            # TODO: fix this giving energy from patches received from /energylink_spend
+            # TODO: fix this giving energy for permanent patches when transitioning into City Trial
             diff = 0
             for patch_type, patch_count in self.dolphin_interface.player_1_patches.items():
                 if patch_count > old_counts[patch_type]:
@@ -567,11 +560,20 @@ class KARContext(CommonContext):
             logger.info(f"Invalid item name: {item_name}")
             return
 
-        cost = self.energy_link_item_cost * int(amount)
-        patch_type = get_patch_type_from_item_name(item_name)
-        if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
-            # ALL patches cost 9x as much
-            cost = self.energy_link_item_cost * 9 * int(amount)
+        # base cost
+        cost = self.energy_link_base_item_cost * int(amount)
+
+        # patch item costs
+        if item_data.type == KARItemType.PATCH:
+            patch_type = get_patch_type_from_item_name(item_name)
+            if patch_type is not None:
+                if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
+                    # ALL patches cost 9x as much
+                    cost = self.energy_link_base_item_cost * 9 * int(amount)
+
+        # checkbox filler item costs
+        if item_data.type == KARItemType.CHECKBOX_FILLER:
+            cost = self.energy_link_base_item_cost * 50
 
         if self.current_energy_link_value < cost:
             logger.info(f"Not enough energy. Current value: {self.current_energy_link_value} Need: {cost}")
@@ -619,9 +621,9 @@ class KARContext(CommonContext):
 
         # handle energylink for the current stage
         if self.energy_link_enabled:
-            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
-                logger.debug("in energylink update...")
-                await self.update_energy_link()
+            # if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
+            logger.debug("in energylink update...")
+            await self.update_energy_link()
 
         # check for death when in City Trial and past transition period
         if self.death_link_enabled:
@@ -634,6 +636,17 @@ class KARContext(CommonContext):
 
         # check if any items are in the items queue and apply them if we're in game
         if len(self.items_queue) > 0:
+            # give checkbox fillers separately, as they do not require any stage
+            checkbox_fillers = [
+                item
+                for item in self.items_queue
+                if ITEM_TABLE[LOOKUP_ID_TO_NAME[item.item]].type == KARItemType.CHECKBOX_FILLER
+            ]
+            given_items = await self.give_items(checkbox_fillers)
+            for item in given_items:
+                self.items_queue.remove(item)
+
+            # give remaining items
             if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
                 logger.debug("in items give...")
                 given_items = await self.give_items(self.items_queue)

@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import List
 
 from BaseClasses import LocationProgressType, Region
+from worlds.kirby_air_ride.KAROptions import CityTrialGoal
 
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -24,21 +25,21 @@ def create_regions(world: "KARWorld"):
     world.multiworld.regions.append(menu_region)
 
     # create and connect "City Trial" region to menu
-    if world.options.city_trial_goal.value != world.options.city_trial_goal.option_none:
+    if world.city_trial_enabled:
         city_trial_region = Region("City Trial", world.player, world.multiworld)
         world.multiworld.regions.append(city_trial_region)
         menu_region.connect(city_trial_region)
         connect_city_trial_region(world, city_trial_region)
 
     # create and connect "Air Ride" region to menu
-    if world.options.air_ride_goal.value != world.options.air_ride_goal.option_none:
+    if world.air_ride_enabled:
         air_ride_region = Region("Air Ride", world.player, world.multiworld)
         world.multiworld.regions.append(air_ride_region)
         menu_region.connect(air_ride_region)
         connect_air_ride_region(world, air_ride_region)
 
     # create and connect "Top Ride" region to menu
-    if world.options.top_ride_goal.value != world.options.top_ride_goal.option_none:
+    if world.top_ride_enabled:
         top_ride_region = Region("Top Ride", world.player, world.multiworld)
         world.multiworld.regions.append(top_ride_region)
         menu_region.connect(top_ride_region)
@@ -46,7 +47,7 @@ def create_regions(world: "KARWorld"):
 
     # Assign City Trial progress locations to their region if City Trial is not disabled in options.
     # Progress locations are sorted for deterministic results.
-    if world.options.city_trial_goal.value != world.options.city_trial_goal.option_none:
+    if world.city_trial_enabled:
         # priority locations
         for location_name in sorted(world.city_trial_priority_locations):
             data = CITY_TRIAL_LOCATION_TABLE[location_name]
@@ -73,7 +74,7 @@ def create_regions(world: "KARWorld"):
 
     # Assign Air Ride locations to their region if Air Ride is not disabled in options.
     # Progress locations are sorted for deterministic results.
-    if world.options.air_ride_goal.value != world.options.air_ride_goal.option_none:
+    if world.air_ride_enabled:
         # priority locations
         for location_name in sorted(world.air_ride_priority_locations):
             data = AIR_RIDE_LOCATION_TABLE[location_name]
@@ -100,7 +101,7 @@ def create_regions(world: "KARWorld"):
 
     # Assign Top Ride locations to their region if Top Ride is not disabled in options.
     # Progress locations are sorted for deterministic results.
-    if world.options.top_ride_goal.value != world.options.top_ride_goal.option_none:
+    if world.top_ride_enabled:
         # priority locations
         for location_name in sorted(world.top_ride_priority_locations):
             data = TOP_RIDE_LOCATION_TABLE[location_name]
@@ -129,13 +130,18 @@ def create_regions(world: "KARWorld"):
     # these are locked because until checkbox reward randomization is possible in-game, only the player's game can
     # collect these.
     if world.options.checkbox_reward_items:
-        if world.options.city_trial_goal.value != world.options.city_trial_goal.option_none:
+        if world.city_trial_enabled:
             for location_name, location_data in CITY_TRIAL_LOCATION_TABLE.items():
                 if location_data.code is not None and location_data.reward != "None":
                     item = world.create_item(location_data.reward)
                     world.get_location(location_name).place_locked_item(item)
-        if world.options.city_trial_goal.value != world.options.city_trial_goal.option_none:
+        if world.air_ride_enabled:
             for location_name, location_data in AIR_RIDE_LOCATION_TABLE.items():
+                if location_data.code is not None and location_data.reward != "None":
+                    item = world.create_item(location_data.reward)
+                    world.get_location(location_name).place_locked_item(item)
+        if world.top_ride_enabled:
+            for location_name, location_data in TOP_RIDE_LOCATION_TABLE.items():
                 if location_data.code is not None and location_data.reward != "None":
                     item = world.create_item(location_data.reward)
                     world.get_location(location_name).place_locked_item(item)
@@ -450,19 +456,19 @@ def determine_goal(world: "KARWorld") -> None:
     """
     collection_state_list: List[Callable] = []
 
-    match world.options.city_trial_goal.value:
-        case world.options.city_trial_goal.option_none:
+    match world.options.city_trial_goal.current_key:
+        case CityTrialGoal.option_none:
             pass
-        case world.options.city_trial_goal.option_n_checklist_blocks:
+        case CityTrialGoal.option_n_checklist_blocks:
             # can't currently gate anything and the player can always complete all checklist blocks regardless,
             # so just being able to reach the city trial region is enough
             collection_state_list.append(lambda state: state.can_reach_region("City Trial", world.player))
         case _:
             collection_state_list.append(
-                lambda state: state.can_reach_location(str(world.options.city_trial_goal.value), world.player)
+                lambda state: state.can_reach_location(world.options.city_trial_goal.current_key, world.player)
             )
 
-    match world.options.air_ride_goal.value:
+    match world.options.air_ride_goal.current_key:
         case world.options.air_ride_goal.option_none:
             pass
         case world.options.air_ride_goal.option_n_checklist_blocks:
@@ -471,10 +477,10 @@ def determine_goal(world: "KARWorld") -> None:
             collection_state_list.append(lambda state: state.can_reach_region("Air Ride", world.player))
         case _:
             collection_state_list.append(
-                lambda state: state.can_reach_location(str(world.options.air_ride_goal.value), world.player)
+                lambda state: state.can_reach_location(world.options.air_ride_goal.current_key, world.player)
             )
 
-    match world.options.top_ride_goal.value:
+    match world.options.top_ride_goal.current_key:
         case world.options.top_ride_goal.option_none:
             pass
         case world.options.top_ride_goal.option_n_checklist_blocks:
@@ -483,7 +489,7 @@ def determine_goal(world: "KARWorld") -> None:
             collection_state_list.append(lambda state: state.can_reach_region("Top Ride", world.player))
         case _:
             collection_state_list.append(
-                lambda state: state.can_reach_location(str(world.options.top_ride_goal.value), world.player)
+                lambda state: state.can_reach_location(world.options.top_ride_goal.current_key, world.player)
             )
 
     # multiworld completion condition is all goal conditions being true

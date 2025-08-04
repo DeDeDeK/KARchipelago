@@ -50,6 +50,15 @@ class CheckboxRewardItems(Toggle):
     default = 0
 
 
+class CheckboxFillersProgression(Toggle):
+    """
+    Toggles whether "checkbox filler" items are progression items.
+    """
+
+    display_name = "Checkbox fillers are progression"
+    default = 1
+
+
 class EnergyLink(Toggle):
     """
     This enables or disables EnergyLink features. This means that collected patches or destroyed objects in
@@ -135,6 +144,26 @@ class CityTrialProgressionFreeRun(Toggle):
     display_name = "City Trial Free Run checkboxes are progression"
 
 
+class CityTrialCheckboxFillers(Toggle):
+    """
+    This controls whether "checkbox filler" items for City Trial are added to the pool.
+    """
+
+    default = 1
+    display_name = "City Trial Checkbox Fillers"
+
+
+class CityTrialCheckboxFillersAmount(Range):
+    """
+    This controls the number of "checkbox filler" items that are added to the pool for City Trial.
+    """
+
+    default = 5
+    range_start = 1
+    range_end = 20
+    display_name = "Number of City Trial Checkbox Fillers"
+
+
 class AirRideGoal(TextChoice):
     """
     This sets the Goal for the run. You can also input a custom location from the location list as a goal.
@@ -186,6 +215,26 @@ class AirRideProgressionHighEffort(Toggle):
 
     default = 0
     display_name = "Air Ride Long/High effort checkboxes are progression"
+
+
+class AirRideCheckboxFillers(Toggle):
+    """
+    This controls whether "checkbox filler" items for Air Ride are added to the pool.
+    """
+
+    default = 1
+    display_name = "Air Ride Checkbox Fillers"
+
+
+class AirRideCheckboxFillersAmount(Range):
+    """
+    This controls the number of "checkbox filler" items that are added to the pool for Air Ride.
+    """
+
+    default = 5
+    range_start = 1
+    range_end = 20
+    display_name = "Number of Air Ride Checkbox Fillers"
 
 
 class TopRideGoal(TextChoice):
@@ -250,6 +299,26 @@ class TopRideProgressionMultiplayer(Toggle):
     display_name = "Top Ride Multiplayer checkboxes are progression"
 
 
+class TopRideCheckboxFillers(Toggle):
+    """
+    This controls whether "checkbox filler" items for Top Ride are added to the pool.
+    """
+
+    default = 1
+    display_name = "Top Ride Checkbox Fillers"
+
+
+class TopRideCheckboxFillersAmount(Range):
+    """
+    This controls the number of "checkbox filler" items that are added to the pool for Top Ride.
+    """
+
+    default = 5
+    range_start = 1
+    range_end = 20
+    display_name = "Number of Top Ride Checkbox Fillers"
+
+
 @dataclass
 class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     """
@@ -260,6 +329,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     trap_chance: TrapChance
     effect_items_enabled: EffectItemsEnabled
     checkbox_reward_items: CheckboxRewardItems
+    checkbox_fillers_progression: CheckboxFillersProgression
     energy_link: EnergyLink
     city_trial_goal: CityTrialGoal
     city_trial_checklist_amount: CityTrialCheckListAmount
@@ -268,17 +338,23 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_progression_multiplayer: CityTrialProgressionMultiplayer
     city_trial_permanent_patches: CityTrialPermanentPatches
     city_trial_permanent_patch_progression: CityTrialPermanentPatchProgression
+    city_trial_checkbox_fillers: CityTrialCheckboxFillers
+    city_trial_checkbox_fillers_amount: CityTrialCheckboxFillersAmount
     air_ride_goal: AirRideGoal
     air_ride_checklist_amount: AirRideCheckListAmount
     air_ride_progression_high_effort: AirRideProgressionHighEffort
     air_ride_progression_free_run: AirRideProgressionFreeRun
     air_ride_progression_time_attack: AirRideProgressionTimeAttack
+    air_ride_checkbox_fillers: AirRideCheckboxFillers
+    air_ride_checkbox_fillers_amount: AirRideCheckboxFillersAmount
     top_ride_goal: TopRideGoal
     top_ride_checklist_amount: TopRideCheckListAmount
     top_ride_progression_high_effort: TopRideProgressionHighEffort
     top_ride_progression_free_run: TopRideProgressionFreeRun
     top_ride_progression_time_attack: TopRideProgressionTimeAttack
     top_ride_progression_multiplayer: TopRideProgressionMultiplayer
+    top_ride_checkbox_fillers: TopRideCheckboxFillers
+    top_ride_checkbox_fillers_amount: TopRideCheckboxFillersAmount
 
     def get_output_dict(self) -> dict[str, Any]:
         """
@@ -290,6 +366,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "trap_chance",
             "effect_items_enabled",
             "checkbox_reward_items",
+            "checkbox_fillers_progression",
             "energy_link",
             "death_link",
             "city_trial_goal",
@@ -299,22 +376,30 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "city_trial_progression_multiplayer",
             "city_trial_permanent_patches",
             "city_trial_permanent_patch_progression",
+            "city_trial_checkbox_fillers",
+            "city_trial_checkbox_fillers_amount",
             "air_ride_goal",
             "air_ride_checklist_amount",
             "air_ride_progression_high_effort",
             "air_ride_progression_free_run",
             "air_ride_progression_time_attack",
+            "air_ride_checkbox_fillers",
+            "air_ride_checkbox_fillers_amount",
             "top_ride_goal",
             "top_ride_checklist_amount",
             "top_ride_progression_high_effort",
             "top_ride_progression_free_run",
             "top_ride_progression_time_attack",
             "top_ride_progression_multiplayer",
+            "top_ride_checkbox_fillers",
+            "top_ride_checkbox_fillers_amount",
         )
 
 
 kar_option_groups = [
-    OptionGroup("Item Options", [TrapsEnabled, TrapChance, EffectItemsEnabled, CheckboxRewardItems]),
+    OptionGroup(
+        "Item Options", [TrapsEnabled, TrapChance, EffectItemsEnabled, CheckboxRewardItems, CheckboxFillersProgression]
+    ),
     OptionGroup(
         "City Trial Options",
         [
@@ -325,6 +410,8 @@ kar_option_groups = [
             CityTrialProgressionMultiplayer,
             CityTrialPermanentPatches,
             CityTrialPermanentPatchProgression,
+            CityTrialCheckboxFillers,
+            CityTrialCheckboxFillersAmount,
         ],
     ),
     OptionGroup(
@@ -335,6 +422,8 @@ kar_option_groups = [
             AirRideProgressionFreeRun,
             AirRideProgressionTimeAttack,
             AirRideProgressionHighEffort,
+            AirRideCheckboxFillers,
+            AirRideCheckboxFillersAmount,
         ],
     ),
     OptionGroup(
@@ -346,6 +435,8 @@ kar_option_groups = [
             TopRideProgressionTimeAttack,
             TopRideProgressionHighEffort,
             TopRideProgressionMultiplayer,
+            TopRideCheckboxFillers,
+            TopRideCheckboxFillersAmount,
         ],
     ),
 ]

@@ -58,6 +58,20 @@ class MemoryAddress(IntEnum):
     AIR_RIDE_BASE_CHECKLIST_ADDRESS = 0x805367BC
     TOP_RIDE_BASE_CHECKLIST_ADDRESS = 0x805368D4
 
+    # number of checklist box fillers for city trial. this is a byte value. this should be a positive integer > 0.
+    # can set to any number at any time and that will be the number the player has. unlocking a filler through a
+    # checklist box will only go to a maximum of 5, but this can go higher.
+    CITY_TRIAL_CHECKLIST_BOX_FILLER_NUM = 0x80536982
+    # the length of the list of checkbox fillers on the side of the checklist. this is a byte value. this should be
+    # an integer between 0 and 5, since it will only show 5 max. it does not matter if this is below the value of
+    # the number of fillers available to the player - they can continue to use them as long as this is at least 1.
+    # setting this to 0 will disable the use of fillers, as there will be no box to select.
+    CITY_TRIAL_CHECKLIST_BOX_FILLER_LIST_LENGTH = 0x80536983
+    AIR_RIDE_CHECKLIST_BOX_FILLER_NUM = 0x80536742
+    AIR_RIDE_CHECKLIST_BOX_FILLER_LIST_LENGTH = 0x80536743
+    TOP_RIDE_CHECKLIST_BOX_FILLER_NUM = 0x8053685A
+    TOP_RIDE_CHECKLIST_BOX_FILLER_LIST_LENGTH = 0x8053685B
+
 
 class MenuSelectionID(IntEnum):
     AIR_RIDE = 0
@@ -158,6 +172,19 @@ def get_patch_type_from_item_name(item_name: str | None):
     for patch_type in PatchType:
         if patch_type.value == item_name:
             return patch_type
+    return None
+
+
+class CheckboxFillerType(StrEnum):
+    CITY_TRIAL_CHECKBOX_FILLER = "Checkbox Filler (City Trial)"
+    AIR_RIDE_CHECKBOX_FILLER = "Checkbox Filler (Air Ride)"
+    TOP_RIDE_CHECKBOX_FILLER = "Checkbox Filler (Top Ride)"
+
+
+def get_checkbox_filler_type_from_item_name(item_name: str | None):
+    for checkbox_filler_type in CheckboxFillerType:
+        if checkbox_filler_type.value == item_name:
+            return checkbox_filler_type
     return None
 
 
