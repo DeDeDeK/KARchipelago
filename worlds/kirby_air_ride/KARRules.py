@@ -2,6 +2,8 @@ import typing
 
 from BaseClasses import Callable, CollectionState
 from worlds.generic.Rules import set_rule
+from worlds.kirby_air_ride.KARData import ProgressiveStadiumUnlockType
+from worlds.kirby_air_ride.KARLocations import CITY_TRIAL_LOCATION_TABLE
 
 if typing.TYPE_CHECKING:
     from . import KARWorld
@@ -48,6 +50,23 @@ def set_rules(world: "KARWorld"):
         )
         and state.can_reach_location("City Trial: Unlock Dragoon Parts A, B, and C on the Checklist!", world.player),
     )
+
+    # City trial stadium rules (if progressive stadiums are enabled). Player must have the stadium unlock item to access
+    # the stadium
+    if world.options.city_trial_progressive_stadiums:
+        for location_name, location_data in CITY_TRIAL_LOCATION_TABLE.items():
+            if "Stadium:" in location_data.region:
+                if "ALL" in location_data.region:
+                    # location that applies to any of the given stadium, so any of the unlock items for that stadium will work
+                    stadium_unlocks = [
+                        stadium_unlock_type.value
+                        for stadium_unlock_type in ProgressiveStadiumUnlockType
+                        if location_data.region.rstrip(" ALL") in stadium_unlock_type.value
+                    ]
+                    set_rule_if_exists(location_name, lambda state: state.has_any(stadium_unlocks, world.player))
+                else:
+                    stadium_unlock_type = ProgressiveStadiumUnlockType("Unlock " + location_data.region)
+                    set_rule_if_exists(location_name, lambda state: state.has(stadium_unlock_type.value, world.player))
 
     # Air Ride Rules
     set_rule_if_exists(

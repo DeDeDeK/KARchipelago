@@ -295,6 +295,12 @@ class KARWorld(World):
                 and item_name == CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value
             ):
                 continue
+            # patch cap increase items should not be added if they are not enabled
+            if not self.options.city_trial_progressive_patch_caps and item_data.type == KARItemType.PATCH_CAP_INCREASE:
+                continue
+            # don't add progressive stadium items if they are not enabled
+            if not self.options.city_trial_progressive_stadiums and item_data.type == KARItemType.PROGRESSIVE_STADIUM:
+                continue
 
             if classification & ItemClassification.progression:
                 # take care of checkbox filler items first, as they have quantity specified by the player
@@ -315,6 +321,14 @@ class KARWorld(World):
                                 progression_pool.extend(
                                     [item_name] * self.options.top_ride_checkbox_fillers_amount.value
                                 )
+                    continue
+
+                # cap increase items need to make as many as is required to get to the max stat count of 18
+                # (for all patches expect HP, which is 16)
+                # assumes the range of patch_cap_amount is 1-17.
+                if item_data.type == KARItemType.PATCH_CAP_INCREASE:
+                    num_needed = max(1, 18 - self.options.city_trial_patch_cap_amount.value)
+                    progression_pool.extend([item_name] * num_needed)
                     continue
 
                 progression_pool.extend([item_name] * item_data.quantity)

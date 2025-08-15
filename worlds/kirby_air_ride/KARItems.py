@@ -3,7 +3,13 @@ from typing import NamedTuple, Optional
 
 from BaseClasses import Item, ItemClassification
 
-from .KARData import CheckboxFillerType, EffectType, PatchType
+from .KARData import (
+    CheckboxFillerType,
+    EffectType,
+    PatchCapIncreaseType,
+    PatchType,
+    ProgressiveStadiumUnlockType,
+)
 from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
 
 
@@ -13,6 +19,7 @@ class KARItemType(StrEnum):
     CHECKBOX_REWARD = "Checkbox Reward"
     CHECKBOX_FILLER = "Checkbox Filler"
     PROGRESSIVE_STADIUM = "Progressive Stadium"
+    PATCH_CAP_INCREASE = "Patch Cap Increase"
     FILLER = "Filler"
 
 
@@ -64,9 +71,6 @@ class KARItem(Item):
         self.type = data.type
         self.item_id = data.item_id
 
-
-# NOTE: .value is needed here due to AP needing base string class for anything that gets into multidata. StrEnums are not
-# converted to base str by AP.
 
 ITEM_TABLE: dict[str, KARItemData] = {
     PatchType.BOOST_UP.value: KARItemData(KARItemType.PATCH.value, ItemClassification.useful, 30, 10, 0x03),
@@ -128,6 +132,108 @@ ITEM_TABLE: dict[str, KARItemData] = {
     CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value: KARItemData(
         KARItemType.CHECKBOX_FILLER.value, ItemClassification.progression, 64, 10, None
     ),
+    PatchCapIncreaseType.ALL_CAP_INCREASE.value: KARItemData(
+        KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 65, 5, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_1.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 66, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_2.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 67, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_3.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 68, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_4.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 69, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_HIGH_JUMP.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 70, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_TARGET_FLIGHT.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 71, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_AIR_GLIDER.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 72, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_1.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 73, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_2.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 74, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_3.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 75, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_4.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 76, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_5.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 77, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_KIRBY_MELEE_1.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 78, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_KIRBY_MELEE_2.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 79, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_1.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 80, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_2.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 81, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_3.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 82, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_4.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 83, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_5.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 84, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_6.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 85, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_7.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 86, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_8.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 87, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_9.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 88, 1, None
+    ),
+    ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value: KARItemData(
+        KARItemType.PROGRESSIVE_STADIUM.value, ItemClassification.progression, 89, 1, None
+    ),
+    # PatchCapIncreaseType.BOOST_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 65, 5, None
+    # ),
+    # PatchCapIncreaseType.TOP_SPEED_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 66, 5, None
+    # ),
+    # PatchCapIncreaseType.OFFENSE_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 67, 5, None
+    # ),
+    # PatchCapIncreaseType.DEFENSE_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 68, 5, None
+    # ),
+    # PatchCapIncreaseType.TURN_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 69, 5, None
+    # ),
+    # PatchCapIncreaseType.GLIDE_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 70, 5, None
+    # ),
+    # PatchCapIncreaseType.CHARGE_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 71, 5, None
+    # ),
+    # PatchCapIncreaseType.WEIGHT_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 72, 5, None
+    # ),
+    # PatchCapIncreaseType.HP_CAP_INCREASE.value: KARItemData(
+    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 73, 5, None
+    # ),
     # 5 progressive stadiums to match the 5 unlockable stadiums
     # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
     # "Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 1, 1, 0x0000),
@@ -209,7 +315,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # "Fake Weight": KARItemData("Fake Patch", ItemClassification.trap, 95, 10, 0x44),
 }
 
-# update the item table with chekcbox reward items. use a 500 offset to avoid colliding with item_table items
+# update the item table with checkbox reward items. use a 500 offset to avoid colliding with item_table items
 ITEM_TABLE.update(
     {
         location_data.reward: KARItemData(
@@ -263,6 +369,10 @@ item_name_groups = {
         # "Run Amok",
         # "No Charge",
         # "Invincible Candy",
+        # "Speed Up",
+        # "Speed Down",
+        # "Attack Up",
+        # "Attack Down",
         EffectType.ONE_HP.value,
         EffectType.FULL_HEAL.value,
     },
@@ -324,10 +434,43 @@ item_name_groups = {
         PatchType.CHARGE_UP_PERMANENT_PLUS_ONE.value,
         PatchType.WEIGHT_UP_PERMANENT_PLUS_ONE.value,
         PatchType.HP_UP_PERMANENT_PLUS_ONE.value,
-        # "Speed Up",
-        # "Speed Down",
-        # "Attack Up",
-        # "Attack Down",
+    },
+    "Patch Cap Increases": {
+        PatchCapIncreaseType.BOOST_CAP_INCREASE.value,
+        PatchCapIncreaseType.TOP_SPEED_CAP_INCREASE.value,
+        PatchCapIncreaseType.OFFENSE_CAP_INCREASE.value,
+        PatchCapIncreaseType.DEFENSE_CAP_INCREASE.value,
+        PatchCapIncreaseType.TURN_CAP_INCREASE.value,
+        PatchCapIncreaseType.GLIDE_CAP_INCREASE.value,
+        PatchCapIncreaseType.CHARGE_CAP_INCREASE.value,
+        PatchCapIncreaseType.WEIGHT_CAP_INCREASE.value,
+        PatchCapIncreaseType.HP_CAP_INCREASE.value,
+    },
+    "Progressive Stadium Unlocks": {
+        ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_1.value,
+        ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_2.value,
+        ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_3.value,
+        ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_4.value,
+        ProgressiveStadiumUnlockType.STADIUM_HIGH_JUMP.value,
+        ProgressiveStadiumUnlockType.STADIUM_TARGET_FLIGHT.value,
+        ProgressiveStadiumUnlockType.STADIUM_AIR_GLIDER.value,
+        ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_1.value,
+        ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_2.value,
+        ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_3.value,
+        ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_4.value,
+        ProgressiveStadiumUnlockType.STADIUM_DESTRUCTION_DERBY_5.value,
+        ProgressiveStadiumUnlockType.STADIUM_KIRBY_MELEE_1.value,
+        ProgressiveStadiumUnlockType.STADIUM_KIRBY_MELEE_2.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_1.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_2.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_3.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_4.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_5.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_6.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_7.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_8.value,
+        ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_9.value,
+        ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value,
     },
     # "Fake Patches": {
     #     "Fake Boost",
