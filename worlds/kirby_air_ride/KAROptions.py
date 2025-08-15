@@ -164,6 +164,38 @@ class CityTrialCheckboxFillersAmount(Range):
     display_name = "Number of City Trial Checkbox Fillers"
 
 
+class CityTrialProgressivePatchCaps(Toggle):
+    """
+    This controls whether the maxiumum value you can have for patches is capped. If so, you can unlock higher
+    patch caps by getting "progressive patch cap" items.
+    """
+
+    default = 0
+    display_name = "City Trial Progressive Patch Caps"
+
+
+class CityTrialPatchCapAmount(Range):
+    """
+    Sets the starting cap on patch maximum amount.
+    """
+
+    default = 10
+    range_start = 1
+    range_end = 17
+    display_name = "Patch Cap Starting Amount"
+
+
+class CityTrialProgressiveStadiums(Toggle):
+    """
+    Toggles whether stadiums need to be found and unlocked. If on, the game starts with no stadiums
+    unlocked. You will need to find the corresponding stadium unlock item to unlock it. If off, stadiums
+    are unlocked via random chance and checkboxes as usual.
+    """
+
+    default = 0
+    display_name = "City Trial Progressive Stadiums"
+
+
 class AirRideGoal(TextChoice):
     """
     This sets the Goal for the run. You can also input a custom location from the location list as a goal.
@@ -340,6 +372,9 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_permanent_patch_progression: CityTrialPermanentPatchProgression
     city_trial_checkbox_fillers: CityTrialCheckboxFillers
     city_trial_checkbox_fillers_amount: CityTrialCheckboxFillersAmount
+    city_trial_progressive_patch_caps: CityTrialProgressivePatchCaps
+    city_trial_patch_cap_amount: CityTrialPatchCapAmount
+    city_trial_progressive_stadiums: CityTrialProgressiveStadiums
     air_ride_goal: AirRideGoal
     air_ride_checklist_amount: AirRideCheckListAmount
     air_ride_progression_high_effort: AirRideProgressionHighEffort
@@ -378,6 +413,9 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "city_trial_permanent_patch_progression",
             "city_trial_checkbox_fillers",
             "city_trial_checkbox_fillers_amount",
+            "city_trial_progressive_patch_caps",
+            "city_trial_patch_cap_amount",
+            "city_trial_progressive_stadiums",
             "air_ride_goal",
             "air_ride_checklist_amount",
             "air_ride_progression_high_effort",
@@ -412,6 +450,9 @@ kar_option_groups = [
             CityTrialPermanentPatchProgression,
             CityTrialCheckboxFillers,
             CityTrialCheckboxFillersAmount,
+            CityTrialProgressivePatchCaps,
+            CityTrialPatchCapAmount,
+            CityTrialProgressiveStadiums,
         ],
     ),
     OptionGroup(

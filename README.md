@@ -71,7 +71,7 @@ Besides having fun being a part of a multiworld with friends, there are also a f
 - None
   - this disables Top Ride from being a part of your world. No locations for Top Ride will exist to be checked.
 
-You can mix and match goals between all game modes. If there is a goal for multiple game modes, you can only complete your game by completing both goals.
+You can mix and match goals between all game modes. If there is a goal for multiple game modes, you can only complete your game by completing all goals.
 
 ## What does randomization do to this game? Which locations get shuffled?
 
@@ -92,7 +92,9 @@ Current items players are able to receive are:
 - "Effect" items
   - 1 HP Trap
   - Full Heal
-- Checkbox filler items
+- Checkbox filler items for each checklist
+- Patch Cap Increase items
+- Progressive stadium items
 
 Any items will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run (after a few seconds have elapsed). 
 
@@ -102,9 +104,9 @@ NOTE: There are currently no items that apply to Air Ride or Top Ride mode (othe
 
 ### EnergyLink
 
-If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any (archipelago) item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
+If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches (if you are below the max stat limit for that patch) in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any (archipelago) item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
 
-Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, except for All patches which cost 90, and Checkbox fillers cost 500.
+Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, except for All patches which cost 90, and Checkbox fillers and Patch Cap Increases cost 500.
 
 For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend):
 
@@ -116,21 +118,24 @@ Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KA
 
 ## Known issues
 
-- DeathLink currently only reliably works one-way. The player can trigger DeathLink by dying quite reliably, but can only be killed by DeathLink some of the time/on certain vehicles.
-- DeathLink for killing vehicles just takes health down to ~0 (likely due to floating point stuff)
-- Restarting the game client results in all permanent patches being received again
-- Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
-- Energylink is occasionally flaky with adding multiple items at once (via `amount` argument)
-- Players can not receive items on the following stages due to stage ID conflicts: 
-  - Stadium: DESTRUCTION DERBY 4
-  - Stadium: DESTRUCTION DERBY 5
-  - Stadium: SINGLE RACE 1
-  - FANTASY MEADOWS
-- Top Ride currently does not support items until a memory address is found that reflects whether we're in game in top
-  ride or not
-- Patch items for City Trial are not guaranteed to work depending on what vehicle you are on. They always work on compact star.
-- 100 checklist blocks goal will misidentify itself as hydra + dragoon goal. Possibly others as well. This could also result
-  in a game complete not being sent. 
+- DeathLink 
+  - receiving Deathlink only works some of the time/on certain vehicles
+  - receiving Deathlink just takes health down to ~0 (likely due to floating point stuff) (have not confirmed this is still a bug)
+- EnergyLink
+  - gives energy from patches received from /energylink_spend
+  - gives energy for permanent patches when transitioning into City Trial
+- Items
+  - Players cannot receive items on the following stages due to stage ID conflicts: 
+    - Stadium: DESTRUCTION DERBY 4
+    - Stadium: DESTRUCTION DERBY 5
+    - Stadium: SINGLE RACE 1
+    - FANTASY MEADOWS
+  - Top Ride currently does not support items until a memory address is found that reflects whether we're in game in top
+    ride or not
+  - Restarting the game client results in all permanent patches being received again
+  - Patch items for City Trial are not guaranteed to work depending on what vehicle you are on. They always work on compact star.
+    - because of this, Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
+  - starting inventory that is not permanent patches gets ignored
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues [here](https://github.com/DeDeDeK/KARchipelago/issues). 
 
@@ -155,8 +160,7 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 - randomization of starting air ride machine
 
 #### Progression
-- progressive stadium items, required to advance to the next stadium
-- progressive patch max - unlock higher patch count maximums with items
+- progressive patch caps for each patch individually
 - progressive item spawn rate increases
 - progressive box color/type unlocks
 - progressive kirby color unlocks
@@ -194,6 +198,7 @@ need to work on creating Gecko codes and modifying the iso to make new features 
   - use checked_locations, missing_locaitons, server_locations as caches
 - possible variable deathlink cooldown?
 - colored text for goal completion
+- ensure that the number of checkbox fillers is less than the n checklist blocks goal number
 
 ## Contributing
 

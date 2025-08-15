@@ -5,7 +5,17 @@ import dolphin_memory_engine
 
 from CommonClient import logger
 
-from .KARData import PATCH_MAP, STAGE_MAP, CheckboxFillerType, EffectType, MemoryAddress, PatchType, StageName
+from .KARData import (
+    BIT_POSITION_TO_STADIUM_MAP,
+    STAGE_MAP,
+    STAT_TO_MEMORY_MAP,
+    CheckboxFillerType,
+    EffectType,
+    MemoryAddress,
+    StageName,
+    StatType,
+    compose_stadium_unlocks_number,
+)
 
 
 class DolphinInterface:
@@ -19,11 +29,9 @@ class DolphinInterface:
         self.transitioned_time: float = time.time()
         self.transition_wait: int = 6
         self.transitioned: bool = False
-        self.player_1_patches: dict[PatchType, float] = {
-            patch_type: 0
-            for patch_type in PATCH_MAP
-            if "Up" in patch_type.value and "Permanent" not in patch_type.value
-        }
+        self.player_1_patches_old: dict[StatType, float] = {stat_type: 0 for stat_type in StatType}
+        self.player_1_patches: dict[StatType, float] = {stat_type: 0 for stat_type in StatType}
+        self.unlocked_stadiums: set[StageName] = set()
         self.destruction_count: int = 0
         self.current_stage: StageName | None = None
 
@@ -97,13 +105,28 @@ class DolphinInterface:
 
     def write_byte(self, console_address: int, value: int) -> bool:
         """
-        Write a byte to Dolphin memory.
+        Write a byte to Dolphin memory. Converts the int value to a single byte before writing to console_address.
 
         Returns:
             Whether the write operation was successful
         """
         try:
-            dolphin_memory_engine.write_bytes(console_address, value.to_bytes(1, byteorder="big"))
+            dolphin_memory_engine.write_bytes(console_address, value.to_bytes(1, byteorder="big", signed=True))
+            return True
+        except Exception as e:
+            logger.warning(self.memory_write_error_fmt.format(type="byte", addr=hex(console_address), error=str(e)))
+            return False
+
+    def write_bytes(self, console_address: int, value: int, num_bytes: int) -> bool:
+        """
+        Write multiple bytes to Dolphin memory. Converts the integer argument to the specified number of bytes,
+        and then writes that number of bytes starting a console_address.
+
+        Returns:
+            Whether the write operation was successful
+        """
+        try:
+            dolphin_memory_engine.write_bytes(console_address, value.to_bytes(num_bytes, byteorder="big"))
             return True
         except Exception as e:
             logger.warning(self.memory_write_error_fmt.format(type="byte", addr=hex(console_address), error=str(e)))
@@ -213,32 +236,60 @@ class DolphinInterface:
             )
             return False
 
-    def increment_player_patch(self, patch_type: PatchType, delta: int) -> None:
+    def set_city_trial_current_stadium(self, stadium: StageName | None) -> None:
         """
-        Change the player patch count by delta.
+        sets the stadium that will occur at the end of the current city trial run to be the given stadium.
+
+        if stadium is None, this sets the stadium to -2, which sets the stadium to fantasy meadows race 1 lap,
+        and prevents unlocking of the stadium.
+        """
+        if stadium is None:
+            self.write_byte(MemoryAddress.CITY_TRIAL_STADIUM_EVENT_ADDRESS.value, -2)
+            return
+
+        if stadium in BIT_POSITION_TO_STADIUM_MAP:
+            # the number written to the memory address must be in range 0-23, or a negative number
+            # if wanting to prevent unlocking the stadium
+            # index already 0-indexes, but it's in reverse order, so we need to take 23 - value
+            stadium_number = 23 - BIT_POSITION_TO_STADIUM_MAP.index(stadium)
+            self.write_byte(MemoryAddress.CITY_TRIAL_STADIUM_EVENT_ADDRESS.value, stadium_number)
+        else:
+            logger.warning(f"invalid stadium name: {stadium} is not a stadium")
+
+    def update_unlocked_stadiums(self) -> None:
+        """
+        Sets the game state of unlocked stadiums based on self.unlocked_stadiums.
+        """
+        bit_list = [0] * 24
+        for stadium in self.unlocked_stadiums:
+            i = BIT_POSITION_TO_STADIUM_MAP.index(stadium)
+            bit_list[i] = 1
+        value = compose_stadium_unlocks_number(bit_list)
+        self.write_bytes(MemoryAddress.CITY_TRIAL_UNLOCKED_STADIUMS_ADDRESS.value, value, 3)
+
+    def increment_player_patch_stat(self, stat_type: StatType, delta: int) -> None:
+        """
+        Change the player patch stat count by delta.
 
         Args:
-            patch_type: PatchType of the patch to be incremented
+            stat_type: StatType of the patch to be incremented
             delta: Amount to change the patch value (positive or negative)
         """
-        # Handle "ALL" patch type which updates all stats
-        if "All" in patch_type:
-            for patch in PATCH_MAP.values():
-                if "Up" in patch.type and "Permanent" not in patch.type:
-                    current = self.read_float(patch.memory_address.value)
-                    self.write_float(patch.memory_address.value, current + delta)
+        memory_address = STAT_TO_MEMORY_MAP.get(stat_type)
+        if memory_address is not None:
+            current = self.read_float(memory_address.value)
+            self.write_float(memory_address.value, current + delta)
         else:
-            # Handle specific patch type
-            patch = PATCH_MAP[patch_type]
-            current = self.read_float(patch.memory_address.value)
-            self.write_float(patch.memory_address.value, current + delta)
+            logger.warning(f"unknown stat to memory address mapping for stat type: {stat_type}")
 
     def update_player_patch_counts(self) -> None:
         """
-        Read in the current player patch counts to self.player_1_patches.
+        Read in the current player patch counts to self.player_1_patches. Save the old values for patch counts
+        to facilitate energylink and other features that need a diff of the counts.
         """
-        for patch_type in self.player_1_patches:
-            self.player_1_patches[patch_type] = self.read_float(PATCH_MAP[patch_type].memory_address.value)
+        self.player_1_patches_old = dict(self.player_1_patches)
+        for stat_type in self.player_1_patches:
+            self.player_1_patches[stat_type] = self.read_float(STAT_TO_MEMORY_MAP[stat_type].value)
 
     def update_destruction_count(self) -> None:
         """
@@ -252,7 +303,7 @@ class DolphinInterface:
         Apply special effect items.
 
         Args:
-            item_name: Name of the effect item to apply
+            effect: EffectType to apply.
         """
         match effect:
             case EffectType.ONE_HP:
