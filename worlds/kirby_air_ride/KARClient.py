@@ -1,4 +1,5 @@
 import asyncio
+import random
 import time
 import traceback
 from typing import Any, List, Optional
@@ -14,12 +15,19 @@ from CommonClient import (
 )
 from NetUtils import ClientStatus, NetworkItem
 
-from .DolphinInterface import DolphinInterface, PatchType
+from .DolphinInterface import DolphinInterface
 from .KARData import (
+    PatchCapIncreaseType,
+    PatchType,
     StageName,
+    StatType,
     get_checkbox_filler_type_from_item_name,
     get_effect_type_from_item_name,
+    get_patch_cap_increase_type_from_item_name,
     get_patch_type_from_item_name,
+    get_progressive_stadium_unlock_type_from_item_name,
+    get_stage_name_from_stadium_unlock_type,
+    patch_type_to_stat_type,
 )
 from .KARItems import ITEM_TABLE, LOOKUP_ID_TO_NAME, KARItemType
 from .KARLocations import (
@@ -31,7 +39,7 @@ from .KARLocations import (
 )
 from .KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
 
-CLIENT_VERSION = "v0.4.1"
+CLIENT_VERSION = "v0.5.0"
 
 
 class KARCommandProcessor(ClientCommandProcessor):
@@ -70,6 +78,7 @@ class KARCommandProcessor(ClientCommandProcessor):
         if isinstance(self.ctx, KARContext):
             if self.ctx.energy_link_enabled:
                 self.ctx.energy_link_enabled = False
+                self.ctx.stored_data_notification_keys.remove(f"EnergyLink{self.ctx.team}")
                 logger.info("EnergyLink disabled.")
             else:
                 self.ctx.energy_link_enabled = True
@@ -95,7 +104,7 @@ class KARContext(CommonContext):
     """
 
     game: str = "Kirby Air Ride"
-    items_handling = 0b111  # receive items from starting inventory, our own world, and other worlds
+    items_handling = 0b111  # receive items from the server for starting inventory, our own world, and other worlds
     want_slot_data = True  # need slot data for player options specified at generation
     command_processor = KARCommandProcessor
 
@@ -120,6 +129,9 @@ class KARContext(CommonContext):
         self.city_trial_goal_checklist_amount: int = 0
         self.city_trial_goal_achieved: bool = False
         self.city_trial_num_locations_checked: int = 0
+        self.city_trial_patch_cap_enabled: bool = False
+        self.city_trial_patch_cap_amount: int = 0
+        self.city_trial_progressive_stadiums_enabled: bool = False
         self.air_ride_enabled: bool = False
         self.air_ride_goal: str = ""
         self.air_ride_goal_checklist_amount: int = 0
@@ -210,6 +222,18 @@ class KARContext(CommonContext):
             if "top_ride_checklist_amount" in args["slot_data"]:
                 self.top_ride_goal_checklist_amount = int(args["slot_data"]["top_ride_checklist_amount"])
 
+            if "city_trial_progressive_patch_caps" in args["slot_data"]:
+                self.city_trial_patch_cap_enabled = bool(args["slot_data"]["city_trial_progressive_patch_caps"])
+
+            if "city_trial_patch_cap_amount" in args["slot_data"]:
+                self.city_trial_patch_cap_amount = int(args["slot_data"]["city_trial_patch_cap_amount"])
+                logger.info(f"set city trial patch cap to {self.city_trial_patch_cap_amount} from player options")
+
+            if "city_trial_progressive_stadiums" in args["slot_data"]:
+                self.city_trial_progressive_stadiums_enabled = bool(
+                    args["slot_data"]["city_trial_progressive_stadiums"]
+                )
+
             self.enabled_modes = tuple(
                 mode for mode in ("city_trial", "air_ride", "top_ride") if getattr(self, f"{mode}_enabled")
             )
@@ -227,10 +251,42 @@ class KARContext(CommonContext):
         # ReceivedItems is a list of items that are in a guaranteed order.
         # {"index": 0, "items": [{"item_1"}, {"item_2"}]}
         # if the index is 0, the whole items list is sent.
+        # the server sends the whole item list with index = 0 upon every connection
+        # TODO: fix this ignoring starting inventory?
         if cmd == "ReceivedItems":
             logger.debug("Got ReceivedItems packet, index: %s, items: %s", args["index"], args["items"])
+            if args["index"] == 0:
+                # set patch cap max based on how many progressive patch cap items we've received
+                # TODO: since the index is also 0 for the first item, if the first item received is a
+                # patch cap increase, this will add one on top of the item being received and adding one
+                for network_item in args["items"]:
+                    if ITEM_TABLE[LOOKUP_ID_TO_NAME[network_item.item]].type == KARItemType.PATCH_CAP_INCREASE:
+                        self.city_trial_patch_cap_amount += 1
+                logger.info(f"set city trial patch cap to {self.city_trial_patch_cap_amount} from items received")
+                # trigger the Retrieved packet to update the patch cap amount based on items purchased
+                Utils.async_start(self.get_server_purhased_item(PatchCapIncreaseType.ALL_CAP_INCREASE.value))
+
+                # set unlocked stadiums based on the stadium unlock items we've received
+                for network_item in args["items"]:
+                    item_name = LOOKUP_ID_TO_NAME[network_item.item]
+                    if ITEM_TABLE[item_name].type == KARItemType.PROGRESSIVE_STADIUM:
+                        stadium = get_progressive_stadium_unlock_type_from_item_name(item_name)
+                        if stadium is not None:
+                            stage_name = get_stage_name_from_stadium_unlock_type(stadium)
+                            self.dolphin_interface.unlocked_stadiums.add(stage_name)
+
             if args["index"] != 0:
                 self.items_queue.extend(args["items"])
+
+        # Retrieved is sent in repsonse to any Get command. It returns a dict[str, any].
+        if cmd == "Retrieved":
+            logger.info(f"got Retrieved packet: {args}")
+            # add to city trial patch cap amount based on the number of cap increases purchased
+            item = f"EnergyLink{self.team}PurchasedItem-{PatchCapIncreaseType.ALL_CAP_INCREASE.value}"
+            if item in args["keys"]:
+                if args["keys"][item] is not None:
+                    self.city_trial_patch_cap_amount += int(args["keys"][item])
+                    logger.info(f"patch cap increased to {self.city_trial_patch_cap_amount} from purchased items")
 
         # SetReply is sent when a server data storage key was updated by us with Set(), and we requested a
         # reply afterwards. Also received when SetNotify was requested for a certain key.
@@ -270,26 +326,6 @@ class KARContext(CommonContext):
         """Send a message to the server that the player has completed their goal."""
         await self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}])
 
-    async def update_server_items_received_index(self, index: int) -> None:
-        """
-        Update the server with the index of the last received item.
-
-        Args:
-            index: Index of the last received item
-        """
-        logger.debug(f"Sending server data storage update for items received index: {index}...")
-        await self.send_msgs(
-            [
-                {
-                    "cmd": "Set",
-                    "key": "last_received_index",
-                    "default": 0,
-                    "want_reply": True,
-                    "operations": [{"operation": "replace", "value": index}],
-                }
-            ]
-        )
-
     async def send_check_locations(self) -> None:
         """
         Check all locations and notify the server of any newly checked locations.
@@ -298,19 +334,12 @@ class KARContext(CommonContext):
         # check City Trial Checklist if City Trial is enabled
         if self.city_trial_enabled:
             self.city_trial_num_locations_checked = 0
-            for location, data in CITY_TRIAL_LOCATION_TABLE.items():
-                if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
-                    if self.dolphin_interface.read_byte(data.mem_address) not in self.excluded_checkbox_bytes:
-                        # TODO: can gate stadium unlocks and other locations by checking if we've received a "progressive stadium"
-                        # or similar item, and then re-writing the checked value to 0 if we haven't gotten that item yet.
-                        # if not [LOOKUP_ID_TO_NAME[item.item] for item in self.items_received]:
-                        #     logger.debug("player has not received the progressive stadium required to progress. re-locking...")
-                        #     checked = False
-                        #     self.dolphin_interface.write_byte(data.mem_address, 0x00)
-                        #     continue
-                        if data.code is not None:
+            for location_data in CITY_TRIAL_LOCATION_TABLE.values():
+                if location_data.type == KARLocationType.CHECKLISTBOX and location_data.mem_address is not None:
+                    if self.dolphin_interface.read_byte(location_data.mem_address) not in self.excluded_checkbox_bytes:
+                        if location_data.code is not None:
                             self.city_trial_num_locations_checked += 1
-                            self.locations_checked.add(data.code)
+                            self.locations_checked.add(location_data.code)
 
             # check goals
             if not (self.city_trial_goal_achieved or self.finished_game):
@@ -333,12 +362,12 @@ class KARContext(CommonContext):
         # check Air Ride Checklist if Air Ride is enabled
         if self.air_ride_enabled:
             self.air_ride_num_locations_checked = 0
-            for location, data in AIR_RIDE_LOCATION_TABLE.items():
-                if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
-                    if self.dolphin_interface.read_byte(data.mem_address) not in self.excluded_checkbox_bytes:
-                        if data.code is not None:
+            for location_data in AIR_RIDE_LOCATION_TABLE.values():
+                if location_data.type == KARLocationType.CHECKLISTBOX and location_data.mem_address is not None:
+                    if self.dolphin_interface.read_byte(location_data.mem_address) not in self.excluded_checkbox_bytes:
+                        if location_data.code is not None:
                             self.air_ride_num_locations_checked += 1
-                            self.locations_checked.add(data.code)
+                            self.locations_checked.add(location_data.code)
 
             # check goals
             if not (self.air_ride_goal_achieved or self.finished_game):
@@ -361,12 +390,12 @@ class KARContext(CommonContext):
         # check Top Ride Checklist if Top Ride is enabled
         if self.top_ride_enabled:
             self.top_ride_num_locations_checked = 0
-            for location, data in TOP_RIDE_LOCATION_TABLE.items():
-                if data.type == KARLocationType.CHECKLISTBOX and data.mem_address is not None:
-                    if self.dolphin_interface.read_byte(data.mem_address) not in self.excluded_checkbox_bytes:
-                        if data.code is not None:
+            for location_data in TOP_RIDE_LOCATION_TABLE.values():
+                if location_data.type == KARLocationType.CHECKLISTBOX and location_data.mem_address is not None:
+                    if self.dolphin_interface.read_byte(location_data.mem_address) not in self.excluded_checkbox_bytes:
+                        if location_data.code is not None:
                             self.top_ride_num_locations_checked += 1
-                            self.locations_checked.add(data.code)
+                            self.locations_checked.add(location_data.code)
 
             # check goals
             if not (self.top_ride_goal_achieved or self.finished_game):
@@ -415,22 +444,57 @@ class KARContext(CommonContext):
 
         match item_data.type:
             case KARItemType.PATCH.value:
+                logger.info("In patch item give...")
                 if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
-                    delta = 1 if "Up" in item_name else -1
                     patch_type = get_patch_type_from_item_name(item_name)
+                    logger.info(f"giving patch type: {patch_type}")
                     if patch_type is not None:
-                        self.dolphin_interface.increment_player_patch(patch_type, delta)
+                        stat_type = patch_type_to_stat_type(patch_type)
+                        logger.info(f"patch type has stat type of {stat_type}")
+                        delta = 1 if "Up" in patch_type.value else -1
+                        if stat_type is not None:
+                            self.dolphin_interface.increment_player_patch_stat(stat_type, delta)
+                            return item
+                        else:
+                            # stat_type returned None, either invalid or All patch type
+                            if "All" in patch_type.value:
+                                for stat in self.dolphin_interface.player_1_patches:
+                                    logger.info(f"incrementing stat {stat_type} by {delta}")
+                                    self.dolphin_interface.increment_player_patch_stat(stat, delta)
+                                return item
+                            else:
+                                logger.warning(f"Failed to parse stat type from patch type: {patch_type}")
+                                return item
+                    else:
+                        logger.warning(f"Failed to parse patch type from item name: {item_name}")
                         return item
+            case KARItemType.PATCH_CAP_INCREASE.value:
+                logger.info("in patch cap increase item give...")
+                patch_cap_increase_type = get_patch_cap_increase_type_from_item_name(item_name)
+                if patch_cap_increase_type is not None:
+                    self.city_trial_patch_cap_amount += 1
+                    logger.info(f"patch cap increased to {self.city_trial_patch_cap_amount}")
+                else:
+                    logger.warning(f"Failed to parse patch cap increase type from item name: {item_name}")
+                return item
             case KARItemType.CHECKBOX_REWARD.value:
                 return item
             case KARItemType.CHECKBOX_FILLER.value:
+                logger.info("in checkbox filler item give...")
                 checkbox_filler_type = get_checkbox_filler_type_from_item_name(item_name)
                 if checkbox_filler_type is not None:
+                    logger.info(f"applying checkbox filler type: {checkbox_filler_type}")
                     self.dolphin_interface.apply_checkbox_filler(checkbox_filler_type)
-                    return item
+                else:
+                    logger.warning(f"Failed to parse checkbox filler type from item name: {item_name}")
+                return item
             case KARItemType.PROGRESSIVE_STADIUM.value:
-                # determine the next progressive stadium in logic
-                # write 01 to the checkbox location corresponding to the next stadium unlock to flag it for unlocking
+                prog_stadium_type = get_progressive_stadium_unlock_type_from_item_name(item_name)
+                if prog_stadium_type is not None:
+                    stage_name = get_stage_name_from_stadium_unlock_type(prog_stadium_type)
+                    self.dolphin_interface.unlocked_stadiums.add(stage_name)
+                else:
+                    logger.warning(f"invalid progressive stadium type: {item_name}")
                 return item
             case KARItemType.EFFECT.value:
                 if self.dolphin_interface.current_stage in (
@@ -445,11 +509,13 @@ class KARContext(CommonContext):
                     effect_type = get_effect_type_from_item_name(item_name)
                     if effect_type is not None:
                         self.dolphin_interface.apply_effect_item(effect_type)
-                        return item
+                    else:
+                        logger.warning(f"Failed to parse effect type from item name: {item_name}")
+                    return item
 
     async def give_items(self, items: List[NetworkItem]) -> List[NetworkItem]:
         """
-        Give the player all outstanding items they have yet to receive. Returns the list of items successfully given.
+        Give the player the list of items. Returns only the list of items successfully given.
 
         Args:
             items: The list of NetworkItems from the server.
@@ -465,11 +531,9 @@ class KARContext(CommonContext):
 
     async def shutdown(self) -> None:
         """Shutdown the client and clean up resources."""
-        # Unhook from Dolphin if still hooked
         if self.dolphin_interface.is_hooked():
             self.dolphin_interface.unhook()
 
-        # Continue with parent shutdown
         await super().shutdown()
 
     async def send_energy(self, value: float) -> None:
@@ -484,7 +548,7 @@ class KARContext(CommonContext):
 
     async def remove_energy(self, value: int) -> None:
         """
-        Removes the given amount of energy for energylink.
+        Removes the given amount of energy from energylink.
         """
         if self.current_energy_link_value is not None:
             Utils.async_start(
@@ -499,6 +563,43 @@ class KARContext(CommonContext):
                 )
             )
 
+    async def update_server_purchased_item(self, item_name: str, amount: int) -> None:
+        """
+        Updates the server storage key for the item purchased through energylink. Adds the amount to the
+        existing amount.
+        """
+        logger.info(f"updating server storage for {item_name}: amount: {amount}")
+        Utils.async_start(
+            self.send_msgs(
+                [
+                    {
+                        "cmd": "Set",
+                        "key": f"EnergyLink{self.team}PurchasedItem-{item_name}",
+                        "default": amount,
+                        "want_reply": True,
+                        "operations": [{"operation": "add", "value": amount}],
+                    }
+                ]
+            )
+        )
+
+    async def get_server_purhased_item(self, item_name: str) -> None:
+        """
+        Get the server-stores data for the everylink purchased item of the given item_name.
+        The data will be sent back in a Retrieved package.
+        """
+        logger.info(f"getting server storage for {item_name}")
+        Utils.async_start(
+            self.send_msgs(
+                [
+                    {
+                        "cmd": "Get",
+                        "keys": [f"EnergyLink{self.team}PurchasedItem-{item_name}"],
+                    }
+                ]
+            )
+        )
+
     async def update_energy_link(self) -> None:
         """
         Check if the player has created energy and update the energy link value accordingly.
@@ -509,18 +610,12 @@ class KARContext(CommonContext):
         energy = 0
 
         if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
-            # shallow copy of original to preserve old count values
-            old_counts = dict(self.dolphin_interface.player_1_patches)
-
-            # get new player patch counts
-            self.dolphin_interface.update_player_patch_counts()
-
             # TODO: fix this giving energy from patches received from /energylink_spend
             # TODO: fix this giving energy for permanent patches when transitioning into City Trial
             diff = 0
-            for patch_type, patch_count in self.dolphin_interface.player_1_patches.items():
-                if patch_count > old_counts[patch_type]:
-                    diff += patch_count - old_counts[patch_type]
+            for stat_type, stat_count in self.dolphin_interface.player_1_patches.items():
+                if stat_count > self.dolphin_interface.player_1_patches_old[stat_type]:
+                    diff += stat_count - self.dolphin_interface.player_1_patches_old[stat_type]
             if diff > 0:
                 energy += diff
 
@@ -535,12 +630,6 @@ class KARContext(CommonContext):
         # send energy to the server
         if energy > 0:
             Utils.async_start(self.send_energy(energy))
-
-        # if there are items that have been aquired by spending energy, queue those to be received
-        if len(self.energy_link_items_queue) > 0:
-            for item_id in self.energy_link_items_queue:
-                self.items_queue.append(NetworkItem(item_id, 0, 0, 0))
-            self.energy_link_items_queue.clear()
 
     async def energy_link_spend(self, item_name: str, amount: str) -> None:
         """
@@ -563,25 +652,37 @@ class KARContext(CommonContext):
         # base cost
         cost = self.energy_link_base_item_cost * int(amount)
 
-        # patch item costs
-        if item_data.type == KARItemType.PATCH:
-            patch_type = get_patch_type_from_item_name(item_name)
-            if patch_type is not None:
-                if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
-                    # ALL patches cost 9x as much
-                    cost = self.energy_link_base_item_cost * 9 * int(amount)
-
-        # checkbox filler item costs
-        if item_data.type == KARItemType.CHECKBOX_FILLER:
-            cost = self.energy_link_base_item_cost * 50
+        # determine costs for specific items
+        match item_data.type:
+            case KARItemType.PATCH:
+                patch_type = get_patch_type_from_item_name(item_name)
+                if patch_type is not None:
+                    if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
+                        # ALL patches cost 9x as much
+                        cost *= 9
+            case KARItemType.CHECKBOX_FILLER:
+                # cost *= 60
+                pass
+            case KARItemType.PATCH_CAP_INCREASE:
+                # cost *= 50
+                pass
+            case KARItemType.PROGRESSIVE_STADIUM:
+                # cost *= 100
+                pass
 
         if self.current_energy_link_value < cost:
-            logger.info(f"Not enough energy. Current value: {self.current_energy_link_value} Need: {cost}")
+            logger.info(
+                f"Not enough energy. Current amount: {self.current_energy_link_value} Need: {cost} for {amount} {item_name}."
+            )
             return
 
         self.energy_link_items_queue.extend([item_data.code] * int(amount))
         Utils.async_start(self.remove_energy(cost))
         logger.info(f"Spent {cost} energy on {amount} {item_name}.")
+
+        if item_data.type == KARItemType.PATCH_CAP_INCREASE:
+            # update the server storage for the patch cap increase
+            Utils.async_start(self.update_server_purchased_item(item_name, int(amount)))
 
     def make_gui(self):
         """
@@ -600,16 +701,16 @@ class KARContext(CommonContext):
             return
 
         # update current_stage and check if a transition into a stage has happend
-        stage_name, transition_trigger = self.dolphin_interface.check_transition()
+        _, transition_trigger = self.dolphin_interface.check_transition()
+
+        # handle stage transitions
         if transition_trigger:
             # queue up permanent patches if player has transitioned into City Trial
             # TODO: fix this giving the player items again if they close and reopen the client.
             # TODO: this will not give players permanent patches if they are off of a vehicle when the patches
             # are given. The game resets the patches to 0 when off of a vehicle, and then seems to set the values
             # back to whatever the value was when they got off of the vehicle
-            # MEGA TODO: getting on a different vehicle uses different addresses for patches?? Do patch values need
-            # to follow a pointer??
-            if stage_name == StageName.CITY_TRIAL:
+            if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
                 logger.debug("queueing permanent patches...")
                 # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
                 items = [
@@ -619,11 +720,52 @@ class KARContext(CommonContext):
                 ]
                 self.items_queue.extend(items)
 
-        # handle energylink for the current stage
+                # set the stadium event
+                if self.city_trial_progressive_stadiums_enabled:
+                    try:
+                        rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
+                        logger.info(f"setting stadium to {rand_stadium.value}")
+                    except IndexError:
+                        # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
+                        # stadium unlock item
+                        # TODO: this causes the game to crash when the stadium hint event happens. Might have to switch
+                        # to starting with a single stadium unlocked at first
+                        rand_stadium = None
+                    self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
+
+        # set the stadium event at the end of the current trial. will only choose randomly from unlocked stadiums
+        if self.city_trial_progressive_stadiums_enabled:
+            # update the unlocked stadiums in-game to reflect our local state. this does not require the player
+            # to be in a stage
+            self.dolphin_interface.update_unlocked_stadiums()
+
+        # update player patch counts and handle patch caps if player is in City Trial
+        if self.dolphin_interface.current_stage == StageName.CITY_TRIAL and self.dolphin_interface.transition_waited():
+            self.dolphin_interface.update_player_patch_counts()
+
+            # reset the values for each patch to the cap if they are over the cap
+            if self.city_trial_patch_cap_enabled:
+                for stat_type, stat_count in self.dolphin_interface.player_1_patches.items():
+                    # +2 offset for everything but HP
+                    offset = 2 if stat_type != StatType.HP else 0
+                    if stat_count + offset > self.city_trial_patch_cap_amount:
+                        diff = int(self.city_trial_patch_cap_amount - (stat_count + offset))
+                        logger.info(
+                            f"incrementing player stat {stat_type} by {diff} due to being over the cap of {self.city_trial_patch_cap_amount}"
+                        )
+                        self.dolphin_interface.increment_player_patch_stat(stat_type, diff)
+
+        # handle energylink
         if self.energy_link_enabled:
-            # if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
-            logger.debug("in energylink update...")
-            await self.update_energy_link()
+            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
+                await self.update_energy_link()
+
+            # if there are items that have been aquired by spending energy, queue those to be received
+            # spending does not require the player to be in a stage
+            if len(self.energy_link_items_queue) > 0:
+                for item_id in self.energy_link_items_queue:
+                    self.items_queue.append(NetworkItem(item_id, 0, 0, 0))
+                self.energy_link_items_queue.clear()
 
         # check for death when in City Trial and past transition period
         if self.death_link_enabled:
@@ -634,21 +776,35 @@ class KARContext(CommonContext):
                 logger.debug("in deathlink check...")
                 await self.check_death()
 
-        # check if any items are in the items queue and apply them if we're in game
+        # check if any items are in the items queue and give them
         if len(self.items_queue) > 0:
-            # give checkbox fillers separately, as they do not require any stage
-            checkbox_fillers = [
-                item
-                for item in self.items_queue
-                if ITEM_TABLE[LOOKUP_ID_TO_NAME[item.item]].type == KARItemType.CHECKBOX_FILLER
-            ]
-            given_items = await self.give_items(checkbox_fillers)
-            for item in given_items:
-                self.items_queue.remove(item)
+            # give items that do not require a player to be in a stage
+            # give checkbox fillers
+            if self.dolphin_interface.current_stage is None:
+                checkbox_fillers = [
+                    item
+                    for item in self.items_queue
+                    if ITEM_TABLE[LOOKUP_ID_TO_NAME[item.item]].type == KARItemType.CHECKBOX_FILLER
+                ]
+                if len(checkbox_fillers) > 0:
+                    given_items = await self.give_items(checkbox_fillers)
+                    for item in given_items:
+                        self.items_queue.remove(item)
 
-            # give remaining items
+                # give patch cap increases
+                patch_cap_increases = [
+                    item
+                    for item in self.items_queue
+                    if ITEM_TABLE[LOOKUP_ID_TO_NAME[item.item]].type == KARItemType.PATCH_CAP_INCREASE
+                ]
+                if len(patch_cap_increases) > 0:
+                    given_items = await self.give_items(patch_cap_increases)
+                    for item in given_items:
+                        self.items_queue.remove(item)
+
+            # give items that were received/purchased while in a stage
             if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
-                logger.debug("in items give...")
+                logger.info("in items give...")
                 given_items = await self.give_items(self.items_queue)
                 for item in given_items:
                     self.items_queue.remove(item)
