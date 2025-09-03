@@ -161,7 +161,7 @@ class DolphinInterface:
             logger.warning(self.memory_write_error_fmt.format(type="float", addr=hex(console_address), error=str(e)))
             return False
 
-    def read_pointer(self, console_address: int, offset: int, byte_count: int) -> Optional[bytes]:
+    def read_pointer_bytes(self, console_address: int, offset: int, byte_count: int) -> Optional[bytes]:
         """
         Follow the pointer at console_address and apply the given offset, then read byte_count amount of bytes from it.
 
@@ -210,6 +210,28 @@ class DolphinInterface:
                 )
             )
             return False
+
+    def read_pointer_float(self, console_address: int, offset: int) -> Optional[float]:
+        """
+        Follow the pointer at console_address and apply the given offset, then read the value from it.
+
+        Args:
+            console_address: Address of the pointer
+            offset: Offset to apply when reading from the pointed location
+        Returns:
+            Float value from memory, or None if the operation failed.
+        """
+        try:
+            address = dolphin_memory_engine.follow_pointers(console_address, [0])
+            address += offset
+            return dolphin_memory_engine.read_float(address)
+        except Exception as e:
+            logger.warning(
+                self.memory_write_error_fmt.format(
+                    type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)
+                )
+            )
+            return None
 
     def write_pointer_float(self, console_address: int, offset: int, value: float) -> bool:
         """
@@ -275,10 +297,17 @@ class DolphinInterface:
             stat_type: StatType of the patch to be incremented
             delta: Amount to change the patch value (positive or negative)
         """
-        memory_address = STAT_TO_MEMORY_MAP.get(stat_type)
-        if memory_address is not None:
-            current = self.read_float(memory_address.value)
-            self.write_float(memory_address.value, current + delta)
+        memory_offset = STAT_TO_MEMORY_MAP.get(stat_type)
+        if memory_offset is not None:
+            current = self.read_pointer_float(
+                MemoryAddress.PLAYER_1_CURRENT_MACHINE_POINTER_ADDRESS.value, memory_offset.value
+            )
+            if current is not None:
+                self.write_pointer_float(
+                    MemoryAddress.PLAYER_1_CURRENT_MACHINE_POINTER_ADDRESS.value, memory_offset.value, current + delta
+                )
+            else:
+                logger.warning(f"could not read the memory address for stat type: {stat_type}")
         else:
             logger.warning(f"unknown stat to memory address mapping for stat type: {stat_type}")
 
@@ -289,7 +318,13 @@ class DolphinInterface:
         """
         self.player_1_patches_old = dict(self.player_1_patches)
         for stat_type in self.player_1_patches:
-            self.player_1_patches[stat_type] = self.read_float(STAT_TO_MEMORY_MAP[stat_type].value)
+            value = self.read_pointer_float(
+                MemoryAddress.PLAYER_1_CURRENT_MACHINE_POINTER_ADDRESS.value, STAT_TO_MEMORY_MAP[stat_type].value
+            )
+            if value is not None:
+                self.player_1_patches[stat_type] = value
+            else:
+                logger.warning(f"could not read memory address for stat type: {stat_type}")
 
     def update_destruction_count(self) -> None:
         """
@@ -384,7 +419,7 @@ class DolphinInterface:
         Check which stage the player is currently in in-game. Returns None if the player is not in a stage.
         """
         menu_selection = self.read_byte(MemoryAddress.MENU_STAGE_ID_ADDR.value)
-        current_stage = self.read_pointer(MemoryAddress.CURR_STAGE_ID_ADDR.value, 0x4, 4)
+        current_stage = self.read_pointer_bytes(MemoryAddress.CURR_STAGE_ID_ADDR.value, 0x4, 4)
 
         if current_stage is not None:
             current_stage = int.from_bytes(current_stage, byteorder="big")
