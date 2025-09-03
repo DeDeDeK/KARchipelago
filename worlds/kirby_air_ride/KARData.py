@@ -1,38 +1,39 @@
-from enum import IntEnum, StrEnum
+from enum import IntEnum, IntFlag, StrEnum
 from typing import NamedTuple
 
 
 class MemoryAddress(IntEnum):
     BASE_MEMORY_ADDRESS = 0x80000000
-    # Player 1 stat patch addresses
-    # Number of patches for player 1 is stored at these addresses. Values start at -2 float except for HP, which starts at 0
-    PLAYER_1_STAT_BOOST_PATCH_AMOUNT = 0x81578630
-    PLAYER_1_STAT_TOP_SPEED_PATCH_AMOUNT = 0x81578634
-    PLAYER_1_STAT_TURN_PATCH_AMOUNT = 0x81578638
-    PLAYER_1_STAT_CHARGE_PATCH_AMOUNT = 0x8157863C
-    PLAYER_1_STAT_GLIDE_PATCH_AMOUNT = 0x81578640
-    PLAYER_1_STAT_WEIGHT_PATCH_AMOUNT = 0x8157862C
-    PLAYER_1_STAT_OFFENSE_PATCH_AMOUNT = 0x81578644
-    PLAYER_1_STAT_DEFENSE_PATCH_AMOUNT = 0x81578648
-    PLAYER_1_STAT_HP_PATCH_AMOUNT = 0x8157864C
 
     # this address holds a pointer to a value that then needs offsets applied to get to the relevant machine data
+    # TODO: find a true pointer or address to the current machine health. This address currently only works for some
+    # machines/some of the time
     PLAYER_1_CURRENT_MACHINE_POINTER_ADDRESS = 0x8055AA30
-    # TODO: find a true pointer or address to the current machine health. This address currently only works for some vehicles or
-    # some of the time
     # current machine health float value from initially 0-100, that gets scaled by heart patches to be over 100
     PLAYER_1_CURRENT_MACHINE_HP_OFFSET = 0xA78
+
+    # Player 1 stat patch offsets. These are offsets from the PLAYER_1_CURRENT_MACHINE_POINTER_ADDRESS.
+    # Float values. Values start at -2 except for HP, which starts at 0
+    PLAYER_1_STAT_WEIGHT_PATCH_OFFSET = 0x9AC
+    PLAYER_1_STAT_BOOST_PATCH_OFFSET = 0x9B0
+    PLAYER_1_STAT_TOP_SPEED_PATCH_OFFSET = 0x9B4
+    PLAYER_1_STAT_TURN_PATCH_OFFSET = 0x9B8
+    PLAYER_1_STAT_CHARGE_PATCH_OFFSET = 0x9BC
+    PLAYER_1_STAT_GLIDE_PATCH_OFFSET = 0x9C0
+    PLAYER_1_STAT_OFFENSE_PATCH_OFFSET = 0x9C4
+    PLAYER_1_STAT_DEFENSE_PATCH_OFFSET = 0x9C8
+    PLAYER_1_STAT_HP_PATCH_OFFSET = 0x9CC
 
     # This address is used to check the player's health for DeathLink.
     # this is a float value from initially 0-100, that gets scaled by heart patches to be over 100.
     # always player HP, always reflects the PLAYER_1_CURRENT_MACHINE_HP_ADDRESS
-    # maybe read only? is overwritten every frame but can still use to check actual current player HP
+    # this is overwritten by the game every frame but can still use to check actual current player HP
     # is 0 for the entire time the player is off of a machine
     PLAYER_1_CURRENT_HP_ADDRESS = 0x8055AA24
     # max health of the player. overwritten every frame, so effectively read-only. float value.
     PLAYER_1_CURRENT_MAX_HP_ADDRESS = 0x8055AA28
 
-    # number of things destroyed:
+    # number of things destroyed in city trial:
     # trees, rocks, coral, houses, star pole, volcano entrances, underground walls
     # Byte value. Starts at 00. Reset only when entering City Trial.
     PLAYER_1_DESTRUCTION_COUNT_ADDRESS = 0x8055B2A3
@@ -41,12 +42,14 @@ class MemoryAddress(IntEnum):
     # Byte value. Initialized as 1, then 0 when choosing courses, then the value of laps for the course.
     PLAYER_1_AIR_RIDE_TOTAL_LAP_COUNT_ADDRESS = 0x80536472
 
-    # Address that holds the currently selected menu
-    # This address is used to check the stage name to verify that the player is in-game before sending items.
+    # Address that holds the currently selected menu item. This is set persistently once a menu selection
+    # is chosen, and only changes once the player is back to the main menu.
+    # This is a byte value.
+    # This address is used to check the stage type to verify that the player is in-game before sending items.
     # 00 = Air Ride, 01 = Top Ride, 02 = City Trial, 03 = Options, 04 = LAN
     MENU_STAGE_ID_ADDR = 0x80535A0C
 
-    # the current stage the player is in
+    # the current stage the player is in.
     # this is a pointer to a 4 byte word. an offset of 4 needs to be applied to get to the address of the current stage.
     # before main menu: very high positive or negative numbers, jumping around
     # on main menu: 22
@@ -54,6 +57,7 @@ class MemoryAddress(IntEnum):
     # after exiting a stage: 0, but can randomly be high positive or negative numbers at any time
     CURR_STAGE_ID_ADDR = 0x805DD6CC
 
+    # The starting addresses for each checklist.
     CITY_TRIAL_BASE_CHECKLIST_ADDRESS = 0x805369FC
     AIR_RIDE_BASE_CHECKLIST_ADDRESS = 0x805367BC
     TOP_RIDE_BASE_CHECKLIST_ADDRESS = 0x805368D4
@@ -127,6 +131,30 @@ class MemoryAddress(IntEnum):
     # -12: fantasy meadows race 1 lap
     # -13: drag race 1
     # ...
+
+
+class CheckboxFlags(IntFlag):
+    # 0b00000000 = locked, not visible
+    # 0b00000001 = flagged for unlocking
+    # 0b00010000 = locked, visible
+    # 0b00010001 = visible, flagged for unlocking
+    # 0b00000100 = unlocked, green box
+    # 0b00001100 = unlocked, red box
+    # 0b00011010 = checkbox filler, reward, previously visible
+    # 0b00001010 = checkbox filler, reward, not previously visible
+    # 0b00010010 = checkbox filler, no reward, previously visible
+    # 0b00000010 = checkbox filler, no reward, not previously visible
+
+    # 0b00010000 = visible bit?
+    # 0b00001000 = reward/red bit?
+    # 0b00000100 = unlocked/green bit?
+    # 0b00000010 = checkbox filler/purple bit?
+    # 0b00000001 = flagged for unlocking bit?
+    VISIBLE = 0b00010000
+    REWARD_RED = 0b00001000
+    UNLOCKED_GREEN = 0b00000100
+    FILLER_PURPLE = 0b00000010
+    FLAGGED_FOR_UNLOCK = 0b00000001
 
 
 def convert_stadium_unlocks_bytes_to_bits(b: bytes) -> list[int]:
@@ -382,15 +410,15 @@ def patch_type_to_stat_type(patch_type: PatchType) -> StatType | None:
 
 # Mapping from StatType to MemoryAddress for easy lookup
 STAT_TO_MEMORY_MAP: dict[StatType, MemoryAddress] = {
-    StatType.TURN: MemoryAddress.PLAYER_1_STAT_TURN_PATCH_AMOUNT,
-    StatType.BOOST: MemoryAddress.PLAYER_1_STAT_BOOST_PATCH_AMOUNT,
-    StatType.CHARGE: MemoryAddress.PLAYER_1_STAT_CHARGE_PATCH_AMOUNT,
-    StatType.DEFENSE: MemoryAddress.PLAYER_1_STAT_DEFENSE_PATCH_AMOUNT,
-    StatType.GLIDE: MemoryAddress.PLAYER_1_STAT_GLIDE_PATCH_AMOUNT,
-    StatType.HP: MemoryAddress.PLAYER_1_STAT_HP_PATCH_AMOUNT,
-    StatType.WEIGHT: MemoryAddress.PLAYER_1_STAT_WEIGHT_PATCH_AMOUNT,
-    StatType.OFFENSE: MemoryAddress.PLAYER_1_STAT_OFFENSE_PATCH_AMOUNT,
-    StatType.TOP_SPEED: MemoryAddress.PLAYER_1_STAT_TOP_SPEED_PATCH_AMOUNT,
+    StatType.TURN: MemoryAddress.PLAYER_1_STAT_TURN_PATCH_OFFSET,
+    StatType.BOOST: MemoryAddress.PLAYER_1_STAT_BOOST_PATCH_OFFSET,
+    StatType.CHARGE: MemoryAddress.PLAYER_1_STAT_CHARGE_PATCH_OFFSET,
+    StatType.DEFENSE: MemoryAddress.PLAYER_1_STAT_DEFENSE_PATCH_OFFSET,
+    StatType.GLIDE: MemoryAddress.PLAYER_1_STAT_GLIDE_PATCH_OFFSET,
+    StatType.HP: MemoryAddress.PLAYER_1_STAT_HP_PATCH_OFFSET,
+    StatType.WEIGHT: MemoryAddress.PLAYER_1_STAT_WEIGHT_PATCH_OFFSET,
+    StatType.OFFENSE: MemoryAddress.PLAYER_1_STAT_OFFENSE_PATCH_OFFSET,
+    StatType.TOP_SPEED: MemoryAddress.PLAYER_1_STAT_TOP_SPEED_PATCH_OFFSET,
 }
 
 
@@ -431,54 +459,6 @@ class Patch(NamedTuple):
     type: PatchType
     memory_address: MemoryAddress
 
-
-PATCH_MAP: dict[PatchType, Patch] = {
-    PatchType.TURN_UP: Patch(PatchType.TURN_UP, MemoryAddress.PLAYER_1_STAT_TURN_PATCH_AMOUNT),
-    PatchType.BOOST_UP: Patch(PatchType.BOOST_UP, MemoryAddress.PLAYER_1_STAT_BOOST_PATCH_AMOUNT),
-    PatchType.CHARGE_UP: Patch(PatchType.CHARGE_UP, MemoryAddress.PLAYER_1_STAT_CHARGE_PATCH_AMOUNT),
-    PatchType.DEFENSE_UP: Patch(PatchType.DEFENSE_UP, MemoryAddress.PLAYER_1_STAT_DEFENSE_PATCH_AMOUNT),
-    PatchType.GLIDE_UP: Patch(PatchType.GLIDE_UP, MemoryAddress.PLAYER_1_STAT_GLIDE_PATCH_AMOUNT),
-    PatchType.HP_UP: Patch(PatchType.HP_UP, MemoryAddress.PLAYER_1_STAT_HP_PATCH_AMOUNT),
-    PatchType.WEIGHT_UP: Patch(PatchType.WEIGHT_UP, MemoryAddress.PLAYER_1_STAT_WEIGHT_PATCH_AMOUNT),
-    PatchType.OFFENSE_UP: Patch(PatchType.OFFENSE_UP, MemoryAddress.PLAYER_1_STAT_OFFENSE_PATCH_AMOUNT),
-    PatchType.TOP_SPEED_UP: Patch(PatchType.TOP_SPEED_UP, MemoryAddress.PLAYER_1_STAT_TOP_SPEED_PATCH_AMOUNT),
-    PatchType.TURN_DOWN: Patch(PatchType.TURN_DOWN, MemoryAddress.PLAYER_1_STAT_TURN_PATCH_AMOUNT),
-    PatchType.BOOST_DOWN: Patch(PatchType.BOOST_DOWN, MemoryAddress.PLAYER_1_STAT_BOOST_PATCH_AMOUNT),
-    PatchType.CHARGE_DOWN: Patch(PatchType.CHARGE_DOWN, MemoryAddress.PLAYER_1_STAT_CHARGE_PATCH_AMOUNT),
-    PatchType.DEFENSE_DOWN: Patch(PatchType.DEFENSE_DOWN, MemoryAddress.PLAYER_1_STAT_DEFENSE_PATCH_AMOUNT),
-    PatchType.GLIDE_DOWN: Patch(PatchType.GLIDE_DOWN, MemoryAddress.PLAYER_1_STAT_GLIDE_PATCH_AMOUNT),
-    PatchType.HP_DOWN: Patch(PatchType.HP_DOWN, MemoryAddress.PLAYER_1_STAT_HP_PATCH_AMOUNT),
-    PatchType.WEIGHT_DOWN: Patch(PatchType.WEIGHT_DOWN, MemoryAddress.PLAYER_1_STAT_WEIGHT_PATCH_AMOUNT),
-    PatchType.OFFENSE_DOWN: Patch(PatchType.OFFENSE_DOWN, MemoryAddress.PLAYER_1_STAT_OFFENSE_PATCH_AMOUNT),
-    PatchType.TOP_SPEED_DOWN: Patch(PatchType.TOP_SPEED_DOWN, MemoryAddress.PLAYER_1_STAT_TOP_SPEED_PATCH_AMOUNT),
-    PatchType.TURN_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.TURN_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_TURN_PATCH_AMOUNT
-    ),
-    PatchType.BOOST_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.BOOST_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_BOOST_PATCH_AMOUNT
-    ),
-    PatchType.CHARGE_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.CHARGE_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_CHARGE_PATCH_AMOUNT
-    ),
-    PatchType.DEFENSE_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.DEFENSE_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_DEFENSE_PATCH_AMOUNT
-    ),
-    PatchType.GLIDE_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.GLIDE_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_GLIDE_PATCH_AMOUNT
-    ),
-    PatchType.HP_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.HP_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_HP_PATCH_AMOUNT
-    ),
-    PatchType.WEIGHT_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.WEIGHT_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_WEIGHT_PATCH_AMOUNT
-    ),
-    PatchType.OFFENSE_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.OFFENSE_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_OFFENSE_PATCH_AMOUNT
-    ),
-    PatchType.TOP_SPEED_UP_PERMANENT_PLUS_ONE: Patch(
-        PatchType.TOP_SPEED_UP_PERMANENT_PLUS_ONE, MemoryAddress.PLAYER_1_STAT_TOP_SPEED_PATCH_AMOUNT
-    ),
-}
 
 STAGE_MAP: dict[StageName, Stage] = {
     StageName.CITY_TRIAL: Stage(StageName.CITY_TRIAL, MenuSelectionID.CITY_TRIAL, StageID.CITY_TRIAL),
