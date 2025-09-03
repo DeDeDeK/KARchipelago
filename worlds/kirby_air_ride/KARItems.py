@@ -234,8 +234,6 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # PatchCapIncreaseType.HP_CAP_INCREASE.value: KARItemData(
     #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 73, 5, None
     # ),
-    # 5 progressive stadiums to match the 5 unlockable stadiums
-    # "Progressive Stadium": KARItemData("Progressive Stadium", ItemClassification.progression, 58, 5, None),
     # "Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 1, 1, 0x0000),
     # "Compact Star": KARItemData("Air Ride Machine", ItemClassification.progression, 2, 1, 0x0001),
     # "Winged Star": KARItemData("Air Ride Machine", ItemClassification.progression, 3, 1, 0x0002),
@@ -436,15 +434,16 @@ item_name_groups = {
         PatchType.HP_UP_PERMANENT_PLUS_ONE.value,
     },
     "Patch Cap Increases": {
-        PatchCapIncreaseType.BOOST_CAP_INCREASE.value,
-        PatchCapIncreaseType.TOP_SPEED_CAP_INCREASE.value,
-        PatchCapIncreaseType.OFFENSE_CAP_INCREASE.value,
-        PatchCapIncreaseType.DEFENSE_CAP_INCREASE.value,
-        PatchCapIncreaseType.TURN_CAP_INCREASE.value,
-        PatchCapIncreaseType.GLIDE_CAP_INCREASE.value,
-        PatchCapIncreaseType.CHARGE_CAP_INCREASE.value,
-        PatchCapIncreaseType.WEIGHT_CAP_INCREASE.value,
-        PatchCapIncreaseType.HP_CAP_INCREASE.value,
+        # PatchCapIncreaseType.BOOST_CAP_INCREASE.value,
+        # PatchCapIncreaseType.TOP_SPEED_CAP_INCREASE.value,
+        # PatchCapIncreaseType.OFFENSE_CAP_INCREASE.value,
+        # PatchCapIncreaseType.DEFENSE_CAP_INCREASE.value,
+        # PatchCapIncreaseType.TURN_CAP_INCREASE.value,
+        # PatchCapIncreaseType.GLIDE_CAP_INCREASE.value,
+        # PatchCapIncreaseType.CHARGE_CAP_INCREASE.value,
+        # PatchCapIncreaseType.WEIGHT_CAP_INCREASE.value,
+        # PatchCapIncreaseType.HP_CAP_INCREASE.value,
+        PatchCapIncreaseType.ALL_CAP_INCREASE.value,
     },
     "Progressive Stadium Unlocks": {
         ProgressiveStadiumUnlockType.STADIUM_DRAG_RACE_1.value,

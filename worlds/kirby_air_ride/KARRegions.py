@@ -3,7 +3,6 @@ from collections.abc import Callable
 from typing import List
 
 from BaseClasses import LocationProgressType, Region
-from worlds.kirby_air_ride.KAROptions import CityTrialGoal
 
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -457,9 +456,9 @@ def determine_goal(world: "KARWorld") -> None:
     collection_state_list: List[Callable] = []
 
     match world.options.city_trial_goal.current_key:
-        case CityTrialGoal.option_none:
+        case world.options.city_trial_goal.option_none:
             pass
-        case CityTrialGoal.option_n_checklist_blocks:
+        case world.options.city_trial_goal.option_n_checklist_blocks:
             # can't currently gate anything and the player can always complete all checklist blocks regardless,
             # so just being able to reach the city trial region is enough
             collection_state_list.append(lambda state: state.can_reach_region("City Trial", world.player))
