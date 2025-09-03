@@ -2,8 +2,9 @@ import typing
 
 from BaseClasses import Callable, CollectionState
 from worlds.generic.Rules import set_rule
-from worlds.kirby_air_ride.KARData import ProgressiveStadiumUnlockType
-from worlds.kirby_air_ride.KARLocations import CITY_TRIAL_LOCATION_TABLE
+
+from .KARData import ProgressiveStadiumUnlockType
+from .KARLocations import CITY_TRIAL_LOCATION_TABLE
 
 if typing.TYPE_CHECKING:
     from . import KARWorld

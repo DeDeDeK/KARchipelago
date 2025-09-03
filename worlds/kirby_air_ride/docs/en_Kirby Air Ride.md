@@ -8,6 +8,7 @@
     - [City Trial](#city-trial)
     - [Air Ride](#air-ride)
     - [Top Ride](#top-ride)
+      - [Note:](#note)
   - [What does randomization do to this game? Which locations get shuffled?](#what-does-randomization-do-to-this-game-which-locations-get-shuffled)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
@@ -70,6 +71,7 @@ Besides having fun being a part of a multiworld with friends, there are also a f
 - None
   - this disables Top Ride from being a part of your world. No locations for Top Ride will exist to be checked.
 
+#### Note:
 You can mix and match goals between all game modes. If there is a goal for multiple game modes, you can only complete your game by completing all goals.
 
 ## What does randomization do to this game? Which locations get shuffled?
@@ -93,7 +95,7 @@ Current items players are able to receive are:
   - Full Heal
 - Checkbox filler items for each checklist
 - Patch Cap Increase items
-- Progressive stadium items
+- Stadium unlock items
 
 Any items will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run (after a few seconds have elapsed). 
 
@@ -131,10 +133,9 @@ Try the troubleshooting steps in the [setup guide (webhost link)](/tutorial/Kirb
     - FANTASY MEADOWS
   - Top Ride currently does not support items until a memory address is found that reflects whether we're in game in top
     ride or not
-  - Restarting the game client results in all permanent patches being received again
+  - Restarting the client results in all permanent patches being received again if in City Trial
   - Patch items for City Trial are not guaranteed to work depending on what vehicle you are on. They always work on compact star.
     - because of this, Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
-  - starting inventory that is not permanent patches gets ignored
 
 Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues [here](https://github.com/DeDeDeK/KARchipelago/issues).
 
@@ -191,14 +192,10 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 - enable lists of locations as goals. get every checkbox on the list to complete your game. Allows for making custom games, essentially
 - energylink for air ride: laps completed, enemies killed
 - energylink for top ride: laps completed, environment destroyed/interacted with
-- kirby gets bigger as energylink grows?
 - ItemLink with other Kirby Air Ride worlds
 - performance pass on location checking
   - use checked_locations, missing_locaitons, server_locations as caches
 - possible variable deathlink cooldown?
-- colored text for goal completion
-- ensure that the number of checkbox fillers is less than the n checklist blocks goal number
-
 
 ## Contributing
 
