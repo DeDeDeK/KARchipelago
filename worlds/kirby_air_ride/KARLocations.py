@@ -2674,6 +2674,9 @@ location_name_groups = {
         "City Trial: Do some damage to Dyna Blade!",
         "City Trial: Get trampled by Dyna Blade!",
         "City Trial: Steal over 8 items from Tac by yourself!",
+        "City Trial: Break 5 or more of the huge pillars that appear!",
+        "City Trial: Break a huge pillar within 40 seconds of the time it appears!",
+        "City Trial: Go into the castle chamber when it opens!",
     },
     "City Trial: Patches": {
         "City Trial: In one game, get over 10 Boost Patches!",
@@ -2695,6 +2698,22 @@ location_name_groups = {
         "City Trial: Free Run: Drive for a total of 10 minutes or more!",
         "City Trial: In one match, complete both Dragoon and Hydra!",
         "City Trial: Fill in over 100 Checklist blocks!",
+        "City Trial: Get 10 items within the first 20 seconds of the match!",
+        "City Trial: In one game, get 50 or more items!",
+        "City Trial: Race over 200 miles!",
+    },
+    "City Trial: RNG": {
+        "City Trial: In one race, eat 3 or more plates of sushi!",
+        "City Trial: In one race, eat 3 or more Hot Dogs!",
+        "City Trial: In one game, eat 2 or more maxim tomatoes!",
+        "City Trial: In one game, drink 3 or more energy drinks!",
+        "City Trial: Get the Bomb ability from the Copy Chance Wheel!",
+        "City Trial: Get the Sleep ability from the Copy Chance Wheel!",
+    },
+    "City Trial: PVP": {
+        "City Trial: Use Fireworks to KO rivals 10 times or more!",
+        "City Trial: Use Sensor Bombs to KO rivals 3 times or more!",
+        "City Trial: Use Gold Spikes to KO rivals 3 times or more!",
     },
     "Air Ride: Races": {
         "Air Ride: MAGMA FLOWS Race over 4,800 feet in 2 minutes!",
