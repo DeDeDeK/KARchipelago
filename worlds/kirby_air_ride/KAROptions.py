@@ -146,6 +146,26 @@ class CityTrialProgressionFreeRun(Toggle):
     display_name = "City Trial Free Run checkboxes are progression"
 
 
+class CityTrialProgressionRNG(Toggle):
+    """
+    This controls whether checkboxes that require RNG elements of the game are a part of progression.
+    This applies to City Trial only.
+    """
+
+    default = 0
+    display_name = "City Trial RNG checkboxes are progression"
+
+
+class CityTrialProgressionBustVehicles(Toggle):
+    """
+    This controls whether checkboxes that require busting a vehicle on another vehicle are a part of progression.
+    This applies to City Trial only.
+    """
+
+    default = 0
+    display_name = "City Trial bust vehicle checkboxes are progression"
+
+
 class CityTrialCheckboxFillers(Toggle):
     """
     This controls whether "checkbox filler" items for City Trial are added to the pool.
@@ -370,6 +390,8 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_progression_high_effort: CityTrialProgressionHighEffort
     city_trial_progression_free_run: CityTrialProgressionFreeRun
     city_trial_progression_multiplayer: CityTrialProgressionMultiplayer
+    city_trial_progression_rng: CityTrialProgressionRNG
+    city_trial_progression_bust_vehicles: CityTrialProgressionBustVehicles
     city_trial_permanent_patches: CityTrialPermanentPatches
     city_trial_permanent_patch_progression: CityTrialPermanentPatchProgression
     city_trial_checkbox_fillers: CityTrialCheckboxFillers
@@ -411,6 +433,8 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "city_trial_progression_high_effort",
             "city_trial_progression_free_run",
             "city_trial_progression_multiplayer",
+            "city_trial_progression_rng",
+            "city_trial_progression_bust_vehicles",
             "city_trial_permanent_patches",
             "city_trial_permanent_patch_progression",
             "city_trial_checkbox_fillers",
@@ -448,6 +472,8 @@ kar_option_groups = [
             CityTrialProgressionHighEffort,
             CityTrialProgressionFreeRun,
             CityTrialProgressionMultiplayer,
+            CityTrialProgressionRNG,
+            CityTrialProgressionBustVehicles,
             CityTrialPermanentPatches,
             CityTrialPermanentPatchProgression,
             CityTrialCheckboxFillers,

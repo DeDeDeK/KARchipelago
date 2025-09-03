@@ -173,6 +173,13 @@ class KARWorld(World):
                 and location in location_name_groups["City Trial: Free Run"]
             ):
                 self.city_trial_excluded_locations.add(location)
+            elif not self.options.city_trial_progression_rng and location in location_name_groups["City Trial: RNG"]:
+                self.city_trial_excluded_locations.add(location)
+            elif (
+                not self.options.city_trial_progression_bust_vehicles
+                and location in location_name_groups["City Trial: Bust Vehicle on Vehicle"]
+            ):
+                self.city_trial_excluded_locations.add(location)
             else:
                 self.city_trial_default_locations.add(location)
 
