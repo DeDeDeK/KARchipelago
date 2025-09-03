@@ -42,8 +42,10 @@ class EffectItemsEnabled(Toggle):
 
 class CheckboxRewardItems(Toggle):
     """
-    This controls whether the in-game default checkbox rewards will be placed as locked items for their checkbox location.
-    Currently, only your game will be able to collect these. This applies to all game modes.
+    This controls whether the usual in-game reward for a checkbox will be placed as a locked item on that
+    checkbox (only you can collect these). These items are more of a reference of what the reward for that
+    location/checkbox is, and receiving the item does nothing special. Recommend setting this to off unless
+    you want a reference to go by. This will limit the amount of other items you can receive.
     """
 
     display_name = "Checkbox rewards are items"
@@ -167,7 +169,7 @@ class CityTrialCheckboxFillersAmount(Range):
 class CityTrialProgressivePatchCaps(Toggle):
     """
     This controls whether the maxiumum value you can have for patches is capped. If so, you can unlock higher
-    patch caps by getting "progressive patch cap" items.
+    patch caps by getting "Patch Cap Increase" items.
     """
 
     default = 0
@@ -187,9 +189,9 @@ class CityTrialPatchCapAmount(Range):
 
 class CityTrialProgressiveStadiums(Toggle):
     """
-    Toggles whether stadiums need to be found and unlocked. If on, the game starts with no stadiums
-    unlocked. You will need to find the corresponding stadium unlock item to unlock it. If off, stadiums
-    are unlocked via random chance and checkboxes as usual.
+    Toggles whether stadiums need to be found and unlocked. If on, the game starts with a single stadium
+    unlocked. To unlock more, you will need to find the corresponding stadium unlock item for that stadium.
+    If off, stadiums are unlocked via random chance and checkboxes as usual.
     """
 
     default = 0
