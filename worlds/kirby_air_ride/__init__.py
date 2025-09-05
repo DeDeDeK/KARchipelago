@@ -116,7 +116,7 @@ class KARWorld(World):
         self.useful_pool: set[str] = set()
         self.filler_pool: set[str] = set()
         self.trap_pool: set[str] = set()
-        self.city_trial_random_stadium_choice: KARItem
+        self.city_trial_random_stadium_choice: ProgressiveStadiumUnlockType
 
     def _determine_item_classification_overrides(self) -> None:
         """
@@ -237,18 +237,10 @@ class KARWorld(World):
         """
         Choose an initial random stadium for the player to receive.
         """
-        if self.options.city_trial_goal.value != self.options.city_trial_goal.option_beat_king_dedede:
-            stadiums = [stadium.value for stadium in ProgressiveStadiumUnlockType]
-        else:
-            # exclude king dedede stadium from the list if it is also the player's goal
-            stadiums = [
-                stadium.value
-                for stadium in ProgressiveStadiumUnlockType
-                if stadium.value != ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value
-            ]
-        stadium_choice = self.random.choice(stadiums)
-        item = self.create_item(stadium_choice)
-        self.city_trial_random_stadium_choice = item
+        stadiums = [stadium for stadium in ProgressiveStadiumUnlockType]
+        if self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede:
+            stadiums.remove(ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE)
+        self.city_trial_random_stadium_choice = self.random.choice(stadiums)
 
     def generate_early(self) -> None:
         """
@@ -259,6 +251,9 @@ class KARWorld(World):
         self.air_ride_enabled = self.options.air_ride_goal.value != AirRideGoal.option_none
         self.top_ride_enabled = self.options.top_ride_goal.value != TopRideGoal.option_none
 
+        if not any((self.city_trial_enabled, self.air_ride_enabled, self.top_ride_enabled)):
+            raise OptionError("No modes enabled. You need to have at least one goal in a mode!")
+
         # Determine locations progress types from player options.
         self._determine_locations_progress_type()
 
@@ -268,7 +263,8 @@ class KARWorld(World):
         # if city trial progressive stadiums are enabled, choose the first random stadium here
         if self.city_trial_enabled and self.options.city_trial_progressive_stadiums:
             self._determine_city_trial_random_stadium()
-            self.push_precollected(self.city_trial_random_stadium_choice)
+            item = self.create_item(self.city_trial_random_stadium_choice.value)
+            self.push_precollected(item)
 
         # raise an error if the number of checkbox fillers the player specified for a mode is greater than or equal
         # to the number of checklist blocks required for the goal
@@ -353,15 +349,19 @@ class KARWorld(World):
                 and item_name == CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value
             ):
                 continue
-            # patch cap increase items should not be added if they are not enabled
+            # don't add patch cap increase items to the pool if they are not enabled
             if not self.options.city_trial_progressive_patch_caps and item_data.type == KARItemType.PATCH_CAP_INCREASE:
                 continue
-            # don't add progressive stadium items if they are not enabled
+            # don't add progressive stadium items to the pool if they are not enabled
             if not self.options.city_trial_progressive_stadiums and item_data.type == KARItemType.PROGRESSIVE_STADIUM:
                 continue
-            # don't add the chosen city trial stadium to the pool since it is precollected
-            if self.city_trial_enabled and self.options.city_trial_progressive_stadiums:
-                if item_name == self.city_trial_random_stadium_choice.name:
+            # don't add the randomly chosen city trial stadium to the pool since it is precollected
+            if (
+                self.city_trial_enabled
+                and self.options.city_trial_progressive_stadiums
+                and item_data.type == KARItemType.PROGRESSIVE_STADIUM
+            ):
+                if item_name == self.city_trial_random_stadium_choice.value:
                     continue
 
             if classification & ItemClassification.progression:
@@ -450,7 +450,7 @@ class KARWorld(World):
         # place useful items to fill out the remaining locations
         # first place checkbox fillers if they are not progression to still honor the number the player specified:
         if not self.options.checkbox_fillers_progression:
-            if self.city_trial_enabled:
+            if self.city_trial_enabled and self.options.city_trial_checkbox_fillers:
                 checkbox_fillers = [
                     CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value
                 ] * self.options.city_trial_checkbox_fillers_amount.value
@@ -458,7 +458,7 @@ class KARWorld(World):
                 num_items_left_to_place -= len(checkbox_fillers)
                 # remove item from useful pool to avoid adding any more
                 self.useful_pool.remove(CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value)
-            if self.air_ride_enabled:
+            if self.air_ride_enabled and self.options.air_ride_checkbox_fillers:
                 checkbox_fillers = [
                     CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value
                 ] * self.options.air_ride_checkbox_fillers_amount.value
@@ -466,7 +466,7 @@ class KARWorld(World):
                 num_items_left_to_place -= len(checkbox_fillers)
                 # remove item from useful pool to avoid adding any more
                 self.useful_pool.remove(CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value)
-            if self.top_ride_enabled:
+            if self.top_ride_enabled and self.options.top_ride_checkbox_fillers:
                 checkbox_fillers = [
                     CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value
                 ] * self.options.top_ride_checkbox_fillers_amount.value
