@@ -1,4 +1,5 @@
 import asyncio
+import json
 import random
 import time
 import traceback
@@ -13,11 +14,10 @@ from CommonClient import (
     logger,
     server_loop,
 )
-from NetUtils import ClientStatus, NetworkItem, color
+from NetUtils import ClientStatus, NetworkItem
 
 from .DolphinInterface import DolphinInterface
 from .KARData import (
-    PatchCapIncreaseType,
     PatchType,
     StageName,
     StatType,
@@ -149,8 +149,9 @@ class KARContext(CommonContext):
         self.energy_link_base_item_cost: int = 10
         self.death_link_enabled: bool = False
         self.death_link_cooldown: int = 120
-        self.last_item_processed_index: int = 0
-        self.filename_base: str = "kirby_air_ride"
+        self.item_processed_index: int = 0
+        self.purchased_permanent_patches: dict[str, int] = {}
+        self.items_file_path: str = Utils.user_path("kirby_air_ride_items.json")
         self.excluded_checkbox_bytes: tuple[int, ...] = (0x00, 0x01, 0x10, 0x11)
 
     async def disconnect(self, allow_autoreconnect: bool = False) -> None:
@@ -175,53 +176,81 @@ class KARContext(CommonContext):
         await self.get_username()
         await self.send_connect()
 
-    def read_items_processed_index(self) -> int:
+    def process_items_file(self, data: dict) -> None:
         """
-        Reads the last processed index value from the items file and sets it on self.last_items_processed_index.
-        Returns the index value.
+        Process the data from the items file and set class variables accordingly.
+        """
+        logger.info("Processing items file...")
+
+        # process items_processed_index
+        item_index = data.get("item_processed_index", 0)
+        if item_index in range(0, 99999):
+            logger.info(
+                f"read file for item_processed_index value: {item_index}, setting item_processed_index to {item_index}"
+            )
+            self.item_processed_index = item_index
+        else:
+            # invalid value, assume 0
+            logger.info("read an invalid value for item_processed_index: setting item_processed_index to default 0")
+            self.item_processed_index = 0
+
+        # process permanent patches
+        purchased_permanent_patches: dict = data.get("purchased_permanent_patches", {})
+        if purchased_permanent_patches:
+            logger.info(f"setting permanent patches from items file: {purchased_permanent_patches}")
+        self.purchased_permanent_patches = purchased_permanent_patches
+
+        # process patch cap amount
+        patch_cap_increase: int = data.get("patch_cap_increase", self.city_trial_patch_cap_amount)
+        if patch_cap_increase:
+            logger.info(f"setting patch cap amount from items file: {patch_cap_increase}")
+        self.city_trial_patch_cap_amount = patch_cap_increase
+
+        # process unlocked stadiums
+        unlocked_stadiums: list[str] = data.get("unlocked_stadiums", [])
+        if unlocked_stadiums:
+            logger.info(f"setting unlocked stadiums from items file: {unlocked_stadiums}")
+        for stage_name in unlocked_stadiums:
+            # this is already the stage name
+            self.dolphin_interface.unlocked_stadiums.add(StageName(stage_name))
+
+    def read_items_file(self) -> None:
+        """
+        Reads data from the kirby air ride items file and sets data accordingly.
         """
         try:
-            with open(Utils.user_path(f"{self.filename_base}_items"), "r") as items_file:
-                # assuming the item index will never be more than 5 digits long, max 99999
-                content = items_file.read(5)
-                item_index = int(content)
-                if item_index in range(0, 99999):
-                    logger.info(
-                        f"read file for last_item_processed_index value: {item_index}, setting last_item_processed_index to {item_index}"
-                    )
-                    self.last_item_processed_index = item_index
-                    return item_index
+            with open(self.items_file_path, "r") as items_file:
+                data: dict = json.load(items_file)
+                if not data:
+                    logger.warning("No data in the items file. Overwriting with blank schema.")
+                    self.write_items_file()
                 else:
-                    # invalid value, assume 0
-                    logger.info(
-                        "read an invalid value for last_item_processed_index: setting last_item_processed_index to default 0"
-                    )
-                    self.last_item_processed_index = 0
-                    return 0
+                    self.process_items_file(data)
         except OSError:
             # file did not exist or could not be read from
             # create new file
-            logger.info("index file did not exist, creating...")
-            self.write_items_processed_index(0)
-            logger.info("setting last_item_processed_index to 0")
-            self.last_item_processed_index = 0
-            return 0
+            logger.info(
+                f"{self.items_file_path} did not exist or could not be read from (possible new game), creating..."
+            )
+            self.write_items_file()
 
-    def write_items_processed_index(self, value: int) -> bool:
+    def write_items_file(self) -> None:
         """
-        Write the value (representing self.last_item_processed_index) to the items file.
-        Create the file if it does not exist.
+        Write the data values from the current state into the items file.
         """
         try:
-            with open(Utils.user_path(f"{self.filename_base}_items"), "w") as items_file:
-                logger.info(f"writing items received index: {value}")
-                items_file.write(str(value))
-                self.last_item_processed_index = value
-                logger.info(f"setting last_item_processed_index: {value}")
-                return True
+            logger.info(f"Writing items data to {self.items_file_path}")
+            with open(self.items_file_path, "w") as items_file:
+                data = {
+                    "item_processed_index": self.item_processed_index,
+                    "purchased_permanent_patches": self.purchased_permanent_patches,
+                    "patch_cap_increase": self.city_trial_patch_cap_amount,
+                    "unlocked_stadiums": list(self.dolphin_interface.unlocked_stadiums),
+                }
+                json.dump(data, items_file, indent=4, sort_keys=True)
+                logger.info(f"Items data written to {self.items_file_path}")
         except OSError as e:
-            logger.info(f"could not open items file to read last_item_processed_index: {e}")
-            return False
+            logger.info(f"Could not open or create {self.items_file_path} to read items information: {e}")
 
     def on_package(self, cmd: str, args: dict[str, Any]) -> None:
         """
@@ -297,11 +326,28 @@ class KARContext(CommonContext):
 
             self.dolphin_interface.unlocked_stadiums.clear()
 
-            # set last_item_processed_index by loading from a local file
-            self.read_items_processed_index()
+            # read and process the items file and set class vars accordingly
+            self.read_items_file()
 
-            # trigger the Retrieved packet to update the patch cap amount based on items purchased
-            Utils.async_start(self.get_server_purhased_item(PatchCapIncreaseType.ALL_CAP_INCREASE.value))
+            # print the goal(s) to the player
+            goals = []
+            if self.city_trial_enabled:
+                if self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks:
+                    goals.append(f"{self.city_trial_goal}: {self.city_trial_goal_checklist_amount}")
+                else:
+                    goals.append(f"{self.city_trial_goal}")
+            if self.air_ride_enabled:
+                if self.air_ride_goal == AirRideGoal.option_n_checklist_blocks:
+                    goals.append(f"{self.air_ride_goal}: {self.air_ride_goal_checklist_amount}")
+                else:
+                    goals.append(f"{self.air_ride_goal}")
+            if self.top_ride_enabled:
+                if self.top_ride_goal == TopRideGoal.option_n_checklist_blocks:
+                    goals.append(f"{self.top_ride_goal}: {self.top_ride_goal_checklist_amount}")
+                else:
+                    goals.append(f"{self.top_ride_goal}")
+
+            logger.info(f"Goal(s): {goals}")
 
         # ReceivedItems is a list of items that we have received from the server that are in a guaranteed order.
         # {"index": 0, "items": [NetworkItem, NetworkItem, ...]}
@@ -313,48 +359,11 @@ class KARContext(CommonContext):
                 f"Got ReceivedItems packet, index: {args['index']}, items: {[LOOKUP_ID_TO_NAME[item.item] for item in args['items']]}"
             )
 
-            if args["index"] == 0:
-                if len(self.items_received) == 0:
-                    # we are connecting to a fresh server, and need to reset our local items processed index
-                    logger.info("detected a fresh server connection, setting items_processed_index to 0")
-                    self.write_items_processed_index(0)
-
-                # set count values and unlocks based on all of the items we've received
-                for network_item in self.items_received:
-                    item_name = LOOKUP_ID_TO_NAME[network_item.item]
-                    item_data = ITEM_TABLE[item_name]
-                    match item_data.type:
-                        case KARItemType.PATCH_CAP_INCREASE:
-                            # only add the patch cap for items we have already processed, else we will be adding twice
-                            # since the item will also be processed after this
-                            if self.items_received.index(network_item) <= self.last_item_processed_index:
-                                self.city_trial_patch_cap_amount += 1
-                                logger.info(
-                                    f"set city trial patch cap to {self.city_trial_patch_cap_amount} from items received"
-                                )
-                        case KARItemType.PROGRESSIVE_STADIUM:
-                            stadium = get_progressive_stadium_unlock_type_from_item_name(item_name)
-                            if stadium is not None:
-                                stage_name = get_stage_name_from_stadium_unlock_type(stadium)
-                                self.dolphin_interface.unlocked_stadiums.add(stage_name)
-
-            new_items = [item for item in self.items_received[self.last_item_processed_index :]]
+            new_items = [item for item in self.items_received[self.item_processed_index :]]
             logger.info(f"adding new items to the queue: {[LOOKUP_ID_TO_NAME[item.item] for item in new_items]}")
             self.items_queue.extend(new_items)
-            self.write_items_processed_index(len(self.items_received))
-
-        # Retrieved is sent in response to any Get command. It returns a dict[str, any].
-        if cmd == "Retrieved":
-            logger.info(f"got Retrieved packet: {args}")
-            for key in args["keys"]:
-                if (
-                    key
-                    == f"EnergyLink{self.team}{[self.slot] if self.slot is not None else ''}PurchasedItem-{PatchCapIncreaseType.ALL_CAP_INCREASE.value}"
-                ):
-                    # add to city trial patch cap amount based on the number of cap increases purchased
-                    if args["keys"][key] is not None:
-                        self.city_trial_patch_cap_amount += int(args["keys"][key])
-                        logger.info(f"patch cap increased to {self.city_trial_patch_cap_amount} from purchased items")
+            self.item_processed_index = len(self.items_received)
+            self.write_items_file()
 
         # SetReply is sent when a server data storage key was updated by us with Set(), and we requested a
         # reply afterwards. Also received when SetNotify was requested for a certain key.
@@ -414,9 +423,7 @@ class KARContext(CommonContext):
                 # check for victory condition location
                 if self.city_trial_goal != CityTrialGoal.option_n_checklist_blocks:
                     if CITY_TRIAL_LOCATION_TABLE[self.city_trial_goal].code in self.locations_checked:
-                        logger.info(
-                            color(f"Victory location found for City Trial: {self.city_trial_goal}", "green", "bold")
-                        )
+                        logger.info(f"Victory location found for City Trial: {self.city_trial_goal}")
                         self.city_trial_goal_achieved = True
 
                 # check for n checklist blocks goal victory
@@ -425,11 +432,7 @@ class KARContext(CommonContext):
                     and self.city_trial_num_locations_checked >= self.city_trial_goal_checklist_amount
                 ):
                     logger.info(
-                        color(
-                            f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}",
-                            "green",
-                            "bold",
-                        )
+                        f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}",
                     )
                     self.city_trial_goal_achieved = True
 
@@ -448,9 +451,7 @@ class KARContext(CommonContext):
                 # check for victory condition location
                 if self.air_ride_goal != AirRideGoal.option_n_checklist_blocks:
                     if AIR_RIDE_LOCATION_TABLE[self.air_ride_goal].code in self.locations_checked:
-                        logger.info(
-                            color(f"Victory location found for Air Ride: {self.air_ride_goal}"), "green", "bold"
-                        )
+                        logger.info(f"Victory location found for Air Ride: {self.air_ride_goal}")
                         self.air_ride_goal_achieved = True
 
                 # check for n checklist blocks goal victory
@@ -459,11 +460,7 @@ class KARContext(CommonContext):
                     and self.air_ride_num_locations_checked >= self.air_ride_goal_checklist_amount
                 ):
                     logger.info(
-                        color(
-                            f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}",
-                            "green",
-                            "bold",
-                        )
+                        f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}",
                     )
                     self.air_ride_goal_achieved = True
 
@@ -482,9 +479,7 @@ class KARContext(CommonContext):
                 # check for victory condition location
                 if self.top_ride_goal != TopRideGoal.option_n_checklist_blocks:
                     if TOP_RIDE_LOCATION_TABLE[self.top_ride_goal].code in self.locations_checked:
-                        logger.info(
-                            color(f"Victory location found for Top Ride: {self.top_ride_goal}"), "green", "bold"
-                        )
+                        logger.info(f"Victory location found for Top Ride: {self.top_ride_goal}")
                         self.top_ride_goal_achieved = True
 
                 # check for n checklist blocks goal victory
@@ -493,11 +488,7 @@ class KARContext(CommonContext):
                     and self.top_ride_num_locations_checked >= self.top_ride_goal_checklist_amount
                 ):
                     logger.info(
-                        color(
-                            f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}",
-                            "green",
-                            "bold",
-                        )
+                        f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}",
                     )
                     self.top_ride_goal_achieved = True
 
@@ -616,6 +607,10 @@ class KARContext(CommonContext):
             if item_given is not None:
                 given_items.append(item_given)
 
+        # write to the items file to ensure we've saved items that were given
+        if given_items:
+            self.write_items_file()
+
         return given_items
 
     async def shutdown(self) -> None:
@@ -651,45 +646,6 @@ class KARContext(CommonContext):
                     ]
                 )
             )
-
-    async def update_server_purchased_item(self, item_name: str, amount: int) -> None:
-        """
-        Updates the server storage key for the item purchased through energylink. Adds the amount to the
-        existing amount.
-        """
-        logger.info(f"updating server storage for {item_name}: amount: {amount}")
-        Utils.async_start(
-            self.send_msgs(
-                [
-                    {
-                        "cmd": "Set",
-                        "key": f"EnergyLink{self.team}{[self.slot] if self.slot is not None else ''}PurchasedItem-{item_name}",
-                        "default": amount,
-                        "want_reply": True,
-                        "operations": [{"operation": "add", "value": amount}],
-                    }
-                ]
-            )
-        )
-
-    async def get_server_purhased_item(self, item_name: str) -> None:
-        """
-        Get the server-stores data for the everylink purchased item of the given item_name.
-        The data will be sent back in a Retrieved package.
-        """
-        logger.info(f"getting server storage for {item_name}")
-        Utils.async_start(
-            self.send_msgs(
-                [
-                    {
-                        "cmd": "Get",
-                        "keys": [
-                            f"EnergyLink{self.team}{[self.slot] if self.slot is not None else ''}PurchasedItem-{item_name}"
-                        ],
-                    }
-                ]
-            )
-        )
 
     async def update_energy_link(self) -> None:
         """
@@ -751,14 +707,16 @@ class KARContext(CommonContext):
                     if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
                         # ALL patches cost 9x as much
                         cost *= 9
+                    # set purchased dict for the permanent patch type
+                    if "Permanent" in patch_type.value:
+                        cost *= 10
             case KARItemType.CHECKBOX_FILLER:
-                # cost *= 100
-                pass
+                cost *= 150
             case KARItemType.PATCH_CAP_INCREASE:
-                # cost *= 100
-                pass
+                logger.info(f"Cannot buy a {KARItemType.PATCH_CAP_INCREASE} item with energy.")
+                return
             case KARItemType.PROGRESSIVE_STADIUM:
-                logger.info("Cannot buy a progressive stadium with energy.")
+                logger.info(f"Cannot buy a {KARItemType.PROGRESSIVE_STADIUM} item with energy.")
                 return
 
         if self.current_energy_link_value < cost:
@@ -767,13 +725,17 @@ class KARContext(CommonContext):
             )
             return
 
+        # save purchased permanent patches
+        if item_data.type == KARItemType.PATCH and "Permanent" in item_name:
+            if self.purchased_permanent_patches.get(item_name, False):
+                self.purchased_permanent_patches[item_name] += int(amount)
+            else:
+                self.purchased_permanent_patches[item_name] = int(amount)
+            self.write_items_file()
+
         self.energy_link_items_queue.extend([item_data.code] * int(amount))
         Utils.async_start(self.remove_energy(cost))
         logger.info(f"Spent {cost} energy on {amount} {item_name}.")
-
-        if item_data.type == KARItemType.PATCH_CAP_INCREASE:
-            # update the server storage for the patch cap increase
-            Utils.async_start(self.update_server_purchased_item(item_name, int(amount)))
 
     def make_gui(self):
         """
@@ -796,20 +758,27 @@ class KARContext(CommonContext):
 
         # handle stage transitions
         if transition_trigger:
-            # queue up permanent patches if player has transitioned into City Trial
+            # handle the trigger events needed for transitioning into city trial
             # TODO: fix this giving the player items again if they close and reopen the client.
-            # TODO: this will not give players permanent patches if they are off of a vehicle when the patches
-            # are given. The game resets the patches to 0 when off of a vehicle, and then seems to set the values
-            # back to whatever the value was when they got off of the vehicle
             if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
-                logger.debug("queueing permanent patches...")
+                logger.info("queueing permanent patches...")
                 # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
-                items = [
+                permanent_patches = [
                     item
                     for item in self.items_received
                     if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue
                 ]
-                self.items_queue.extend(items)
+
+                logger.info("queueing purchased permanent patches...")
+                for patch_name, patch_amount in self.purchased_permanent_patches.items():
+                    item_data = ITEM_TABLE.get(patch_name)
+                    if not item_data or not item_data.code:
+                        logger.info(f"Invalid item name: {patch_name}")
+                        return
+                    item = NetworkItem(item_data.code, 0, 0, 0)
+                    permanent_patches.extend([item] * patch_amount)
+
+                self.items_queue.extend(permanent_patches)
 
                 # set the stadium event
                 if self.city_trial_progressive_stadiums_enabled:
@@ -819,8 +788,6 @@ class KARContext(CommonContext):
                     except IndexError:
                         # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
                         # stadium unlock item
-                        # TODO: this causes the game to crash when the stadium hint event happens. Might have to switch
-                        # to starting with a single stadium unlocked at first
                         rand_stadium = None
                     self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
 

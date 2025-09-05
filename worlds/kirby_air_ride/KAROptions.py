@@ -45,7 +45,8 @@ class CheckboxRewardItems(Toggle):
     This controls whether the usual in-game reward for a checkbox will be placed as a locked item on that
     checkbox (only you can collect these). These items are more of a reference of what the reward for that
     location/checkbox is, and receiving the item does nothing special. Recommend setting this to off unless
-    you want a reference to go by. This will limit the amount of other items you can receive.
+    you want a reference to go by. This will limit the amount of other items you can receive and can lead to
+    generation errors with too many other progression items specified.
     """
 
     display_name = "Checkbox rewards are items"
@@ -214,7 +215,7 @@ class CityTrialProgressiveStadiums(Toggle):
     If off, stadiums are unlocked via random chance and checkboxes as usual.
     """
 
-    default = 0
+    default = 1
     display_name = "City Trial Progressive Stadiums"
 
 
