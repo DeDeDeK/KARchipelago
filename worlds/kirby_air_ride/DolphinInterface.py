@@ -225,11 +225,12 @@ class DolphinInterface:
             address = dolphin_memory_engine.follow_pointers(console_address, [0])
             address += offset
             return dolphin_memory_engine.read_float(address)
+        except RuntimeError:
+            # player is dead or off vehicle, pointer resolves to address 0 and is invalid
+            return None
         except Exception as e:
             logger.warning(
-                self.memory_write_error_fmt.format(
-                    type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e)
-                )
+                self.memory_read_error_fmt.format(type="pointer", addr=f"{hex(console_address)}+{offset}", error=str(e))
             )
             return None
 
@@ -265,6 +266,8 @@ class DolphinInterface:
         if stadium is None, this sets the stadium to -2, which sets the stadium to fantasy meadows race 1 lap,
         and prevents unlocking of the stadium.
         """
+        # TODO: this causes the game to crash when the stadium prediction event happens. For now, we always have
+        # a starting stadium unlock item to prevent this.
         if stadium is None:
             self.write_byte(MemoryAddress.CITY_TRIAL_STADIUM_EVENT_ADDRESS.value, -2)
             return
@@ -306,8 +309,6 @@ class DolphinInterface:
                 self.write_pointer_float(
                     MemoryAddress.PLAYER_1_CURRENT_MACHINE_POINTER_ADDRESS.value, memory_offset.value, current + delta
                 )
-            else:
-                logger.warning(f"could not read the memory address for stat type: {stat_type}")
         else:
             logger.warning(f"unknown stat to memory address mapping for stat type: {stat_type}")
 
@@ -323,8 +324,6 @@ class DolphinInterface:
             )
             if value is not None:
                 self.player_1_patches[stat_type] = value
-            else:
-                logger.warning(f"could not read memory address for stat type: {stat_type}")
 
     def update_destruction_count(self) -> None:
         """
