@@ -7,6 +7,7 @@ If you're playing Kirby Air Ride, you must follow a few simple steps to get star
   - [Requirements](#requirements)
   - [Setting Up a YAML](#setting-up-a-yaml)
   - [Save files](#save-files)
+  - [Items file](#items-file)
   - [Connecting to a Room](#connecting-to-a-room)
   - [Troubleshooting](#troubleshooting)
 
@@ -48,6 +49,15 @@ To make sure you have a fresh save file:
 
 * In Dolphin, go to `Tools -> Memory Card Manager`
 * If you have Kirby Air Ride data in this menu, click on it and click `Export as` if you wish to keep the save file for later, or `Delete` if you wish to wipe the save
+
+## Items file
+
+Similarly, every multiworld you join should be done with a fresh `kirby_air_ride_items.json` file. This is created by the client automatically when first connecting to a server, and is located in the root of your archipelago install folder. It is needed by the client to keep track of items properly. You should never need to look at the contents or edit it manually. 
+
+**IMPORTANT:**
+
+This file will need to be moved or deleted before joining a new multiworld server (just as your save file), and always needs to have the same name as above. Ideally, every world you join with a certain save file will also always be tied to the corresponding items file. 
+
 
 ## Connecting to a Room
 
