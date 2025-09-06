@@ -12,6 +12,9 @@
   - [What does randomization do to this game? Which locations get shuffled?](#what-does-randomization-do-to-this-game-which-locations-get-shuffled)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
+      - [Checkbox Filler Items](#checkbox-filler-items)
+      - [Patch Cap Increase Items](#patch-cap-increase-items)
+      - [Stadium Unlock Items](#stadium-unlock-items)
     - [EnergyLink](#energylink)
   - [I need help! What do I do?](#i-need-help-what-do-i-do)
   - [Known issues](#known-issues)
@@ -77,9 +80,9 @@ You can mix and match goals between all game modes. If there is a goal for multi
 
 ## What does randomization do to this game? Which locations get shuffled?
 
-Currently, randomization affects nothing in the game except the AP items you receive for completing checkboxes or receive from other worlds.
+Randomization affects which AP items you receive or send for unlocking a checkbox. It will also affect which stadiums you have available if you have progressive stadiums enabled. 
 
-No locations are currently shuffled. Eventually, all checkboxes will be able to be randomized. 
+No locations are currently shuffled, so every checkbox in the game unlocks what it usually unlocks (with the exception of stadiums, which are ignored in favor of the AP item unlocks if they are enabled).
 
 ## What does another world's item look like in Kirby Air Ride?
 
@@ -98,6 +101,20 @@ Current items players are able to receive are:
 - Patch Cap Increase items
 - Stadium unlock items
 
+#### Checkbox Filler Items
+
+Receiving a checkbox filler item for a given checklist will apply it immediately. Look to the side of the checklist
+for the purple boxes. The game limits the number of these you can see at once to 5, but rest assured if you unlocked more than that, you have access to that amount and can keep using them as normal until they run out.
+
+#### Patch Cap Increase Items
+
+Receiving a patch cap increase item will increase the maximum cap on the number of patches you can have in City Trial. For instance, if you specified a starting cap of 5 in your yaml, this will increase it by one, to 6 for the rest of your entire AP run. This is for each patch type separately. So for instance, if you have a patch cap of 6 and collect 7 Top Speeds, you will lose one of those Top Speeds and be back to 6. 
+
+#### Stadium Unlock Items
+
+If you have progressive stadiums enabled, receiving a stadium unlock item will unlock that stadium in-game. You will always start with one random stadium unlock item in your starting inventory. If your goal is to beat King DeDeDe, you will not be able to start with that stadium unlocked. 
+
+
 Any items will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run (after a few seconds have elapsed). 
 
 NOTE: you must collect any patch in the city after receiving patch items for the stat increases/decreases to take effect. 
@@ -108,11 +125,18 @@ NOTE: There are currently no items that apply to Air Ride or Top Ride mode (othe
 
 If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches (if you are below the max stat limit for that patch) in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any (archipelago) item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
 
-Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, except for All patches which cost 90, and Checkbox fillers and Patch Cap Increases cost 500.
+Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, and other items have costs of:
+
+- All patches: 90,
+- Checkbox fillers: 1500
+- Patch Cap Increases: 1500
+- Permanent Patch Increases: 200
 
 For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend):
 
 `/energylink_spend "Top Speed Up" 5`
+
+Spending energy on Permanent Patch increases and Patch Cap increases will also be persistent for the rest of your game. 
 
 ## I need help! What do I do?
 
@@ -197,6 +221,7 @@ need to work on creating Gecko codes and modifying the iso to make new features 
 - performance pass on location checking
   - use checked_locations, missing_locaitons, server_locations as caches
 - possible variable deathlink cooldown?
+- colored logging for things like goals
 
 ## Contributing
 
