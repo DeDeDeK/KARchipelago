@@ -116,7 +116,7 @@ class KARWorld(World):
         self.useful_pool: set[str] = set()
         self.filler_pool: set[str] = set()
         self.trap_pool: set[str] = set()
-        self.city_trial_random_stadium_choice: ProgressiveStadiumUnlockType
+        self.city_trial_random_stadium_choice: ProgressiveStadiumUnlockType | None = None
 
     def _determine_item_classification_overrides(self) -> None:
         """
@@ -235,8 +235,24 @@ class KARWorld(World):
 
     def _determine_city_trial_random_stadium(self) -> None:
         """
-        Choose an initial random stadium for the player to receive.
+        Choose an initial random stadium for the player to receive if there is not one already specified by the player.
         """
+        player_stadium_unlocks = [
+            item_name
+            for item_name in self.options.start_inventory
+            if item_name in (stadium.value for stadium in ProgressiveStadiumUnlockType)
+        ]
+        if player_stadium_unlocks:
+            # Player specified king dedede stadium to exist, but that's also the goal
+            if self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede:
+                if ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value in player_stadium_unlocks:
+                    raise OptionError(
+                        f"Cannot have {ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value} in starting inventory if the goal is {self.options.city_trial_goal.option_beat_king_dedede}"
+                    )
+            # don't need to generate a starting stadium unlock if the player has specified one in the starting inventory
+            self.city_trial_random_stadium_choice = None
+            return
+
         stadiums = [stadium for stadium in ProgressiveStadiumUnlockType]
         if self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede:
             stadiums.remove(ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE)
@@ -260,11 +276,12 @@ class KARWorld(World):
         # Determine any item classification overrides from player options.
         self._determine_item_classification_overrides()
 
-        # if city trial progressive stadiums are enabled, choose the first random stadium here
+        # if city trial progressive stadiums are enabled, choose and precollect the initial stadium unlock
         if self.city_trial_enabled and self.options.city_trial_progressive_stadiums:
             self._determine_city_trial_random_stadium()
-            item = self.create_item(self.city_trial_random_stadium_choice.value)
-            self.push_precollected(item)
+            if self.city_trial_random_stadium_choice is not None:
+                item = self.create_item(self.city_trial_random_stadium_choice.value)
+                self.push_precollected(item)
 
         # raise an error if the number of checkbox fillers the player specified for a mode is greater than or equal
         # to the number of checklist blocks required for the goal
@@ -355,13 +372,13 @@ class KARWorld(World):
             # don't add progressive stadium items to the pool if they are not enabled
             if not self.options.city_trial_progressive_stadiums and item_data.type == KARItemType.PROGRESSIVE_STADIUM:
                 continue
-            # don't add the randomly chosen city trial stadium to the pool since it is precollected
+            # don't add stadium unlocks if they are in the starting inventory or the randomly chosen precollected stadium
             if (
                 self.city_trial_enabled
                 and self.options.city_trial_progressive_stadiums
                 and item_data.type == KARItemType.PROGRESSIVE_STADIUM
             ):
-                if item_name == self.city_trial_random_stadium_choice.value:
+                if item_name in self.options.start_inventory or item_name == self.city_trial_random_stadium_choice:
                     continue
 
             if classification & ItemClassification.progression:
