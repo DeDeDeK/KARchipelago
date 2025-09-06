@@ -95,6 +95,14 @@ class KARCommandProcessor(ClientCommandProcessor):
             else:
                 logger.info("You must enable energylink first with /energylink.")
 
+    def _cmd_patch_cap(self) -> None:
+        """See what the current value of the patch cap is."""
+        if isinstance(self.ctx, KARContext):
+            if self.ctx.city_trial_patch_cap_enabled:
+                logger.info(f"Patch cap: {self.ctx.city_trial_patch_cap_amount}")
+            else:
+                logger.info("Patch caps were not enabled for this run.")
+
 
 class KARContext(CommonContext):
     """
@@ -180,36 +188,36 @@ class KARContext(CommonContext):
         """
         Process the data from the items file and set class variables accordingly.
         """
-        logger.info("Processing items file...")
+        logger.debug("Processing items file...")
 
         # process items_processed_index
         item_index = data.get("item_processed_index", 0)
         if item_index in range(0, 99999):
-            logger.info(
+            logger.debug(
                 f"read file for item_processed_index value: {item_index}, setting item_processed_index to {item_index}"
             )
             self.item_processed_index = item_index
         else:
             # invalid value, assume 0
-            logger.info("read an invalid value for item_processed_index: setting item_processed_index to default 0")
+            logger.debug("read an invalid value for item_processed_index: setting item_processed_index to default 0")
             self.item_processed_index = 0
 
         # process permanent patches
         purchased_permanent_patches: dict = data.get("purchased_permanent_patches", {})
         if purchased_permanent_patches:
-            logger.info(f"setting permanent patches from items file: {purchased_permanent_patches}")
+            logger.debug(f"setting permanent patches from items file: {purchased_permanent_patches}")
         self.purchased_permanent_patches = purchased_permanent_patches
 
         # process patch cap amount
         patch_cap_increase: int = data.get("patch_cap_increase", self.city_trial_patch_cap_amount)
         if patch_cap_increase:
-            logger.info(f"setting patch cap amount from items file: {patch_cap_increase}")
+            logger.debug(f"setting patch cap amount from items file: {patch_cap_increase}")
         self.city_trial_patch_cap_amount = patch_cap_increase
 
         # process unlocked stadiums
         unlocked_stadiums: list[str] = data.get("unlocked_stadiums", [])
         if unlocked_stadiums:
-            logger.info(f"setting unlocked stadiums from items file: {unlocked_stadiums}")
+            logger.debug(f"setting unlocked stadiums from items file: {unlocked_stadiums}")
         for stage_name in unlocked_stadiums:
             # this is already the stage name
             self.dolphin_interface.unlocked_stadiums.add(StageName(stage_name))
@@ -222,14 +230,14 @@ class KARContext(CommonContext):
             with open(self.items_file_path, "r") as items_file:
                 data: dict = json.load(items_file)
                 if not data:
-                    logger.warning("No data in the items file. Overwriting with blank schema.")
+                    logger.warning(f"No data in {self.items_file_path}. Overwriting with blank schema.")
                     self.write_items_file()
                 else:
                     self.process_items_file(data)
         except OSError:
             # file did not exist or could not be read from
             # create new file
-            logger.info(
+            logger.warning(
                 f"{self.items_file_path} did not exist or could not be read from (possible new game), creating..."
             )
             self.write_items_file()
@@ -239,7 +247,7 @@ class KARContext(CommonContext):
         Write the data values from the current state into the items file.
         """
         try:
-            logger.info(f"Writing items data to {self.items_file_path}")
+            logger.debug(f"Writing items data to {self.items_file_path}")
             with open(self.items_file_path, "w") as items_file:
                 data = {
                     "item_processed_index": self.item_processed_index,
@@ -248,9 +256,9 @@ class KARContext(CommonContext):
                     "unlocked_stadiums": list(self.dolphin_interface.unlocked_stadiums),
                 }
                 json.dump(data, items_file, indent=4, sort_keys=True)
-                logger.info(f"Items data written to {self.items_file_path}")
+                logger.debug(f"Items data written to {self.items_file_path}")
         except OSError as e:
-            logger.info(f"Could not open or create {self.items_file_path} to read items information: {e}")
+            logger.warning(f"Could not open or create {self.items_file_path} to read items information: {e}")
 
     def on_package(self, cmd: str, args: dict[str, Any]) -> None:
         """
@@ -302,7 +310,7 @@ class KARContext(CommonContext):
 
             if "city_trial_patch_cap_amount" in args["slot_data"]:
                 self.city_trial_patch_cap_amount = int(args["slot_data"]["city_trial_patch_cap_amount"])
-                logger.info(f"set city trial patch cap to {self.city_trial_patch_cap_amount} from player options")
+                logger.debug(f"set city trial patch cap to {self.city_trial_patch_cap_amount} from player options")
 
             if "city_trial_progressive_stadiums" in args["slot_data"]:
                 self.city_trial_progressive_stadiums_enabled = bool(
@@ -355,12 +363,12 @@ class KARContext(CommonContext):
         # a ReceivedItems packet will be sent alongside Connected, with index = 0. This is the whole of items received.
         # This will include items we've received while being offline.
         if cmd == "ReceivedItems":
-            logger.info(
+            logger.debug(
                 f"Got ReceivedItems packet, index: {args['index']}, items: {[LOOKUP_ID_TO_NAME[item.item] for item in args['items']]}"
             )
 
             new_items = [item for item in self.items_received[self.item_processed_index :]]
-            logger.info(f"adding new items to the queue: {[LOOKUP_ID_TO_NAME[item.item] for item in new_items]}")
+            logger.debug(f"adding new items to the queue: {[LOOKUP_ID_TO_NAME[item.item] for item in new_items]}")
             self.items_queue.extend(new_items)
             self.item_processed_index = len(self.items_received)
             self.write_items_file()
@@ -521,13 +529,13 @@ class KARContext(CommonContext):
 
         match item_data.type:
             case KARItemType.PATCH.value:
-                logger.info("in patch item give...")
                 if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
+                    logger.debug("in patch item give...")
                     patch_type = get_patch_type_from_item_name(item_name)
-                    logger.info(f"giving patch type: {patch_type}")
+                    logger.debug(f"giving patch type: {patch_type}")
                     if patch_type is not None:
                         stat_type = patch_type_to_stat_type(patch_type)
-                        logger.info(f"patch type has stat type of {stat_type}")
+                        logger.debug(f"patch type has stat type of {stat_type}")
                         delta = 1 if "Up" in patch_type.value else -1
                         if stat_type is not None:
                             self.dolphin_interface.increment_player_patch_stat(stat_type, delta)
@@ -536,44 +544,44 @@ class KARContext(CommonContext):
                             # stat_type returned None, either invalid or All patch type
                             if "All" in patch_type.value:
                                 for stat in self.dolphin_interface.player_1_patches:
-                                    logger.info(f"incrementing stat {stat_type} by {delta}")
+                                    logger.debug(f"incrementing stat {stat_type} by {delta}")
                                     self.dolphin_interface.increment_player_patch_stat(stat, delta)
                                 return item
                             else:
-                                logger.warning(f"Failed to parse stat type from patch type: {patch_type}")
+                                logger.debug(f"Failed to parse stat type from patch type: {patch_type}")
                                 return item
                     else:
-                        logger.warning(f"Failed to parse patch type from item name: {item_name}")
+                        logger.debug(f"Failed to parse patch type from item name: {item_name}")
                         return item
             case KARItemType.PATCH_CAP_INCREASE.value:
-                logger.info("in patch cap increase item give...")
+                logger.debug("in patch cap increase item give...")
                 patch_cap_increase_type = get_patch_cap_increase_type_from_item_name(item_name)
                 if patch_cap_increase_type is not None:
                     self.city_trial_patch_cap_amount += 1
-                    logger.info(f"patch cap increased to {self.city_trial_patch_cap_amount}")
+                    logger.debug(f"Patch cap increased to {self.city_trial_patch_cap_amount}")
                 else:
-                    logger.warning(f"Failed to parse patch cap increase type from item name: {item_name}")
+                    logger.debug(f"Failed to parse patch cap increase type from item name: {item_name}")
                 return item
             case KARItemType.CHECKBOX_REWARD.value:
-                logger.info("in checkbox reward item give...")
+                logger.debug("in checkbox reward item give...")
                 return item
             case KARItemType.CHECKBOX_FILLER.value:
-                logger.info("in checkbox filler item give...")
+                logger.debug("in checkbox filler item give...")
                 checkbox_filler_type = get_checkbox_filler_type_from_item_name(item_name)
                 if checkbox_filler_type is not None:
-                    logger.info(f"applying checkbox filler type: {checkbox_filler_type}")
+                    logger.debug(f"applying checkbox filler type: {checkbox_filler_type}")
                     self.dolphin_interface.apply_checkbox_filler(checkbox_filler_type)
                 else:
-                    logger.warning(f"Failed to parse checkbox filler type from item name: {item_name}")
+                    logger.debug(f"Failed to parse checkbox filler type from item name: {item_name}")
                 return item
             case KARItemType.PROGRESSIVE_STADIUM.value:
-                logger.info("in progressive stadium item give...")
+                logger.debug("in progressive stadium item give...")
                 prog_stadium_type = get_progressive_stadium_unlock_type_from_item_name(item_name)
                 if prog_stadium_type is not None:
                     stage_name = get_stage_name_from_stadium_unlock_type(prog_stadium_type)
                     self.dolphin_interface.unlocked_stadiums.add(stage_name)
                 else:
-                    logger.warning(f"invalid progressive stadium type: {item_name}")
+                    logger.debug(f"invalid progressive stadium type: {item_name}")
                 return item
             case KARItemType.EFFECT.value:
                 if self.dolphin_interface.current_stage in (
@@ -585,12 +593,12 @@ class KARContext(CommonContext):
                     StageName.STADIUM_KIRBY_MELEE_1,
                     StageName.STADIUM_KIRBY_MELEE_2,
                 ):
-                    logger.info("in effect item give...")
+                    logger.debug("in effect item give...")
                     effect_type = get_effect_type_from_item_name(item_name)
                     if effect_type is not None:
                         self.dolphin_interface.apply_effect_item(effect_type)
                     else:
-                        logger.warning(f"Failed to parse effect type from item name: {item_name}")
+                        logger.debug(f"Failed to parse effect type from item name: {item_name}")
                     return item
 
     async def give_items(self, items: List[NetworkItem]) -> List[NetworkItem]:
@@ -704,24 +712,23 @@ class KARContext(CommonContext):
             case KARItemType.PATCH:
                 patch_type = get_patch_type_from_item_name(item_name)
                 if patch_type is not None:
-                    if patch_type == PatchType.ALL_UP or patch_type == PatchType.ALL_DOWN:
+                    if patch_type in (PatchType.ALL_UP, PatchType.ALL_DOWN):
                         # ALL patches cost 9x as much
                         cost *= 9
                     # set purchased dict for the permanent patch type
                     if "Permanent" in patch_type.value:
-                        cost *= 10
+                        cost *= 20
             case KARItemType.CHECKBOX_FILLER:
                 cost *= 150
             case KARItemType.PATCH_CAP_INCREASE:
-                logger.info(f"Cannot buy a {KARItemType.PATCH_CAP_INCREASE} item with energy.")
-                return
+                cost *= 150
             case KARItemType.PROGRESSIVE_STADIUM:
                 logger.info(f"Cannot buy a {KARItemType.PROGRESSIVE_STADIUM} item with energy.")
                 return
 
         if self.current_energy_link_value < cost:
             logger.info(
-                f"Not enough energy. Current amount: {self.current_energy_link_value} Need: {cost} for {amount} {item_name}."
+                f"Not enough energy. Current amount: {self.current_energy_link_value:.2f} Need: {cost} for {amount} {item_name}."
             )
             return
 
@@ -761,7 +768,7 @@ class KARContext(CommonContext):
             # handle the trigger events needed for transitioning into city trial
             # TODO: fix this giving the player items again if they close and reopen the client.
             if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
-                logger.info("queueing permanent patches...")
+                logger.debug("queueing permanent patches...")
                 # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
                 permanent_patches = [
                     item
@@ -769,11 +776,11 @@ class KARContext(CommonContext):
                     if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue
                 ]
 
-                logger.info("queueing purchased permanent patches...")
+                logger.debug("queueing purchased permanent patches...")
                 for patch_name, patch_amount in self.purchased_permanent_patches.items():
                     item_data = ITEM_TABLE.get(patch_name)
                     if not item_data or not item_data.code:
-                        logger.info(f"Invalid item name: {patch_name}")
+                        logger.debug(f"Invalid item name: {patch_name}")
                         return
                     item = NetworkItem(item_data.code, 0, 0, 0)
                     permanent_patches.extend([item] * patch_amount)
@@ -784,7 +791,7 @@ class KARContext(CommonContext):
                 if self.city_trial_progressive_stadiums_enabled:
                     try:
                         rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
-                        logger.info(f"setting stadium to {rand_stadium.value}")
+                        logger.debug(f"setting stadium to {rand_stadium.value}")
                     except IndexError:
                         # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
                         # stadium unlock item
@@ -808,7 +815,7 @@ class KARContext(CommonContext):
                     offset = 2 if stat_type != StatType.HP else 0
                     if stat_count + offset > self.city_trial_patch_cap_amount:
                         diff = int(self.city_trial_patch_cap_amount - (stat_count + offset))
-                        logger.info(
+                        logger.debug(
                             f"incrementing player stat {stat_type} by {diff} due to being over the cap of {self.city_trial_patch_cap_amount}"
                         )
                         self.dolphin_interface.increment_player_patch_stat(stat_type, diff)
@@ -831,7 +838,7 @@ class KARContext(CommonContext):
                 self.dolphin_interface.current_stage == StageName.CITY_TRIAL
                 and self.dolphin_interface.transition_waited()
             ):
-                logger.debug("in deathlink check...")
+                # logger.debug("in deathlink check...")
                 await self.check_death()
 
         # check if any items are in the items queue and give them
