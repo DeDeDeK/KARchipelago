@@ -145,6 +145,12 @@ def create_regions(world: "KARWorld"):
                     item = world.create_item(location_data.reward)
                     world.get_location(location_name).place_locked_item(item)
 
+    # TODO:
+    # might need to place stadium unlock items for those stadiums that are unlocked by checkboxes in-game,
+    # since we can't prevent these from being unlocked by the checkbox. Currently, this is just overwritten
+    # by us right after the stadium is unlocked, so we effectively ignore these checkbox rewards in favor of the AP
+    # item
+
     # determine the goal for the world, given player options
     determine_goal(world)
 
