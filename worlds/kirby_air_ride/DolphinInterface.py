@@ -259,6 +259,17 @@ class DolphinInterface:
             )
             return False
 
+    def get_city_trial_current_stadium(self) -> tuple[int, StageName]:
+        """
+        Get the current stadium that has been selected by the game to happen at the end of City Trial.
+        Returns the number read from memory and the corresponding StageName.
+        """
+        # num from 0-23
+        stadium_number = self.read_byte(MemoryAddress.CITY_TRIAL_STADIUM_EVENT_ADDRESS.value)
+        # needs to be reversed as the map is in significant bit order, not stage number order
+        stage_name = list(reversed(BIT_POSITION_TO_STADIUM_MAP))[stadium_number]
+        return stadium_number, stage_name
+
     def set_city_trial_current_stadium(self, stadium: StageName | None) -> None:
         """
         sets the stadium that will occur at the end of the current city trial run to be the given stadium.
