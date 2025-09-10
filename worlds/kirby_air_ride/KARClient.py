@@ -787,16 +787,21 @@ class KARContext(CommonContext):
 
                 self.items_queue.extend(permanent_patches)
 
-                # set the stadium event
+                # set the stadium event. if the game-chosen stadium (which will either be random or selected by
+                # the player in city trial settings) is one that is already unlocked, no need to choose one here
                 if self.city_trial_progressive_stadiums_enabled:
-                    try:
-                        rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
-                        logger.debug(f"setting stadium to {rand_stadium.value}")
-                    except IndexError:
-                        # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
-                        # stadium unlock item
-                        rand_stadium = None
-                    self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
+                    stage_num, stage_name = self.dolphin_interface.get_city_trial_current_stadium()
+                    if stage_name not in self.dolphin_interface.unlocked_stadiums:
+                        try:
+                            rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
+                            logger.debug(
+                                f"game chose a non-unlocked stadium: {stage_name.value}, setting stadium to {rand_stadium.value}"
+                            )
+                        except IndexError:
+                            # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
+                            # stadium unlock item
+                            rand_stadium = None
+                        self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
 
         # set the stadium event at the end of the current trial. will only choose randomly from unlocked stadiums
         if self.city_trial_progressive_stadiums_enabled:
