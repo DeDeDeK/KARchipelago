@@ -529,7 +529,11 @@ class KARContext(CommonContext):
 
         match item_data.type:
             case KARItemType.PATCH.value:
-                if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
+                if self.dolphin_interface.current_stage in (
+                    StageName.CITY_TRIAL,
+                    StageName.STADIUM_DESTRUCTION_DERBY_4,
+                    StageName.STADIUM_DESTRUCTION_DERBY_5,
+                ):
                     logger.debug("in patch item give...")
                     patch_type = get_patch_type_from_item_name(item_name)
                     logger.debug(f"giving patch type: {patch_type}")
