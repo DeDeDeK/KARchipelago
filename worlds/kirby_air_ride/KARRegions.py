@@ -2,7 +2,7 @@ import typing
 from collections.abc import Callable
 from typing import List
 
-from BaseClasses import LocationProgressType, Region
+from BaseClasses import CollectionState, LocationProgressType, Region
 
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -125,7 +125,7 @@ def create_regions(world: "KARWorld"):
             location.progress_type = LocationProgressType.EXCLUDED
             region.locations.append(location)
 
-    # place checkbox reward items as locked items on their repective locations if the player option is enabled.
+    # place checkbox reward items as locked items on their respective locations if the player option is enabled.
     # these are locked because until checkbox reward randomization is possible in-game, only the player's game can
     # collect these.
     if world.options.checkbox_reward_items:
@@ -153,6 +153,9 @@ def create_regions(world: "KARWorld"):
 
     # determine the goal for the world, given player options
     determine_goal(world)
+
+    # from Utils import visualize_regions
+    # visualize_regions(world.multiworld.get_region("Menu", world.player), "my_world.puml", show_entrance_names=True)
 
 
 def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> None:
@@ -203,25 +206,44 @@ def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> N
     stadium_vs_king_dedede = Region("Stadium: VS. KING DEDEDE", world.player, world.multiworld)
     world.multiworld.regions.append(stadium_vs_king_dedede)
 
+    stadium_single_race_1 = Region("Stadium: SINGLE RACE 1", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_1)
+    stadium_single_race_2 = Region("Stadium: SINGLE RACE 2", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_2)
+    stadium_single_race_3 = Region("Stadium: SINGLE RACE 3", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_3)
+    stadium_single_race_4 = Region("Stadium: SINGLE RACE 4", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_4)
+    stadium_single_race_5 = Region("Stadium: SINGLE RACE 5", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_5)
+    stadium_single_race_6 = Region("Stadium: SINGLE RACE 6", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_6)
+    stadium_single_race_7 = Region("Stadium: SINGLE RACE 7", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_7)
+    stadium_single_race_8 = Region("Stadium: SINGLE RACE 8", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_8)
+    stadium_single_race_9 = Region("Stadium: SINGLE RACE 9", world.player, world.multiworld)
+    world.multiworld.regions.append(stadium_single_race_9)
+
     # connect stadium regions
     city_trial_region.connect(stadium_destruction_derby_all)
     stadium_destruction_derby_all.connect(stadium_destruction_derby_1)
     stadium_destruction_derby_all.connect(stadium_destruction_derby_2)
-    stadium_destruction_derby_2.connect(
+    stadium_destruction_derby_all.connect(
         stadium_destruction_derby_3,
         None,
         lambda state: state.can_reach_location(
             "Stadium: DESTRUCTION DERBY 2 In one game, KO a rival 10 times or more!", world.player
         ),
     )
-    stadium_destruction_derby_3.connect(
+    stadium_destruction_derby_all.connect(
         stadium_destruction_derby_4,
         None,
         lambda state: state.can_reach_location(
             "Stadium: DESTRUCTION DERBY 3 In one game, KO your rivals 5 or more times!", world.player
         ),
     )
-    stadium_destruction_derby_4.connect(
+    stadium_destruction_derby_all.connect(
         stadium_destruction_derby_5,
         None,
         lambda state: state.can_reach_location(
@@ -232,7 +254,7 @@ def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> N
     city_trial_region.connect(stadium_drag_race_1)
     city_trial_region.connect(stadium_drag_race_2)
     city_trial_region.connect(stadium_drag_race_3)
-    stadium_drag_race_3.connect(
+    city_trial_region.connect(
         stadium_drag_race_4,
         None,
         lambda state: state.can_reach_location("Stadium: DRAG RACE 3 Finish in less than 00:27:00!", world.player),
@@ -244,7 +266,7 @@ def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> N
 
     city_trial_region.connect(stadium_kirby_melee_all)
     stadium_kirby_melee_all.connect(stadium_kirby_melee_1)
-    stadium_kirby_melee_1.connect(
+    stadium_kirby_melee_all.connect(
         stadium_kirby_melee_2,
         None,
         lambda state: state.can_reach_location(
@@ -253,6 +275,16 @@ def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> N
     )
 
     city_trial_region.connect(stadium_vs_king_dedede)
+
+    city_trial_region.connect(stadium_single_race_1)
+    city_trial_region.connect(stadium_single_race_2)
+    city_trial_region.connect(stadium_single_race_3)
+    city_trial_region.connect(stadium_single_race_4)
+    city_trial_region.connect(stadium_single_race_5)
+    city_trial_region.connect(stadium_single_race_6)
+    city_trial_region.connect(stadium_single_race_7)
+    city_trial_region.connect(stadium_single_race_8)
+    city_trial_region.connect(stadium_single_race_9)
 
 
 def connect_air_ride_region(world: "KARWorld", air_ride_region: Region) -> None:
@@ -459,7 +491,7 @@ def determine_goal(world: "KARWorld") -> None:
     """
     Determine the goal for the world, given the player options of goals selected for each game mode.
     """
-    collection_state_list: List[Callable] = []
+    goal_func_list: List[Callable[[CollectionState], bool]] = []
 
     match world.options.city_trial_goal.current_key:
         case world.options.city_trial_goal.option_none:
@@ -467,9 +499,9 @@ def determine_goal(world: "KARWorld") -> None:
         case world.options.city_trial_goal.option_n_checklist_blocks:
             # can't currently gate anything and the player can always complete all checklist blocks regardless,
             # so just being able to reach the city trial region is enough
-            collection_state_list.append(lambda state: state.can_reach_region("City Trial", world.player))
+            goal_func_list.append(lambda state: state.can_reach_region("City Trial", world.player))
         case _:
-            collection_state_list.append(
+            goal_func_list.append(
                 lambda state: state.can_reach_location(world.options.city_trial_goal.current_key, world.player)
             )
 
@@ -479,9 +511,9 @@ def determine_goal(world: "KARWorld") -> None:
         case world.options.air_ride_goal.option_n_checklist_blocks:
             # can't currently gate anything and the player can always complete all checklist blocks regardless,
             # so just being able to reach the air ride region is enough
-            collection_state_list.append(lambda state: state.can_reach_region("Air Ride", world.player))
+            goal_func_list.append(lambda state: state.can_reach_region("Air Ride", world.player))
         case _:
-            collection_state_list.append(
+            goal_func_list.append(
                 lambda state: state.can_reach_location(world.options.air_ride_goal.current_key, world.player)
             )
 
@@ -491,14 +523,14 @@ def determine_goal(world: "KARWorld") -> None:
         case world.options.top_ride_goal.option_n_checklist_blocks:
             # can't currently gate anything and the player can always complete all checklist blocks regardless,
             # so just being able to reach the top ride region is enough
-            collection_state_list.append(lambda state: state.can_reach_region("Top Ride", world.player))
+            goal_func_list.append(lambda state: state.can_reach_region("Top Ride", world.player))
         case _:
-            collection_state_list.append(
+            goal_func_list.append(
                 lambda state: state.can_reach_location(world.options.top_ride_goal.current_key, world.player)
             )
 
     # multiworld completion condition is all goal conditions being true
-    if len(collection_state_list) > 0:
+    if len(goal_func_list) > 0:
         world.multiworld.completion_condition[world.player] = lambda state: all(
-            [func(state) for func in collection_state_list]
+            [func(state) for func in goal_func_list]
         )
