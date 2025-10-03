@@ -228,6 +228,11 @@ class KARWorld(World):
                 and location in location_name_groups["Top Ride: Time Attack"]
             ):
                 self.top_ride_excluded_locations.add(location)
+            elif (
+                not self.options.top_ride_progression_multiplayer
+                and location in location_name_groups["Top Ride: Multiplayer"]
+            ):
+                self.top_ride_excluded_locations.add(location)
             else:
                 self.top_ride_default_locations.add(location)
 
