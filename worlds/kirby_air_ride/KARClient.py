@@ -18,6 +18,7 @@ from NetUtils import ClientStatus, NetworkItem
 
 from .DolphinInterface import DolphinInterface
 from .KARData import (
+    CheckboxFlags,
     PatchType,
     StageName,
     StatType,
@@ -319,18 +320,30 @@ class KARContext(CommonContext):
                 mode for mode in ("city_trial", "air_ride", "top_ride") if getattr(self, f"{mode}_enabled")
             )
 
-            # reset local location checks so that a client that has already won its game but hasn't closed can't
-            # connect to a server and accidentally auto-win. This doesn't solve the problem of using a save file
-            # that already has won, but does solve this smaller problem.
+            # reset local location checks and goals achieved so that a client that has already won its game but
+            # hasn't closed can't connect to a server and accidentally auto-win. This doesn't solve the problem
+            # of using a save file that already has won, but does solve this smaller problem.
             self.locations_checked.clear()
-
-            # also reset goals achieved for the same reason
             self.city_trial_goal_achieved = False
             self.air_ride_goal_achieved = False
             self.top_ride_goal_achieved = False
             self.finished_game = False
-
+            # also reset unlocked stadiums for the same reason
             self.dolphin_interface.unlocked_stadiums.clear()
+
+            # sync the local checklist state with the locations that have been checked according to the server.
+            # this is useful for same-slot co-op, recovering from losing a save file, and picking up a slot in an
+            # async
+            for location_int in args["checked_locations"]:
+                mem_address = CITY_TRIAL_LOCATION_TABLE[LOCATION_LOOKUP_ID_TO_NAME[location_int]].mem_address
+                if mem_address is not None:
+                    current_val = self.dolphin_interface.read_byte(mem_address)
+                    # only unlock the checkbox if it isn't unlocked yet
+                    if current_val in self.excluded_checkbox_bytes:
+                        self.dolphin_interface.write_byte(
+                            mem_address,
+                            int(CheckboxFlags.UNLOCKED_GREEN),
+                        )
 
             # read and process the items file and set class vars accordingly
             self.read_items_file()
@@ -364,7 +377,6 @@ class KARContext(CommonContext):
             logger.debug(
                 f"Got ReceivedItems packet, index: {args['index']}, items: {[LOOKUP_ID_TO_NAME[item.item] for item in args['items']]}"
             )
-
             new_items = [item for item in self.items_received[self.item_processed_index :]]
             logger.debug(f"adding new items to the queue: {[LOOKUP_ID_TO_NAME[item.item] for item in new_items]}")
             self.items_queue.extend(new_items)
@@ -789,21 +801,37 @@ class KARContext(CommonContext):
 
                 self.items_queue.extend(permanent_patches)
 
-                # set the stadium event. if the game-chosen stadium (which will either be random or selected by
-                # the player in city trial settings) is one that is already unlocked, no need to choose one here
+                # set the stadium event. if the game-chosen stadium (which will either be random or selected at
+                # random via category specified by the player in city trial settings) is one that is already unlocked,
+                # no need to choose one here. if it is locked, still select randomly from the category of stadium that
+                # was selected.
                 if self.city_trial_progressive_stadiums_enabled:
-                    stage_num, stage_name = self.dolphin_interface.get_city_trial_current_stadium()
-                    if stage_name not in self.dolphin_interface.unlocked_stadiums:
-                        try:
-                            rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
+                    current_stage_num, current_stage_name = self.dolphin_interface.get_city_trial_current_stadium()
+                    if current_stage_name not in self.dolphin_interface.unlocked_stadiums:
+                        # get the unlocked stadiums that are in the same category as the current stadium
+                        category_unlocks = [
+                            stage
+                            for stage in self.dolphin_interface.unlocked_stadiums
+                            if " ".join(current_stage_name.split(" ")[1:-1]) in stage.value
+                        ]
+                        if category_unlocks:
                             logger.debug(
-                                f"game chose a non-unlocked stadium: {stage_name.value}, setting stadium to {rand_stadium.value}"
+                                f"game chose an non-unlocked stadium: {current_stage_name.value} choosing a random unlocked stadium from the same category: {[stage.value for stage in category_unlocks]}"
                             )
-                        except IndexError:
-                            # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
-                            # stadium unlock item
-                            rand_stadium = None
-                        self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
+                            rand_stadium = random.choice(category_unlocks)
+                            logger.debug(f"setting stadium to {rand_stadium.value}")
+                            self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
+                        else:
+                            try:
+                                rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
+                            except IndexError:
+                                # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
+                                # stadium unlock item
+                                rand_stadium = None
+                            logger.debug(
+                                f"game chose a non-unlocked stadium: {current_stage_name.value}, setting stadium to {rand_stadium.value if rand_stadium is not None else 'None (no stadiums are currently unlocked)'}"
+                            )
+                            self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
 
         # set the stadium event at the end of the current trial. will only choose randomly from unlocked stadiums
         if self.city_trial_progressive_stadiums_enabled:
