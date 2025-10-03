@@ -39,8 +39,6 @@ from .KARLocations import (
 )
 from .KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
 
-CLIENT_VERSION = "v0.5.0"
-
 
 class KARCommandProcessor(ClientCommandProcessor):
     """
@@ -756,7 +754,7 @@ class KARContext(CommonContext):
             The client's GUI.
         """
         ui = super().make_gui()
-        ui.base_title = f"Archipelago Kirby Air Ride Client ({CLIENT_VERSION})"
+        ui.base_title = "Archipelago Kirby Air Ride Client"
         return ui
 
     async def handle_connected_state(self) -> None:
