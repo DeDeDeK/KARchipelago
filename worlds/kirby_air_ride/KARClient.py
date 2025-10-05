@@ -334,16 +334,18 @@ class KARContext(CommonContext):
             # sync the local checklist state with the locations that have been checked according to the server.
             # this is useful for same-slot co-op, recovering from losing a save file, and picking up a slot in an
             # async
-            for location_int in args["checked_locations"]:
-                mem_address = CITY_TRIAL_LOCATION_TABLE[LOCATION_LOOKUP_ID_TO_NAME[location_int]].mem_address
-                if mem_address is not None:
-                    current_val = self.dolphin_interface.read_byte(mem_address)
-                    # only unlock the checkbox if it isn't unlocked yet
-                    if current_val in self.excluded_checkbox_bytes:
-                        self.dolphin_interface.write_byte(
-                            mem_address,
-                            int(CheckboxFlags.UNLOCKED_GREEN),
-                        )
+            if len(args["checked_locations"]) > 0:
+                location_table = CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE
+                for location_int in args["checked_locations"]:
+                    mem_address = location_table[LOCATION_LOOKUP_ID_TO_NAME[location_int]].mem_address
+                    if mem_address is not None:
+                        current_val = self.dolphin_interface.read_byte(mem_address)
+                        # only unlock the checkbox if it isn't unlocked yet
+                        if current_val in self.excluded_checkbox_bytes:
+                            self.dolphin_interface.write_byte(
+                                mem_address,
+                                int(CheckboxFlags.UNLOCKED_GREEN),
+                            )
 
             # read and process the items file and set class vars accordingly
             self.read_items_file()
