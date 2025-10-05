@@ -22,11 +22,11 @@ def set_rules(world: "KARWorld"):
         Set rule on location if it exists in the multiworld.
         """
         try:
-            print(f"adding rule for location: {location_name}: {rule}")
+            # print(f"adding rule for location: {location_name}: {rule}")
             if world.get_location(location_name):
                 add_rule(world.get_location(location_name), rule, "or")
         except KeyError:
-            print(f"didn't set rule for location due to it not existing in the multiworld: {location_name}")
+            # print(f"didn't set rule for location due to it not existing in the multiworld: {location_name}")
             # location was not added to the multiworld due to player options
             pass
 
@@ -35,13 +35,13 @@ def set_rules(world: "KARWorld"):
         Set rule on region if it exists in the multiworld.
         """
         try:
-            print(f"adding rule for region: {region.name}: {rule}")
+            # print(f"adding rule for region: {region.name}: {rule}")
             if world.get_region(region.name):
                 # assuming all regions only have one entrance, and that we're adding an additional rule
                 # on top of any that might exist, with OR logic.
                 add_rule(region.entrances[0], rule, "or")
         except KeyError:
-            print(f"didn't set rule for region due to it not existing in the multiworld: {region.name}")
+            # print(f"didn't set rule for region due to it not existing in the multiworld: {region.name}")
             # region was not added to the multiworld due to player options
             pass
 
