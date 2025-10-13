@@ -810,6 +810,7 @@ class KARContext(CommonContext):
                 if self.city_trial_progressive_stadiums_enabled:
                     current_stage_num, current_stage_name = self.dolphin_interface.get_city_trial_current_stadium()
                     if current_stage_name not in self.dolphin_interface.unlocked_stadiums:
+                        logger.debug(f"game chose a locked stadium: {current_stage_name.value}")
                         # get the unlocked stadiums that are in the same category as the current stadium
                         category_unlocks = [
                             stage
@@ -818,22 +819,25 @@ class KARContext(CommonContext):
                         ]
                         if category_unlocks:
                             logger.debug(
-                                f"game chose an non-unlocked stadium: {current_stage_name.value} choosing a random unlocked stadium from the same category: {[stage.value for stage in category_unlocks]}"
+                                f"choosing a random unlocked stadium from the same category: {[stage.value for stage in category_unlocks]}"
                             )
                             rand_stadium = random.choice(category_unlocks)
                             logger.debug(f"setting stadium to {rand_stadium.value}")
                             self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
                         else:
+                            logger.debug("no unlocked stadiums in the same category.")
                             try:
+                                logger.debug(
+                                    f"choosing a random unlocked stadium from: {list(self.dolphin_interface.unlocked_stadiums)}"
+                                )
                                 rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
+                                logger.debug(f"setting stadium to {rand_stadium.value}")
+                                self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
                             except IndexError:
-                                # no stadiums unlocked yet, set None to prevent stadiums from being unlocked until we receive a
-                                # stadium unlock item
-                                rand_stadium = None
-                            logger.debug(
-                                f"game chose a non-unlocked stadium: {current_stage_name.value}, setting stadium to {rand_stadium.value if rand_stadium is not None else 'None (no stadiums are currently unlocked)'}"
-                            )
-                            self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
+                                # no stadiums unlocked yet, just use the game-chosen value in this case
+                                logger.debug(
+                                    f"no stadiums were unlocked, leaving the game-set value of {current_stage_name.value}"
+                                )
 
         # set the stadium event at the end of the current trial. will only choose randomly from unlocked stadiums
         if self.city_trial_progressive_stadiums_enabled:
