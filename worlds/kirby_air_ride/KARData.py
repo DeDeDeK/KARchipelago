@@ -76,8 +76,8 @@ class MemoryAddress(IntEnum):
     TOP_RIDE_CHECKLIST_BOX_FILLER_NUM = 0x8053685A
     TOP_RIDE_CHECKLIST_BOX_FILLER_LIST_LENGTH = 0x8053685B
 
-    # this is an address that starts at the last 3 bytes of a 4 byte word. for this address, we treat each byte as binary,
-    # and each bit is a stadium unlock. 0 = locked, 1 = unlocked.
+    # this is an address that starts at the last 3 bytes of a 4 byte word. for this address,
+    # we treat each byte as binary, and each bit is a stadium unlock. 0 = locked, 1 = unlocked.
     # enumerating which bit unlocks which stadiums:
     # byte 1 (starting at most significant bit):
     # 1: vs. king dedede (stadium 24)
