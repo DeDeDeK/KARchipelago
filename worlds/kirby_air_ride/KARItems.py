@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from BaseClasses import Item, ItemClassification
 
@@ -36,9 +36,9 @@ class KARItemData(NamedTuple):
 
     type: str
     classification: ItemClassification
-    code: Optional[int]
+    code: int | None
     quantity: int
-    item_id: Optional[int]
+    item_id: int | None
 
 
 class KARItem(Item):
@@ -52,14 +52,14 @@ class KARItem(Item):
     """
 
     game: str = "Kirby Air Ride"
-    type: Optional[str]
+    type: str | None
 
     def __init__(
         self,
         name: str,
         player: int,
         data: KARItemData,
-        classification: Optional[ItemClassification] = None,
+        classification: ItemClassification | None = None,
     ) -> None:
         super().__init__(
             name,

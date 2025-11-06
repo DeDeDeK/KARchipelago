@@ -103,7 +103,8 @@ class CityTrialCheckListAmount(Range):
 
 class CityTrialProgressionHighEffort(Toggle):
     """
-    This controls whether difficult or extremely high effort checkboxes are counted in progression. This applies to City Trial only.
+    This controls whether difficult or extremely high effort checkboxes are counted in progression.
+    This applies to City Trial only.
     """
 
     default = 0
@@ -131,7 +132,8 @@ class CityTrialPermanentPatchProgression(Toggle):
 
 class CityTrialProgressionMultiplayer(Toggle):
     """
-    This controls whether checkboxes that require multiple players are a part of progression. This applies to City Trial only.
+    This controls whether checkboxes that require multiple players are a part of progression.
+    This applies to City Trial only.
     """
 
     default = 0
@@ -265,7 +267,8 @@ class AirRideProgressionTimeAttack(Toggle):
 
 class AirRideProgressionHighEffort(Toggle):
     """
-    This controls whether difficult or extremely high effort checkboxes are counted in progression. This applies to Air Ride only.
+    This controls whether difficult or extremely high effort checkboxes are counted in progression.
+    This applies to Air Ride only.
     """
 
     default = 0
@@ -338,7 +341,8 @@ class TopRideProgressionTimeAttack(Toggle):
 
 class TopRideProgressionHighEffort(Toggle):
     """
-    This controls whether difficult or extremely high effort checkboxes are counted in progression. This applies to Top Ride only.
+    This controls whether difficult or extremely high effort checkboxes are counted in progression.
+    This applies to Top Ride only.
     """
 
     default = 0
@@ -347,7 +351,8 @@ class TopRideProgressionHighEffort(Toggle):
 
 class TopRideProgressionMultiplayer(Toggle):
     """
-    This controls whether checkboxes that require multiple players are a part of progression. This applies to Top Ride only.
+    This controls whether checkboxes that require multiple players are a part of progression.
+    This applies to Top Ride only.
     """
 
     default = 0

@@ -1,6 +1,5 @@
 import typing
 from collections.abc import Callable
-from typing import List
 
 from BaseClasses import CollectionState, LocationProgressType, Region
 
@@ -491,7 +490,7 @@ def determine_goal(world: "KARWorld") -> None:
     """
     Determine the goal for the world, given the player options of goals selected for each game mode.
     """
-    goal_func_list: List[Callable[[CollectionState], bool]] = []
+    goal_func_list: list[Callable[[CollectionState], bool]] = []
 
     match world.options.city_trial_goal.current_key:
         case world.options.city_trial_goal.option_none:
@@ -531,6 +530,4 @@ def determine_goal(world: "KARWorld") -> None:
 
     # multiworld completion condition is all goal conditions being true
     if len(goal_func_list) > 0:
-        world.multiworld.completion_condition[world.player] = lambda state: all(
-            [func(state) for func in goal_func_list]
-        )
+        world.multiworld.completion_condition[world.player] = lambda state: all(func(state) for func in goal_func_list)

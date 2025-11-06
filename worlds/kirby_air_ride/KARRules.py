@@ -1,6 +1,7 @@
 import typing
 
 from BaseClasses import Callable, CollectionState, Region
+
 from worlds.generic.Rules import add_rule
 
 from .KARData import ProgressiveStadiumUnlockType
