@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from BaseClasses import Location, Region
 
@@ -29,7 +29,7 @@ class KARLocationData(NamedTuple):
     region: str
     reward: str
     type: KARLocationType
-    mem_address: Optional[int] = None
+    mem_address: int | None = None
 
 
 class KARLocation(Location):
