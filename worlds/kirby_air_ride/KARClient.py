@@ -18,6 +18,7 @@ from NetUtils import ClientStatus, NetworkItem
 
 from .DolphinInterface import DolphinInterface
 from .KARData import (
+    CheckboxFillerType,
     CheckboxFlags,
     PatchType,
     StageName,
@@ -36,6 +37,7 @@ from .KARLocations import (
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_LOOKUP_ID_TO_NAME,
     TOP_RIDE_LOCATION_TABLE,
+    KARLocationData,
     KARLocationType,
 )
 from .KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
@@ -139,16 +141,31 @@ class KARContext(CommonContext):
         self.city_trial_patch_cap_enabled: bool = False
         self.city_trial_patch_cap_amount: int = 0
         self.city_trial_progressive_stadiums_enabled: bool = False
+        self.city_trial_checklist_locations: list[KARLocationData] = [
+            location_data
+            for location_data in CITY_TRIAL_LOCATION_TABLE.values()
+            if location_data.type == KARLocationType.CHECKLISTBOX
+        ]
         self.air_ride_enabled: bool = False
         self.air_ride_goal: str = ""
         self.air_ride_goal_checklist_amount: int = 0
         self.air_ride_goal_achieved: bool = False
         self.air_ride_num_locations_checked: int = 0
+        self.air_ride_checklist_locations: list[KARLocationData] = [
+            location_data
+            for location_data in AIR_RIDE_LOCATION_TABLE.values()
+            if location_data.type == KARLocationType.CHECKLISTBOX
+        ]
         self.top_ride_enabled: bool = False
         self.top_ride_goal: str = ""
         self.top_ride_goal_checklist_amount: int = 0
         self.top_ride_goal_achieved: bool = False
         self.top_ride_num_locations_checked: int = 0
+        self.top_ride_checklist_locations: list[KARLocationData] = [
+            location_data
+            for location_data in TOP_RIDE_LOCATION_TABLE.values()
+            if location_data.type == KARLocationType.CHECKLISTBOX
+        ]
         self.enabled_modes: tuple[str, ...] = ()
         self.items_queue: List[NetworkItem] = []
         self.energy_link_enabled: bool = False
@@ -431,86 +448,32 @@ class KARContext(CommonContext):
         # check City Trial Checklist if City Trial is enabled
         if self.city_trial_enabled:
             self.city_trial_num_locations_checked = 0
-            for location_data in CITY_TRIAL_LOCATION_TABLE.values():
-                if location_data.type == KARLocationType.CHECKLISTBOX and location_data.mem_address is not None:
-                    if self.dolphin_interface.read_byte(location_data.mem_address) not in self.excluded_checkbox_bytes:
-                        if location_data.code is not None:
-                            self.city_trial_num_locations_checked += 1
-                            self.locations_checked.add(location_data.code)
-
-            # check goals
-            if not (self.city_trial_goal_achieved or self.finished_game):
-                # check for victory condition location
-                if self.city_trial_goal != CityTrialGoal.option_n_checklist_blocks:
-                    if CITY_TRIAL_LOCATION_TABLE[self.city_trial_goal].code in self.locations_checked:
-                        logger.info(f"Victory location found for City Trial: {self.city_trial_goal}")
-                        self.city_trial_goal_achieved = True
-
-                # check for n checklist blocks goal victory
-                if (
-                    self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks
-                    and self.city_trial_num_locations_checked >= self.city_trial_goal_checklist_amount
-                ):
-                    logger.info(
-                        f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}",
-                    )
-                    self.city_trial_goal_achieved = True
+            for location_data in self.city_trial_checklist_locations:
+                if location_data.mem_address is not None and location_data.code is not None:
+                    checkbox_byte = self.dolphin_interface.read_byte(location_data.mem_address)
+                    if checkbox_byte not in self.excluded_checkbox_bytes:
+                        self.city_trial_num_locations_checked += 1
+                        self.locations_checked.add(location_data.code)
 
         # check Air Ride Checklist if Air Ride is enabled
         if self.air_ride_enabled:
             self.air_ride_num_locations_checked = 0
-            for location_data in AIR_RIDE_LOCATION_TABLE.values():
-                if location_data.type == KARLocationType.CHECKLISTBOX and location_data.mem_address is not None:
-                    if self.dolphin_interface.read_byte(location_data.mem_address) not in self.excluded_checkbox_bytes:
-                        if location_data.code is not None:
-                            self.air_ride_num_locations_checked += 1
-                            self.locations_checked.add(location_data.code)
-
-            # check goals
-            if not (self.air_ride_goal_achieved or self.finished_game):
-                # check for victory condition location
-                if self.air_ride_goal != AirRideGoal.option_n_checklist_blocks:
-                    if AIR_RIDE_LOCATION_TABLE[self.air_ride_goal].code in self.locations_checked:
-                        logger.info(f"Victory location found for Air Ride: {self.air_ride_goal}")
-                        self.air_ride_goal_achieved = True
-
-                # check for n checklist blocks goal victory
-                if (
-                    self.air_ride_goal == AirRideGoal.option_n_checklist_blocks
-                    and self.air_ride_num_locations_checked >= self.air_ride_goal_checklist_amount
-                ):
-                    logger.info(
-                        f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}",
-                    )
-                    self.air_ride_goal_achieved = True
+            for location_data in self.air_ride_checklist_locations:
+                if location_data.mem_address is not None and location_data.code is not None:
+                    checkbox_byte = self.dolphin_interface.read_byte(location_data.mem_address)
+                    if checkbox_byte not in self.excluded_checkbox_bytes:
+                        self.air_ride_num_locations_checked += 1
+                        self.locations_checked.add(location_data.code)
 
         # check Top Ride Checklist if Top Ride is enabled
         if self.top_ride_enabled:
             self.top_ride_num_locations_checked = 0
-            for location_data in TOP_RIDE_LOCATION_TABLE.values():
-                if location_data.type == KARLocationType.CHECKLISTBOX and location_data.mem_address is not None:
-                    if self.dolphin_interface.read_byte(location_data.mem_address) not in self.excluded_checkbox_bytes:
-                        if location_data.code is not None:
-                            self.top_ride_num_locations_checked += 1
-                            self.locations_checked.add(location_data.code)
-
-            # check goals
-            if not (self.top_ride_goal_achieved or self.finished_game):
-                # check for victory condition location
-                if self.top_ride_goal != TopRideGoal.option_n_checklist_blocks:
-                    if TOP_RIDE_LOCATION_TABLE[self.top_ride_goal].code in self.locations_checked:
-                        logger.info(f"Victory location found for Top Ride: {self.top_ride_goal}")
-                        self.top_ride_goal_achieved = True
-
-                # check for n checklist blocks goal victory
-                if (
-                    self.top_ride_goal == TopRideGoal.option_n_checklist_blocks
-                    and self.top_ride_num_locations_checked >= self.top_ride_goal_checklist_amount
-                ):
-                    logger.info(
-                        f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}",
-                    )
-                    self.top_ride_goal_achieved = True
+            for location_data in self.top_ride_checklist_locations:
+                if location_data.mem_address is not None and location_data.code is not None:
+                    checkbox_byte = self.dolphin_interface.read_byte(location_data.mem_address)
+                    if checkbox_byte not in self.excluded_checkbox_bytes:
+                        self.top_ride_num_locations_checked += 1
+                        self.locations_checked.add(location_data.code)
 
         # determine if overall goal has been achieved
         if not self.finished_game:
@@ -525,6 +488,100 @@ class KARContext(CommonContext):
             )
 
     async def determine_goal_achieved(self) -> None:
+        # check city trial goals
+        if self.city_trial_enabled and not self.city_trial_goal_achieved:
+            # check for victory condition location
+            if self.city_trial_goal != CityTrialGoal.option_n_checklist_blocks:
+                goal_location_data = CITY_TRIAL_LOCATION_TABLE[self.city_trial_goal]
+                if goal_location_data.code in self.locations_checked:
+                    if goal_location_data.mem_address is not None:
+                        checkbox_byte = self.dolphin_interface.read_byte(goal_location_data.mem_address)
+                        if checkbox_byte & CheckboxFlags.FILLER_PURPLE.value:
+                            # if the checkbox is a goal checkbox and checked off via checkbox filler, reset it
+                            # to locked and do not add it to locations_checked
+                            self.locations_checked.remove(goal_location_data.code)
+                            self.dolphin_interface.write_byte(
+                                goal_location_data.mem_address, int(CheckboxFlags.VISIBLE)
+                            )
+                            # refund checkbox filler
+                            self.dolphin_interface.apply_checkbox_filler(CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER)
+                        else:
+                            logger.info(f"Victory location found for City Trial: {self.city_trial_goal}")
+                            self.city_trial_goal_achieved = True
+
+            # check for n checklist blocks goal victory
+            if (
+                self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks
+                and self.city_trial_num_locations_checked >= self.city_trial_goal_checklist_amount
+            ):
+                logger.info(
+                    f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}",
+                )
+                self.city_trial_goal_achieved = True
+
+        # check air ride goals
+        if self.air_ride_enabled and not self.air_ride_goal_achieved:
+            # check for victory condition location
+            if self.air_ride_goal != AirRideGoal.option_n_checklist_blocks:
+                goal_location_data = AIR_RIDE_LOCATION_TABLE[self.air_ride_goal]
+                if goal_location_data.code in self.locations_checked:
+                    if goal_location_data.mem_address is not None:
+                        checkbox_byte = self.dolphin_interface.read_byte(goal_location_data.mem_address)
+                        if checkbox_byte & CheckboxFlags.FILLER_PURPLE.value:
+                            # if the checkbox is a goal checkbox and checked off via checkbox filler, reset it
+                            # to locked and do not add it to locations_checked
+                            self.locations_checked.remove(goal_location_data.code)
+                            self.dolphin_interface.write_byte(
+                                goal_location_data.mem_address, int(CheckboxFlags.VISIBLE)
+                            )
+                            # refund checkbox filler
+                            self.dolphin_interface.apply_checkbox_filler(CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER)
+                        else:
+                            logger.info(f"Victory location found for Air Ride: {self.air_ride_goal}")
+                            self.air_ride_goal_achieved = True
+
+            # check for n checklist blocks goal victory
+            if (
+                self.air_ride_goal == AirRideGoal.option_n_checklist_blocks
+                and self.air_ride_num_locations_checked >= self.air_ride_goal_checklist_amount
+            ):
+                logger.info(
+                    f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}",
+                )
+                self.air_ride_goal_achieved = True
+
+        # check top ride goals
+        if self.top_ride_enabled and not self.top_ride_goal_achieved:
+            # check for victory condition location
+            if self.top_ride_goal != TopRideGoal.option_n_checklist_blocks:
+                goal_location_data = TOP_RIDE_LOCATION_TABLE[self.top_ride_goal]
+                if goal_location_data.code in self.locations_checked:
+                    if goal_location_data.mem_address is not None:
+                        checkbox_byte = self.dolphin_interface.read_byte(goal_location_data.mem_address)
+                        if checkbox_byte & CheckboxFlags.FILLER_PURPLE.value:
+                            # if the checkbox is a goal checkbox and checked off via checkbox filler, reset it
+                            # to locked and do not add it to locations_checked
+                            self.locations_checked.remove(goal_location_data.code)
+                            self.dolphin_interface.write_byte(
+                                goal_location_data.mem_address, int(CheckboxFlags.VISIBLE)
+                            )
+                            # refund checkbox filler
+                            self.dolphin_interface.apply_checkbox_filler(CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER)
+                        else:
+                            logger.info(f"Victory location found for Top Ride: {self.top_ride_goal}")
+                            self.top_ride_goal_achieved = True
+
+            # check for n checklist blocks goal victory
+            if (
+                self.top_ride_goal == TopRideGoal.option_n_checklist_blocks
+                and self.top_ride_num_locations_checked >= self.top_ride_goal_checklist_amount
+            ):
+                logger.info(
+                    f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}",
+                )
+                self.top_ride_goal_achieved = True
+
+        # check for game complete (completed goals for all enabled modes)
         if all(getattr(self, f"{mode}_goal_achieved") for mode in self.enabled_modes):
             self.finished_game = True
             await self.send_victory()
