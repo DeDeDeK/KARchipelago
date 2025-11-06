@@ -3,7 +3,7 @@ import json
 import random
 import time
 import traceback
-from typing import Any, List, Optional
+from typing import Any
 
 import Utils
 from CommonClient import (
@@ -89,7 +89,8 @@ class KARCommandProcessor(ClientCommandProcessor):
                 logger.info("EnergyLink enabled.")
 
     def _cmd_energylink_spend(self, item_name: str, amount: str) -> None:
-        """Spend energy from EnergyLink on patches or other items. Specify items like: /energylink_spend "Top Speed Up" 1"""
+        """Spend energy from EnergyLink on patches or other items. Specify items like: \
+            /energylink_spend "Top Speed Up" 1"""
         if isinstance(self.ctx, KARContext):
             if self.ctx.energy_link_enabled:
                 Utils.async_start(self.ctx.energy_link_spend(item_name, amount))
@@ -117,7 +118,7 @@ class KARContext(CommonContext):
     want_slot_data = True  # need slot data for player options specified at generation
     command_processor = KARCommandProcessor
 
-    def __init__(self, server_address: Optional[str], password: Optional[str]) -> None:
+    def __init__(self, server_address: str | None, password: str | None) -> None:
         """
         Initialize the KAR context.
 
@@ -126,11 +127,14 @@ class KARContext(CommonContext):
             password: Password for server authentication.
         """
         super().__init__(server_address, password)
-        self.connection_refused_game_status = "Dolphin failed to connect. Please make sure your emulator is running and load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
+        self.connection_refused_game_status = (
+            "Dolphin failed to connect. Please make sure your emulator is running and \
+            load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
+        )
         self.connection_connected_game_status = "Dolphin connected successfully."
         self.connection_initial_status = "Dolphin connection has not been initiated."
         self.dolphin_interface = DolphinInterface()
-        self.dolphin_sync_task: Optional[asyncio.Task[None]] = None
+        self.dolphin_sync_task: asyncio.Task[None] | None = None
         self.dolphin_status: str = self.connection_initial_status
         self.dolphin_reconnect_delay: int = 5
         self.city_trial_enabled: bool = False
@@ -167,7 +171,7 @@ class KARContext(CommonContext):
             if location_data.type == KARLocationType.CHECKLISTBOX
         ]
         self.enabled_modes: tuple[str, ...] = ()
-        self.items_queue: List[NetworkItem] = []
+        self.items_queue: list[NetworkItem] = []
         self.energy_link_enabled: bool = False
         self.energy_link_items_queue: list[int] = []
         self.energy_link_base_item_cost: int = 10
@@ -394,9 +398,11 @@ class KARContext(CommonContext):
         # This will include items we've received while being offline.
         if cmd == "ReceivedItems":
             logger.debug(
-                f"Got ReceivedItems packet, index: {args['index']}, items: {[LOOKUP_ID_TO_NAME[item.item] for item in args['items']]}"
+                f"Got ReceivedItems packet, index: {args['index']}, items: {
+                    [LOOKUP_ID_TO_NAME[item.item] for item in args['items']]
+                }"
             )
-            new_items = [item for item in self.items_received[self.item_processed_index :]]
+            new_items = list(self.items_received[self.item_processed_index :])
             logger.debug(f"adding new items to the queue: {[LOOKUP_ID_TO_NAME[item.item] for item in new_items]}")
             self.items_queue.extend(new_items)
             self.item_processed_index = len(self.items_received)
@@ -515,7 +521,8 @@ class KARContext(CommonContext):
                 and self.city_trial_num_locations_checked >= self.city_trial_goal_checklist_amount
             ):
                 logger.info(
-                    f"N Checklist Blocks Goal Acheived for City Trial - locations checked: {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}",
+                    f"N Checklist Blocks Goal Acheived for City Trial - locations checked: \
+                        {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}",
                 )
                 self.city_trial_goal_achieved = True
 
@@ -546,7 +553,8 @@ class KARContext(CommonContext):
                 and self.air_ride_num_locations_checked >= self.air_ride_goal_checklist_amount
             ):
                 logger.info(
-                    f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}",
+                    f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: \
+                        {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}",
                 )
                 self.air_ride_goal_achieved = True
 
@@ -577,7 +585,8 @@ class KARContext(CommonContext):
                 and self.top_ride_num_locations_checked >= self.top_ride_goal_checklist_amount
             ):
                 logger.info(
-                    f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}",
+                    f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: \
+                        {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}",
                 )
                 self.top_ride_goal_achieved = True
 
@@ -613,19 +622,16 @@ class KARContext(CommonContext):
                         if stat_type is not None:
                             self.dolphin_interface.increment_player_patch_stat(stat_type, delta)
                             return item
-                        else:
-                            # stat_type returned None, either invalid or All patch type
-                            if "All" in patch_type.value:
-                                for stat in self.dolphin_interface.player_1_patches:
-                                    logger.debug(f"incrementing stat {stat_type} by {delta}")
-                                    self.dolphin_interface.increment_player_patch_stat(stat, delta)
-                                return item
-                            else:
-                                logger.debug(f"Failed to parse stat type from patch type: {patch_type}")
-                                return item
-                    else:
-                        logger.debug(f"Failed to parse patch type from item name: {item_name}")
+                        # stat_type returned None, either invalid or All patch type
+                        if "All" in patch_type.value:
+                            for stat in self.dolphin_interface.player_1_patches:
+                                logger.debug(f"incrementing stat {stat_type} by {delta}")
+                                self.dolphin_interface.increment_player_patch_stat(stat, delta)
+                            return item
+                        logger.debug(f"Failed to parse stat type from patch type: {patch_type}")
                         return item
+                    logger.debug(f"Failed to parse patch type from item name: {item_name}")
+                    return item
             case KARItemType.PATCH_CAP_INCREASE.value:
                 logger.debug("in patch cap increase item give...")
                 patch_cap_increase_type = get_patch_cap_increase_type_from_item_name(item_name)
@@ -673,8 +679,9 @@ class KARContext(CommonContext):
                     else:
                         logger.debug(f"Failed to parse effect type from item name: {item_name}")
                     return item
+        return None
 
-    async def give_items(self, items: List[NetworkItem]) -> List[NetworkItem]:
+    async def give_items(self, items: list[NetworkItem]) -> list[NetworkItem]:
         """
         Give the player the list of items. Returns only the list of items successfully given.
 
@@ -801,7 +808,8 @@ class KARContext(CommonContext):
 
         if self.current_energy_link_value < cost:
             logger.info(
-                f"Not enough energy. Current amount: {self.current_energy_link_value:.2f} Need: {cost} for {amount} {item_name}."
+                f"Not enough energy. Current amount: {self.current_energy_link_value:.2f} \
+                    Need: {cost} for {amount} {item_name}."
             )
             return
 
@@ -865,7 +873,7 @@ class KARContext(CommonContext):
                 # no need to choose one here. if it is locked, still select randomly from the category of stadium that
                 # was selected.
                 if self.city_trial_progressive_stadiums_enabled:
-                    current_stage_num, current_stage_name = self.dolphin_interface.get_city_trial_current_stadium()
+                    _, current_stage_name = self.dolphin_interface.get_city_trial_current_stadium()
                     if current_stage_name not in self.dolphin_interface.unlocked_stadiums:
                         logger.debug(f"game chose a locked stadium: {current_stage_name.value}")
                         # get the unlocked stadiums that are in the same category as the current stadium
@@ -876,7 +884,8 @@ class KARContext(CommonContext):
                         ]
                         if category_unlocks:
                             logger.debug(
-                                f"choosing a random unlocked stadium from the same category: {[stage.value for stage in category_unlocks]}"
+                                f"choosing a random unlocked stadium from the same category: \
+                                      {[stage.value for stage in category_unlocks]}"
                             )
                             rand_stadium = random.choice(category_unlocks)
                             logger.debug(f"setting stadium to {rand_stadium.value}")
@@ -885,7 +894,8 @@ class KARContext(CommonContext):
                             logger.debug("no unlocked stadiums in the same category.")
                             try:
                                 logger.debug(
-                                    f"choosing a random unlocked stadium from: {list(self.dolphin_interface.unlocked_stadiums)}"
+                                    f"choosing a random unlocked stadium from: \
+                                        {list(self.dolphin_interface.unlocked_stadiums)}"
                                 )
                                 rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
                                 logger.debug(f"setting stadium to {rand_stadium.value}")
@@ -893,7 +903,8 @@ class KARContext(CommonContext):
                             except IndexError:
                                 # no stadiums unlocked yet, just use the game-chosen value in this case
                                 logger.debug(
-                                    f"no stadiums were unlocked, leaving the game-set value of {current_stage_name.value}"
+                                    f"no stadiums were unlocked, leaving the game-set value of \
+                                        {current_stage_name.value}"
                                 )
 
         # set the stadium event at the end of the current trial. will only choose randomly from unlocked stadiums
@@ -914,7 +925,8 @@ class KARContext(CommonContext):
                     if stat_count + offset > self.city_trial_patch_cap_amount:
                         diff = int(self.city_trial_patch_cap_amount - (stat_count + offset))
                         logger.debug(
-                            f"incrementing player stat {stat_type} by {diff} due to being over the cap of {self.city_trial_patch_cap_amount}"
+                            f"incrementing player stat {stat_type} by {diff} due to being over the cap of \
+                            {self.city_trial_patch_cap_amount}"
                         )
                         self.dolphin_interface.increment_player_patch_stat(stat_type, diff)
 
@@ -1002,7 +1014,7 @@ class KARContext(CommonContext):
             try:
                 # self.watcher_event gets set when receiving ReceivedItems or LocationInfo, or when shutting down.
                 await asyncio.wait_for(self.watcher_event.wait(), 1)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             finally:
                 self.watcher_event.clear()
@@ -1026,7 +1038,7 @@ class KARContext(CommonContext):
                 logger.error(traceback.format_exc())
 
 
-async def async_main(connect: Optional[str], password: Optional[str]) -> None:
+async def async_main(connect: str | None, password: str | None) -> None:
     """
     Main async function to run the Kirby Air Ride client.
 
@@ -1063,7 +1075,7 @@ async def async_main(connect: Optional[str], password: Optional[str]) -> None:
             await ctx.dolphin_sync_task
 
 
-def main(connect: Optional[str] = None, password: Optional[str] = None) -> None:
+def main(connect: str | None = None, password: str | None = None) -> None:
     """
     Run the main async loop for the Kirby Air Ride client.
 

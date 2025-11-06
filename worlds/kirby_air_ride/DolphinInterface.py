@@ -1,8 +1,6 @@
 import time
-from typing import Optional, Tuple
 
 import dolphin_memory_engine
-
 from CommonClient import logger
 
 from .KARData import (
@@ -29,8 +27,8 @@ class DolphinInterface:
         self.transitioned_time: float = time.time()
         self.transition_wait: int = 6
         self.transitioned: bool = False
-        self.player_1_patches_old: dict[StatType, float] = {stat_type: 0 for stat_type in StatType}
-        self.player_1_patches: dict[StatType, float] = {stat_type: 0 for stat_type in StatType}
+        self.player_1_patches_old: dict[StatType, float] = dict.fromkeys(StatType, 0)
+        self.player_1_patches: dict[StatType, float] = dict.fromkeys(StatType, 0)
         self.unlocked_stadiums: set[StageName] = set()
         self.destruction_count: int = 0
         self.current_stage: StageName | None = None
@@ -161,7 +159,7 @@ class DolphinInterface:
             logger.warning(self.memory_write_error_fmt.format(type="float", addr=hex(console_address), error=str(e)))
             return False
 
-    def read_pointer_bytes(self, console_address: int, offset: int, byte_count: int) -> Optional[bytes]:
+    def read_pointer_bytes(self, console_address: int, offset: int, byte_count: int) -> bytes | None:
         """
         Follow the pointer at console_address and apply the given offset, then read byte_count amount of bytes from it.
 
@@ -211,7 +209,7 @@ class DolphinInterface:
             )
             return False
 
-    def read_pointer_float(self, console_address: int, offset: int) -> Optional[float]:
+    def read_pointer_float(self, console_address: int, offset: int) -> float | None:
         """
         Follow the pointer at console_address and apply the given offset, then read the value from it.
 
@@ -442,7 +440,9 @@ class DolphinInterface:
             if stage.menu_selection == menu_selection and stage.stage_id == current_stage:
                 return stage.name
 
-    def check_transition(self) -> Tuple[StageName | None, bool]:
+        return None
+
+    def check_transition(self) -> tuple[StageName | None, bool]:
         """
         Detect a transition into a stage. Sets the current stage once a transition into that stage is detected.
 
