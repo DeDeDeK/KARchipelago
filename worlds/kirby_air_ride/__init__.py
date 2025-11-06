@@ -1,9 +1,10 @@
 from collections.abc import Mapping
-from typing import Any, ClassVar, Dict, Set
+from typing import Any, ClassVar
 
 from BaseClasses import ItemClassification, Tutorial
 from Fill import FillError
 from Options import OptionError
+
 from worlds.AutoWorld import WebWorld, World
 from worlds.LauncherComponents import (
     Component,
@@ -30,7 +31,6 @@ def run_client() -> None:
     """
     Launch Kirby Air Ride client.
     """
-    print("Running Kirby Air Ride Client")
     from .KARClient import main
 
     launch_subprocess(main, name="KirbyAirRideClient")
@@ -54,7 +54,7 @@ class KARWeb(WebWorld):
     The web interface includes the setup guide and the options page for generating YAMLs.
     """
 
-    tutorials = [
+    tutorials = [  # noqa: RUF012
         Tutorial(
             "Multiworld Setup Guide",
             "A guide to setting up Kirby Air Ride Archipelago on your computer.",
@@ -92,8 +92,8 @@ class KARWorld(World):
         if location_data.code is not None
     }
 
-    item_name_groups: ClassVar[Dict[str, Set[str]]] = item_name_groups
-    location_name_groups: ClassVar[Dict[str, Set[str]]] = location_name_groups
+    item_name_groups: ClassVar[dict[str, set[str]]] = item_name_groups
+    location_name_groups: ClassVar[dict[str, set[str]]] = location_name_groups
 
     web: ClassVar[KARWeb] = KARWeb()
 
@@ -252,13 +252,14 @@ class KARWorld(World):
             if self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede:
                 if ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value in player_stadium_unlocks:
                     raise OptionError(
-                        f"Cannot have {ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value} in starting inventory if the goal is {self.options.city_trial_goal.option_beat_king_dedede}"
+                        f"Cannot have {ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value} \
+                            in starting inventory if the goal is {self.options.city_trial_goal.option_beat_king_dedede}"
                     )
             # don't need to generate a starting stadium unlock if the player has specified one in the starting inventory
             self.city_trial_random_stadium_choice = None
             return
 
-        stadiums = [stadium for stadium in ProgressiveStadiumUnlockType]
+        stadiums = list(ProgressiveStadiumUnlockType)
         if self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede:
             stadiums.remove(ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE)
         self.city_trial_random_stadium_choice = self.random.choice(stadiums)
@@ -296,7 +297,9 @@ class KARWorld(World):
         ):
             if self.options.city_trial_checkbox_fillers_amount.value >= self.options.city_trial_checklist_amount.value:
                 raise OptionError(
-                    f"Cannot start with {self.options.city_trial_checkbox_fillers_amount.value} City Trial checkbox fillers with {self.options.city_trial_checklist_amount.value} checklist blocks as a goal. Checkbox filler number must be less than goal amount."
+                    f"Cannot start with {self.options.city_trial_checkbox_fillers_amount.value} \
+                        City Trial checkbox fillers with {self.options.city_trial_checklist_amount.value} \
+                            checklist blocks as a goal. Checkbox filler number must be less than goal amount."
                 )
         if (
             self.air_ride_enabled
@@ -304,7 +307,9 @@ class KARWorld(World):
         ):
             if self.options.air_ride_checkbox_fillers_amount.value >= self.options.air_ride_checklist_amount.value:
                 raise OptionError(
-                    f"Cannot start with {self.options.air_ride_checkbox_fillers_amount.value} Air Ride checkbox fillers with {self.options.air_ride_checklist_amount.value} checklist blocks as a goal. Checkbox filler number must be less than goal amount."
+                    f"Cannot start with {self.options.air_ride_checkbox_fillers_amount.value} \
+                        Air Ride checkbox fillers with {self.options.air_ride_checklist_amount.value} \
+                            checklist blocks as a goal. Checkbox filler number must be less than goal amount."
                 )
         if (
             self.top_ride_enabled
@@ -312,7 +317,9 @@ class KARWorld(World):
         ):
             if self.options.top_ride_checkbox_fillers_amount.value >= self.options.top_ride_checklist_amount.value:
                 raise OptionError(
-                    f"Cannot start with {self.options.top_ride_checkbox_fillers_amount.value} Top Ride checkbox fillers with {self.options.top_ride_checklist_amount.value} checklist blocks as a goal. Checkbox filler number must be less than goal amount."
+                    f"Cannot start with {self.options.top_ride_checkbox_fillers_amount.value} \
+                        Top Ride checkbox fillers with {self.options.top_ride_checklist_amount.value} \
+                            checklist blocks as a goal. Checkbox filler number must be less than goal amount."
                 )
 
     def create_regions(self) -> None:
@@ -377,7 +384,8 @@ class KARWorld(World):
             # don't add progressive stadium items to the pool if they are not enabled
             if not self.options.city_trial_progressive_stadiums and item_data.type == KARItemType.PROGRESSIVE_STADIUM:
                 continue
-            # don't add stadium unlocks if they are in the starting inventory or the randomly chosen precollected stadium
+            # don't add stadium unlocks if they are in the starting inventory or the randomly chosen precollected
+            # stadium
             if (
                 self.city_trial_enabled
                 and self.options.city_trial_progressive_stadiums
@@ -527,6 +535,4 @@ class KARWorld(World):
 
         :return: A dictionary to be sent to the client when it connects to the server.
         """
-        slot_data = self.options.get_output_dict()
-
-        return slot_data
+        return self.options.get_output_dict()
