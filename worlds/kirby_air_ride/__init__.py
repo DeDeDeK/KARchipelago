@@ -270,9 +270,6 @@ class KARWorld(World):
         for item_name, item_data in ITEM_TABLE.items():
             classification = self.item_classification_overrides.get(item_name, item_data.classification)
 
-            # don't add checkbox reward items to the pool, they are already placed as locked if the option is enabled
-            if item_data.type == KARItemType.CHECKBOX_REWARD.value:
-                continue
             # don't add permanent patches to the pool if the option disables them
             if not self.options.city_trial_permanent_patches and "Permanent" in item_name:
                 continue
