@@ -124,26 +124,6 @@ def create_regions(world: "KARWorld"):
             location.progress_type = LocationProgressType.EXCLUDED
             region.locations.append(location)
 
-    # place checkbox reward items as locked items on their respective locations if the player option is enabled.
-    # these are locked because until checkbox reward randomization is possible in-game, only the player's game can
-    # collect these.
-    if world.options.checkbox_reward_items:
-        if world.city_trial_enabled:
-            for location_name, location_data in CITY_TRIAL_LOCATION_TABLE.items():
-                if location_data.code is not None and location_data.reward != "None":
-                    item = world.create_item(location_data.reward)
-                    world.get_location(location_name).place_locked_item(item)
-        if world.air_ride_enabled:
-            for location_name, location_data in AIR_RIDE_LOCATION_TABLE.items():
-                if location_data.code is not None and location_data.reward != "None":
-                    item = world.create_item(location_data.reward)
-                    world.get_location(location_name).place_locked_item(item)
-        if world.top_ride_enabled:
-            for location_name, location_data in TOP_RIDE_LOCATION_TABLE.items():
-                if location_data.code is not None and location_data.reward != "None":
-                    item = world.create_item(location_data.reward)
-                    world.get_location(location_name).place_locked_item(item)
-
     # TODO:
     # might need to place stadium unlock items for those stadiums that are unlocked by checkboxes in-game,
     # since we can't prevent these from being unlocked by the checkbox. Currently, this is just overwritten
