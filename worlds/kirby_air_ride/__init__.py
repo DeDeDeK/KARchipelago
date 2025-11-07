@@ -116,6 +116,7 @@ class KARWorld(World):
         self.useful_pool: set[str] = set()
         self.filler_pool: set[str] = set()
         self.trap_pool: set[str] = set()
+        self.progression_pool: list = []
         self.city_trial_random_stadium_choice: ProgressiveStadiumUnlockType | None = None
 
     def _determine_item_classification_overrides(self) -> None:
@@ -264,6 +265,105 @@ class KARWorld(World):
             stadiums.remove(ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE)
         self.city_trial_random_stadium_choice = self.random.choice(stadiums)
 
+    def _populate_item_pools(self) -> None:
+        # assign progression, useful, filler and trap items to the pools
+        for item_name, item_data in ITEM_TABLE.items():
+            classification = self.item_classification_overrides.get(item_name, item_data.classification)
+
+            # don't add checkbox reward items to the pool, they are already placed as locked if the option is enabled
+            if item_data.type == KARItemType.CHECKBOX_REWARD.value:
+                continue
+            # don't add permanent patches to the pool if the option disables them
+            if not self.options.city_trial_permanent_patches and "Permanent" in item_name:
+                continue
+            # don't add effect items to the pool if they are not enabled
+            if not self.options.effect_items_enabled and item_data.type == KARItemType.EFFECT.value:
+                continue
+            # don't add city trial checkbox fillers to the pool if they are not enabled
+            if (
+                not self.options.city_trial_checkbox_fillers
+                and item_name == CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value
+            ):
+                continue
+            # don't add air ride checkbox fillers to the pool if they are not enabled
+            if (
+                not self.options.air_ride_checkbox_fillers
+                and item_name == CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value
+            ):
+                continue
+            # don't add top ride checkbox fillers to the pool if they are not enabled
+            if (
+                not self.options.top_ride_checkbox_fillers
+                and item_name == CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value
+            ):
+                continue
+            # don't add patch cap increase items to the pool if they are not enabled
+            if not self.options.city_trial_progressive_patch_caps and item_data.type == KARItemType.PATCH_CAP_INCREASE:
+                continue
+            # don't add progressive stadium items to the pool if they are not enabled
+            if not self.options.city_trial_progressive_stadiums and item_data.type == KARItemType.PROGRESSIVE_STADIUM:
+                continue
+            # don't add stadium unlocks if they are in the starting inventory or the randomly chosen precollected
+            # stadium
+            if (
+                self.city_trial_enabled
+                and self.options.city_trial_progressive_stadiums
+                and item_data.type == KARItemType.PROGRESSIVE_STADIUM
+            ):
+                if item_name in self.options.start_inventory or item_name == self.city_trial_random_stadium_choice:
+                    continue
+
+            if classification & ItemClassification.progression:
+                # take care of checkbox filler items first, as they have quantity specified by the player
+                if item_data.type == KARItemType.CHECKBOX_FILLER.value:
+                    match item_name:
+                        case CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value:
+                            if self.city_trial_enabled:
+                                self.progression_pool.extend(
+                                    [item_name] * self.options.city_trial_checkbox_fillers_amount.value
+                                )
+                        case CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value:
+                            if self.air_ride_enabled:
+                                self.progression_pool.extend(
+                                    [item_name] * self.options.air_ride_checkbox_fillers_amount.value
+                                )
+                        case CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value:
+                            if self.top_ride_enabled:
+                                self.progression_pool.extend(
+                                    [item_name] * self.options.top_ride_checkbox_fillers_amount.value
+                                )
+                    continue
+
+                # cap increase items need to make as many as is required to get to the max stat count of 18
+                # (for all patches expect HP, which is 16)
+                # assumes the range of patch_cap_amount is 1-17.
+                if item_data.type == KARItemType.PATCH_CAP_INCREASE:
+                    num_needed = max(1, 18 - self.options.city_trial_patch_cap_amount.value)
+                    self.progression_pool.extend([item_name] * num_needed)
+                    continue
+
+                self.progression_pool.extend([item_name] * item_data.quantity)
+            elif classification & ItemClassification.useful:
+                # add checkbox fillers only if the modes for them are enabled
+                if item_data.type == KARItemType.CHECKBOX_FILLER.value:
+                    match item_name:
+                        case CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value:
+                            if self.city_trial_enabled:
+                                self.useful_pool.add(item_name)
+                        case CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value:
+                            if self.air_ride_enabled:
+                                self.useful_pool.add(item_name)
+                        case CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value:
+                            if self.top_ride_enabled:
+                                self.useful_pool.add(item_name)
+                    continue
+
+                self.useful_pool.add(item_name)
+            elif classification & ItemClassification.trap:
+                self.trap_pool.add(item_name)
+            else:
+                self.filler_pool.add(item_name)
+
     def generate_early(self) -> None:
         """
         Run before any general steps of the MultiWorld other than options. Useful for getting and adjusting option
@@ -281,6 +381,10 @@ class KARWorld(World):
 
         # Determine any item classification overrides from player options.
         self._determine_item_classification_overrides()
+
+        # Populate item pools for create_items, based on user options. must run after
+        # _determine_item_classification_overrides
+        self._populate_item_pools()
 
         # if city trial progressive stadiums are enabled, choose and precollect the initial stadium unlock
         if self.city_trial_enabled and self.options.city_trial_progressive_stadiums:
@@ -345,105 +449,6 @@ class KARWorld(World):
 
     def create_items(self) -> None:
         pool: list[str] = []
-        progression_pool: list[str] = []
-
-        # assign progression, useful, filler and trap items to the pools
-        for item_name, item_data in ITEM_TABLE.items():
-            classification = self.item_classification_overrides.get(item_name, item_data.classification)
-
-            # don't add checkbox reward items to the pool, they are already placed as locked if the option is enabled
-            if item_data.type == KARItemType.CHECKBOX_REWARD.value:
-                continue
-            # don't add permanent patches to the pool if the option disables them
-            if not self.options.city_trial_permanent_patches and "Permanent" in item_name:
-                continue
-            # don't add effect items to the pool if they are not enabled
-            if not self.options.effect_items_enabled and item_data.type == KARItemType.EFFECT.value:
-                continue
-            # don't add city trial checkbox fillers to the pool if they are not enabled
-            if (
-                not self.options.city_trial_checkbox_fillers
-                and item_name == CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value
-            ):
-                continue
-            # don't add air ride checkbox fillers to the pool if they are not enabled
-            if (
-                not self.options.air_ride_checkbox_fillers
-                and item_name == CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value
-            ):
-                continue
-            # don't add top ride checkbox fillers to the pool if they are not enabled
-            if (
-                not self.options.top_ride_checkbox_fillers
-                and item_name == CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value
-            ):
-                continue
-            # don't add patch cap increase items to the pool if they are not enabled
-            if not self.options.city_trial_progressive_patch_caps and item_data.type == KARItemType.PATCH_CAP_INCREASE:
-                continue
-            # don't add progressive stadium items to the pool if they are not enabled
-            if not self.options.city_trial_progressive_stadiums and item_data.type == KARItemType.PROGRESSIVE_STADIUM:
-                continue
-            # don't add stadium unlocks if they are in the starting inventory or the randomly chosen precollected
-            # stadium
-            if (
-                self.city_trial_enabled
-                and self.options.city_trial_progressive_stadiums
-                and item_data.type == KARItemType.PROGRESSIVE_STADIUM
-            ):
-                if item_name in self.options.start_inventory or item_name == self.city_trial_random_stadium_choice:
-                    continue
-
-            if classification & ItemClassification.progression:
-                # take care of checkbox filler items first, as they have quantity specified by the player
-                if item_data.type == KARItemType.CHECKBOX_FILLER.value:
-                    match item_name:
-                        case CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value:
-                            if self.city_trial_enabled:
-                                progression_pool.extend(
-                                    [item_name] * self.options.city_trial_checkbox_fillers_amount.value
-                                )
-                        case CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value:
-                            if self.air_ride_enabled:
-                                progression_pool.extend(
-                                    [item_name] * self.options.air_ride_checkbox_fillers_amount.value
-                                )
-                        case CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value:
-                            if self.top_ride_enabled:
-                                progression_pool.extend(
-                                    [item_name] * self.options.top_ride_checkbox_fillers_amount.value
-                                )
-                    continue
-
-                # cap increase items need to make as many as is required to get to the max stat count of 18
-                # (for all patches expect HP, which is 16)
-                # assumes the range of patch_cap_amount is 1-17.
-                if item_data.type == KARItemType.PATCH_CAP_INCREASE:
-                    num_needed = max(1, 18 - self.options.city_trial_patch_cap_amount.value)
-                    progression_pool.extend([item_name] * num_needed)
-                    continue
-
-                progression_pool.extend([item_name] * item_data.quantity)
-            elif classification & ItemClassification.useful:
-                # add checkbox fillers only if the modes for them are enabled
-                if item_data.type == KARItemType.CHECKBOX_FILLER.value:
-                    match item_name:
-                        case CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value:
-                            if self.city_trial_enabled:
-                                self.useful_pool.add(item_name)
-                        case CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value:
-                            if self.air_ride_enabled:
-                                self.useful_pool.add(item_name)
-                        case CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value:
-                            if self.top_ride_enabled:
-                                self.useful_pool.add(item_name)
-                    continue
-
-                self.useful_pool.add(item_name)
-            elif classification & ItemClassification.trap:
-                self.trap_pool.add(item_name)
-            else:
-                self.filler_pool.add(item_name)
 
         # Determine excluded locations. Add in excluded locations only if the respective game modes are
         # enabled, as the locations won't exist in the multiworld if they haven't been enabled.
@@ -467,15 +472,15 @@ class KARWorld(World):
         # The remaining number of items left to place should be the same as the number of non-excluded
         # locations in the world.
         num_items_left_to_place = len(nonexcluded_locations)
-        if len(progression_pool) > num_items_left_to_place:
+        if len(self.progression_pool) > num_items_left_to_place:
             raise FillError(
                 "There are insufficient locations to place progression items! "
-                f"Trying to place {len(progression_pool)} items in only {num_items_left_to_place} locations."
+                f"Trying to place {len(self.progression_pool)} items in only {num_items_left_to_place} locations."
             )
 
         # Add progression items into the pool
-        pool.extend(progression_pool)
-        num_items_left_to_place -= len(progression_pool)
+        pool.extend(self.progression_pool)
+        num_items_left_to_place -= len(self.progression_pool)
 
         # place useful items to fill out the remaining locations
         # first place checkbox fillers if they are not progression to still honor the number the player specified:
@@ -520,6 +525,17 @@ class KARWorld(World):
 
         :return: The name of a filler item from this world.
         """
+
+        # check if filler_pool has been populated. if not, we are in the instance that this world is a part of ItemLink
+        # generation instead of regular generation. filler_pool will be populated in every other case
+        if not self.filler_pool:
+            filler_pool = set()
+            for item_name, item_data in ITEM_TABLE.items():
+                # check specifically for 0 value
+                if item_data.classification == ItemClassification.filler:
+                    filler_pool.add(item_name)
+            return self.random.choices(list(filler_pool), k=1)[0]
+
         if self.options.traps_enabled and self.options.trap_chance.value > 0:
             if self.random.random() * 100 < self.options.trap_chance.value:
                 return self.random.choices(list(self.trap_pool), k=1)[0]
