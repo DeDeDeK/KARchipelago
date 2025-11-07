@@ -641,9 +641,6 @@ class KARContext(CommonContext):
                 else:
                     logger.debug(f"Failed to parse patch cap increase type from item name: {item_name}")
                 return item
-            case KARItemType.CHECKBOX_REWARD.value:
-                logger.debug("in checkbox reward item give...")
-                return item
             case KARItemType.CHECKBOX_FILLER.value:
                 logger.debug("in checkbox filler item give...")
                 checkbox_filler_type = get_checkbox_filler_type_from_item_name(item_name)
