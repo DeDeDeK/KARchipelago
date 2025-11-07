@@ -40,19 +40,6 @@ class EffectItemsEnabled(Toggle):
     default = 1
 
 
-class CheckboxRewardItems(Toggle):
-    """
-    This controls whether the usual in-game reward for a checkbox will be placed as a locked item on that
-    checkbox (only you can collect these). These items are more of a reference of what the reward for that
-    location/checkbox is, and receiving the item does nothing special. Recommend setting this to off unless
-    you want a reference to go by. This will limit the amount of other items you can receive and can lead to
-    generation errors with too many other progression items specified.
-    """
-
-    display_name = "Checkbox rewards are items"
-    default = 0
-
-
 class CheckboxFillersProgression(Toggle):
     """
     Toggles whether "checkbox filler" items are progression items.
@@ -388,7 +375,6 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     traps_enabled: TrapsEnabled
     trap_chance: TrapChance
     effect_items_enabled: EffectItemsEnabled
-    checkbox_reward_items: CheckboxRewardItems
     checkbox_fillers_progression: CheckboxFillersProgression
     energy_link: EnergyLink
     city_trial_goal: CityTrialGoal
@@ -430,7 +416,6 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "traps_enabled",
             "trap_chance",
             "effect_items_enabled",
-            "checkbox_reward_items",
             "checkbox_fillers_progression",
             "energy_link",
             "death_link",
@@ -467,9 +452,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 
 
 kar_option_groups = [
-    OptionGroup(
-        "Item Options", [TrapsEnabled, TrapChance, EffectItemsEnabled, CheckboxRewardItems, CheckboxFillersProgression]
-    ),
+    OptionGroup("Item Options", [TrapsEnabled, TrapChance, EffectItemsEnabled, CheckboxFillersProgression]),
     OptionGroup(
         "City Trial Options",
         [
