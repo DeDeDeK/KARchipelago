@@ -10,13 +10,11 @@ from .KARData import (
     PatchType,
     ProgressiveStadiumUnlockType,
 )
-from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
 
 
 class KARItemType(StrEnum):
     PATCH = "Patch"
     EFFECT = "Effect"
-    CHECKBOX_REWARD = "Checkbox Reward"
     CHECKBOX_FILLER = "Checkbox Filler"
     PROGRESSIVE_STADIUM = "Progressive Stadium"
     PATCH_CAP_INCREASE = "Patch Cap Increase"
@@ -312,17 +310,6 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # "Fake Charge": KARItemData("Fake Patch", ItemClassification.trap, 94, 10, 0x43),
     # "Fake Weight": KARItemData("Fake Patch", ItemClassification.trap, 95, 10, 0x44),
 }
-
-# update the item table with checkbox reward items. use a 500 offset to avoid colliding with item_table items
-ITEM_TABLE.update(
-    {
-        location_data.reward: KARItemData(
-            KARItemType.CHECKBOX_REWARD, ItemClassification.progression, location_data.code + 500, 1, None
-        )
-        for location_data in (CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE).values()
-        if location_data.code is not None and location_data.reward != "None"
-    }
-)
 
 LOOKUP_ID_TO_NAME: dict[int, str] = {data.code: item for item, data in ITEM_TABLE.items() if data.code is not None}
 
