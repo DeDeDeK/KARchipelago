@@ -25,7 +25,7 @@ class KARLocationData(NamedTuple):
     :param mem_address: In-memory address of the check.
     """
 
-    code: int
+    code: int | None
     region: str
     reward: str
     type: KARLocationType
@@ -45,8 +45,7 @@ class KARLocation(Location):
     game: str = "Kirby Air Ride"
 
     def __init__(self, player: int, name: str, parent: Region, data: KARLocationData):
-        address = None if data.code is None else data.code
-        super().__init__(player, name, address=address, parent=parent)
+        super().__init__(player, name, data.code, parent)
 
         self.data = data
 
