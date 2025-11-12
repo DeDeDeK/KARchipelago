@@ -15,7 +15,7 @@ from worlds.LauncherComponents import (
 )
 
 from .KARData import CheckboxFillerType, ProgressiveStadiumUnlockType
-from .KARItems import ITEM_TABLE, KARItem, KARItemType, item_name_groups
+from .KARItems import ITEM_TABLE, KARItem, KARItemData, KARItemType, item_name_groups
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
@@ -433,14 +433,20 @@ class KARWorld(World):
 
     def create_item(self, item_name: str) -> KARItem:
         """
-        Create a KARItem for this world type and player.
+        Create a KARItem from the given item_name.
         """
         if item_name in ITEM_TABLE:
+            data = ITEM_TABLE[item_name]
+            new_item_data = KARItemData(
+                data.type,
+                self.item_classification_overrides.get(item_name, data.classification),
+                data.code,
+                data.quantity,
+            )
             return KARItem(
                 item_name,
                 self.player,
-                ITEM_TABLE[item_name],
-                self.item_classification_overrides.get(item_name, ITEM_TABLE[item_name].classification),
+                new_item_data,
             )
         raise KeyError(f"Invalid item name: {item_name}")
 
@@ -524,7 +530,8 @@ class KARWorld(World):
         """
 
         # check if filler_pool has been populated. if not, we are in the instance that this world is a part of ItemLink
-        # generation instead of regular generation. filler_pool will be populated in every other case
+        # generation instead of regular generation. no other generation steps have happened yet.
+        # filler_pool will be populated in every other case
         if not self.filler_pool:
             filler_pool = set()
             for item_name, item_data in ITEM_TABLE.items():
