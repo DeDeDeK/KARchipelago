@@ -414,8 +414,6 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # "Fake Weight": KARItemData("Fake Patch", ItemClassification.trap, 95, 10, 0x44),
 }
 
-LOOKUP_ID_TO_NAME: dict[int, str] = {data.code: item for item, data in ITEM_TABLE.items() if data.code is not None}
-
 item_name_groups = {
     # "Abilities": {
     #     "Bomb Ability",
