@@ -128,7 +128,8 @@ def create_regions(world: "KARWorld"):
     # might need to place stadium unlock items for those stadiums that are unlocked by checkboxes in-game,
     # since we can't prevent these from being unlocked by the checkbox. Currently, this is just overwritten
     # by us right after the stadium is unlocked, so we effectively ignore these checkbox rewards in favor of the AP
-    # item
+    # item. This might interact badly with excluded locations though, as this would require the progression item
+    # to be on an excluded location if the exluded location is the checkbox that unlocks the stadium.
 
     # determine the goal for the world, given player options
     determine_goal(world)
