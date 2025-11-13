@@ -78,7 +78,7 @@ class KARWorld(World):
     options_dataclass = KAROptions
     options: KAROptions
     game: ClassVar[str] = "Kirby Air Ride"
-    topology_present: bool = False
+    topology_present: bool = True
     explicit_indirect_conditions = False
 
     item_name_to_id: ClassVar[dict[str, int]] = {
@@ -435,7 +435,7 @@ class KARWorld(World):
         """
         Create a KARItem from the given item_name.
         """
-        if item_name in ITEM_TABLE:
+        if item_name in self.item_names:
             data = ITEM_TABLE[item_name]
             new_item_data = KARItemData(
                 data.type,

@@ -2579,15 +2579,6 @@ TOP_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
     ),
 }
 
-
-LOCATION_LOOKUP_ID_TO_NAME: dict[int, str] = {
-    location_data.code: location_name
-    for location_name, location_data in (
-        CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE
-    ).items()
-    if location_data.code is not None
-}
-
 location_name_groups = {
     "City Trial: Stadiums": {
         "Stadium: play in over 10 stadium modes!",
