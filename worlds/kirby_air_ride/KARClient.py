@@ -31,11 +31,10 @@ from .KARData import (
     get_stage_name_from_stadium_unlock_type,
     patch_type_to_stat_type,
 )
-from .KARItems import ITEM_TABLE, LOOKUP_ID_TO_NAME, KARItemType
+from .KARItems import ITEM_TABLE, KARItemType
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
-    LOCATION_LOOKUP_ID_TO_NAME,
     TOP_RIDE_LOCATION_TABLE,
     KARLocationData,
     KARLocationType,
@@ -358,7 +357,8 @@ class KARContext(CommonContext):
             if len(args["checked_locations"]) > 0:
                 location_table = CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE
                 for location_int in args["checked_locations"]:
-                    mem_address = location_table[LOCATION_LOOKUP_ID_TO_NAME[location_int]].mem_address
+                    location_name = self.location_names.lookup_in_game(location_int)
+                    mem_address = location_table[location_name].mem_address
                     if mem_address is not None:
                         current_val = self.dolphin_interface.read_byte(mem_address)
                         # only unlock the checkbox if it isn't unlocked yet
@@ -398,12 +398,13 @@ class KARContext(CommonContext):
         # This will include items we've received while being offline.
         if cmd == "ReceivedItems":
             logger.debug(
-                f"Got ReceivedItems packet, index: {args['index']}, items: {
-                    [LOOKUP_ID_TO_NAME[item.item] for item in args['items']]
-                }"
+                f"Got ReceivedItems packet: {args}, \
+                    ({[self.item_names.lookup_in_game(item.item) for item in args['items']]})"
             )
             new_items = list(self.items_received[self.item_processed_index :])
-            logger.debug(f"adding new items to the queue: {[LOOKUP_ID_TO_NAME[item.item] for item in new_items]}")
+            logger.debug(
+                f"adding new items to the queue: {[self.item_names.lookup_in_game(item.item) for item in new_items]}"
+            )
             self.items_queue.extend(new_items)
             self.item_processed_index = len(self.items_received)
             self.write_items_file()
@@ -488,10 +489,8 @@ class KARContext(CommonContext):
         # Send newly checked locations to the server
         new_locations_checked = await self.check_locations(self.locations_checked)
         if new_locations_checked:
-            logger.debug(
-                "New locations checked and sent to server: %s",
-                [f"{LOCATION_LOOKUP_ID_TO_NAME[location_id]} ({location_id})" for location_id in new_locations_checked],
-            )
+            location_names = [self.location_names.lookup_in_game(location_id) for location_id in new_locations_checked]
+            logger.debug(f"New locations checked and sent to server: {new_locations_checked} ({location_names})")
 
     async def determine_goal_achieved(self) -> None:
         # check city trial goals
@@ -602,7 +601,7 @@ class KARContext(CommonContext):
         Args:
             item: NetworkItem
         """
-        item_name = LOOKUP_ID_TO_NAME[item.item]
+        item_name = self.item_names.lookup_in_game(item.item)
         item_data = ITEM_TABLE[item_name]
 
         match item_data.type:
@@ -851,7 +850,7 @@ class KARContext(CommonContext):
                 permanent_patches = [
                     item
                     for item in self.items_received
-                    if "Permanent" in LOOKUP_ID_TO_NAME[item.item] and item not in self.items_queue
+                    if "Permanent" in self.item_names.lookup_in_game(item.item) and item not in self.items_queue
                 ]
 
                 logger.debug("queueing purchased permanent patches...")
@@ -955,7 +954,7 @@ class KARContext(CommonContext):
                 items = [
                     item
                     for item in self.items_queue
-                    if ITEM_TABLE[LOOKUP_ID_TO_NAME[item.item]].type
+                    if ITEM_TABLE[self.item_names.lookup_in_game(item.item)].type
                     in (KARItemType.CHECKBOX_FILLER, KARItemType.PATCH_CAP_INCREASE, KARItemType.PROGRESSIVE_STADIUM)
                 ]
                 if len(items) > 0:
