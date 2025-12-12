@@ -431,24 +431,24 @@ class KARWorld(World):
         """Method for setting the rules on the World's regions and locations."""
         set_rules(self)
 
-    def create_item(self, item_name: str) -> KARItem:
+    def create_item(self, name: str) -> KARItem:
         """
         Create a KARItem from the given item_name.
         """
-        if item_name in self.item_names:
-            data = ITEM_TABLE[item_name]
+        if name in self.item_names:
+            data = ITEM_TABLE[name]
             new_item_data = KARItemData(
                 data.type,
-                self.item_classification_overrides.get(item_name, data.classification),
+                self.item_classification_overrides.get(name, data.classification),
                 data.code,
                 data.quantity,
             )
             return KARItem(
-                item_name,
+                name,
                 self.player,
                 new_item_data,
             )
-        raise KeyError(f"Invalid item name: {item_name}")
+        raise KeyError(f"Invalid item name: {name}")
 
     def create_items(self) -> None:
         pool: list[str] = []
