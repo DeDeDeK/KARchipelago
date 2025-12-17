@@ -365,11 +365,7 @@ class KARContext(CommonContext):
                         if current_val in self.excluded_checkbox_bytes:
                             self.dolphin_interface.write_byte(
                                 mem_address,
-                                int(
-                                    CheckboxFlags.UNLOCKED_GREEN
-                                    | CheckboxFlags.FLAGGED_FOR_UNLOCK
-                                    | CheckboxFlags.VISIBLE
-                                ),
+                                int(CheckboxFlags.FLAGGED_FOR_UNLOCK | CheckboxFlags.VISIBLE),
                             )
 
             # read and process the items file and set class vars accordingly
