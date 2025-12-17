@@ -12,6 +12,7 @@ from .KARData import (
     MemoryAddress,
     StageName,
     StatType,
+    SubMenuFlag,
     compose_stadium_unlocks_number,
 )
 
@@ -26,7 +27,6 @@ class DolphinInterface:
         self.memory_write_error_fmt = "Failed to write {type} at {addr}: {error}"
         self.transitioned_time: float = time.time()
         self.transition_wait: int = 6
-        self.transitioned: bool = False
         self.player_1_patches_old: dict[StatType, float] = dict.fromkeys(StatType, 0)
         self.player_1_patches: dict[StatType, float] = dict.fromkeys(StatType, 0)
         self.unlocked_stadiums: set[StageName] = set()
@@ -427,6 +427,9 @@ class DolphinInterface:
         Check which stage the player is currently in in-game. Returns None if the player is not in a stage.
         """
         menu_selection = self.read_byte(MemoryAddress.MENU_STAGE_ID_ADDR.value)
+        sub_menu_selection = self.read_byte(MemoryAddress.SUB_MENU_STAGE_ID_ADDR.value)
+        sub_sub_menu_selection = self.read_byte(MemoryAddress.SUB_SUB_MENU_STAGE_ID_ADDR.value)
+        submenu_flag = self.read_byte(MemoryAddress.SUBMENU_FLAG.value)
         current_stage = self.read_pointer_bytes(MemoryAddress.CURR_STAGE_ID_ADDR.value, 0x4, 4)
 
         if current_stage is not None:
@@ -437,8 +440,17 @@ class DolphinInterface:
             return None
 
         for stage in STAGE_MAP.values():
-            if stage.menu_selection == menu_selection and stage.stage_id == current_stage:
-                return stage.name
+            if (
+                stage.menu_selection.value == menu_selection
+                and stage.sub_menu_selection.value == sub_menu_selection
+                and stage.stage_id.value == current_stage
+            ):
+                if stage.submenu_flag.value == submenu_flag:
+                    if stage.submenu_flag.value == SubMenuFlag.ON.value:
+                        if stage.sub_sub_menu_selection.value == sub_sub_menu_selection:
+                            return stage.name
+                    else:
+                        return stage.name
 
         return None
 
@@ -453,18 +465,15 @@ class DolphinInterface:
         trigger = False
         # Detect transition into the stage
         stage = self.get_current_stage()
-        if stage is not None and stage != self.current_stage and not self.transitioned:
+        if stage is not None and stage != self.current_stage:
             logger.debug(f"transition into stage {stage.value} detected")
             trigger = True
-            self.transitioned = True
             self.transitioned_time = time.time()
-            self.current_stage = stage
         # Detect transition out of the stage
-        elif stage is None and stage != self.current_stage and self.transitioned:
+        elif stage is None and stage != self.current_stage:
             logger.debug(f"transition out of stage {self.current_stage} detected")
-            self.transitioned = False
-            self.current_stage = None
 
+        self.current_stage = stage
         return stage, trigger
 
     def transition_waited(self) -> bool:
