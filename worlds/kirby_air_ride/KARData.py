@@ -48,6 +48,21 @@ class MemoryAddress(IntEnum):
     # This address is used to check the stage type to verify that the player is in-game before sending items.
     # 00 = Air Ride, 01 = Top Ride, 02 = City Trial, 03 = Options, 04 = LAN
     MENU_STAGE_ID_ADDR = 0x80535A0C
+    # the submenu within the current menu selection "air ride -> start game, free run, etc." byte value.
+    # persistent once selected, even in-game. reset once the menu has been backed out of
+    # 00 -> 0X
+    SUB_MENU_STAGE_ID_ADDR = 0x80535A0D
+    # sub-sub menu selection. byte value 00 -> 0X
+    # persistent once selected, even in-game. reset once the menu has been backed out of
+    # ONLY RELIABLE IF SUBMENU_FLAG is ON
+    SUB_SUB_MENU_STAGE_ID_ADDR = 0x80535A0E
+
+    # byte value. this is 0 when there are no simple submenus for the current active selection. this 1 when there are
+    # simple submenus active for the current selection. For example, air ride and top ride free run selections have
+    # 2 more options for time attack and free run. This is 1 for those. Any "Records" menu has submenus as well.
+    # This is an easy way to differentiate if the value we read from sub_sub_menu_stage_id_addr is 0 because the
+    # first sub sub menu item was selected, vs. it being 0 because that's it's default state.
+    SUBMENU_FLAG = 0x80535A0F
 
     # the current stage the player is in.
     # this is a pointer to a 4 byte word. an offset of 4 needs to be applied to get to the address of the current stage.
@@ -186,9 +201,54 @@ class MenuSelectionID(IntEnum):
     LAN = 4
 
 
+class SubMenuSelectionIDCityTrial(IntEnum):
+    START_GAME = 0
+    STADIUM = 1
+    FREE_RUN = 2
+    GAME_SETTINGS = 3
+    RECORDS = 4
+    HOW_TO_PLAY = 5
+
+
+class SubSubMenuSelectionIDCityTrial(IntEnum):
+    NONE = 0
+
+
+class SubMenuSelectionIDAirRide(IntEnum):
+    START_GAME = 0
+    FREE_RUN = 1
+    GAME_SETTINGS = 2
+    RECORDS = 3
+    HOW_TO_PLAY = 4
+
+
+class SubSubMenuSelectionIDAirRideFreeRun(IntEnum):
+    TIME_ATTACK = 0
+    FREE_RUN = 1
+
+
+class SubMenuSelectionIDTopRide(IntEnum):
+    START_GAME = 0
+    FREE_RUN = 1
+    GAME_SETTINGS = 2
+    RECORDS = 3
+    HOW_TO_PLAY = 4
+
+
+class SubSubMenuSelectionIDTopRideFreeRun(IntEnum):
+    TIME_ATTACK = 0
+    FREE_RUN = 1
+
+
+class SubMenuFlag(IntEnum):
+    OFF = 0
+    ON = 1
+
+
 class StageID(IntEnum):
     MAIN_MENU = 22
     CITY_TRIAL = 9
+    CITY_TRIAL_FREE_RUN = 9
     STADIUM_DRAG_RACE_1 = 13
     STADIUM_DRAG_RACE_2 = 11
     STADIUM_DRAG_RACE_3 = 10
@@ -199,25 +259,74 @@ class StageID(IntEnum):
     STADIUM_DESTRUCTION_DERBY_1 = 15
     STADIUM_DESTRUCTION_DERBY_2 = 16
     STADIUM_DESTRUCTION_DERBY_3 = 21
-    # STADIUM_DESTRUCTION_DERBY_4 = 9 # conflicts with City Trial
-    # STADIUM_DESTRUCTION_DERBY_5 = 9 # conflicts with City Trial
+    STADIUM_DESTRUCTION_DERBY_4 = 9
+    STADIUM_DESTRUCTION_DERBY_5 = 9
+    STADIUM_SINGLE_RACE_9 = 6
+    STADIUM_SINGLE_RACE_8 = 3
+    STADIUM_SINGLE_RACE_7 = 5
+    STADIUM_SINGLE_RACE_6 = 4
+    STADIUM_SINGLE_RACE_5 = 7
+    STADIUM_SINGLE_RACE_4 = 8
+    STADIUM_SINGLE_RACE_3 = 2
+    STADIUM_SINGLE_RACE_2 = 1
+    STADIUM_SINGLE_RACE_1 = 0
     STADIUM_KIRBY_MELEE_1 = 14
     STADIUM_KIRBY_MELEE_2 = 17
     STADIUM_VS_KING_DEDEDE = 15
-    # FANTASY_MEADOWS = 0 # indistinguishable
-    CELESTIAL_VALLEY = 4
-    SKY_SANDS = 2
-    FROZEN_HILLSIDE = 8
-    MAGMA_FLOWS = 1
-    BEANSTALK_PARK = 7
-    MACHINE_PASSAGE = 5
-    CHECKER_KNIGHTS = 3
-    NEBULA_BELT = 6
+    AIR_RIDE_FANTASY_MEADOWS = 0
+    AIR_RIDE_CELESTIAL_VALLEY = 4
+    AIR_RIDE_SKY_SANDS = 2
+    AIR_RIDE_FROZEN_HILLSIDE = 8
+    AIR_RIDE_MAGMA_FLOWS = 1
+    AIR_RIDE_BEANSTALK_PARK = 7
+    AIR_RIDE_MACHINE_PASSAGE = 5
+    AIR_RIDE_CHECKER_KNIGHTS = 3
+    AIR_RIDE_NEBULA_BELT = 6
+    AIR_RIDE_FANTASY_MEADOWS_FREE_RUN = 0
+    AIR_RIDE_CELESTIAL_VALLEY_FREE_RUN = 4
+    AIR_RIDE_SKY_SANDS_FREE_RUN = 2
+    AIR_RIDE_FROZEN_HILLSIDE_FREE_RUN = 8
+    AIR_RIDE_MAGMA_FLOWS_FREE_RUN = 1
+    AIR_RIDE_BEANSTALK_PARK_FREE_RUN = 7
+    AIR_RIDE_MACHINE_PASSAGE_FREE_RUN = 5
+    AIR_RIDE_CHECKER_KNIGHTS_FREE_RUN = 3
+    AIR_RIDE_NEBULA_BELT_FREE_RUN = 6
+    AIR_RIDE_FANTASY_MEADOWS_TIME_ATTACK = 0
+    AIR_RIDE_CELESTIAL_VALLEY_TIME_ATTACK = 4
+    AIR_RIDE_SKY_SANDS_TIME_ATTACK = 2
+    AIR_RIDE_FROZEN_HILLSIDE_TIME_ATTACK = 8
+    AIR_RIDE_MAGMA_FLOWS_TIME_ATTACK = 1
+    AIR_RIDE_BEANSTALK_PARK_TIME_ATTACK = 7
+    AIR_RIDE_MACHINE_PASSAGE_TIME_ATTACK = 5
+    AIR_RIDE_CHECKER_KNIGHTS_TIME_ATTACK = 3
+    AIR_RIDE_NEBULA_BELT_TIME_ATTACK = 6
+    TOP_RIDE_GRASS = 0
+    TOP_RIDE_SAND = 0
+    TOP_RIDE_SKY = 0
+    TOP_RIDE_FIRE = 0
+    TOP_RIDE_LIGHT = 0
+    TOP_RIDE_WATER = 0
+    TOP_RIDE_METAL = 0
+    TOP_RIDE_GRASS_FREE_RUN = 0
+    TOP_RIDE_SAND_FREE_RUN = 0
+    TOP_RIDE_SKY_FREE_RUN = 0
+    TOP_RIDE_FIRE_FREE_RUN = 0
+    TOP_RIDE_LIGHT_FREE_RUN = 0
+    TOP_RIDE_WATER_FREE_RUN = 0
+    TOP_RIDE_METAL_FREE_RUN = 0
+    TOP_RIDE_GRASS_TIME_ATTACK = 0
+    TOP_RIDE_SAND_TIME_ATTACK = 0
+    TOP_RIDE_SKY_TIME_ATTACK = 0
+    TOP_RIDE_FIRE_TIME_ATTACK = 0
+    TOP_RIDE_LIGHT_TIME_ATTACK = 0
+    TOP_RIDE_WATER_TIME_ATTACK = 0
+    TOP_RIDE_METAL_TIME_ATTACK = 0
 
 
 class StageName(StrEnum):
     MAIN_MENU = "Main Menu"
     CITY_TRIAL = "City Trial"
+    CITY_TRIAL_FREE_RUN = "City Trial (Free Run)"
     STADIUM_DRAG_RACE_1 = "Stadium: DRAG RACE 1"
     STADIUM_DRAG_RACE_2 = "Stadium: DRAG RACE 2"
     STADIUM_DRAG_RACE_3 = "Stadium: DRAG RACE 3"
@@ -242,15 +351,54 @@ class StageName(StrEnum):
     STADIUM_SINGLE_RACE_8 = "Stadium: SINGLE RACE 8"
     STADIUM_SINGLE_RACE_9 = "Stadium: SINGLE RACE 9"
     STADIUM_VS_KING_DEDEDE = "Stadium: VS. KING DEDEDE"
-    FANTASY_MEADOWS = "FANTASY MEADOWS"
-    CELESTIAL_VALLEY = "CELESTIAL VALLEY"
-    SKY_SANDS = "SKY SANDS"
-    FROZEN_HILLSIDE = "FROZEN HILLSIDE"
-    MAGMA_FLOWS = "MAGMA FLOWS"
-    BEANSTALK_PARK = "BEANSTALK PARK"
-    MACHINE_PASSAGE = "MACHINE PASSAGE"
-    CHECKER_KNIGHTS = "CHECKER KNIGHTS"
-    NEBULA_BELT = "NEBULA BELT"
+    AIR_RIDE_FANTASY_MEADOWS = "FANTASY MEADOWS"
+    AIR_RIDE_CELESTIAL_VALLEY = "CELESTIAL VALLEY"
+    AIR_RIDE_SKY_SANDS = "SKY SANDS"
+    AIR_RIDE_FROZEN_HILLSIDE = "FROZEN HILLSIDE"
+    AIR_RIDE_MAGMA_FLOWS = "MAGMA FLOWS"
+    AIR_RIDE_BEANSTALK_PARK = "BEANSTALK PARK"
+    AIR_RIDE_MACHINE_PASSAGE = "MACHINE PASSAGE"
+    AIR_RIDE_CHECKER_KNIGHTS = "CHECKER KNIGHTS"
+    AIR_RIDE_NEBULA_BELT = "NEBULA BELT"
+    AIR_RIDE_FANTASY_MEADOWS_FREE_RUN = "FANTASY MEADOWS (Free Run)"
+    AIR_RIDE_CELESTIAL_VALLEY_FREE_RUN = "CELESTIAL VALLEY (Free Run)"
+    AIR_RIDE_SKY_SANDS_FREE_RUN = "SKY SANDS (Free Run)"
+    AIR_RIDE_FROZEN_HILLSIDE_FREE_RUN = "FROZEN HILLSIDE (Free Run)"
+    AIR_RIDE_MAGMA_FLOWS_FREE_RUN = "MAGMA FLOWS (Free Run)"
+    AIR_RIDE_BEANSTALK_PARK_FREE_RUN = "BEANSTALK PARK (Free Run)"
+    AIR_RIDE_MACHINE_PASSAGE_FREE_RUN = "MACHINE PASSAGE (Free Run)"
+    AIR_RIDE_CHECKER_KNIGHTS_FREE_RUN = "CHECKER KNIGHTS (Free Run)"
+    AIR_RIDE_NEBULA_BELT_FREE_RUN = "NEBULA BELT (Free Run)"
+    AIR_RIDE_FANTASY_MEADOWS_TIME_ATTACK = "FANTASY MEADOWS (Time Attack)"
+    AIR_RIDE_CELESTIAL_VALLEY_TIME_ATTACK = "CELESTIAL VALLEY (Time Attack)"
+    AIR_RIDE_SKY_SANDS_TIME_ATTACK = "SKY SANDS (Time Attack)"
+    AIR_RIDE_FROZEN_HILLSIDE_TIME_ATTACK = "FROZEN HILLSIDE (Time Attack)"
+    AIR_RIDE_MAGMA_FLOWS_TIME_ATTACK = "MAGMA FLOWS (Time Attack)"
+    AIR_RIDE_BEANSTALK_PARK_TIME_ATTACK = "BEANSTALK PARK (Time Attack)"
+    AIR_RIDE_MACHINE_PASSAGE_TIME_ATTACK = "MACHINE PASSAGE (Time Attack)"
+    AIR_RIDE_CHECKER_KNIGHTS_TIME_ATTACK = "CHECKER KNIGHTS (Time Attack)"
+    AIR_RIDE_NEBULA_BELT_TIME_ATTACK = "NEBULA BELT (Time Attack)"
+    TOP_RIDE_GRASS = "Top Ride: GRASS"
+    TOP_RIDE_SAND = "Top Ride: SAND"
+    TOP_RIDE_SKY = "Top Ride: SKY"
+    TOP_RIDE_FIRE = "Top Ride: FIRE"
+    TOP_RIDE_LIGHT = "Top Ride: LIGHT"
+    TOP_RIDE_WATER = "Top Ride: WATER"
+    TOP_RIDE_METAL = "Top Ride: METAL"
+    TOP_RIDE_GRASS_FREE_RUN = "Top Ride: GRASS (Free Run)"
+    TOP_RIDE_SAND_FREE_RUN = "Top Ride: SAND (Free Run)"
+    TOP_RIDE_SKY_FREE_RUN = "Top Ride: SKY (Free Run)"
+    TOP_RIDE_FIRE_FREE_RUN = "Top Ride: FIRE (Free Run)"
+    TOP_RIDE_LIGHT_FREE_RUN = "Top Ride: LIGHT (Free Run)"
+    TOP_RIDE_WATER_FREE_RUN = "Top Ride: WATER (Free Run)"
+    TOP_RIDE_METAL_FREE_RUN = "Top Ride: METAL (Free Run)"
+    TOP_RIDE_GRASS_TIME_ATTACK = "Top Ride: GRASS (Time Attack)"
+    TOP_RIDE_SAND_TIME_ATTACK = "Top Ride: SAND (Time Attack)"
+    TOP_RIDE_SKY_TIME_ATTACK = "Top Ride: SKY (Time Attack)"
+    TOP_RIDE_FIRE_TIME_ATTACK = "Top Ride: FIRE (Time Attack)"
+    TOP_RIDE_LIGHT_TIME_ATTACK = "Top Ride: LIGHT (Time Attack)"
+    TOP_RIDE_WATER_TIME_ATTACK = "Top Ride: WATER (Time Attack)"
+    TOP_RIDE_METAL_TIME_ATTACK = "Top Ride: METAL (Time Attack)"
 
 
 class ProgressiveStadiumUnlockType(StrEnum):
@@ -452,6 +600,11 @@ def get_effect_type_from_item_name(item_name: str) -> EffectType | None:
 class Stage(NamedTuple):
     name: StageName
     menu_selection: MenuSelectionID
+    sub_menu_selection: SubMenuSelectionIDCityTrial | SubMenuSelectionIDAirRide | SubMenuSelectionIDTopRide
+    sub_sub_menu_selection: (
+        SubSubMenuSelectionIDAirRideFreeRun | SubSubMenuSelectionIDTopRideFreeRun | SubSubMenuSelectionIDCityTrial
+    )
+    submenu_flag: SubMenuFlag
     stage_id: StageID
 
 
@@ -460,53 +613,790 @@ class Patch(NamedTuple):
     memory_address: MemoryAddress
 
 
+# maps staged to their menu selections and stage IDs, to faciliatate detecting when the player is in a game
 STAGE_MAP: dict[StageName, Stage] = {
-    StageName.CITY_TRIAL: Stage(StageName.CITY_TRIAL, MenuSelectionID.CITY_TRIAL, StageID.CITY_TRIAL),
+    StageName.CITY_TRIAL: Stage(
+        StageName.CITY_TRIAL,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.CITY_TRIAL,
+    ),
+    StageName.CITY_TRIAL_FREE_RUN: Stage(
+        StageName.CITY_TRIAL_FREE_RUN,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.FREE_RUN,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.CITY_TRIAL_FREE_RUN,
+    ),
     StageName.STADIUM_DRAG_RACE_1: Stage(
-        StageName.STADIUM_DRAG_RACE_1, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_DRAG_RACE_1
-    ),
+        StageName.STADIUM_DRAG_RACE_1,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_1,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_DRAG_RACE_2: Stage(
-        StageName.STADIUM_DRAG_RACE_2, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_DRAG_RACE_2
-    ),
+        StageName.STADIUM_DRAG_RACE_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_2,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_DRAG_RACE_3: Stage(
-        StageName.STADIUM_DRAG_RACE_3, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_DRAG_RACE_3
-    ),
+        StageName.STADIUM_DRAG_RACE_3,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_3,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_DRAG_RACE_4: Stage(
-        StageName.STADIUM_DRAG_RACE_4, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_DRAG_RACE_4
-    ),
+        StageName.STADIUM_DRAG_RACE_4,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_4,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_HIGH_JUMP: Stage(
-        StageName.STADIUM_HIGH_JUMP, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_HIGH_JUMP
-    ),
+        StageName.STADIUM_HIGH_JUMP,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_HIGH_JUMP,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_TARGET_FLIGHT: Stage(
-        StageName.STADIUM_TARGET_FLIGHT, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_TARGET_FLIGHT
-    ),
+        StageName.STADIUM_TARGET_FLIGHT,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_TARGET_FLIGHT,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_AIR_GLIDER: Stage(
-        StageName.STADIUM_AIR_GLIDER, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_AIR_GLIDER
-    ),
+        StageName.STADIUM_AIR_GLIDER,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_AIR_GLIDER,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_DESTRUCTION_DERBY_1: Stage(
-        StageName.STADIUM_DESTRUCTION_DERBY_1, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_DESTRUCTION_DERBY_1
-    ),
+        StageName.STADIUM_DESTRUCTION_DERBY_1,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_1,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_DESTRUCTION_DERBY_2: Stage(
-        StageName.STADIUM_DESTRUCTION_DERBY_2, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_DESTRUCTION_DERBY_2
-    ),
+        StageName.STADIUM_DESTRUCTION_DERBY_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_2,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_DESTRUCTION_DERBY_3: Stage(
-        StageName.STADIUM_DESTRUCTION_DERBY_3, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_DESTRUCTION_DERBY_3
-    ),
+        StageName.STADIUM_DESTRUCTION_DERBY_3,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_3,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_DESTRUCTION_DERBY_4: Stage(
+        StageName.STADIUM_DESTRUCTION_DERBY_4,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_4,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_DESTRUCTION_DERBY_5: Stage(
+        StageName.STADIUM_DESTRUCTION_DERBY_5,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_5,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_KIRBY_MELEE_1: Stage(
-        StageName.STADIUM_KIRBY_MELEE_1, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_KIRBY_MELEE_1
-    ),
+        StageName.STADIUM_KIRBY_MELEE_1,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_KIRBY_MELEE_1,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_KIRBY_MELEE_2: Stage(
-        StageName.STADIUM_KIRBY_MELEE_2, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_KIRBY_MELEE_2
-    ),
+        StageName.STADIUM_KIRBY_MELEE_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_KIRBY_MELEE_2,
+    ),  # from city trial menu (stadium after game of city trial)
+    # StageName.STADIUM_SINGLE_RACE_1: Stage(
+    #     StageName.STADIUM_SINGLE_RACE_1,
+    #     MenuSelectionID.CITY_TRIAL,
+    #     SubMenuSelectionIDCityTrial.START_GAME,
+    #     SubSubMenuSelectionIDCityTrial.NONE,
+    #     SubMenuFlag.OFF,
+    #     StageID.STADIUM_SINGLE_RACE_1,
+    # ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_2: Stage(
+        StageName.STADIUM_SINGLE_RACE_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_2,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_3: Stage(
+        StageName.STADIUM_SINGLE_RACE_3,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_3,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_4: Stage(
+        StageName.STADIUM_SINGLE_RACE_4,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_4,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_5: Stage(
+        StageName.STADIUM_SINGLE_RACE_5,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_5,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_6: Stage(
+        StageName.STADIUM_SINGLE_RACE_6,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_6,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_7: Stage(
+        StageName.STADIUM_SINGLE_RACE_7,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_7,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_8: Stage(
+        StageName.STADIUM_SINGLE_RACE_8,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_8,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_SINGLE_RACE_9: Stage(
+        StageName.STADIUM_SINGLE_RACE_9,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_9,
+    ),  # from city trial menu (stadium after game of city trial)
     StageName.STADIUM_VS_KING_DEDEDE: Stage(
-        StageName.STADIUM_VS_KING_DEDEDE, MenuSelectionID.CITY_TRIAL, StageID.STADIUM_VS_KING_DEDEDE
+        StageName.STADIUM_VS_KING_DEDEDE,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_VS_KING_DEDEDE,
+    ),  # from city trial menu (stadium after game of city trial)
+    StageName.STADIUM_DRAG_RACE_1: Stage(
+        StageName.STADIUM_DRAG_RACE_1,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_1,
+    ),  # from stadium menu
+    StageName.STADIUM_DRAG_RACE_2: Stage(
+        StageName.STADIUM_DRAG_RACE_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_2,
+    ),  # from stadium menu
+    StageName.STADIUM_DRAG_RACE_3: Stage(
+        StageName.STADIUM_DRAG_RACE_3,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_3,
+    ),  # from stadium menu
+    StageName.STADIUM_DRAG_RACE_4: Stage(
+        StageName.STADIUM_DRAG_RACE_4,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DRAG_RACE_4,
+    ),  # from stadium menu
+    StageName.STADIUM_HIGH_JUMP: Stage(
+        StageName.STADIUM_HIGH_JUMP,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_HIGH_JUMP,
+    ),  # from stadium menu
+    StageName.STADIUM_TARGET_FLIGHT: Stage(
+        StageName.STADIUM_TARGET_FLIGHT,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_TARGET_FLIGHT,
+    ),  # from stadium menu
+    StageName.STADIUM_AIR_GLIDER: Stage(
+        StageName.STADIUM_AIR_GLIDER,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_AIR_GLIDER,
+    ),  # from stadium menu
+    StageName.STADIUM_DESTRUCTION_DERBY_1: Stage(
+        StageName.STADIUM_DESTRUCTION_DERBY_1,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_1,
+    ),  # from stadium menu
+    StageName.STADIUM_DESTRUCTION_DERBY_2: Stage(
+        StageName.STADIUM_DESTRUCTION_DERBY_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_2,
+    ),  # from stadium menu
+    StageName.STADIUM_DESTRUCTION_DERBY_3: Stage(
+        StageName.STADIUM_DESTRUCTION_DERBY_3,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_3,
+    ),  # from stadium menu
+    StageName.STADIUM_DESTRUCTION_DERBY_4: Stage(
+        StageName.STADIUM_DESTRUCTION_DERBY_4,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_4,
+    ),  # from stadium menu
+    StageName.STADIUM_DESTRUCTION_DERBY_5: Stage(
+        StageName.STADIUM_DESTRUCTION_DERBY_5,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_DESTRUCTION_DERBY_5,
+    ),  # from stadium menu
+    StageName.STADIUM_KIRBY_MELEE_1: Stage(
+        StageName.STADIUM_KIRBY_MELEE_1,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_KIRBY_MELEE_1,
+    ),  # from stadium menu
+    StageName.STADIUM_KIRBY_MELEE_2: Stage(
+        StageName.STADIUM_KIRBY_MELEE_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_KIRBY_MELEE_2,
+    ),  # from stadium menu
+    # StageName.STADIUM_SINGLE_RACE_1: Stage(
+    #     StageName.STADIUM_SINGLE_RACE_1,
+    #     MenuSelectionID.CITY_TRIAL,
+    #     SubMenuSelectionIDCityTrial.STADIUM,
+    #     SubSubMenuSelectionIDCityTrial.NONE,
+    #     SubMenuFlag.OFF,
+    #     StageID.STADIUM_SINGLE_RACE_1,
+    # ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_2: Stage(
+        StageName.STADIUM_SINGLE_RACE_2,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_2,
+    ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_3: Stage(
+        StageName.STADIUM_SINGLE_RACE_3,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_3,
+    ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_4: Stage(
+        StageName.STADIUM_SINGLE_RACE_4,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_4,
+    ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_5: Stage(
+        StageName.STADIUM_SINGLE_RACE_5,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_5,
+    ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_6: Stage(
+        StageName.STADIUM_SINGLE_RACE_6,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_6,
+    ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_7: Stage(
+        StageName.STADIUM_SINGLE_RACE_7,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_7,
+    ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_8: Stage(
+        StageName.STADIUM_SINGLE_RACE_8,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_8,
+    ),  # from stadium menu
+    StageName.STADIUM_SINGLE_RACE_9: Stage(
+        StageName.STADIUM_SINGLE_RACE_9,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_SINGLE_RACE_9,
+    ),  # from stadium menu
+    StageName.STADIUM_VS_KING_DEDEDE: Stage(
+        StageName.STADIUM_VS_KING_DEDEDE,
+        MenuSelectionID.CITY_TRIAL,
+        SubMenuSelectionIDCityTrial.STADIUM,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.STADIUM_VS_KING_DEDEDE,
+    ),  # from stadium menu
+    # StageName.AIR_RIDE_FANTASY_MEADOWS: Stage(
+    #     StageName.AIR_RIDE_FANTASY_MEADOWS,
+    #     MenuSelectionID.AIR_RIDE,
+    #     SubMenuSelectionIDAirRide.START_GAME,
+    #     SubSubMenuSelectionIDCityTrial.NONE,
+    #     SubMenuFlag.OFF,
+    #     StageID.AIR_RIDE_FANTASY_MEADOWS,
+    # ),
+    StageName.AIR_RIDE_CELESTIAL_VALLEY: Stage(
+        StageName.AIR_RIDE_CELESTIAL_VALLEY,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_CELESTIAL_VALLEY,
     ),
-    StageName.CELESTIAL_VALLEY: Stage(StageName.CELESTIAL_VALLEY, MenuSelectionID.AIR_RIDE, StageID.CELESTIAL_VALLEY),
-    StageName.SKY_SANDS: Stage(StageName.SKY_SANDS, MenuSelectionID.AIR_RIDE, StageID.SKY_SANDS),
-    StageName.FROZEN_HILLSIDE: Stage(StageName.FROZEN_HILLSIDE, MenuSelectionID.AIR_RIDE, StageID.FROZEN_HILLSIDE),
-    StageName.MAGMA_FLOWS: Stage(StageName.MAGMA_FLOWS, MenuSelectionID.AIR_RIDE, StageID.MAGMA_FLOWS),
-    StageName.BEANSTALK_PARK: Stage(StageName.BEANSTALK_PARK, MenuSelectionID.AIR_RIDE, StageID.BEANSTALK_PARK),
-    StageName.MACHINE_PASSAGE: Stage(StageName.MACHINE_PASSAGE, MenuSelectionID.AIR_RIDE, StageID.MACHINE_PASSAGE),
-    StageName.CHECKER_KNIGHTS: Stage(StageName.CHECKER_KNIGHTS, MenuSelectionID.AIR_RIDE, StageID.CHECKER_KNIGHTS),
-    StageName.NEBULA_BELT: Stage(StageName.NEBULA_BELT, MenuSelectionID.AIR_RIDE, StageID.NEBULA_BELT),
+    StageName.AIR_RIDE_SKY_SANDS: Stage(
+        StageName.AIR_RIDE_SKY_SANDS,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_SKY_SANDS,
+    ),
+    StageName.AIR_RIDE_FROZEN_HILLSIDE: Stage(
+        StageName.AIR_RIDE_FROZEN_HILLSIDE,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_FROZEN_HILLSIDE,
+    ),
+    StageName.AIR_RIDE_MAGMA_FLOWS: Stage(
+        StageName.AIR_RIDE_MAGMA_FLOWS,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_MAGMA_FLOWS,
+    ),
+    StageName.AIR_RIDE_BEANSTALK_PARK: Stage(
+        StageName.AIR_RIDE_BEANSTALK_PARK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_BEANSTALK_PARK,
+    ),
+    StageName.AIR_RIDE_MACHINE_PASSAGE: Stage(
+        StageName.AIR_RIDE_MACHINE_PASSAGE,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_MACHINE_PASSAGE,
+    ),
+    StageName.AIR_RIDE_CHECKER_KNIGHTS: Stage(
+        StageName.AIR_RIDE_CHECKER_KNIGHTS,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_CHECKER_KNIGHTS,
+    ),
+    StageName.AIR_RIDE_NEBULA_BELT: Stage(
+        StageName.AIR_RIDE_NEBULA_BELT,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.START_GAME,
+        SubSubMenuSelectionIDCityTrial.NONE,
+        SubMenuFlag.OFF,
+        StageID.AIR_RIDE_NEBULA_BELT,
+    ),
+    # StageName.AIR_RIDE_FANTASY_MEADOWS_FREE_RUN: Stage(
+    #     StageName.AIR_RIDE_FANTASY_MEADOWS_FREE_RUN,
+    #     MenuSelectionID.AIR_RIDE,
+    #     SubMenuSelectionIDAirRide.FREE_RUN,
+    #     SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.AIR_RIDE_FANTASY_MEADOWS_FREE_RUN,
+    # ),
+    StageName.AIR_RIDE_CELESTIAL_VALLEY_FREE_RUN: Stage(
+        StageName.AIR_RIDE_CELESTIAL_VALLEY_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_CELESTIAL_VALLEY_FREE_RUN,
+    ),
+    StageName.AIR_RIDE_SKY_SANDS_FREE_RUN: Stage(
+        StageName.AIR_RIDE_SKY_SANDS_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_SKY_SANDS_FREE_RUN,
+    ),
+    StageName.AIR_RIDE_FROZEN_HILLSIDE_FREE_RUN: Stage(
+        StageName.AIR_RIDE_FROZEN_HILLSIDE_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_FROZEN_HILLSIDE_FREE_RUN,
+    ),
+    StageName.AIR_RIDE_MAGMA_FLOWS_FREE_RUN: Stage(
+        StageName.AIR_RIDE_MAGMA_FLOWS_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_MAGMA_FLOWS_FREE_RUN,
+    ),
+    StageName.AIR_RIDE_BEANSTALK_PARK_FREE_RUN: Stage(
+        StageName.AIR_RIDE_BEANSTALK_PARK_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_BEANSTALK_PARK_FREE_RUN,
+    ),
+    StageName.AIR_RIDE_MACHINE_PASSAGE_FREE_RUN: Stage(
+        StageName.AIR_RIDE_MACHINE_PASSAGE_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_MACHINE_PASSAGE_FREE_RUN,
+    ),
+    StageName.AIR_RIDE_CHECKER_KNIGHTS_FREE_RUN: Stage(
+        StageName.AIR_RIDE_CHECKER_KNIGHTS_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_CHECKER_KNIGHTS_FREE_RUN,
+    ),
+    StageName.AIR_RIDE_NEBULA_BELT_FREE_RUN: Stage(
+        StageName.AIR_RIDE_NEBULA_BELT_FREE_RUN,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.FREE_RUN,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_NEBULA_BELT_FREE_RUN,
+    ),
+    # StageName.AIR_RIDE_FANTASY_MEADOWS_TIME_ATTACK: Stage(
+    #     StageName.AIR_RIDE_FANTASY_MEADOWS_TIME_ATTACK,
+    #     MenuSelectionID.AIR_RIDE,
+    #     SubMenuSelectionIDAirRide.FREE_RUN,
+    #     SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.AIR_RIDE_FANTASY_MEADOWS_TIME_ATTACK,
+    # ),
+    StageName.AIR_RIDE_CELESTIAL_VALLEY_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_CELESTIAL_VALLEY_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_CELESTIAL_VALLEY_TIME_ATTACK,
+    ),
+    StageName.AIR_RIDE_SKY_SANDS_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_SKY_SANDS_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_SKY_SANDS_TIME_ATTACK,
+    ),
+    StageName.AIR_RIDE_FROZEN_HILLSIDE_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_FROZEN_HILLSIDE_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_FROZEN_HILLSIDE_TIME_ATTACK,
+    ),
+    StageName.AIR_RIDE_MAGMA_FLOWS_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_MAGMA_FLOWS_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_MAGMA_FLOWS_TIME_ATTACK,
+    ),
+    StageName.AIR_RIDE_BEANSTALK_PARK_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_BEANSTALK_PARK_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_BEANSTALK_PARK_TIME_ATTACK,
+    ),
+    StageName.AIR_RIDE_MACHINE_PASSAGE_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_MACHINE_PASSAGE_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_MACHINE_PASSAGE_TIME_ATTACK,
+    ),
+    StageName.AIR_RIDE_CHECKER_KNIGHTS_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_CHECKER_KNIGHTS_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_CHECKER_KNIGHTS_TIME_ATTACK,
+    ),
+    StageName.AIR_RIDE_NEBULA_BELT_TIME_ATTACK: Stage(
+        StageName.AIR_RIDE_NEBULA_BELT_TIME_ATTACK,
+        MenuSelectionID.AIR_RIDE,
+        SubMenuSelectionIDAirRide.FREE_RUN,
+        SubSubMenuSelectionIDAirRideFreeRun.TIME_ATTACK,
+        SubMenuFlag.ON,
+        StageID.AIR_RIDE_NEBULA_BELT_TIME_ATTACK,
+    ),
+    # StageName.TOP_RIDE_GRASS: Stage(
+    #     StageName.TOP_RIDE_GRASS,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.START_GAME,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.OFF,
+    #     StageID.TOP_RIDE_GRASS,
+    # ),
+    # StageName.TOP_RIDE_SAND: Stage(
+    #     StageName.TOP_RIDE_SAND,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.START_GAME,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.OFF,
+    #     StageID.TOP_RIDE_SAND,
+    # ),
+    # StageName.TOP_RIDE_SKY: Stage(
+    #     StageName.TOP_RIDE_SKY,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.START_GAME,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.OFF,
+    #     StageID.TOP_RIDE_SKY,
+    # ),
+    # StageName.TOP_RIDE_FIRE: Stage(
+    #     StageName.TOP_RIDE_FIRE,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.START_GAME,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.OFF,
+    #     StageID.TOP_RIDE_FIRE,
+    # ),
+    # StageName.TOP_RIDE_LIGHT: Stage(
+    #     StageName.TOP_RIDE_LIGHT,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.START_GAME,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.OFF,
+    #     StageID.TOP_RIDE_LIGHT,
+    # ),
+    # StageName.TOP_RIDE_WATER: Stage(
+    #     StageName.TOP_RIDE_WATER,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.START_GAME,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.OFF,
+    #     StageID.TOP_RIDE_WATER,
+    # ),
+    # StageName.TOP_RIDE_METAL: Stage(
+    #     StageName.TOP_RIDE_METAL,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.START_GAME,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.OFF,
+    #     StageID.TOP_RIDE_METAL,
+    # ),
+    # StageName.TOP_RIDE_GRASS_FREE_RUN: Stage(
+    #     StageName.TOP_RIDE_GRASS_FREE_RUN,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_GRASS_FREE_RUN,
+    # ),
+    # StageName.TOP_RIDE_SAND_FREE_RUN: Stage(
+    #     StageName.TOP_RIDE_SAND_FREE_RUN,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_SAND_FREE_RUN,
+    # ),
+    # StageName.TOP_RIDE_SKY_FREE_RUN: Stage(
+    #     StageName.TOP_RIDE_SKY_FREE_RUN,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_SKY_FREE_RUN,
+    # ),
+    # StageName.TOP_RIDE_FIRE_FREE_RUN: Stage(
+    #     StageName.TOP_RIDE_FIRE_FREE_RUN,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_FIRE_FREE_RUN,
+    # ),
+    # StageName.TOP_RIDE_LIGHT_FREE_RUN: Stage(
+    #     StageName.TOP_RIDE_LIGHT_FREE_RUN,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_LIGHT_FREE_RUN,
+    # ),
+    # StageName.TOP_RIDE_WATER_FREE_RUN: Stage(
+    #     StageName.TOP_RIDE_WATER_FREE_RUN,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_WATER_FREE_RUN,
+    # ),
+    # StageName.TOP_RIDE_METAL_FREE_RUN: Stage(
+    #     StageName.TOP_RIDE_METAL_FREE_RUN,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.FREE_RUN,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_METAL_FREE_RUN,
+    # ),
+    # StageName.TOP_RIDE_GRASS_TIME_ATTACK: Stage(
+    #     StageName.TOP_RIDE_GRASS_TIME_ATTACK,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_GRASS_TIME_ATTACK,
+    # ),
+    # StageName.TOP_RIDE_SAND_TIME_ATTACK: Stage(
+    #     StageName.TOP_RIDE_SAND_TIME_ATTACK,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_SAND_TIME_ATTACK,
+    # ),
+    # StageName.TOP_RIDE_SKY_TIME_ATTACK: Stage(
+    #     StageName.TOP_RIDE_SKY_TIME_ATTACK,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_SKY_TIME_ATTACK,
+    # ),
+    # StageName.TOP_RIDE_FIRE_TIME_ATTACK: Stage(
+    #     StageName.TOP_RIDE_FIRE_TIME_ATTACK,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_FIRE_TIME_ATTACK,
+    # ),
+    # StageName.TOP_RIDE_LIGHT_TIME_ATTACK: Stage(
+    #     StageName.TOP_RIDE_LIGHT_TIME_ATTACK,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_LIGHT_TIME_ATTACK,
+    # ),
+    # StageName.TOP_RIDE_WATER_TIME_ATTACK: Stage(
+    #     StageName.TOP_RIDE_WATER_TIME_ATTACK,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_WATER_TIME_ATTACK,
+    # ),
+    # StageName.TOP_RIDE_METAL_TIME_ATTACK: Stage(
+    #     StageName.TOP_RIDE_METAL_TIME_ATTACK,
+    #     MenuSelectionID.TOP_RIDE,
+    #     SubMenuSelectionIDTopRide.FREE_RUN,
+    #     SubSubMenuSelectionIDTopRideFreeRun.TIME_ATTACK,
+    #     SubMenuFlag.ON,
+    #     StageID.TOP_RIDE_METAL_TIME_ATTACK,
+    # ),
 }
