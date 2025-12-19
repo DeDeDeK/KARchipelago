@@ -176,6 +176,7 @@ class KARContext(CommonContext):
         self.energy_link_base_item_cost: int = 10
         self.death_link_enabled: bool = False
         self.death_link_cooldown: int = 120
+        self.reveal_checklists: bool = False
         self.item_processed_index: int = 0
         self.purchased_permanent_patches: dict[str, int] = {}
         self.items_file_path: str = Utils.user_path("kirby_air_ride_items.json")
@@ -300,6 +301,9 @@ class KARContext(CommonContext):
                         self.ui.enable_energy_link()
                     logger.info("EnergyLink enabled.")
 
+            if "reveal_checklists" in args["slot_data"]:
+                self.reveal_checklists = bool(args["slot_data"]["reveal_checklists"])
+
             if "city_trial_goal" in args["slot_data"]:
                 self.city_trial_goal = args["slot_data"]["city_trial_goal"]
                 if self.city_trial_goal != CityTrialGoal.option_none:
@@ -351,6 +355,30 @@ class KARContext(CommonContext):
             # also reset unlocked stadiums for the same reason
             self.dolphin_interface.unlocked_stadiums.clear()
 
+            # if "reveal checklists" option is set, loop through the enabled checklists and set the visible bit.
+            if self.reveal_checklists:
+                if self.city_trial_enabled:
+                    for location_data in CITY_TRIAL_LOCATION_TABLE.values():
+                        if location_data.mem_address is not None:
+                            current_val = self.dolphin_interface.read_byte(location_data.mem_address)
+                            # set visible bit on the current val int
+                            new_int = int(current_val | CheckboxFlags.VISIBLE)
+                            self.dolphin_interface.write_byte(location_data.mem_address, new_int)
+                if self.air_ride_enabled:
+                    for location_data in AIR_RIDE_LOCATION_TABLE.values():
+                        if location_data.mem_address is not None:
+                            current_val = self.dolphin_interface.read_byte(location_data.mem_address)
+                            # set visible bit on the current val int
+                            new_int = int(current_val | CheckboxFlags.VISIBLE)
+                            self.dolphin_interface.write_byte(location_data.mem_address, new_int)
+                if self.top_ride_enabled:
+                    for location_data in TOP_RIDE_LOCATION_TABLE.values():
+                        if location_data.mem_address is not None:
+                            current_val = self.dolphin_interface.read_byte(location_data.mem_address)
+                            # set visible bit on the current val int
+                            new_int = int(current_val | CheckboxFlags.VISIBLE)
+                            self.dolphin_interface.write_byte(location_data.mem_address, new_int)
+
             # sync the local checklist state with the locations that have been checked according to the server.
             # this is useful for same-slot co-op, recovering from losing a save file, and picking up a slot in an
             # async. This is also needed to support other players in a multiworld collecting their items from our world.
@@ -363,10 +391,8 @@ class KARContext(CommonContext):
                         current_val = self.dolphin_interface.read_byte(mem_address)
                         # only unlock the checkbox if it isn't unlocked yet
                         if current_val in self.excluded_checkbox_bytes:
-                            self.dolphin_interface.write_byte(
-                                mem_address,
-                                int(CheckboxFlags.FLAGGED_FOR_UNLOCK | CheckboxFlags.VISIBLE),
-                            )
+                            new_val = int(current_val | CheckboxFlags.FLAGGED_FOR_UNLOCK | CheckboxFlags.VISIBLE)
+                            self.dolphin_interface.write_byte(mem_address, new_val)
 
             # read and process the items file and set class vars accordingly
             self.read_items_file()
