@@ -1,6 +1,6 @@
-# Kirby Air Ride
+# Kirby Air Ride APWorld
 
-- [Kirby Air Ride](#kirby-air-ride)
+- [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
   - [What is this?](#what-is-this)
   - [Where do I get the apworld and yaml file?](#where-do-i-get-the-apworld-and-yaml-file)
   - [How do I set this up?](#how-do-i-set-this-up)
@@ -16,17 +16,13 @@
       - [Patch Cap Increase Items](#patch-cap-increase-items)
       - [Stadium Unlock Items](#stadium-unlock-items)
     - [EnergyLink](#energylink)
+    - [Other features](#other-features)
+      - [Server sync](#server-sync)
   - [I need help! What do I do?](#i-need-help-what-do-i-do)
-  - [Known issues](#known-issues)
+  - [Known Issues](#known-issues)
   - [Planned Features](#planned-features)
-      - [Items](#items)
-      - [Randomization](#randomization)
-      - [Progression](#progression)
-      - [Top Ride](#top-ride-1)
-      - [Air Ride](#air-ride-1)
-      - [Multiplayer](#multiplayer)
-      - [Code/misc](#codemisc)
   - [Contributing](#contributing)
+
 
 ## What is this?
 
@@ -38,7 +34,7 @@ You can get the apworld file and an example player configuration yaml in the [re
 
 ## How do I set this up?
 
-Follow the [setup guide (webhost link)](/tutorial/Kirby%20Air%20Ride/setup/en) or [setup guide (github)](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md).
+Follow the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md).
 
 ## What is the goal of Kirby Air Ride in Archipelago?
 
@@ -85,7 +81,7 @@ No locations are currently shuffled, so every checkbox in the game unlocks what 
 
 ## What does another world's item look like in Kirby Air Ride?
 
-There is no change in the graphical appearance of other's items. Completing checkboxes will earn whatever item is attached to that checkbox.
+There is no change in the graphical appearance of other's items. Completing checkboxes will earn whatever AP item is attached to that checkbox.
 
 ## What happens when the player receives an item?
 
@@ -137,91 +133,39 @@ For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend
 
 Spending energy on Permanent Patch increases and Patch Cap increases will also be persistent for the rest of your game. 
 
+### Other features
+
+#### Server sync 
+
+The client will sync your completed AP checks to your in-game checklist every time you connect to the server. This means that if you: 
+
+- lose your save file 
+- are starting fresh and doing a same-slot co-op
+- have had some of your checks collected by another player after finishing their game
+
+Your game will always be in sync with what the server has.
+
+**IMPORTANT:** Any checks that are synced from the server are initially only *visible* in the checklist. They need to be unlocked by entering any stadium or city trial, and then quitting (or finishing them normally). This will trigger the checkbox unlocking process for those checks. 
+
+
 ## I need help! What do I do?
 
-Try the troubleshooting steps in the [setup guide (webhost link)](/tutorial/Kirby%20Air%20Ride/setup/en) or [(github link)](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md). If you are still stuck, please ask in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [Link.](https://discord.com/channels/731205301247803413/1291501105389502554)
+Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md). 
 
-## Known issues
+If you are still stuck, please ask us over in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554)
 
-- DeathLink 
-  - receiving Deathlink only works some of the time/on certain vehicles
-  - receiving Deathlink just takes health down to ~0 (likely due to floating point stuff) (have not confirmed this is still a bug)
-- EnergyLink
-  - gives energy from patches received from /energylink_spend
-  - gives energy for permanent patches when transitioning into City Trial
-- Items
-  - Players cannot receive items on the following stages due to stage ID conflicts: 
-    - Stadium: DESTRUCTION DERBY 4
-    - Stadium: DESTRUCTION DERBY 5
-    - Stadium: SINGLE RACE 1
-    - FANTASY MEADOWS
-  - Top Ride currently does not support items until a memory address is found that reflects whether we're in game in top
-    ride or not
-  - Restarting the client results in all permanent patches being received again if in City Trial
-  - Patch items for City Trial are not guaranteed to work depending on what vehicle you are on. They always work on compact star.
-    - because of this, Energylink stops adding energy after a certain point for picking up patches (even below the max patch limit)
+## Known Issues
 
-Feel free to report any other issues or suggest improvements in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554) or in the issues [here](https://github.com/DeDeDeK/KARchipelago/issues).
+Known bugs and issues are tracked in the github issues [here.](https://github.com/DeDeDeK/KARchipelago/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug)
+
+Feel free to report any issues or suggest improvements either there or in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554)
 
 ## Planned Features
 
-Much of the planned features are gated by progress on modding the game itself or finding proper memory addresses to read/write to. Contributions are very welcome! Eventually, we will see a hard cap on what we can do with Archipelago and will
-need to work on creating Gecko codes and modifying the iso to make new features work.
+Much of the planned features are gated by progress on modding the game itself or finding proper memory addresses, function locations, etc. within the game's memory. Contributions are very welcome!
 
-#### Items
-- permanent increase/decrease item spawn rates as useful/filler/trap items
-- food items as filler/useful
-- kirby abilities as useful/filler/trap items
-- kirby effects (such as "run amok") as useful/filler/trap items
-- city trial events as useful/filler/trap items
-- spawning boxes as filler/useful items
-- drop patches trap item
-- physics-based trap items (altitude increase/decrease, teleport forward/backward/random location, gravity changes, etc.)
-- generic trap or other items that work for any mode (e.g. "stun trap", which will apply sleep, freeze, etc. based on mode)
-
-#### Randomization
-- randomization of checklist box rewards
-- randomization of starting air ride machine
-
-#### Progression
-- progressive patch caps for each patch individually
-- progressive item spawn rate increases
-- progressive box color/type unlocks
-- progressive kirby color unlocks
-- progressive kirby ability unlocks
-- progressive air ride machine unlocks
-- progressive city trial event unlock items
-- progressive hot dogs/food items
-- other progressive rng-related items
-
-#### Top Ride
-- Top Ride items
-
-#### Air Ride
-- Air Ride items
-  - air ride speed increase item (permanent speed increases?)
-
-#### Multiplayer
-- All players receiving items in all modes
-
-#### Code/misc
-- more fine-grained options for which traps or patches are enabled
-- option to reveal (but not unlock) the whole checklist at game start by writing 10 to every checkbox?
-- option to fully unlock every checkbox on game complete?
-  - does this make sense to have? how does this work with games that don't have collect on?
-- option to sync the local checklist state with the server checked locations upon connection. 
-  - for people who don't care about saves being edited/wiped and want the convenience of not having to juggle save files for each lobby
-  - this may have a conflict if players can get checks "offline"? But the client currently requires that they be connected? need to avoid this removing checks players do when not connected to the server?
-- options presets that set goals for different "game modes" (killing enemies focused checkboxes, collecting items focused, etc.)
-- enable lists of locations as goals. get every checkbox on the list to complete your game. Allows for making custom games, essentially
-- energylink for air ride: laps completed, enemies killed
-- energylink for top ride: laps completed, environment destroyed/interacted with
-- ItemLink with other Kirby Air Ride worlds
-- performance pass on location checking
-  - use checked_locations, missing_locaitons, server_locations as caches
-- possible variable deathlink cooldown?
-- colored logging for things like goals
+You can see a current list of planned features and other requests [here.](https://github.com/DeDeDeK/KARchipelago/issues?q=is%3Aissue%20state%3Aopen%20label%3Aenhancement)
 
 ## Contributing
 
-Feel free to [raise an issue](https://github.com/DeDeDeK/KARchipelago/issues) or [submit a PR](https://github.com/DeDeDeK/KARchipelago/pulls)!  
+Feel free to [raise an issue](https://github.com/DeDeDeK/KARchipelago/issues) or [submit a PR](https://github.com/DeDeDeK/KARchipelago/pulls)! And you can always pop in the [discord channel](https://discord.com/channels/731205301247803413/1291501105389502554) to ask questions or collaborate! 
