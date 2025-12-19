@@ -60,6 +60,15 @@ class EnergyLink(Toggle):
     display_name = "Energy Link"
 
 
+class RevealChecklists(Toggle):
+    """
+    If this is enabled, the checklists for each of your enabled game modes will start off as completely revealed.
+    """
+
+    default = 0
+    display_name = "Reveal Checklists"
+
+
 class CityTrialGoal(TextChoice):
     """
     This sets the Goal for the run. You can also input a custom location from the location list as a goal.
@@ -377,6 +386,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     effect_items_enabled: EffectItemsEnabled
     checkbox_fillers_progression: CheckboxFillersProgression
     energy_link: EnergyLink
+    reveal_checklists: RevealChecklists
     city_trial_goal: CityTrialGoal
     city_trial_checklist_amount: CityTrialCheckListAmount
     city_trial_progression_high_effort: CityTrialProgressionHighEffort
@@ -418,6 +428,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
             "effect_items_enabled",
             "checkbox_fillers_progression",
             "energy_link",
+            "reveal_checklists",
             "death_link",
             "city_trial_goal",
             "city_trial_checklist_amount",
