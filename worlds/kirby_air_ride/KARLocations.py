@@ -12,6 +12,7 @@ class KARLocationType(Enum):
     """
 
     CHECKLISTBOX = auto()
+    EVENT = auto()
 
 
 class KARLocationData(NamedTuple):
