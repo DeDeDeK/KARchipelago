@@ -2,7 +2,7 @@ import typing
 
 from BaseClasses import Callable, CollectionState, Region
 
-from worlds.generic.Rules import add_rule
+from worlds.generic.Rules import add_rule, set_rule
 
 from .KARData import ProgressiveStadiumUnlockType
 
@@ -64,27 +64,46 @@ def set_rules(world: "KARWorld"):
     # City trial stadium rules (if progressive stadiums are enabled). Player must have the stadium unlock item to access
     # the stadium
     if world.options.city_trial_progressive_stadiums:
-        # also place rules on the entrances to the regions
+
+        def extract_stadium_name(name: str) -> str:
+            """Extract stadium identifier like 'DRAG RACE 1' from region or item names."""
+            if "Unlock Stadium:" in name:
+                return name.replace("Unlock Stadium:", "").strip()
+            if "Stadium:" in name:
+                # Remove "Stadium:" prefix and "ALL" suffix if present
+                return name.replace("Stadium:", "").replace("ALL", "").strip()
+            return name
+
         for region in world.get_regions():
-            if "Stadium" in region.name:
+            if "Stadium:" in region.name and region.entrances:
+                stadium_name = extract_stadium_name(region.name)
+
                 if "ALL" in region.name:
-                    # any of the unlock items for the stadium will apply
+                    # For ALL regions, accept any variant of this stadium type
                     stadium_unlocks = [
-                        stadium_unlock_type.value
-                        for stadium_unlock_type in ProgressiveStadiumUnlockType
-                        if region.name in stadium_unlock_type.value
+                        unlock.value
+                        for unlock in ProgressiveStadiumUnlockType
+                        if stadium_name in extract_stadium_name(unlock.value)
                     ]
-                    # to get into the region, player will need any of the unlock items
-                    set_region_rule_if_exists(
-                        region, lambda state, unlocks=stadium_unlocks: state.has_any(unlocks, world.player)
-                    )
+
+                    if stadium_unlocks:
+                        # Use has_any for OR logic - requires ANY of the unlock items
+                        set_rule(
+                            region.entrances[0],
+                            lambda state, unlocks=stadium_unlocks: state.has_any(unlocks, world.player),
+                        )
                 else:
-                    # not an ALL region, player will need the unlock item for the specific stadium
-                    stadium_unlock_type = ProgressiveStadiumUnlockType("Unlock " + region.name)
-                    set_region_rule_if_exists(
-                        region,
-                        lambda state, unlock_type=stadium_unlock_type: state.has(unlock_type.value, world.player),
-                    )
+                    # For specific stadium regions, require exact unlock item
+                    matching_unlock = None
+                    for unlock in ProgressiveStadiumUnlockType:
+                        if stadium_name == extract_stadium_name(unlock.value):
+                            matching_unlock = unlock.value
+                            break
+
+                    if matching_unlock:
+                        set_rule(
+                            region.entrances[0], lambda state, unlock=matching_unlock: state.has(unlock, world.player)
+                        )
 
     # Air Ride Rules
     set_location_rule_if_exists(
