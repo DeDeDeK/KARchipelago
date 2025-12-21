@@ -9,6 +9,7 @@ from .KARData import (
     PatchCapIncreaseType,
     PatchType,
     ProgressiveStadiumUnlockType,
+    VictoryEventType,
 )
 
 
@@ -19,6 +20,7 @@ class KARItemType(StrEnum):
     PROGRESSIVE_STADIUM = "Progressive Stadium"
     PATCH_CAP_INCREASE = "Patch Cap Increase"
     FILLER = "Filler"
+    GOAL = "Goal"
 
 
 class KARItemData(NamedTuple):
@@ -308,188 +310,17 @@ ITEM_TABLE: dict[str, KARItemData] = {
         89,
         1,
     ),
-    # PatchCapIncreaseType.BOOST_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 65, 5, None
-    # ),
-    # PatchCapIncreaseType.TOP_SPEED_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 66, 5, None
-    # ),
-    # PatchCapIncreaseType.OFFENSE_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 67, 5, None
-    # ),
-    # PatchCapIncreaseType.DEFENSE_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 68, 5, None
-    # ),
-    # PatchCapIncreaseType.TURN_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 69, 5, None
-    # ),
-    # PatchCapIncreaseType.GLIDE_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 70, 5, None
-    # ),
-    # PatchCapIncreaseType.CHARGE_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 71, 5, None
-    # ),
-    # PatchCapIncreaseType.WEIGHT_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 72, 5, None
-    # ),
-    # PatchCapIncreaseType.HP_CAP_INCREASE.value: KARItemData(
-    #     KARItemType.PATCH_CAP_INCREASE.value, ItemClassification.progression, 73, 5, None
-    # ),
-    # "Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 1, 1, 0x0000),
-    # "Compact Star": KARItemData("Air Ride Machine", ItemClassification.progression, 2, 1, 0x0001),
-    # "Winged Star": KARItemData("Air Ride Machine", ItemClassification.progression, 3, 1, 0x0002),
-    # "Shadow Star": KARItemData("Air Ride Machine", ItemClassification.progression, 4, 1, 0x0003),
-    # "Hydra Star": KARItemData("Air Ride Machine", ItemClassification.progression, 5, 1, 0x0004),
-    # "Bulk Star": KARItemData("Air Ride Machine", ItemClassification.progression, 6, 1, 0x0005),
-    # "Slick Star": KARItemData("Air Ride Machine", ItemClassification.progression, 7, 1, 0x0006),
-    # "Formula Star": KARItemData("Air Ride Machine", ItemClassification.progression, 8, 1, 0x0007),
-    # "Dragoon Star": KARItemData("Air Ride Machine", ItemClassification.progression, 9, 1, 0x0008),
-    # "Wagon Star": KARItemData("Air Ride Machine", ItemClassification.progression, 10, 1, 0x0009),
-    # "Rocket Star": KARItemData("Air Ride Machine", ItemClassification.progression, 11, 1, 0x000A),
-    # "Swerve Star": KARItemData("Air Ride Machine", ItemClassification.progression, 12, 1, 0x000B),
-    # "Turbo Star": KARItemData("Air Ride Machine", ItemClassification.progression, 13, 1, 0x000C),
-    # "Jet Star": KARItemData("Air Ride Machine", ItemClassification.progression, 14, 1, 0x000D),
-    # "Flight Warpstar": KARItemData("Air Ride Machine", ItemClassification.progression, 15, 1, 0x000E),
-    # "Free Star": KARItemData("Air Ride Machine", ItemClassification.progression, 16, 1, 0x000F),
-    # "Steer Star": KARItemData("Air Ride Machine", ItemClassification.progression, 17, 1, 0x0010),
-    # "Invisible Star (Kirby)": KARItemData("Air Ride Machine", ItemClassification.progression, 18, 1, 0x0011),
-    # "Invisible Star (Meta Knight)": KARItemData("Air Ride Machine", ItemClassification.progression, 19, 1, 0x0012),
-    # "Beta Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 20, 1, 0x1000),
-    # "Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 21, 1, 0x1001),
-    # "Wheelie Bike": KARItemData("Air Ride Machine", ItemClassification.progression, 22, 1, 0x1002),
-    # "Rex Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 23, 1, 0x1003),
-    # "Wheelie Scooter": KARItemData("Air Ride Machine", ItemClassification.progression, 24, 1, 0x1004),
-    # "King Dedede Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 25, 1, 0x1005),
-    # "King Dedede VS Wheelie": KARItemData("Air Ride Machine", ItemClassification.progression, 26, 1, 0x1006),
-    # "Blue Box": KARItemData("Box", ItemClassification.filler, 27, 20, 0x00),
-    # "Green Box": KARItemData("Box", ItemClassification.filler, 28, 20, 0x01),
-    # "Red Box": KARItemData("Box", ItemClassification.filler, 29, 20, 0x02),
-    # "Speed Up": KARItemData("Patch", ItemClassification.useful, 48, 20, 0x15),
-    # "Speed Down": KARItemData("Patch", ItemClassification.trap, 49, 20, 0x16),
-    # "Attack Up": KARItemData("Patch", ItemClassification.useful, 50, 20, 0x17),
-    # "Attack Down": KARItemData("Patch", ItemClassification.trap, 51, 20, 0x18),  # this might also be Defense Up?
-    # "Run Amok": KARItemData("Effect", ItemClassification.trap, 52, 20, 0x19),
-    # "No Charge": KARItemData("Effect", ItemClassification.trap, 53, 20, 0x1A),
-    # "Invincible Candy": KARItemData("Effect", ItemClassification.useful, 54, 20, 0x1B),
-    # "Bomb Ability": KARItemData("Ability", ItemClassification.useful, 55, 20, 0x1C),
-    # "Flame Ability": KARItemData("Ability", ItemClassification.useful, 56, 20, 0x1D),
-    # "Ice Ability": KARItemData("Ability", ItemClassification.useful, 57, 20, 0x1E),
-    # "Sleep Ability": KARItemData("Ability", ItemClassification.trap, 58, 20, 0x1F),
-    # "Wheel Ability": KARItemData("Ability", ItemClassification.trap, 59, 20, 0x20),
-    # "Bird Ability": KARItemData("Ability", ItemClassification.trap, 60, 20, 0x21),
-    # "Electric Ability": KARItemData("Ability", ItemClassification.useful, 61, 20, 0x22),
-    # "Tornado Ability": KARItemData("Ability", ItemClassification.useful, 62, 20, 0x23),
-    # "Sword Ability": KARItemData("Ability", ItemClassification.useful, 63, 20, 0x24),
-    # "Spike Ability": KARItemData("Ability", ItemClassification.useful, 64, 20, 0x25),
-    # "Mic Ability": KARItemData("Ability", ItemClassification.useful, 65, 20, 0x26),
-    # "Maxim Tomato": KARItemData("Food", ItemClassification.useful, 66, 10, 0x27),
-    # "Drink": KARItemData("Food", ItemClassification.filler, 67, 10, 0x28),
-    # "Ice Cream Cone": KARItemData("Food", ItemClassification.filler, 68, 10, 0x29),
-    # "Riceball": KARItemData("Food", ItemClassification.filler, 69, 10, 0x2A),
-    # "Turkey": KARItemData("Food", ItemClassification.filler, 70, 10, 0x2B),
-    # "Bowl": KARItemData("Food", ItemClassification.filler, 71, 10, 0x2C),
-    # "Bowl 2": KARItemData("Food", ItemClassification.filler, 72, 10, 0x2D),
-    # "Omurice": KARItemData("Food", ItemClassification.filler, 73, 10, 0x2E),
-    # "Hamburger": KARItemData("Food", ItemClassification.filler, 74, 10, 0x2F),
-    # "Sushi": KARItemData("Food", ItemClassification.filler, 75, 10, 0x30),
-    # "Hot Dog": KARItemData("Food", ItemClassification.filler, 76, 10, 0x31),
-    # "Apple": KARItemData("Food", ItemClassification.filler, 77, 10, 0x32),
-    # "Cracker": KARItemData("Food", ItemClassification.filler, 78, 10, 0x33),
-    # "Panic Spin": KARItemData("Ability", ItemClassification.useful, 79, 10, 0x34),
-    # "Time Bomb": KARItemData("Ability", ItemClassification.useful, 80, 10, 0x35),
-    # "Gordo": KARItemData("Ability", ItemClassification.useful, 81, 10, 0x36),
-    # "Hydra Piece 1": KARItemData("Legendary Piece", ItemClassification.progression, 82, 1, 0x37),
-    # "Hydra Piece 2": KARItemData("Legendary Piece", ItemClassification.progression, 83, 1, 0x38),
-    # "Hydra Piece 3": KARItemData("Legendary Piece", ItemClassification.progression, 84, 1, 0x39),
-    # "Dragoon Piece 1": KARItemData("Legendary Piece", ItemClassification.progression, 85, 1, 0x3A),
-    # "Dragoon Piece 2": KARItemData("Legendary Piece", ItemClassification.progression, 86, 1, 0x3B),
-    # "Dragoon Piece 3": KARItemData("Legendary Piece", ItemClassification.progression, 87, 1, 0x3C),
-    # "Fake Boost": KARItemData("Fake Patch", ItemClassification.trap, 88, 10, 0x3D),
-    # "Fake Top Speed": KARItemData("Fake Patch", ItemClassification.trap, 89, 10, 0x3E),
-    # "Fake Offense": KARItemData("Fake Patch", ItemClassification.trap, 90, 10, 0x3F),
-    # "Fake Defense": KARItemData("Fake Patch", ItemClassification.trap, 91, 10, 0x40),
-    # "Fake Turn": KARItemData("Fake Patch", ItemClassification.trap, 92, 10, 0x41),
-    # "Fake Glide": KARItemData("Fake Patch", ItemClassification.trap, 93, 10, 0x42),
-    # "Fake Charge": KARItemData("Fake Patch", ItemClassification.trap, 94, 10, 0x43),
-    # "Fake Weight": KARItemData("Fake Patch", ItemClassification.trap, 95, 10, 0x44),
+    # Event items (for goal completion)
+    VictoryEventType.CITY_TRIAL_VICTORY.value: KARItemData(KARItemType.GOAL, ItemClassification.progression, None, 1),
+    VictoryEventType.AIR_RIDE_VICTORY.value: KARItemData(KARItemType.GOAL, ItemClassification.progression, None, 1),
+    VictoryEventType.TOP_RIDE_VICTORY.value: KARItemData(KARItemType.GOAL, ItemClassification.progression, None, 1),
 }
 
 item_name_groups = {
-    # "Abilities": {
-    #     "Bomb Ability",
-    #     "Flame Ability",
-    #     "Ice Ability",
-    #     "Sleep Ability",
-    #     "Wheel Ability",
-    #     "Bird Ability",
-    #     "Electric Ability",
-    #     "Tornado Ability",
-    #     "Sword Ability",
-    #     "Spike Ability",
-    #     "Mic Ability",
-    #     "Panic Spin",
-    #     "Time Bomb",
-    #     "Gordo",
-    # },
-    # "Foods": {
-    #     "Maxim Tomato",
-    #     "Drink",
-    #     "Ice Cream Cone",
-    #     "Riceball",
-    #     "Turkey",
-    #     "Bowl",
-    #     "Bowl 2",
-    #     "Omurice",
-    #     "Hamburger",
-    #     "Sushi",
-    #     "Hot Dog",
-    #     "Apple",
-    #     "Cracker",
-    # },
-    # "Boxes": {
-    #     "Blue Box",
-    #     "Green Box",
-    #     "Red Box",
-    # },
     "Effects": {
-        # "Run Amok",
-        # "No Charge",
-        # "Invincible Candy",
-        # "Speed Up",
-        # "Speed Down",
-        # "Attack Up",
-        # "Attack Down",
         EffectType.ONE_HP.value,
         EffectType.FULL_HEAL.value,
     },
-    # "Air Ride Machines": {
-    #     "Warpstar",
-    #     "Compact Star",
-    #     "Winged Star",
-    #     "Shadow Star",
-    #     "Hydra Star",
-    #     "Bulk Star",
-    #     "Slick Star",
-    #     "Formula Star",
-    #     "Dragoon Star",
-    #     "Wagon Star",
-    #     "Rocket Star",
-    #     "Swerve Star",
-    #     "Turbo Star",
-    #     "Jet Star",
-    #     "Flight Warpstar",
-    #     "Free Star",
-    #     "Steer Star",
-    #     "Invisible Star (Kirby)",
-    #     "Invisible Star (Meta Knight)",
-    #     "Beta Wheelie",
-    #     "Wheelie",
-    #     "Wheelie Bike",
-    #     "Rex Wheelie",
-    #     "Wheelie Scooter",
-    #     "King Dedede Wheelie",
-    #     "King Dedede VS Wheelie",
-    # },
     "Patches": {
         PatchType.BOOST_UP.value,
         PatchType.BOOST_DOWN.value,
@@ -522,15 +353,6 @@ item_name_groups = {
         PatchType.HP_UP_PERMANENT_PLUS_ONE.value,
     },
     "Patch Cap Increases": {
-        # PatchCapIncreaseType.BOOST_CAP_INCREASE.value,
-        # PatchCapIncreaseType.TOP_SPEED_CAP_INCREASE.value,
-        # PatchCapIncreaseType.OFFENSE_CAP_INCREASE.value,
-        # PatchCapIncreaseType.DEFENSE_CAP_INCREASE.value,
-        # PatchCapIncreaseType.TURN_CAP_INCREASE.value,
-        # PatchCapIncreaseType.GLIDE_CAP_INCREASE.value,
-        # PatchCapIncreaseType.CHARGE_CAP_INCREASE.value,
-        # PatchCapIncreaseType.WEIGHT_CAP_INCREASE.value,
-        # PatchCapIncreaseType.HP_CAP_INCREASE.value,
         PatchCapIncreaseType.ALL_CAP_INCREASE.value,
     },
     "Progressive Stadium Unlocks": {
@@ -559,22 +381,4 @@ item_name_groups = {
         ProgressiveStadiumUnlockType.STADIUM_SINGLE_RACE_9.value,
         ProgressiveStadiumUnlockType.STADIUM_VS_KING_DEDEDE.value,
     },
-    # "Fake Patches": {
-    #     "Fake Boost",
-    #     "Fake Top Speed",
-    #     "Fake Offense",
-    #     "Fake Defense",
-    #     "Fake Turn",
-    #     "Fake Glide",
-    #     "Fake Charge",
-    #     "Fake Weight",
-    # },
-    # "Legendary Pieces": {
-    #     "Hydra Piece 1",
-    #     "Hydra Piece 2",
-    #     "Hydra Piece 3",
-    #     "Dragoon Piece 1",
-    #     "Dragoon Piece 2",
-    #     "Dragoon Piece 3",
-    # },
 }
