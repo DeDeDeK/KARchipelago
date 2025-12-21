@@ -14,7 +14,7 @@ from worlds.LauncherComponents import (
     launch_subprocess,
 )
 
-from .KARData import CheckboxFillerType, ProgressiveStadiumUnlockType
+from .KARData import CheckboxFillerType, PatchConstants, ProgressiveStadiumUnlockType
 from .KARItems import ITEM_TABLE, KARItem, KARItemData, KARItemType, item_name_groups
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -184,7 +184,9 @@ class KARWorld(World):
             else:
                 self.city_trial_default_locations.add(location)
 
-        assert self.city_trial_default_locations.isdisjoint(self.city_trial_excluded_locations)
+        assert self.city_trial_default_locations.isdisjoint(self.city_trial_excluded_locations), (
+            "City Trial default and excluded locations must not overlap"
+        )
 
         # categorzie Air Ride locations progress type based on player options choices
         # currently, we do not have any options that prioritize locations other than the core options,
@@ -208,7 +210,9 @@ class KARWorld(World):
             else:
                 self.air_ride_default_locations.add(location)
 
-        assert self.air_ride_default_locations.isdisjoint(self.air_ride_excluded_locations)
+        assert self.air_ride_default_locations.isdisjoint(self.air_ride_excluded_locations), (
+            "Air Ride default and excluded locations must not overlap"
+        )
 
         # categorzie Top Ride locations progress type based on player options choices
         # currently, we do not have any options that prioritize locations other than the core options,
@@ -237,7 +241,9 @@ class KARWorld(World):
             else:
                 self.top_ride_default_locations.add(location)
 
-        assert self.top_ride_default_locations.isdisjoint(self.top_ride_excluded_locations)
+        assert self.top_ride_default_locations.isdisjoint(self.top_ride_excluded_locations), (
+            "Top Ride default and excluded locations must not overlap"
+        )
 
     def _determine_city_trial_random_stadium(self) -> None:
         """
@@ -266,48 +272,64 @@ class KARWorld(World):
         self.city_trial_random_stadium_choice = self.random.choice(stadiums)
 
     def _populate_item_pools(self) -> None:
+        """
+        Populate progression, useful, filler, and trap item pools based on player options.
+
+        Must run after _determine_item_classification_overrides() to respect any
+        classification changes from player settings.
+        """
         # assign progression, useful, filler and trap items to the pools
         for item_name, item_data in ITEM_TABLE.items():
             classification = self.item_classification_overrides.get(item_name, item_data.classification)
 
-            # don't add permanent patches to the pool if the option disables them
-            if not self.options.city_trial_permanent_patches and "Permanent" in item_name:
+            # don't add event items to the pool - they are only placed on event locations
+            if item_data.code is None:
+                continue
+
+            # don't add permanent patches to the pool if they are not enabled or City Trial is disabled
+            if (
+                not self.city_trial_enabled or not self.options.city_trial_permanent_patches
+            ) and "Permanent" in item_name:
                 continue
             # don't add effect items to the pool if they are not enabled
             if not self.options.effect_items_enabled and item_data.type == KARItemType.EFFECT.value:
                 continue
-            # don't add city trial checkbox fillers to the pool if they are not enabled
-            if (
-                not self.options.city_trial_checkbox_fillers
-                and item_name == CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value
+            # don't add city trial checkbox fillers to the pool if they are not enabled or City Trial is disabled
+            if item_name == CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value and (
+                not self.city_trial_enabled or not self.options.city_trial_checkbox_fillers
             ):
                 continue
-            # don't add air ride checkbox fillers to the pool if they are not enabled
-            if (
-                not self.options.air_ride_checkbox_fillers
-                and item_name == CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value
+            # don't add air ride checkbox fillers to the pool if they are not enabled or Air Ride is disabled
+            if item_name == CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value and (
+                not self.air_ride_enabled or not self.options.air_ride_checkbox_fillers
             ):
                 continue
-            # don't add top ride checkbox fillers to the pool if they are not enabled
-            if (
-                not self.options.top_ride_checkbox_fillers
-                and item_name == CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value
+            # don't add top ride checkbox fillers to the pool if they are not enabled or Top Ride is disabled
+            if item_name == CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value and (
+                not self.top_ride_enabled or not self.options.top_ride_checkbox_fillers
             ):
                 continue
-            # don't add patch cap increase items to the pool if they are not enabled
-            if not self.options.city_trial_progressive_patch_caps and item_data.type == KARItemType.PATCH_CAP_INCREASE:
+            # don't add patch cap increase items to the pool if they are not enabled or City Trial is disabled
+            if item_data.type == KARItemType.PATCH_CAP_INCREASE.value and (
+                not self.city_trial_enabled or not self.options.city_trial_progressive_patch_caps
+            ):
                 continue
-            # don't add progressive stadium items to the pool if they are not enabled
-            if not self.options.city_trial_progressive_stadiums and item_data.type == KARItemType.PROGRESSIVE_STADIUM:
+            # don't add progressive stadium items to the pool if they are not enabled or City Trial is disabled
+            if item_data.type == KARItemType.PROGRESSIVE_STADIUM.value and (
+                not self.city_trial_enabled or not self.options.city_trial_progressive_stadiums
+            ):
                 continue
             # don't add stadium unlocks if they are in the starting inventory or the randomly chosen precollected
             # stadium
             if (
                 self.city_trial_enabled
                 and self.options.city_trial_progressive_stadiums
-                and item_data.type == KARItemType.PROGRESSIVE_STADIUM
+                and item_data.type == KARItemType.PROGRESSIVE_STADIUM.value
             ):
-                if item_name in self.options.start_inventory or item_name == self.city_trial_random_stadium_choice:
+                if item_name in self.options.start_inventory or (
+                    self.city_trial_random_stadium_choice is not None
+                    and item_name == self.city_trial_random_stadium_choice.value
+                ):
                     continue
 
             if classification & ItemClassification.progression:
@@ -331,11 +353,11 @@ class KARWorld(World):
                                 )
                     continue
 
-                # cap increase items need to make as many as is required to get to the max stat count of 18
-                # (for all patches expect HP, which is 16)
+                # cap increase items need to make as many as is required to get to the max stat count
+                # (18 for most patches, 16 for HP)
                 # assumes the range of patch_cap_amount is 1-17.
-                if item_data.type == KARItemType.PATCH_CAP_INCREASE:
-                    num_needed = max(1, 18 - self.options.city_trial_patch_cap_amount.value)
+                if item_data.type == KARItemType.PATCH_CAP_INCREASE.value:
+                    num_needed = max(1, PatchConstants.MAX_PATCH_CAP - self.options.city_trial_patch_cap_amount.value)
                     self.progression_pool.extend([item_name] * num_needed)
                     continue
 
@@ -435,7 +457,8 @@ class KARWorld(World):
         """
         Create a KARItem from the given item_name.
         """
-        if name in self.item_names:
+        # Check both item_names (for regular items) and ITEM_TABLE (for event items with code=None)
+        if name in self.item_names or name in ITEM_TABLE:
             data = ITEM_TABLE[name]
             new_item_data = KARItemData(
                 data.type,
@@ -463,6 +486,31 @@ class KARWorld(World):
         if self.top_ride_enabled:
             excluded_locations |= self.top_ride_excluded_locations
 
+        # Determine which locations are goal locations (these were excluded from region creation)
+        # Goal locations don't exist as real locations, so we shouldn't create items for them
+        goal_locations_to_exclude: set[str] = set()
+
+        if self.city_trial_enabled and self.options.city_trial_goal.current_key not in [
+            self.options.city_trial_goal.option_none,
+            self.options.city_trial_goal.option_n_checklist_blocks,
+        ]:
+            goal_locations_to_exclude.add(self.options.city_trial_goal.current_key)
+
+        if self.air_ride_enabled and self.options.air_ride_goal.current_key not in [
+            self.options.air_ride_goal.option_none,
+            self.options.air_ride_goal.option_n_checklist_blocks,
+        ]:
+            goal_locations_to_exclude.add(self.options.air_ride_goal.current_key)
+
+        if self.top_ride_enabled and self.options.top_ride_goal.current_key not in [
+            self.options.top_ride_goal.option_none,
+            self.options.top_ride_goal.option_n_checklist_blocks,
+        ]:
+            goal_locations_to_exclude.add(self.options.top_ride_goal.current_key)
+
+        # Remove goal locations from excluded_locations since they don't actually exist as real locations
+        excluded_locations -= goal_locations_to_exclude
+
         nonexcluded_locations = [
             location
             for location in self.get_locations()
@@ -486,39 +534,21 @@ class KARWorld(World):
         num_items_left_to_place -= len(self.progression_pool)
 
         # place useful items to fill out the remaining locations
-        # first place checkbox fillers if they are not progression to still honor the number the player specified:
-        if not self.options.checkbox_fillers_progression:
-            if self.city_trial_enabled and self.options.city_trial_checkbox_fillers:
-                checkbox_fillers = [
-                    CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value
-                ] * self.options.city_trial_checkbox_fillers_amount.value
-                pool.extend(checkbox_fillers)
-                num_items_left_to_place -= len(checkbox_fillers)
-                # remove item from useful pool to avoid adding any more
-                self.useful_pool.remove(CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER.value)
-            if self.air_ride_enabled and self.options.air_ride_checkbox_fillers:
-                checkbox_fillers = [
-                    CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value
-                ] * self.options.air_ride_checkbox_fillers_amount.value
-                pool.extend(checkbox_fillers)
-                num_items_left_to_place -= len(checkbox_fillers)
-                # remove item from useful pool to avoid adding any more
-                self.useful_pool.remove(CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER.value)
-            if self.top_ride_enabled and self.options.top_ride_checkbox_fillers:
-                checkbox_fillers = [
-                    CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value
-                ] * self.options.top_ride_checkbox_fillers_amount.value
-                pool.extend(checkbox_fillers)
-                num_items_left_to_place -= len(checkbox_fillers)
-                # remove item from useful pool to avoid adding any more
-                self.useful_pool.remove(CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER.value)
-
-        # place remaining useful items
         pool.extend(self.random.choices(list(self.useful_pool), k=num_items_left_to_place))
 
         # Create the pool of the remaining shuffled items.
         items = [self.create_item(item_name) for item_name in pool]
         self.random.shuffle(items)
+
+        # Final validation that pool matches location count
+        # Pool contains items for both excluded and nonexcluded locations
+        total_location_count = len(excluded_locations) + len(nonexcluded_locations)
+        if len(items) != total_location_count:
+            raise FillError(
+                f"Item pool size ({len(items)}) does not match total location count "
+                f"({total_location_count}). Excluded: {len(excluded_locations)}, "
+                f"Nonexcluded: {len(nonexcluded_locations)}. This indicates a logic error in item pool generation."
+            )
 
         self.multiworld.itempool += items
 

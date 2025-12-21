@@ -3,21 +3,82 @@ from collections.abc import Callable
 
 from BaseClasses import CollectionState, LocationProgressType, Region
 
+from .KARData import VictoryEventType
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     TOP_RIDE_LOCATION_TABLE,
     KARLocation,
+    KARLocationData,
+    KARLocationType,
 )
 
 if typing.TYPE_CHECKING:
     from . import KARWorld
 
 
+def create_event_location(
+    world: "KARWorld",
+    region: Region,
+    event_name: str,
+    event_item_name: str,
+    rule: Callable[[CollectionState], bool] | None = None,
+) -> None:
+    """
+    Create an event location and place the associated event item on it.
+
+    :param world: The KARWorld instance
+    :param region: The region to place the event location in
+    :param event_name: Name of the event location
+    :param event_item_name: Name of the event item to place
+    :param rule: Optional rule to apply to this event location
+    """
+    from worlds.generic.Rules import set_rule
+
+    # Create event location with code=None
+    event_location_data = KARLocationData(
+        code=None, region=region.name, reward=event_item_name, type=KARLocationType.EVENT, mem_address=None
+    )
+
+    event_location = KARLocation(world.player, event_name, region, event_location_data)
+    region.locations.append(event_location)
+
+    # Apply rule if provided
+    if rule is not None:
+        set_rule(event_location, rule)
+
+    # Create and place locked event item
+    event_item = world.create_item(event_item_name)
+    event_location.place_locked_item(event_item)
+
+
 def create_regions(world: "KARWorld"):
     """
     Create regions, place locations in regions, and connect regions for the Kirby Air Ride world.
     """
+    # Collect goal locations that should be excluded from the multiworld
+    # These will be replaced by event locations
+    goal_locations_to_exclude: set[str] = set()
+
+    # Check each mode's goal - if it's a specific location (not "N checklist blocks"), exclude it
+    if world.city_trial_enabled and world.options.city_trial_goal.current_key not in [
+        world.options.city_trial_goal.option_none,
+        world.options.city_trial_goal.option_n_checklist_blocks,
+    ]:
+        goal_locations_to_exclude.add(world.options.city_trial_goal.current_key)
+
+    if world.air_ride_enabled and world.options.air_ride_goal.current_key not in [
+        world.options.air_ride_goal.option_none,
+        world.options.air_ride_goal.option_n_checklist_blocks,
+    ]:
+        goal_locations_to_exclude.add(world.options.air_ride_goal.current_key)
+
+    if world.top_ride_enabled and world.options.top_ride_goal.current_key not in [
+        world.options.top_ride_goal.option_none,
+        world.options.top_ride_goal.option_n_checklist_blocks,
+    ]:
+        goal_locations_to_exclude.add(world.options.top_ride_goal.current_key)
+
     # create the "Menu" default Region, which will connect all game modes.
     menu_region = Region(world.origin_region_name, world.player, world.multiworld)
     world.multiworld.regions.append(menu_region)
@@ -48,6 +109,8 @@ def create_regions(world: "KARWorld"):
     if world.city_trial_enabled:
         # priority locations
         for location_name in sorted(world.city_trial_priority_locations):
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = CITY_TRIAL_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -56,6 +119,8 @@ def create_regions(world: "KARWorld"):
 
         # default locations
         for location_name in world.city_trial_default_locations:
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = CITY_TRIAL_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -64,6 +129,8 @@ def create_regions(world: "KARWorld"):
 
         # excluded locations
         for location_name in world.city_trial_excluded_locations:
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = CITY_TRIAL_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -75,6 +142,8 @@ def create_regions(world: "KARWorld"):
     if world.air_ride_enabled:
         # priority locations
         for location_name in sorted(world.air_ride_priority_locations):
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = AIR_RIDE_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -83,6 +152,8 @@ def create_regions(world: "KARWorld"):
 
         # default locations
         for location_name in world.air_ride_default_locations:
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = AIR_RIDE_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -91,6 +162,8 @@ def create_regions(world: "KARWorld"):
 
         # excluded locations
         for location_name in world.air_ride_excluded_locations:
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = AIR_RIDE_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -102,6 +175,8 @@ def create_regions(world: "KARWorld"):
     if world.top_ride_enabled:
         # priority locations
         for location_name in sorted(world.top_ride_priority_locations):
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = TOP_RIDE_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -110,6 +185,8 @@ def create_regions(world: "KARWorld"):
 
         # default locations
         for location_name in world.top_ride_default_locations:
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = TOP_RIDE_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -118,6 +195,8 @@ def create_regions(world: "KARWorld"):
 
         # excluded locations
         for location_name in world.top_ride_excluded_locations:
+            if location_name in goal_locations_to_exclude:
+                continue  # Skip goal locations - they'll be replaced by event locations
             data = TOP_RIDE_LOCATION_TABLE[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, region, data)
@@ -460,48 +539,238 @@ def connect_top_ride_region(world: "KARWorld", top_ride_region: Region) -> None:
     time_attack_region.connect(time_attack_sky)
 
 
+def count_locations_by_region(world: "KARWorld") -> dict[str, int]:
+    """
+    Count the number of locations in each region.
+
+    :param world: The KARWorld instance
+    :return: Dict mapping region name to location count
+    """
+    region_location_counts: dict[str, int] = {}
+
+    for region in world.multiworld.get_regions(world.player):
+        # Count actual locations (not event locations, which have address=None)
+        location_count = sum(1 for loc in region.locations if loc.address is not None)
+        if location_count > 0:
+            region_location_counts[region.name] = location_count
+
+    return region_location_counts
+
+
+def create_n_blocks_rule(
+    world: "KARWorld", mode_prefix: str, required_blocks: int
+) -> Callable[[CollectionState], bool]:
+    """
+    Create a rule that checks if the player can access enough locations to complete N blocks.
+
+    :param world: The KARWorld instance
+    :param mode_prefix: The mode prefix (e.g., "City Trial", "Air Ride", "Top Ride")
+    :param required_blocks: The number of blocks required for victory
+    :return: A rule function that checks if N blocks can be completed
+    """
+    from .KARData import ProgressiveStadiumUnlockType
+
+    # Get location counts per region
+    region_counts = count_locations_by_region(world)
+
+    # Separate base locations from stadium locations
+    # Map specific stadium unlocks to their region location counts
+    # Track "ALL" regions separately to avoid double-counting
+    base_count = 0
+    stadium_unlock_to_count: dict[str, int] = {}
+    all_region_to_unlocks: dict[str, tuple[int, list[str]]] = {}  # region_name -> (count, [unlock_items])
+
+    for region_name, count in region_counts.items():
+        # For City Trial, stadium regions are separate regions that start with "Stadium:"
+        # For Air Ride and Top Ride, all regions start with the mode prefix
+        is_stadium_region = region_name.startswith("Stadium:")
+        is_mode_region = region_name.startswith(mode_prefix)
+
+        # Include this region if it's either a mode-specific region OR a stadium (for City Trial only)
+        if is_mode_region or (mode_prefix == "City Trial" and is_stadium_region):
+            if is_stadium_region:
+                # This is a stadium region
+                if "ALL" in region_name:
+                    # This is an "ALL" region - track it separately
+                    # Extract base stadium name (e.g., "Stadium: DESTRUCTION DERBY ALL" -> "DESTRUCTION DERBY")
+                    stadium_base = region_name.replace("Stadium:", "").replace("ALL", "").strip()
+
+                    # Find all unlocks that match this stadium type
+                    matching_unlocks = []
+                    for unlock in ProgressiveStadiumUnlockType:
+                        unlock_name = unlock.value.replace("Unlock Stadium:", "").strip()
+                        if stadium_base in unlock_name:
+                            matching_unlocks.append(unlock.value)
+
+                    all_region_to_unlocks[region_name] = (count, matching_unlocks)
+                else:
+                    # This is a specific numbered region - find exact match
+                    stadium_name = region_name.replace("Stadium:", "").strip()
+
+                    # Find exact matching unlock item
+                    for unlock in ProgressiveStadiumUnlockType:
+                        unlock_name = unlock.value.replace("Unlock Stadium:", "").strip()
+                        if unlock_name == stadium_name:
+                            stadium_unlock_to_count[unlock.value] = count
+                            break
+            else:
+                # This is a base region (e.g., "City Trial", "Air Ride", "Top Ride")
+                base_count += count
+
+    # If we can already reach the required blocks without stadiums, no rule needed
+    if base_count >= required_blocks:
+        return lambda state: True
+
+    # Create a rule that counts accessible locations based on stadium unlocks
+    def can_access_n_blocks(state: CollectionState) -> bool:
+        accessible_count = base_count
+
+        # Add specific stadium region counts
+        for unlock_item, count in stadium_unlock_to_count.items():
+            if state.has(unlock_item, world.player):
+                accessible_count += count
+
+        # Add "ALL" region counts (only once per ALL region, if ANY matching unlock is present)
+        for count, matching_unlocks in all_region_to_unlocks.values():
+            if state.has_any(matching_unlocks, world.player):
+                accessible_count += count
+
+        return accessible_count >= required_blocks
+
+    return can_access_n_blocks
+
+
 def determine_goal(world: "KARWorld") -> None:
     """
-    Determine the goal for the world, given the player options of goals selected for each game mode.
+    Determine the goal for the world and create event locations for each enabled mode's goal.
+    Event items placed on these locations are checked for completion.
     """
-    goal_func_list: list[Callable[[CollectionState], bool]] = []
 
-    match world.options.city_trial_goal.current_key:
-        case world.options.city_trial_goal.option_none:
-            pass
-        case world.options.city_trial_goal.option_n_checklist_blocks:
-            # can't currently gate anything and the player can always complete all checklist blocks regardless,
-            # so just being able to reach the city trial region is enough
-            goal_func_list.append(lambda state: state.can_reach_region("City Trial", world.player))
-        case _:
-            goal_func_list.append(
-                lambda state: state.can_reach_location(world.options.city_trial_goal.current_key, world.player)
-            )
+    goal_event_items: list[str] = []
 
-    match world.options.air_ride_goal.current_key:
-        case world.options.air_ride_goal.option_none:
-            pass
-        case world.options.air_ride_goal.option_n_checklist_blocks:
-            # can't currently gate anything and the player can always complete all checklist blocks regardless,
-            # so just being able to reach the air ride region is enough
-            goal_func_list.append(lambda state: state.can_reach_region("Air Ride", world.player))
-        case _:
-            goal_func_list.append(
-                lambda state: state.can_reach_location(world.options.air_ride_goal.current_key, world.player)
-            )
+    # City Trial goal handling
+    if world.options.city_trial_goal.value != world.options.city_trial_goal.option_none:
+        goal_event_items.append(VictoryEventType.CITY_TRIAL_VICTORY.value)
 
-    match world.options.top_ride_goal.current_key:
-        case world.options.top_ride_goal.option_none:
-            pass
-        case world.options.top_ride_goal.option_n_checklist_blocks:
-            # can't currently gate anything and the player can always complete all checklist blocks regardless,
-            # so just being able to reach the top ride region is enough
-            goal_func_list.append(lambda state: state.can_reach_region("Top Ride", world.player))
-        case _:
-            goal_func_list.append(
-                lambda state: state.can_reach_location(world.options.top_ride_goal.current_key, world.player)
-            )
+        match world.options.city_trial_goal.current_key:
+            case world.options.city_trial_goal.option_n_checklist_blocks:
+                # For N checklist blocks, place event in the main City Trial region
+                city_trial_region = world.get_region("City Trial")
+                # Create rule to ensure player has access to enough locations
+                n_blocks_rule = (
+                    create_n_blocks_rule(world, "City Trial", world.options.city_trial_checklist_amount.value)
+                    if world.options.city_trial_progressive_stadiums
+                    else None
+                )
+                create_event_location(
+                    world,
+                    city_trial_region,
+                    f"City Trial: Complete {world.options.city_trial_checklist_amount.value} Checklist Blocks",
+                    VictoryEventType.CITY_TRIAL_VICTORY.value,
+                    n_blocks_rule,
+                )
+            case _:
+                # For specific goal locations (100 blocks, Hydra+Dragoon, King Dedede)
+                # Get the region from the location table since the actual location was excluded
+                goal_location_data = CITY_TRIAL_LOCATION_TABLE[world.options.city_trial_goal.current_key]
+                goal_region = world.get_region(goal_location_data.region)
 
-    # multiworld completion condition is all goal conditions being true
-    if len(goal_func_list) > 0:
-        world.multiworld.completion_condition[world.player] = lambda state: all(func(state) for func in goal_func_list)
+                # For 100 blocks goal in main region, add rule if progressive stadiums enabled
+                blocks_rule = None
+                if (
+                    world.options.city_trial_progressive_stadiums
+                    and world.options.city_trial_goal.current_key
+                    == world.options.city_trial_goal.option_100_checklist_blocks
+                    and goal_location_data.region == "City Trial"
+                ):
+                    blocks_rule = create_n_blocks_rule(world, "City Trial", 100)
+
+                create_event_location(
+                    world,
+                    goal_region,
+                    f"{world.options.city_trial_goal.current_key} (Victory)",
+                    VictoryEventType.CITY_TRIAL_VICTORY.value,
+                    blocks_rule,
+                )
+
+    # Air Ride goal handling
+    if world.options.air_ride_goal.value != world.options.air_ride_goal.option_none:
+        goal_event_items.append(VictoryEventType.AIR_RIDE_VICTORY.value)
+
+        match world.options.air_ride_goal.current_key:
+            case world.options.air_ride_goal.option_n_checklist_blocks:
+                air_ride_region = world.get_region("Air Ride")
+                # Create rule to ensure player has access to enough locations
+                n_blocks_rule = create_n_blocks_rule(world, "Air Ride", world.options.air_ride_checklist_amount.value)
+                create_event_location(
+                    world,
+                    air_ride_region,
+                    f"Air Ride: Complete {world.options.air_ride_checklist_amount.value} Checklist Blocks",
+                    VictoryEventType.AIR_RIDE_VICTORY.value,
+                    n_blocks_rule,
+                )
+            case _:
+                # For 100 blocks goal
+                # Get the region from the location table since the actual location was excluded
+                goal_location_data = AIR_RIDE_LOCATION_TABLE[world.options.air_ride_goal.current_key]
+                goal_region = world.get_region(goal_location_data.region)
+
+                # For 100 blocks goal in main region, add rule
+                blocks_rule = None
+                if (
+                    world.options.air_ride_goal.current_key == world.options.air_ride_goal.option_100_checklist_blocks
+                    and goal_location_data.region == "Air Ride"
+                ):
+                    blocks_rule = create_n_blocks_rule(world, "Air Ride", 100)
+
+                create_event_location(
+                    world,
+                    goal_region,
+                    f"{world.options.air_ride_goal.current_key} (Victory)",
+                    VictoryEventType.AIR_RIDE_VICTORY.value,
+                    blocks_rule,
+                )
+
+    # Top Ride goal handling
+    if world.options.top_ride_goal.value != world.options.top_ride_goal.option_none:
+        goal_event_items.append(VictoryEventType.TOP_RIDE_VICTORY.value)
+
+        match world.options.top_ride_goal.current_key:
+            case world.options.top_ride_goal.option_n_checklist_blocks:
+                top_ride_region = world.get_region("Top Ride")
+                # Create rule to ensure player has access to enough locations
+                n_blocks_rule = create_n_blocks_rule(world, "Top Ride", world.options.top_ride_checklist_amount.value)
+                create_event_location(
+                    world,
+                    top_ride_region,
+                    f"Top Ride: Complete {world.options.top_ride_checklist_amount.value} Checklist Blocks",
+                    VictoryEventType.TOP_RIDE_VICTORY.value,
+                    n_blocks_rule,
+                )
+            case _:
+                # For 100 blocks goal
+                # Get the region from the location table since the actual location was excluded
+                goal_location_data = TOP_RIDE_LOCATION_TABLE[world.options.top_ride_goal.current_key]
+                goal_region = world.get_region(goal_location_data.region)
+
+                # For 100 blocks goal in main region, add rule
+                blocks_rule = None
+                if (
+                    world.options.top_ride_goal.current_key == world.options.top_ride_goal.option_100_checklist_blocks
+                    and goal_location_data.region == "Top Ride"
+                ):
+                    blocks_rule = create_n_blocks_rule(world, "Top Ride", 100)
+
+                create_event_location(
+                    world,
+                    goal_region,
+                    f"{world.options.top_ride_goal.current_key} (Victory)",
+                    VictoryEventType.TOP_RIDE_VICTORY.value,
+                    blocks_rule,
+                )
+
+    # Set multiworld completion condition to check for all victory event items
+    if len(goal_event_items) > 0:
+        world.multiworld.completion_condition[world.player] = lambda state: all(
+            state.has(event_item, world.player) for event_item in goal_event_items
+        )

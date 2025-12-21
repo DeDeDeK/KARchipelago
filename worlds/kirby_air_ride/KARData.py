@@ -526,6 +526,14 @@ def get_patch_cap_increase_type_from_item_name(item_name: str) -> PatchCapIncrea
         return None
 
 
+class PatchConstants:
+    """Constants related to patch stat mechanics."""
+
+    MAX_PATCH_CAP = 18  # Maximum cap for most patch stats (HP max is 16)
+    MIN_PATCH_CAP = 1  # Minimum starting patch cap
+    DEFAULT_PATCH_VALUE = -2  # Starting value for most patches (HP starts at 0)
+
+
 class StatType(StrEnum):
     """Base stat types that correspond to unique memory addresses."""
 
@@ -595,6 +603,12 @@ def get_effect_type_from_item_name(item_name: str) -> EffectType | None:
         return EffectType(item_name)
     except ValueError:
         return None
+
+
+class VictoryEventType(StrEnum):
+    CITY_TRIAL_VICTORY = "City Trial Victory"
+    AIR_RIDE_VICTORY = "Air Ride Victory"
+    TOP_RIDE_VICTORY = "Top Ride Victory"
 
 
 class Stage(NamedTuple):
