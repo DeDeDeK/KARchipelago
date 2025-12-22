@@ -145,7 +145,9 @@ The client will sync your completed AP checks to your in-game checklist every ti
 
 Your game will always be in sync with what the server has.
 
-**IMPORTANT:** Any checks that are synced from the server are initially only *visible* in the checklist. They need to be unlocked by entering any stadium or city trial, and then quitting (or finishing them normally). This will trigger the checkbox unlocking process for those checks. 
+**IMPORTANT:** Any checks that are synced from the server are initially only *visible* in the checklist. They need to be unlocked by entering any stadium or city trial (or for Air Ride or Top Ride, a Race), and then quitting (or finishing them normally). This will trigger the checkbox unlocking process for those checks. 
+
+**NOTE:** Similarly, after game completion, if you have collect on, reconnecting to the server and then entering and exiting out of any City Trial, Air Ride, or Top Ride mode (depending on what modes you have enabled) will trigger a complete checklist unlock! Very satisfying!
 
 
 ## I need help! What do I do?
