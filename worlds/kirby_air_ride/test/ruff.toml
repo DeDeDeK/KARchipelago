@@ -1,0 +1,4 @@
+extend = "../ruff.toml"
+lint.ignore = [
+    "RUF012",  # WorldTestBase requires `options = {...}` as a mutable class attribute.
+]

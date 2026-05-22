@@ -1,34 +1,71 @@
 from dataclasses import dataclass
-from typing import Any
 
 from Options import (
+    Choice,
     DeathLinkMixin,
+    DefaultOnToggle,
+    LocationSet,
+    NamedRange,
     OptionGroup,
     PerGameCommonOptions,
     Range,
-    TextChoice,
     Toggle,
 )
 
 
-class TrapsEnabled(Toggle):
-    """
-    This controls whether trap items will be placed into the item pool. These will only replace filler items.
-    """
-
-    display_name = "Traps Enabled"
-    default = 0
-
-
 class TrapChance(Range):
     """
-    Percentage chance for filler items to be replaced with traps. Only has an effect if traps are enabled.
+    Percentage chance for non-progression item slots to contain traps.
+    Set to 0 to disable traps entirely.
     """
 
     display_name = "Trap Chance"
-    default = 10
+    default = 0
     range_start = 0
     range_end = 100
+
+
+class TrapWeight(Choice):
+    """Base class for trap weight options."""
+
+    option_disabled = 0
+    option_low = 1
+    option_medium = 2
+    option_high = 4
+    default = 2
+
+
+class TrapWeightDirectDamage(TrapWeight):
+    """
+    Weight for direct damage traps: 1 HP Trap.
+    """
+
+    display_name = "Direct Damage Trap Weight"
+
+
+class TrapWeightStatDebuff(TrapWeight):
+    """
+    Weight for stat debuff traps: All Down, stat-down patches, Speed Min, Charge None,
+    Drop Patches Trap.
+    """
+
+    display_name = "Stat Debuff Trap Weight"
+
+
+class TrapWeightFakePatches(TrapWeight):
+    """
+    Weight for fake patch traps: items that look like stat-ups but are harmful.
+    """
+
+    display_name = "Fake Patch Trap Weight"
+
+
+class TrapWeightHazards(TrapWeight):
+    """
+    Weight for hazard item traps: Panic Spin, Sensor Bomb, Gordo.
+    """
+
+    display_name = "Hazard Trap Weight"
 
 
 class EffectItemsEnabled(Toggle):
@@ -40,13 +77,42 @@ class EffectItemsEnabled(Toggle):
     default = 1
 
 
-class CheckboxFillersProgression(Toggle):
+class ProgressiveSpawnRate(Toggle):
     """
-    Toggles whether "checkbox filler" items are progression items.
+    If on, the City Trial / Top Ride item spawn rate starts at "Spawn Rate Min" and grows toward
+    "Spawn Rate Max" as you receive "Spawn Rate Up" items (each grants +10%). The item pool will
+    contain (max - min) / 10 Spawn Rate Up items, so collecting all of them reaches the max.
+    If off, spawn rate stays at the vanilla baseline (100%) and no Spawn Rate Up items are placed.
+    Air Ride has no spawn-rate scaling and is unaffected either way.
     """
 
-    display_name = "Checkbox fillers are progression"
-    default = 1
+    default = 0
+    display_name = "Progressive Spawn Rate"
+
+
+class SpawnRateMin(Range):
+    """
+    Starting spawn rate percent when "Progressive Spawn Rate" is on. 100 = vanilla baseline,
+    200 = 2x as many items spawn, etc. Ignored when progressive is off.
+    """
+
+    display_name = "Spawn Rate Min"
+    default = 100
+    range_start = 100
+    range_end = 500
+
+
+class SpawnRateMax(Range):
+    """
+    Spawn rate percent reached after collecting every "Spawn Rate Up" item. The item pool will
+    contain (max - min) / 10 Spawn Rate Up items (rounded down). Must be >= "Spawn Rate Min".
+    The mod's hard cap is 500% regardless of this value. Ignored when progressive is off.
+    """
+
+    display_name = "Spawn Rate Max"
+    default = 500
+    range_start = 100
+    range_end = 500
 
 
 class EnergyLink(Toggle):
@@ -54,10 +120,28 @@ class EnergyLink(Toggle):
     This enables or disables EnergyLink features. This means that collected patches or destroyed objects in
     City Trial will send energy to the collective energy pool of the Multiworld. You can spend some of this
     energy to get specific patches or other items immediately.
+
+    This value seeds the in-game Energy Link menu toggle on first connect. After that, the in-game menu
+    is authoritative — toggling it there will override this setting for the rest of the session.
     """
 
-    default = 1
+    default = 0
     display_name = "Energy Link"
+
+
+class TrapLink(Toggle):
+    """
+    This enables or disables TrapLink. When on, traps you receive in-game are broadcast to other players
+    with TrapLink enabled, and you receive traps they broadcast in return. Independent of "Trap Chance" —
+    you can participate in TrapLink even with no traps in your own pool (you'll still receive others'),
+    and you can disable TrapLink while keeping traps in your pool.
+
+    This value seeds the in-game Trap Link menu toggle on first connect. After that, the in-game menu
+    is authoritative — toggling it there will override this setting for the rest of the session.
+    """
+
+    default = 0
+    display_name = "Trap Link"
 
 
 class RevealChecklists(Toggle):
@@ -69,24 +153,42 @@ class RevealChecklists(Toggle):
     display_name = "Reveal Checklists"
 
 
-class CityTrialGoal(TextChoice):
+class CrossModePlacement(DefaultOnToggle):
     """
-    This sets the Goal for the run. You can also input a custom location from the location list as a goal.
-    You can have a goal for each game mode if you wish.
-    If you have goals on multiple game modes, all goals will need to be achieved in order to complete your game.
-    Select "None" if you wish to disable City Trial in your game.
+    Controls whether checklist reward items can be placed cross-mode in your own world.
+
+    If on (default), a reward item originally from one game mode (e.g. an Air Ride reward) can land
+    at any of your checklist locations across all enabled modes. If off, your own checklist reward
+    items are restricted to locations in their source mode — Air Ride rewards on Air Ride
+    checkboxes, Top Ride on Top Ride, City Trial on City Trial. Rewards placed remotely (in other
+    players' worlds) are not affected either way.
+    """
+
+    display_name = "Cross-Mode Placement"
+
+
+class CityTrialGoal(Choice):
+    """
+    Sets the goal for City Trial. If you have goals on multiple game modes, all must be achieved to win.
+    Select "None" to disable City Trial.
+
+    "max_stats_in_one_run" requires reaching the patch cap target (City Trial Patch Cap Amount) on
+    every stat in a single City Trial trial round. Pairs with Progressive Patch Caps to make the
+    target reachable only after collecting Patch Cap Increase items.
     """
 
     display_name = "City Trial Goal"
-    option_100_checklist_blocks = "City Trial: Fill in over 100 Checklist blocks!"
-    option_n_checklist_blocks = "City Trial: Fill in N Checklist blocks!"
-    option_hydra_and_dragoon = "City Trial: In one match, complete both Dragoon and Hydra!"
-    option_beat_king_dedede = "Stadium: VS. KING DEDEDE KO King Dedede in less than a minute!"
-    option_none = "None"
-    default = option_100_checklist_blocks
+    option_100_checklist_blocks = 0
+    option_n_checklist_blocks = 1
+    option_hydra_and_dragoon = 2
+    option_beat_king_dedede = 3
+    option_none = 4
+    option_checklist_list = 5
+    option_max_stats_in_one_run = 6
+    default = 0
 
 
-class CityTrialCheckListAmount(Range):
+class CityTrialChecklistAmount(Range):
     """
     This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for City Trial.
     """
@@ -95,6 +197,16 @@ class CityTrialCheckListAmount(Range):
     default = 60
     range_start = 1
     range_end = 120
+
+
+class CityTrialGoalLocations(LocationSet):
+    """
+    The specific checklist locations required for the "checklist_list" goal in City Trial.
+    Only used when City Trial Goal is set to "checklist_list". Supports location group names.
+    """
+
+    display_name = "City Trial Goal Locations"
+    verify_location_name = True
 
 
 class CityTrialProgressionHighEffort(Toggle):
@@ -114,16 +226,6 @@ class CityTrialPermanentPatches(Toggle):
 
     default = 1
     display_name = "City Trial Permanent Patches"
-
-
-class CityTrialPermanentPatchProgression(Toggle):
-    """
-    This controls whether permanent patch increase items are a part of progression. This applies only to City Trial, and
-    only if Permanent Patches are enabled.
-    """
-
-    default = 1
-    display_name = "Permanent Patches are progression"
 
 
 class CityTrialProgressionMultiplayer(Toggle):
@@ -165,24 +267,17 @@ class CityTrialProgressionBustVehicles(Toggle):
     display_name = "City Trial bust vehicle checkboxes are progression"
 
 
-class CityTrialCheckboxFillers(Toggle):
+class CityTrialCheckboxFillers(NamedRange):
     """
-    This controls whether "checkbox filler" items for City Trial are added to the pool.
+    Number of "checkbox filler" items added to the City Trial pool.
+    These auto-complete checklist blocks when received. Set to 0 to disable.
     """
 
-    default = 1
     display_name = "City Trial Checkbox Fillers"
-
-
-class CityTrialCheckboxFillersAmount(Range):
-    """
-    This controls the number of "checkbox filler" items that are added to the pool for City Trial.
-    """
-
     default = 5
-    range_start = 1
+    range_start = 0
     range_end = 20
-    display_name = "Number of City Trial Checkbox Fillers"
+    special_range_names = {"disabled": 0}  # noqa: RUF012
 
 
 class CityTrialProgressivePatchCaps(Toggle):
@@ -197,42 +292,50 @@ class CityTrialProgressivePatchCaps(Toggle):
 
 class CityTrialPatchCapAmount(Range):
     """
-    Sets the starting cap on patch maximum amount.
+    Sets the target (maximum) per-stat patch cap.
+
+    With Progressive Patch Caps ON, the cap starts at 1 and grows toward this value as Patch Cap
+    Increase items are received — one item is added to the pool for each step (target - 1 items).
+    With Progressive Patch Caps OFF, the cap is locked at this value from the start.
+
+    The "max_stats_in_one_run" City Trial goal uses this value as the per-stat threshold all 9 stats
+    must reach in a single trial round to win. Default 18 matches the vanilla per-stat cap.
+    The PowerPC hardware ceiling is 127.
     """
 
-    default = 10
+    default = 18
     range_start = 1
-    range_end = 17
-    display_name = "Patch Cap Starting Amount"
+    range_end = 127
+    display_name = "Patch Cap Target"
 
 
 class CityTrialProgressiveStadiums(Toggle):
     """
-    Toggles whether stadiums need to be found and unlocked. If on, the game starts with a single stadium
-    unlocked. To unlock more, you will need to find the corresponding stadium unlock item for that stadium.
-    If off, stadiums are unlocked via random chance and checkboxes as usual.
+    Toggles whether stadiums need to be found and unlocked. If on, the game starts with one random
+    stadium unlocked (chosen from stadiums that aren't checklist rewards, and not VS King Dedede when
+    that is the goal). To unlock more, you will need to find the corresponding stadium unlock item
+    for that stadium. If off, stadiums are unlocked via random chance and checkboxes as usual.
     """
 
     default = 1
     display_name = "City Trial Progressive Stadiums"
 
 
-class AirRideGoal(TextChoice):
+class AirRideGoal(Choice):
     """
-    This sets the Goal for the run. You can also input a custom location from the location list as a goal.
-    You can have a goal for each game mode if you wish.
-    If you have goals on multiple game modes, all goals will need to be achieved in order to complete your game.
-    Select "None" if you wish to disable Air Ride in your game.
+    Sets the goal for Air Ride. If you have goals on multiple game modes, all must be achieved to win.
+    Select "None" to disable Air Ride.
     """
 
     display_name = "Air Ride Goal"
-    option_100_checklist_blocks = "Air Ride: Fill in over 100 Checklist blocks!"
-    option_n_checklist_blocks = "Air Ride: Fill in N Checklist blocks!"
-    option_none = "None"
-    default = option_none
+    option_100_checklist_blocks = 0
+    option_n_checklist_blocks = 1
+    option_none = 4
+    option_checklist_list = 5
+    default = 4
 
 
-class AirRideCheckListAmount(Range):
+class AirRideChecklistAmount(Range):
     """
     This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for Air Ride.
     """
@@ -241,6 +344,16 @@ class AirRideCheckListAmount(Range):
     default = 60
     range_start = 1
     range_end = 120
+
+
+class AirRideGoalLocations(LocationSet):
+    """
+    The specific checklist locations required for the "checklist_list" goal in Air Ride.
+    Only used when Air Ride Goal is set to "checklist_list". Supports location group names.
+    """
+
+    display_name = "Air Ride Goal Locations"
+    verify_location_name = True
 
 
 class AirRideProgressionFreeRun(Toggle):
@@ -271,42 +384,34 @@ class AirRideProgressionHighEffort(Toggle):
     display_name = "Air Ride Long/High effort checkboxes are progression"
 
 
-class AirRideCheckboxFillers(Toggle):
+class AirRideCheckboxFillers(NamedRange):
     """
-    This controls whether "checkbox filler" items for Air Ride are added to the pool.
+    Number of "checkbox filler" items added to the Air Ride pool.
+    These auto-complete checklist blocks when received. Set to 0 to disable.
     """
 
-    default = 1
     display_name = "Air Ride Checkbox Fillers"
-
-
-class AirRideCheckboxFillersAmount(Range):
-    """
-    This controls the number of "checkbox filler" items that are added to the pool for Air Ride.
-    """
-
     default = 5
-    range_start = 1
+    range_start = 0
     range_end = 20
-    display_name = "Number of Air Ride Checkbox Fillers"
+    special_range_names = {"disabled": 0}  # noqa: RUF012
 
 
-class TopRideGoal(TextChoice):
+class TopRideGoal(Choice):
     """
-    This sets the Goal for the run. You can also input a custom location from the location list as a goal.
-    You can have a goal for each game mode if you wish.
-    If you have goals on multiple game modes, all goals will need to be achieved in order to complete your game.
-    Select "None" if you wish to disable Top Ride in your game.
+    Sets the goal for Top Ride. If you have goals on multiple game modes, all must be achieved to win.
+    Select "None" to disable Top Ride.
     """
 
     display_name = "Top Ride Goal"
-    option_100_checklist_blocks = "Top Ride: Fill in over 100 Checklist blocks!"
-    option_n_checklist_blocks = "Top Ride: Fill in N Checklist blocks!"
-    option_none = "None"
-    default = option_none
+    option_100_checklist_blocks = 0
+    option_n_checklist_blocks = 1
+    option_none = 4
+    option_checklist_list = 5
+    default = 4
 
 
-class TopRideCheckListAmount(Range):
+class TopRideChecklistAmount(Range):
     """
     This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for Top Ride.
     """
@@ -315,6 +420,16 @@ class TopRideCheckListAmount(Range):
     default = 60
     range_start = 1
     range_end = 120
+
+
+class TopRideGoalLocations(LocationSet):
+    """
+    The specific checklist locations required for the "checklist_list" goal in Top Ride.
+    Only used when Top Ride Goal is set to "checklist_list". Supports location group names.
+    """
+
+    display_name = "Top Ride Goal Locations"
+    verify_location_name = True
 
 
 class TopRideProgressionFreeRun(Toggle):
@@ -355,129 +470,198 @@ class TopRideProgressionMultiplayer(Toggle):
     display_name = "Top Ride Multiplayer checkboxes are progression"
 
 
-class TopRideCheckboxFillers(Toggle):
+class TopRideCheckboxFillers(NamedRange):
     """
-    This controls whether "checkbox filler" items for Top Ride are added to the pool.
+    Number of "checkbox filler" items added to the Top Ride pool.
+    These auto-complete checklist blocks when received. Set to 0 to disable.
     """
 
-    default = 1
     display_name = "Top Ride Checkbox Fillers"
-
-
-class TopRideCheckboxFillersAmount(Range):
-    """
-    This controls the number of "checkbox filler" items that are added to the pool for Top Ride.
-    """
-
     default = 5
-    range_start = 1
+    range_start = 0
     range_end = 20
-    display_name = "Number of Top Ride Checkbox Fillers"
+    special_range_names = {"disabled": 0}  # noqa: RUF012
+
+
+class EventsGated(DefaultOnToggle):
+    """
+    When enabled, City Trial events (Dyna Blade, Meteor, Tac, etc.) are locked and must be
+    unlocked by finding their corresponding items.
+    """
+
+    display_name = "City Trial Events Gated"
+
+
+class AbilitiesGated(DefaultOnToggle):
+    """
+    When enabled, copy abilities (Fire, Sword, Bomb, etc.) are locked and must be unlocked
+    by finding their corresponding items.
+    """
+
+    display_name = "Copy Abilities Gated"
+
+
+class PatchesGated(DefaultOnToggle):
+    """
+    When enabled, patch stat types (Accel, Top Speed, Offense, etc.) are locked and must be
+    unlocked by finding their corresponding items.
+    """
+
+    display_name = "Patch Types Gated"
+
+
+class CityTrialItemsGated(Toggle):
+    """
+    When enabled, game items (All Up, Speed Max, Candy, food, hazards, legendary parts, etc.)
+    are locked and must be unlocked by finding their corresponding items.
+    Adds 30 unlock items to the progression pool — enable more game modes for more locations.
+    """
+
+    display_name = "City Trial Items Gated"
+
+
+class MachinesGated(Toggle):
+    """
+    When enabled, air ride machines are locked and must be unlocked by finding their
+    corresponding items. Applies to both City Trial and Air Ride.
+    Adds 25 unlock items to the progression pool — enable more game modes for more locations.
+    """
+
+    display_name = "Machines Gated"
+
+
+class BoxesGated(DefaultOnToggle):
+    """
+    When enabled, box types (Blue, Green, Red) are locked and must be unlocked by finding
+    their corresponding items.
+    """
+
+    display_name = "Boxes Gated"
+
+
+class AirRideCoursesGated(DefaultOnToggle):
+    """
+    When enabled, Air Ride courses are locked and must be unlocked by finding their
+    corresponding items.
+    """
+
+    display_name = "Air Ride Courses Gated"
+
+
+class ColorsGated(DefaultOnToggle):
+    """
+    When enabled, Kirby colors (other than Pink) are locked and must be unlocked by finding
+    their corresponding items.
+    """
+
+    display_name = "Kirby Colors Gated"
+
+
+class TopRideCoursesGated(DefaultOnToggle):
+    """
+    When enabled, Top Ride courses are locked and must be unlocked by finding their
+    corresponding items.
+    """
+
+    display_name = "Top Ride Courses Gated"
+
+
+class TopRideItemsGated(DefaultOnToggle):
+    """
+    When enabled, Top Ride items are locked and must be unlocked by finding their
+    corresponding items. Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky)
+    are gated by the copy ability unlock instead.
+    """
+
+    display_name = "Top Ride Items Gated"
 
 
 @dataclass
 class KAROptions(PerGameCommonOptions, DeathLinkMixin):
-    """
-    A data class that encapsulates all configuration options for Kirby Air Ride.
-    """
+    """Configuration options for Kirby Air Ride."""
 
-    traps_enabled: TrapsEnabled
+    # General
     trap_chance: TrapChance
+    trap_weight_direct_damage: TrapWeightDirectDamage
+    trap_weight_stat_debuff: TrapWeightStatDebuff
+    trap_weight_fake_patches: TrapWeightFakePatches
+    trap_weight_hazards: TrapWeightHazards
+    trap_link: TrapLink
     effect_items_enabled: EffectItemsEnabled
-    checkbox_fillers_progression: CheckboxFillersProgression
+    spawn_rate_progressive: ProgressiveSpawnRate
+    spawn_rate_min: SpawnRateMin
+    spawn_rate_max: SpawnRateMax
     energy_link: EnergyLink
     reveal_checklists: RevealChecklists
+    cross_mode_placement: CrossModePlacement
+
+    # City Trial
     city_trial_goal: CityTrialGoal
-    city_trial_checklist_amount: CityTrialCheckListAmount
+    city_trial_checklist_amount: CityTrialChecklistAmount
+    city_trial_goal_locations: CityTrialGoalLocations
     city_trial_progression_high_effort: CityTrialProgressionHighEffort
     city_trial_progression_free_run: CityTrialProgressionFreeRun
     city_trial_progression_multiplayer: CityTrialProgressionMultiplayer
     city_trial_progression_rng: CityTrialProgressionRNG
     city_trial_progression_bust_vehicles: CityTrialProgressionBustVehicles
     city_trial_permanent_patches: CityTrialPermanentPatches
-    city_trial_permanent_patch_progression: CityTrialPermanentPatchProgression
     city_trial_checkbox_fillers: CityTrialCheckboxFillers
-    city_trial_checkbox_fillers_amount: CityTrialCheckboxFillersAmount
     city_trial_progressive_patch_caps: CityTrialProgressivePatchCaps
     city_trial_patch_cap_amount: CityTrialPatchCapAmount
     city_trial_progressive_stadiums: CityTrialProgressiveStadiums
+
+    # Air Ride
     air_ride_goal: AirRideGoal
-    air_ride_checklist_amount: AirRideCheckListAmount
+    air_ride_checklist_amount: AirRideChecklistAmount
+    air_ride_goal_locations: AirRideGoalLocations
     air_ride_progression_high_effort: AirRideProgressionHighEffort
     air_ride_progression_free_run: AirRideProgressionFreeRun
     air_ride_progression_time_attack: AirRideProgressionTimeAttack
     air_ride_checkbox_fillers: AirRideCheckboxFillers
-    air_ride_checkbox_fillers_amount: AirRideCheckboxFillersAmount
+
+    # Top Ride
     top_ride_goal: TopRideGoal
-    top_ride_checklist_amount: TopRideCheckListAmount
+    top_ride_checklist_amount: TopRideChecklistAmount
+    top_ride_goal_locations: TopRideGoalLocations
     top_ride_progression_high_effort: TopRideProgressionHighEffort
     top_ride_progression_free_run: TopRideProgressionFreeRun
     top_ride_progression_time_attack: TopRideProgressionTimeAttack
     top_ride_progression_multiplayer: TopRideProgressionMultiplayer
     top_ride_checkbox_fillers: TopRideCheckboxFillers
-    top_ride_checkbox_fillers_amount: TopRideCheckboxFillersAmount
 
-    def get_output_dict(self) -> dict[str, Any]:
-        """
-        Returns a dictionary of option name to value. This is used later in slot_data.
-        """
-
-        return self.as_dict(
-            "traps_enabled",
-            "trap_chance",
-            "effect_items_enabled",
-            "checkbox_fillers_progression",
-            "energy_link",
-            "reveal_checklists",
-            "death_link",
-            "city_trial_goal",
-            "city_trial_checklist_amount",
-            "city_trial_progression_high_effort",
-            "city_trial_progression_free_run",
-            "city_trial_progression_multiplayer",
-            "city_trial_progression_rng",
-            "city_trial_progression_bust_vehicles",
-            "city_trial_permanent_patches",
-            "city_trial_permanent_patch_progression",
-            "city_trial_checkbox_fillers",
-            "city_trial_checkbox_fillers_amount",
-            "city_trial_progressive_patch_caps",
-            "city_trial_patch_cap_amount",
-            "city_trial_progressive_stadiums",
-            "air_ride_goal",
-            "air_ride_checklist_amount",
-            "air_ride_progression_high_effort",
-            "air_ride_progression_free_run",
-            "air_ride_progression_time_attack",
-            "air_ride_checkbox_fillers",
-            "air_ride_checkbox_fillers_amount",
-            "top_ride_goal",
-            "top_ride_checklist_amount",
-            "top_ride_progression_high_effort",
-            "top_ride_progression_free_run",
-            "top_ride_progression_time_attack",
-            "top_ride_progression_multiplayer",
-            "top_ride_checkbox_fillers",
-            "top_ride_checkbox_fillers_amount",
-        )
+    # Access Gating
+    events_gated: EventsGated
+    abilities_gated: AbilitiesGated
+    patches_gated: PatchesGated
+    city_trial_items_gated: CityTrialItemsGated
+    machines_gated: MachinesGated
+    boxes_gated: BoxesGated
+    air_ride_courses_gated: AirRideCoursesGated
+    colors_gated: ColorsGated
+    top_ride_courses_gated: TopRideCoursesGated
+    top_ride_items_gated: TopRideItemsGated
 
 
 kar_option_groups = [
-    OptionGroup("Item Options", [TrapsEnabled, TrapChance, EffectItemsEnabled, CheckboxFillersProgression]),
+    OptionGroup("General Options", [EnergyLink, RevealChecklists, CrossModePlacement]),
+    OptionGroup(
+        "Trap Options",
+        [TrapChance, TrapWeightDirectDamage, TrapWeightStatDebuff, TrapWeightFakePatches, TrapWeightHazards, TrapLink],
+    ),
+    OptionGroup("Item Options", [EffectItemsEnabled, ProgressiveSpawnRate, SpawnRateMin, SpawnRateMax]),
     OptionGroup(
         "City Trial Options",
         [
             CityTrialGoal,
-            CityTrialCheckListAmount,
+            CityTrialChecklistAmount,
+            CityTrialGoalLocations,
             CityTrialProgressionHighEffort,
             CityTrialProgressionFreeRun,
             CityTrialProgressionMultiplayer,
             CityTrialProgressionRNG,
             CityTrialProgressionBustVehicles,
             CityTrialPermanentPatches,
-            CityTrialPermanentPatchProgression,
             CityTrialCheckboxFillers,
-            CityTrialCheckboxFillersAmount,
             CityTrialProgressivePatchCaps,
             CityTrialPatchCapAmount,
             CityTrialProgressiveStadiums,
@@ -487,25 +671,40 @@ kar_option_groups = [
         "Air Ride Options",
         [
             AirRideGoal,
-            AirRideCheckListAmount,
+            AirRideChecklistAmount,
+            AirRideGoalLocations,
             AirRideProgressionFreeRun,
             AirRideProgressionTimeAttack,
             AirRideProgressionHighEffort,
             AirRideCheckboxFillers,
-            AirRideCheckboxFillersAmount,
         ],
     ),
     OptionGroup(
         "Top Ride Options",
         [
             TopRideGoal,
-            TopRideCheckListAmount,
+            TopRideChecklistAmount,
+            TopRideGoalLocations,
             TopRideProgressionFreeRun,
             TopRideProgressionTimeAttack,
             TopRideProgressionHighEffort,
             TopRideProgressionMultiplayer,
             TopRideCheckboxFillers,
-            TopRideCheckboxFillersAmount,
+        ],
+    ),
+    OptionGroup(
+        "Access Gating",
+        [
+            EventsGated,
+            AbilitiesGated,
+            PatchesGated,
+            CityTrialItemsGated,
+            MachinesGated,
+            BoxesGated,
+            AirRideCoursesGated,
+            ColorsGated,
+            TopRideCoursesGated,
+            TopRideItemsGated,
         ],
     ),
 ]
