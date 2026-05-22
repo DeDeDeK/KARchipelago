@@ -1,0 +1,36 @@
+name: PlandoSlot
+description: Exercises plando_items with mixed item/location pinning, item groups, and from_pool semantics
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: 100_checklist_blocks
+  air_ride_goal: 100_checklist_blocks
+  top_ride_goal: none
+  events_gated: true
+  abilities_gated: true
+  patches_gated: true
+  machines_gated: true
+  boxes_gated: true
+  air_ride_courses_gated: true
+  colors_gated: true
+  effect_items_enabled: true
+  cross_mode_placement: true
+  trap_chance: 10
+  plando_items:
+    - item: "Unlock Event: Tac"
+      location: "City Trial: Steal over 8 items from Tac by yourself!"
+      from_pool: true
+      force: silent
+      percentage: 100
+    - item: "Unlock Ability: Bomb"
+      location: "City Trial: Get the Bomb ability from the Copy Chance Wheel!"
+      from_pool: true
+      force: silent
+      percentage: 100
+    - items:
+        Machine Unlocks: 1
+      locations:
+        - "City Trial: In the city, bust the star pole!"
+      from_pool: true
+      force: silent

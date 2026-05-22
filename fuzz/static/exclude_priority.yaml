@@ -1,0 +1,28 @@
+name: ExclSlot
+description: Heavy exclude_locations + priority_locations using both explicit names and location groups
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: 100_checklist_blocks
+  air_ride_goal: 100_checklist_blocks
+  top_ride_goal: none
+  events_gated: true
+  abilities_gated: true
+  patches_gated: true
+  machines_gated: true
+  boxes_gated: true
+  air_ride_courses_gated: true
+  colors_gated: true
+  effect_items_enabled: true
+  cross_mode_placement: true
+  exclude_locations:
+    - "City Trial: Bust the star pole!"
+    - "City Trial: Steal over 8 items from Tac by yourself!"
+    - "City Trial: Get the Bomb ability from the Copy Chance Wheel!"
+    - "City Trial: Get the Sleep ability from the Copy Chance Wheel!"
+  priority_locations:
+    - "City Trial: Knock down all of the trees in the forest!"
+    - "City Trial: Open up the pitfall in the forest!"
+    - "City Trial: Open up all the holes around the base of the volcano!"
+    - "Air Ride: Race all of the standard Air Ride courses!"

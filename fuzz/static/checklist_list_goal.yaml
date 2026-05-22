@@ -1,0 +1,31 @@
+name: ChecklistSlot
+description: checklist_list goal in all three modes with explicit goal locations and progression-flag mix
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: checklist_list
+  city_trial_goal_locations:
+    - "City Trial: Knock down all of the trees in the forest!"
+    - "City Trial: Open up the pitfall in the forest!"
+    - "City Trial: Open up all the holes around the base of the volcano!"
+  air_ride_goal: checklist_list
+  air_ride_goal_locations:
+    - "Air Ride: Race all of the standard Air Ride courses!"
+    - "Air Ride: Finish in 1st place while flying through the air!"
+  top_ride_goal: checklist_list
+  top_ride_goal_locations:
+    - "Top Ride: Take 1st place while holding the Hammer!"
+  city_trial_progression_high_effort: true
+  city_trial_progression_free_run: true
+  air_ride_progression_high_effort: true
+  air_ride_progression_time_attack: true
+  events_gated: true
+  abilities_gated: true
+  patches_gated: true
+  machines_gated: true
+  boxes_gated: true
+  air_ride_courses_gated: true
+  colors_gated: true
+  top_ride_courses_gated: true
+  effect_items_enabled: true
