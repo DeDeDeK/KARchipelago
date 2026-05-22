@@ -1,1112 +1,796 @@
 import asyncio
-import json
-import random
 import time
-import traceback
+import uuid
 from typing import Any
 
 import Utils
-from CommonClient import (
-    ClientCommandProcessor,
-    CommonContext,
-    get_base_parser,
-    gui_enabled,
-    logger,
-    server_loop,
-)
+from CommonClient import ClientCommandProcessor, CommonContext, get_base_parser, logger, server_loop
 from NetUtils import ClientStatus, NetworkItem
 
 from .DolphinInterface import DolphinInterface
 from .KARData import (
-    CheckboxFillerType,
-    CheckboxFlags,
-    PatchType,
-    StageName,
-    StatType,
-    get_checkbox_filler_type_from_item_name,
-    get_effect_type_from_item_name,
-    get_patch_cap_increase_type_from_item_name,
-    get_patch_type_from_item_name,
-    get_progressive_stadium_unlock_type_from_item_name,
-    get_stage_name_from_stadium_unlock_type,
-    patch_type_to_stat_type,
+    CLIENT_BACKFILL_PER_MODE,
+    LOCATIONS_PER_MODE,
+    OPTION_GOAL_CHECKS_PER_MODE,
+    REWARDS_PER_MODE,
+    SENT_CHECKS_PER_MODE,
+    GameMode,
+    GoalKind,
+    MemoryAddress,
+    TrapLinkKind,
+    location_code_to_mode_clear,
+    mode_clear_to_location_code,
+    reward_code_to_mode_index,
 )
-from .KARItems import ITEM_TABLE, KARItemType
-from .KARLocations import (
-    AIR_RIDE_LOCATION_TABLE,
-    CITY_TRIAL_LOCATION_TABLE,
-    TOP_RIDE_LOCATION_TABLE,
-    KARLocationData,
-    KARLocationType,
-)
-from .KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
+from .KARLocations import LOCATION_TABLE
+
+# 1 raw KAR energy unit = 1 MJ in the multiworld pool (AP stores integer Joules).
+ENERGY_LINK_EXCHANGE_RATE = 1_000_000
+
+# Display names for TrapLink kinds. Used in the outgoing Bounce so other worlds
+# can translate to local equivalents.
+TRAPLINK_NAMES: dict[TrapLinkKind, str] = {
+    TrapLinkKind.BAD_PATCH: "Bad Patch",
+    TrapLinkKind.SLEEP: "Sleep",
+    TrapLinkKind.SPEED_DOWN: "Speed Down",
+}
+
+# Display names for goal kinds.
+GOAL_NAMES: dict[GoalKind, str] = {
+    GoalKind.CHECKLIST_100: "100 Checklist Blocks",
+    GoalKind.N_CHECKLIST: "N Checklist Blocks",
+    GoalKind.HYDRA_AND_DRAGOON: "Hydra and Dragoon",
+    GoalKind.BEAT_KING_DEDEDE: "Beat King Dedede",
+    GoalKind.NONE: "None",
+    GoalKind.CHECKLIST_LIST: "Checklist List",
+    GoalKind.MAX_STATS_CT: "Max Stats CT",
+}
 
 
 class KARCommandProcessor(ClientCommandProcessor):
-    """
-    Command Processor for Kirby Air Ride client commands.
-
-    This class handles commands specific to Kirby Air Ride.
-    """
-
-    def __init__(self, ctx: CommonContext) -> None:
-        """
-        Initialize the command processor with the provided context.
-
-        Args:
-            ctx: Context for the client.
-        """
-        super().__init__(ctx)
-
     def _cmd_dolphin(self) -> None:
         """Display the current Dolphin emulator connection status."""
-        if isinstance(self.ctx, KARContext):
-            logger.info(f"Dolphin Status: {self.ctx.dolphin_status}")
-
-    def _cmd_deathlink(self) -> None:
-        """Toggle DeathLink."""
-        if isinstance(self.ctx, KARContext):
-            if "DeathLink" in self.ctx.tags:
-                Utils.async_start(self.ctx.update_death_link(False))
-                logger.info("Deathlink disabled.")
-            else:
-                Utils.async_start(self.ctx.update_death_link(True))
-                logger.info("Deathlink enabled.")
-
-    def _cmd_energylink(self) -> None:
-        """Toggle EnergyLink features."""
-        if isinstance(self.ctx, KARContext):
-            if self.ctx.energy_link_enabled:
-                self.ctx.energy_link_enabled = False
-                self.ctx.stored_data_notification_keys.remove(f"EnergyLink{self.ctx.team}")
-                logger.info("EnergyLink disabled.")
-            else:
-                self.ctx.energy_link_enabled = True
-                self.ctx.set_notify(f"EnergyLink{self.ctx.team}")
-                if self.ctx.ui:
-                    self.ctx.ui.enable_energy_link()
-                logger.info("EnergyLink enabled.")
-
-    def _cmd_energylink_spend(self, item_name: str, amount: str) -> None:
-        """Spend energy from EnergyLink on patches or other items. Specify items like: \
-            /energylink_spend "Top Speed Up" 1"""
-        if isinstance(self.ctx, KARContext):
-            if self.ctx.energy_link_enabled:
-                Utils.async_start(self.ctx.energy_link_spend(item_name, amount))
-            else:
-                logger.info("You must enable energylink first with /energylink.")
-
-    def _cmd_patch_cap(self) -> None:
-        """See what the current value of the patch cap is."""
-        if isinstance(self.ctx, KARContext):
-            if self.ctx.city_trial_patch_cap_enabled:
-                logger.info(f"Patch cap: {self.ctx.city_trial_patch_cap_amount}")
-            else:
-                logger.info("Patch caps were not enabled for this run.")
+        if not isinstance(self.ctx, KARContext):
+            return
+        ctx = self.ctx
+        if not ctx.dolphin.is_hooked():
+            status = "Not connected"
+        elif not ctx.dolphin.check_game_running():
+            status = "Hooked, game not running"
+        elif ctx.ap_data_base is None:
+            status = "Waiting for APData struct"
+        elif not ctx.game_ready:
+            status = "Waiting for game ready"
+        elif not ctx.options_written:
+            status = "Waiting for slot options"
+        elif not ctx.locations_written:
+            status = "Waiting for location data"
+        else:
+            status = "Connected"
+        logger.info(f"Dolphin Status: {status}")
 
 
 class KARContext(CommonContext):
-    """
-    The context for Kirby Air Ride client.
-
-    This class manages all interactions with the Dolphin emulator and the Archipelago server for Kirby Air Ride.
-    """
-
-    game: str = "Kirby Air Ride"
-    items_handling = 0b111  # receive items from the server for starting inventory, our own world, and other worlds
-    want_slot_data = True  # need slot data for player options specified at generation
+    game = "Kirby Air Ride"
+    items_handling = 0b111
+    want_slot_data = True
     command_processor = KARCommandProcessor
 
     def __init__(self, server_address: str | None, password: str | None) -> None:
-        """
-        Initialize the KAR context.
-
-        Args:
-            server_address: Address of the Archipelago server.
-            password: Password for server authentication.
-        """
         super().__init__(server_address, password)
-        self.connection_refused_game_status = (
-            "Dolphin failed to connect. Please make sure your emulator is running and \
-            load an ISO for Kirby Air Ride. Trying again in 5 seconds..."
-        )
-        self.connection_connected_game_status = "Dolphin connected successfully."
-        self.connection_initial_status = "Dolphin connection has not been initiated."
-        self.dolphin_interface = DolphinInterface()
+        self.dolphin = DolphinInterface()
         self.dolphin_sync_task: asyncio.Task[None] | None = None
-        self.dolphin_status: str = self.connection_initial_status
-        self.dolphin_reconnect_delay: int = 5
-        self.city_trial_enabled: bool = False
-        self.city_trial_goal: str = ""
-        self.city_trial_goal_checklist_amount: int = 0
-        self.city_trial_goal_achieved: bool = False
-        self.city_trial_num_locations_checked: int = 0
-        self.city_trial_patch_cap_enabled: bool = False
-        self.city_trial_patch_cap_amount: int = 0
-        self.city_trial_progressive_stadiums_enabled: bool = False
-        self.city_trial_checklist_locations: list[KARLocationData] = [
-            location_data
-            for location_data in CITY_TRIAL_LOCATION_TABLE.values()
-            if location_data.type == KARLocationType.CHECKLISTBOX
-        ]
-        self.air_ride_enabled: bool = False
-        self.air_ride_goal: str = ""
-        self.air_ride_goal_checklist_amount: int = 0
-        self.air_ride_goal_achieved: bool = False
-        self.air_ride_num_locations_checked: int = 0
-        self.air_ride_checklist_locations: list[KARLocationData] = [
-            location_data
-            for location_data in AIR_RIDE_LOCATION_TABLE.values()
-            if location_data.type == KARLocationType.CHECKLISTBOX
-        ]
-        self.top_ride_enabled: bool = False
-        self.top_ride_goal: str = ""
-        self.top_ride_goal_checklist_amount: int = 0
-        self.top_ride_goal_achieved: bool = False
-        self.top_ride_num_locations_checked: int = 0
-        self.top_ride_checklist_locations: list[KARLocationData] = [
-            location_data
-            for location_data in TOP_RIDE_LOCATION_TABLE.values()
-            if location_data.type == KARLocationType.CHECKLISTBOX
-        ]
-        self.enabled_modes: tuple[str, ...] = ()
-        self.items_queue: list[NetworkItem] = []
-        self.energy_link_enabled: bool = False
-        self.energy_link_items_queue: list[int] = []
-        self.energy_link_base_item_cost: int = 10
-        self.death_link_enabled: bool = False
-        self.death_link_cooldown: int = 120
-        self.reveal_checklists: bool = False
-        self.item_processed_index: int = 0
-        self.purchased_permanent_patches: dict[str, int] = {}
-        self.items_file_path: str = Utils.user_path("kirby_air_ride_items.json")
-        self.excluded_checkbox_bytes: tuple[int, ...] = (0x00, 0x01, 0x10, 0x11)
+        self._dolphin_was_connected: bool | None = None
 
-    async def disconnect(self, allow_autoreconnect: bool = False) -> None:
-        """
-        Disconnect the client from the server and reset game state variables.
+        # APData struct base address (resolved from static pointer).
+        self.ap_data_base: int | None = None
 
-        Args:
-            allow_autoreconnect: Allow the client to auto-reconnect to the server.
+        # Handshake progress flags.
+        self.game_ready = False
+        self.options_written = False
+        self.locations_written = False
+
+        # Slot data received from the AP server on connect.
+        self.slot_options: dict[str, Any] = {}
+
+        # Location arrays built from scout results. Per-mode u16[46], default 0xFFFF (remote).
+        self.location_arrays: dict[GameMode, list[int]] = {m: [0xFFFF] * REWARDS_PER_MODE for m in GameMode}
+        self.location_arrays_ready = False
+        # Outstanding scouted location IDs; populated when LocationScouts is sent,
+        # drained as LocationInfo replies arrive. Ready flag flips only when empty,
+        # so split replies cannot prematurely signal completion.
+        self.pending_scout_ids: set[int] = set()
+
+        # Index into items_received: next item to deliver to the game via the mailbox.
+        self.item_send_index = 0
+
+        # Last-seen sent_checks bitmask from game memory. Per mode: [word0, word1].
+        self.last_sent_checks: dict[GameMode, list[int]] = {m: [0, 0] for m in GameMode}
+
+        # Backfill: True when the client should write server-known checks the game is missing.
+        self.backfill_pending = False
+
+        # TrapLink: pending incoming traps and dedupe state.
+        self.pending_trap_receives = 0
+        # Timestamp of the most recently accepted incoming TrapLink bounce. Used
+        # to dedupe server resends (the AP server may re-broadcast a bounce on
+        # reconnect or proto-level retry, mirroring DeathLink's pattern).
+        self.last_traplink_receive = 0.0
+
+        # EnergyLink.
+        self.energy_link_enabled = False
+        # Withdrawals send `{tag: expected_subtraction_joules}` and reconcile
+        # against SetReply.original_value - value to detect server-clamped
+        # under-withdraws (pool didn't have enough). Logged for now; if we
+        # ever need refunds, the mapping is here to support it.
+        self.pending_energy_withdrawals: dict[str, int] = {}
+
+    def _reset_dolphin_state(self) -> None:
+        """Reset state tied to the Dolphin connection/mod memory.
+
+        Safe to call whenever the Dolphin hook drops or the APData pointer
+        changes — this state is rebuilt from memory on the next handshake.
         """
-        self.auth = None
-        await super().disconnect(allow_autoreconnect)
+        self.ap_data_base = None
+        self.game_ready = False
+        self.options_written = False
+        self.locations_written = False
+        self.item_send_index = 0
+        self.last_sent_checks = {m: [0, 0] for m in GameMode}
+
+    def _reset_server_state(self) -> None:
+        """Reset state tied to the AP server session (scouts, bounces).
+
+        Only call on actual server disconnect — not on Dolphin flapping —
+        since this state is populated by server packets that arrive once
+        per session (LocationInfo, RoomUpdate, bounces).
+        """
+        self.location_arrays = {m: [0xFFFF] * REWARDS_PER_MODE for m in GameMode}
+        self.location_arrays_ready = False
+        self.pending_scout_ids.clear()
+        self.backfill_pending = False
+        self.pending_trap_receives = 0
+
+    def _reset_game_state(self) -> None:
+        """Reset everything — both Dolphin and server-side state."""
+        self._reset_dolphin_state()
+        self._reset_server_state()
 
     async def server_auth(self, password_requested: bool = False) -> None:
-        """
-        Authenticate with the Archipelago server.
-
-        Args:
-            password_requested: Whether the server requires a password.
-        """
         if password_requested and not self.password:
             await super().server_auth(password_requested)
         await self.get_username()
         await self.send_connect()
 
-    def process_items_file(self, data: dict) -> None:
-        """
-        Process the data from the items file and set class variables accordingly.
-        """
-        logger.debug("Processing items file...")
-
-        # process items_processed_index
-        item_index = data.get("item_processed_index", 0)
-        if item_index in range(0, 99999):
-            logger.debug(
-                f"read file for item_processed_index value: {item_index}, setting item_processed_index to {item_index}"
-            )
-            self.item_processed_index = item_index
-        else:
-            # invalid value, assume 0
-            logger.debug("read an invalid value for item_processed_index: setting item_processed_index to default 0")
-            self.item_processed_index = 0
-
-        # process permanent patches
-        purchased_permanent_patches: dict = data.get("purchased_permanent_patches", {})
-        if purchased_permanent_patches:
-            logger.debug(f"setting permanent patches from items file: {purchased_permanent_patches}")
-        self.purchased_permanent_patches = purchased_permanent_patches
-
-        # process patch cap amount
-        patch_cap_increase: int = data.get("patch_cap_increase", self.city_trial_patch_cap_amount)
-        if patch_cap_increase:
-            logger.debug(f"setting patch cap amount from items file: {patch_cap_increase}")
-        self.city_trial_patch_cap_amount = patch_cap_increase
-
-        # process unlocked stadiums
-        unlocked_stadiums: list[str] = data.get("unlocked_stadiums", [])
-        if unlocked_stadiums:
-            logger.debug(f"setting unlocked stadiums from items file: {unlocked_stadiums}")
-        for stage_name in unlocked_stadiums:
-            # this is already the stage name
-            self.dolphin_interface.unlocked_stadiums.add(StageName(stage_name))
-
-    def read_items_file(self) -> None:
-        """
-        Reads data from the kirby air ride items file and sets data accordingly.
-        """
-        try:
-            with open(self.items_file_path, "r") as items_file:
-                data: dict = json.load(items_file)
-                if not data:
-                    logger.warning(f"No data in {self.items_file_path}. Overwriting with blank schema.")
-                    self.write_items_file()
-                else:
-                    self.process_items_file(data)
-        except OSError:
-            # file did not exist or could not be read from
-            # create new file
-            logger.warning(
-                f"{self.items_file_path} did not exist or could not be read from (possible new game), creating..."
-            )
-            self.write_items_file()
-
-    def write_items_file(self) -> None:
-        """
-        Write the data values from the current state into the items file.
-        """
-        try:
-            logger.debug(f"Writing items data to {self.items_file_path}")
-            with open(self.items_file_path, "w") as items_file:
-                data = {
-                    "item_processed_index": self.item_processed_index,
-                    "purchased_permanent_patches": self.purchased_permanent_patches,
-                    "patch_cap_increase": self.city_trial_patch_cap_amount,
-                    "unlocked_stadiums": list(self.dolphin_interface.unlocked_stadiums),
-                }
-                json.dump(data, items_file, indent=4, sort_keys=True)
-                logger.debug(f"Items data written to {self.items_file_path}")
-        except OSError as e:
-            logger.warning(f"Could not open or create {self.items_file_path} to read items information: {e}")
+    async def disconnect(self, allow_autoreconnect: bool = False) -> None:
+        self.auth = None
+        self._reset_game_state()
+        await super().disconnect(allow_autoreconnect)
 
     def on_package(self, cmd: str, args: dict[str, Any]) -> None:
-        """
-        Handle incoming packages from the server.
-
-        Args:
-            cmd: The command received from the server.
-            args: The command arguments.
-        """
         if cmd == "Connected":
-            if "death_link" in args["slot_data"]:
-                self.death_link_enabled = bool(args["slot_data"]["death_link"])
-                Utils.async_start(self.update_death_link(self.death_link_enabled))
+            self._handle_connected(args)
+        elif cmd == "RoomUpdate":
+            if "checked_locations" in args:
+                self.backfill_pending = True
+        elif cmd == "Bounced":
+            self._handle_bounced(args)
+        elif cmd == "LocationInfo":
+            self._handle_location_info(args)
+        elif cmd == "SetReply":
+            self._handle_set_reply(args)
+        elif cmd == "InvalidPacket":
+            self._handle_invalid_packet(args)
 
-            if "energy_link" in args["slot_data"]:
-                self.energy_link_enabled = bool(args["slot_data"]["energy_link"])
-                if self.energy_link_enabled:
-                    self.set_notify(f"EnergyLink{self.team}")
-                    if self.ui:
-                        self.ui.enable_energy_link()
-                    logger.info("EnergyLink enabled.")
-
-            if "reveal_checklists" in args["slot_data"]:
-                self.reveal_checklists = bool(args["slot_data"]["reveal_checklists"])
-
-            if "city_trial_goal" in args["slot_data"]:
-                self.city_trial_goal = args["slot_data"]["city_trial_goal"]
-                if self.city_trial_goal != CityTrialGoal.option_none:
-                    self.city_trial_enabled = True
-
-            if "air_ride_goal" in args["slot_data"]:
-                self.air_ride_goal = args["slot_data"]["air_ride_goal"]
-                if self.air_ride_goal != AirRideGoal.option_none:
-                    self.air_ride_enabled = True
-
-            if "top_ride_goal" in args["slot_data"]:
-                self.top_ride_goal = args["slot_data"]["top_ride_goal"]
-                if self.top_ride_goal != TopRideGoal.option_none:
-                    self.top_ride_enabled = True
-
-            if "city_trial_checklist_amount" in args["slot_data"]:
-                self.city_trial_goal_checklist_amount = int(args["slot_data"]["city_trial_checklist_amount"])
-
-            if "air_ride_checklist_amount" in args["slot_data"]:
-                self.air_ride_goal_checklist_amount = int(args["slot_data"]["air_ride_checklist_amount"])
-
-            if "top_ride_checklist_amount" in args["slot_data"]:
-                self.top_ride_goal_checklist_amount = int(args["slot_data"]["top_ride_checklist_amount"])
-
-            if "city_trial_progressive_patch_caps" in args["slot_data"]:
-                self.city_trial_patch_cap_enabled = bool(args["slot_data"]["city_trial_progressive_patch_caps"])
-
-            if "city_trial_patch_cap_amount" in args["slot_data"]:
-                self.city_trial_patch_cap_amount = int(args["slot_data"]["city_trial_patch_cap_amount"])
-                logger.debug(f"set city trial patch cap to {self.city_trial_patch_cap_amount} from player options")
-
-            if "city_trial_progressive_stadiums" in args["slot_data"]:
-                self.city_trial_progressive_stadiums_enabled = bool(
-                    args["slot_data"]["city_trial_progressive_stadiums"]
-                )
-
-            self.enabled_modes = tuple(
-                mode for mode in ("city_trial", "air_ride", "top_ride") if getattr(self, f"{mode}_enabled")
-            )
-
-            # reset local location checks and goals achieved so that a client that has already won its game but
-            # hasn't closed can't connect to a server and accidentally auto-win. This doesn't solve the problem
-            # of using a save file that already has won, but does solve this smaller problem.
-            self.locations_checked.clear()
-            self.city_trial_goal_achieved = False
-            self.air_ride_goal_achieved = False
-            self.top_ride_goal_achieved = False
-            self.finished_game = False
-            # also reset unlocked stadiums for the same reason
-            self.dolphin_interface.unlocked_stadiums.clear()
-
-            # if "reveal checklists" option is set, loop through the enabled checklists and set the visible bit.
-            if self.reveal_checklists:
-                if self.city_trial_enabled:
-                    for location_data in CITY_TRIAL_LOCATION_TABLE.values():
-                        if location_data.mem_address is not None:
-                            current_val = self.dolphin_interface.read_byte(location_data.mem_address)
-                            # set visible bit on the current val int
-                            new_int = int(current_val | CheckboxFlags.VISIBLE)
-                            self.dolphin_interface.write_byte(location_data.mem_address, new_int)
-                if self.air_ride_enabled:
-                    for location_data in AIR_RIDE_LOCATION_TABLE.values():
-                        if location_data.mem_address is not None:
-                            current_val = self.dolphin_interface.read_byte(location_data.mem_address)
-                            # set visible bit on the current val int
-                            new_int = int(current_val | CheckboxFlags.VISIBLE)
-                            self.dolphin_interface.write_byte(location_data.mem_address, new_int)
-                if self.top_ride_enabled:
-                    for location_data in TOP_RIDE_LOCATION_TABLE.values():
-                        if location_data.mem_address is not None:
-                            current_val = self.dolphin_interface.read_byte(location_data.mem_address)
-                            # set visible bit on the current val int
-                            new_int = int(current_val | CheckboxFlags.VISIBLE)
-                            self.dolphin_interface.write_byte(location_data.mem_address, new_int)
-
-            # sync the local checklist state with the locations that have been checked according to the server.
-            # this is useful for same-slot co-op, recovering from losing a save file, and picking up a slot in an
-            # async. This is also needed to support other players in a multiworld collecting their items from our world.
-            if len(args["checked_locations"]) > 0:
-                location_table = CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE
-                for location_int in args["checked_locations"]:
-                    location_name = self.location_names.lookup_in_game(location_int)
-                    mem_address = location_table[location_name].mem_address
-                    if mem_address is not None:
-                        current_val = self.dolphin_interface.read_byte(mem_address)
-                        # only unlock the checkbox if it isn't unlocked yet
-                        if current_val in self.excluded_checkbox_bytes:
-                            new_val = int(current_val | CheckboxFlags.FLAGGED_FOR_UNLOCK | CheckboxFlags.VISIBLE)
-                            self.dolphin_interface.write_byte(mem_address, new_val)
-
-            # read and process the items file and set class vars accordingly
-            self.read_items_file()
-
-            # print the goal(s) to the player
-            goals = []
-            if self.city_trial_enabled:
-                if self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks:
-                    goals.append(f"{self.city_trial_goal}: {self.city_trial_goal_checklist_amount}")
-                else:
-                    goals.append(f"{self.city_trial_goal}")
-            if self.air_ride_enabled:
-                if self.air_ride_goal == AirRideGoal.option_n_checklist_blocks:
-                    goals.append(f"{self.air_ride_goal}: {self.air_ride_goal_checklist_amount}")
-                else:
-                    goals.append(f"{self.air_ride_goal}")
-            if self.top_ride_enabled:
-                if self.top_ride_goal == TopRideGoal.option_n_checklist_blocks:
-                    goals.append(f"{self.top_ride_goal}: {self.top_ride_goal_checklist_amount}")
-                else:
-                    goals.append(f"{self.top_ride_goal}")
-
-            logger.info(f"Goal(s): {goals}")
-
-        # ReceivedItems is a list of items that we have received from the server that are in a guaranteed order.
-        # {"index": 0, "items": [NetworkItem, NetworkItem, ...]}
-        # if we have a starting inventory or are returning to a game where we have already received items,
-        # a ReceivedItems packet will be sent alongside Connected, with index = 0. This is the whole of items received.
-        # This will include items we've received while being offline.
-        if cmd == "ReceivedItems":
-            logger.debug(
-                f"Got ReceivedItems packet: {args}, \
-                    ({[self.item_names.lookup_in_game(item.item) for item in args['items']]})"
-            )
-            new_items = list(self.items_received[self.item_processed_index :])
-            logger.debug(
-                f"adding new items to the queue: {[self.item_names.lookup_in_game(item.item) for item in new_items]}"
-            )
-            self.items_queue.extend(new_items)
-            self.item_processed_index = len(self.items_received)
-            self.write_items_file()
-
-        # SetReply is sent when a server data storage key was updated by us with Set(), and we requested a
-        # reply afterwards. Also received when SetNotify was requested for a certain key.
-        if cmd == "SetReply":
-            logger.debug(f"Got SetReply from the server: {args}")
-
-    def on_deathlink(self, data: dict[str, Any]) -> None:
-        """
-        Handle a DeathLink event.
-
-        Args:
-            data: The data associated with the DeathLink event.
-        """
-        super().on_deathlink(data)
-        # TODO: queue up a deathlink if the player is not in a stage when it happens
-        if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
-            self.dolphin_interface.give_death()
-
-    async def check_death(self) -> None:
-        """
-        Check if the player is currently dead in-game.
-        If DeathLink is on, notify the server of the player's death.
-        """
-        if not self.dolphin_interface.check_alive() and self.slot is not None:
-            logger.debug("player is not alive")
-            # in city trial, give the player 2 minutes to get back on an air ride machine until death is sent again
-            # TODO: configurable option for length of time?
-            # TODO: player can keep sending death by not getting on a vehicle. turn this into a trigger
-            # TODO: currently, receiving a death also will reset this cooldown. might want to separate this from
-            # self.last_death_link
-            if time.time() >= self.last_death_link + self.death_link_cooldown:
-                await self.send_death(self.player_names[self.slot] + " exploded.")
-            else:
-                logger.debug("did not send death (cooldown not elapsed)")
-
-    async def send_victory(self) -> None:
-        """Send a message to the server that the player has completed their goal."""
-        await self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}])
-
-    async def send_check_locations(self) -> None:
-        """
-        Check all locations and notify the server of any newly checked locations.
-        If the goal has been completed, notify the server of victory.
-        """
-        # check City Trial Checklist if City Trial is enabled
-        if self.city_trial_enabled:
-            self.city_trial_num_locations_checked = 0
-            for location_data in self.city_trial_checklist_locations:
-                if location_data.mem_address is not None and location_data.code is not None:
-                    checkbox_byte = self.dolphin_interface.read_byte(location_data.mem_address)
-                    if checkbox_byte not in self.excluded_checkbox_bytes:
-                        self.city_trial_num_locations_checked += 1
-                        self.locations_checked.add(location_data.code)
-
-        # check Air Ride Checklist if Air Ride is enabled
-        if self.air_ride_enabled:
-            self.air_ride_num_locations_checked = 0
-            for location_data in self.air_ride_checklist_locations:
-                if location_data.mem_address is not None and location_data.code is not None:
-                    checkbox_byte = self.dolphin_interface.read_byte(location_data.mem_address)
-                    if checkbox_byte not in self.excluded_checkbox_bytes:
-                        self.air_ride_num_locations_checked += 1
-                        self.locations_checked.add(location_data.code)
-
-        # check Top Ride Checklist if Top Ride is enabled
-        if self.top_ride_enabled:
-            self.top_ride_num_locations_checked = 0
-            for location_data in self.top_ride_checklist_locations:
-                if location_data.mem_address is not None and location_data.code is not None:
-                    checkbox_byte = self.dolphin_interface.read_byte(location_data.mem_address)
-                    if checkbox_byte not in self.excluded_checkbox_bytes:
-                        self.top_ride_num_locations_checked += 1
-                        self.locations_checked.add(location_data.code)
-
-        # determine if overall goal has been achieved
-        if not self.finished_game:
-            await self.determine_goal_achieved()
-
-        # Send newly checked locations to the server
-        new_locations_checked = await self.check_locations(self.locations_checked)
-        if new_locations_checked:
-            location_names = [self.location_names.lookup_in_game(location_id) for location_id in new_locations_checked]
-            logger.debug(f"New locations checked and sent to server: {new_locations_checked} ({location_names})")
-
-    async def determine_goal_achieved(self) -> None:
-        # check city trial goals
-        if self.city_trial_enabled and not self.city_trial_goal_achieved:
-            # check for victory condition location
-            if self.city_trial_goal != CityTrialGoal.option_n_checklist_blocks:
-                goal_location_data = CITY_TRIAL_LOCATION_TABLE[self.city_trial_goal]
-                if goal_location_data.code in self.locations_checked:
-                    if goal_location_data.mem_address is not None:
-                        checkbox_byte = self.dolphin_interface.read_byte(goal_location_data.mem_address)
-                        if checkbox_byte & CheckboxFlags.FILLER_PURPLE.value:
-                            # if the checkbox is a goal checkbox and checked off via checkbox filler, reset it
-                            # to locked and do not add it to locations_checked
-                            self.locations_checked.remove(goal_location_data.code)
-                            self.dolphin_interface.write_byte(
-                                goal_location_data.mem_address, int(CheckboxFlags.VISIBLE)
-                            )
-                            # refund checkbox filler
-                            self.dolphin_interface.apply_checkbox_filler(CheckboxFillerType.CITY_TRIAL_CHECKBOX_FILLER)
-                        else:
-                            logger.info(f"Victory location found for City Trial: {self.city_trial_goal}")
-                            self.city_trial_goal_achieved = True
-
-            # check for n checklist blocks goal victory
-            if (
-                self.city_trial_goal == CityTrialGoal.option_n_checklist_blocks
-                and self.city_trial_num_locations_checked >= self.city_trial_goal_checklist_amount
-            ):
-                logger.info(
-                    f"N Checklist Blocks Goal Acheived for City Trial - locations checked: \
-                        {self.city_trial_num_locations_checked} goal amount: {self.city_trial_goal_checklist_amount}",
-                )
-                self.city_trial_goal_achieved = True
-
-        # check air ride goals
-        if self.air_ride_enabled and not self.air_ride_goal_achieved:
-            # check for victory condition location
-            if self.air_ride_goal != AirRideGoal.option_n_checklist_blocks:
-                goal_location_data = AIR_RIDE_LOCATION_TABLE[self.air_ride_goal]
-                if goal_location_data.code in self.locations_checked:
-                    if goal_location_data.mem_address is not None:
-                        checkbox_byte = self.dolphin_interface.read_byte(goal_location_data.mem_address)
-                        if checkbox_byte & CheckboxFlags.FILLER_PURPLE.value:
-                            # if the checkbox is a goal checkbox and checked off via checkbox filler, reset it
-                            # to locked and do not add it to locations_checked
-                            self.locations_checked.remove(goal_location_data.code)
-                            self.dolphin_interface.write_byte(
-                                goal_location_data.mem_address, int(CheckboxFlags.VISIBLE)
-                            )
-                            # refund checkbox filler
-                            self.dolphin_interface.apply_checkbox_filler(CheckboxFillerType.AIR_RIDE_CHECKBOX_FILLER)
-                        else:
-                            logger.info(f"Victory location found for Air Ride: {self.air_ride_goal}")
-                            self.air_ride_goal_achieved = True
-
-            # check for n checklist blocks goal victory
-            if (
-                self.air_ride_goal == AirRideGoal.option_n_checklist_blocks
-                and self.air_ride_num_locations_checked >= self.air_ride_goal_checklist_amount
-            ):
-                logger.info(
-                    f"N Checklist Blocks Goal Acheived for Air Ride - locations checked: \
-                        {self.air_ride_num_locations_checked} goal amount: {self.air_ride_goal_checklist_amount}",
-                )
-                self.air_ride_goal_achieved = True
-
-        # check top ride goals
-        if self.top_ride_enabled and not self.top_ride_goal_achieved:
-            # check for victory condition location
-            if self.top_ride_goal != TopRideGoal.option_n_checklist_blocks:
-                goal_location_data = TOP_RIDE_LOCATION_TABLE[self.top_ride_goal]
-                if goal_location_data.code in self.locations_checked:
-                    if goal_location_data.mem_address is not None:
-                        checkbox_byte = self.dolphin_interface.read_byte(goal_location_data.mem_address)
-                        if checkbox_byte & CheckboxFlags.FILLER_PURPLE.value:
-                            # if the checkbox is a goal checkbox and checked off via checkbox filler, reset it
-                            # to locked and do not add it to locations_checked
-                            self.locations_checked.remove(goal_location_data.code)
-                            self.dolphin_interface.write_byte(
-                                goal_location_data.mem_address, int(CheckboxFlags.VISIBLE)
-                            )
-                            # refund checkbox filler
-                            self.dolphin_interface.apply_checkbox_filler(CheckboxFillerType.TOP_RIDE_CHECKBOX_FILLER)
-                        else:
-                            logger.info(f"Victory location found for Top Ride: {self.top_ride_goal}")
-                            self.top_ride_goal_achieved = True
-
-            # check for n checklist blocks goal victory
-            if (
-                self.top_ride_goal == TopRideGoal.option_n_checklist_blocks
-                and self.top_ride_num_locations_checked >= self.top_ride_goal_checklist_amount
-            ):
-                logger.info(
-                    f"N Checklist Blocks Goal Acheived for Top Ride - locations checked: \
-                        {self.top_ride_num_locations_checked} goal amount: {self.top_ride_goal_checklist_amount}",
-                )
-                self.top_ride_goal_achieved = True
-
-        # check for game complete (completed goals for all enabled modes)
-        if all(getattr(self, f"{mode}_goal_achieved") for mode in self.enabled_modes):
-            self.finished_game = True
-            await self.send_victory()
-
-    def give_item(self, item: NetworkItem) -> NetworkItem | None:
-        """
-        Give an item to the player in-game. Returns the item if it was successfully given.
-
-        Args:
-            item: NetworkItem
-        """
-        item_name = self.item_names.lookup_in_game(item.item)
-        item_data = ITEM_TABLE[item_name]
-
-        match item_data.type:
-            case KARItemType.PATCH.value:
-                if self.dolphin_interface.current_stage in (
-                    StageName.CITY_TRIAL,
-                    StageName.STADIUM_DESTRUCTION_DERBY_4,
-                    StageName.STADIUM_DESTRUCTION_DERBY_5,
-                ):
-                    logger.debug("in patch item give...")
-                    patch_type = get_patch_type_from_item_name(item_name)
-                    logger.debug(f"giving patch type: {patch_type}")
-                    if patch_type is not None:
-                        stat_type = patch_type_to_stat_type(patch_type)
-                        logger.debug(f"patch type has stat type of {stat_type}")
-                        delta = 1 if "Up" in patch_type.value else -1
-                        if stat_type is not None:
-                            self.dolphin_interface.increment_player_patch_stat(stat_type, delta)
-                            return item
-                        # stat_type returned None, either invalid or All patch type
-                        if "All" in patch_type.value:
-                            for stat in self.dolphin_interface.player_1_patches:
-                                logger.debug(f"incrementing stat {stat_type} by {delta}")
-                                self.dolphin_interface.increment_player_patch_stat(stat, delta)
-                            return item
-                        logger.debug(f"Failed to parse stat type from patch type: {patch_type}")
-                        return item
-                    logger.debug(f"Failed to parse patch type from item name: {item_name}")
-                    return item
-            case KARItemType.PATCH_CAP_INCREASE.value:
-                logger.debug("in patch cap increase item give...")
-                patch_cap_increase_type = get_patch_cap_increase_type_from_item_name(item_name)
-                if patch_cap_increase_type is not None:
-                    self.city_trial_patch_cap_amount += 1
-                    logger.debug(f"Patch cap increased to {self.city_trial_patch_cap_amount}")
-                else:
-                    logger.debug(f"Failed to parse patch cap increase type from item name: {item_name}")
-                return item
-            case KARItemType.CHECKBOX_FILLER.value:
-                logger.debug("in checkbox filler item give...")
-                checkbox_filler_type = get_checkbox_filler_type_from_item_name(item_name)
-                if checkbox_filler_type is not None:
-                    logger.debug(f"applying checkbox filler type: {checkbox_filler_type}")
-                    self.dolphin_interface.apply_checkbox_filler(checkbox_filler_type)
-                else:
-                    logger.debug(f"Failed to parse checkbox filler type from item name: {item_name}")
-                return item
-            case KARItemType.PROGRESSIVE_STADIUM.value:
-                logger.debug("in progressive stadium item give...")
-                prog_stadium_type = get_progressive_stadium_unlock_type_from_item_name(item_name)
-                if prog_stadium_type is not None:
-                    stage_name = get_stage_name_from_stadium_unlock_type(prog_stadium_type)
-                    self.dolphin_interface.unlocked_stadiums.add(stage_name)
-                else:
-                    logger.debug(f"invalid progressive stadium type: {item_name}")
-                return item
-            case KARItemType.EFFECT.value:
-                if self.dolphin_interface.current_stage in (
-                    StageName.CITY_TRIAL,
-                    StageName.STADIUM_DESTRUCTION_DERBY_1,
-                    StageName.STADIUM_DESTRUCTION_DERBY_2,
-                    StageName.STADIUM_DESTRUCTION_DERBY_3,
-                    StageName.STADIUM_VS_KING_DEDEDE,
-                    StageName.STADIUM_KIRBY_MELEE_1,
-                    StageName.STADIUM_KIRBY_MELEE_2,
-                ):
-                    logger.debug("in effect item give...")
-                    effect_type = get_effect_type_from_item_name(item_name)
-                    if effect_type is not None:
-                        self.dolphin_interface.apply_effect_item(effect_type)
-                    else:
-                        logger.debug(f"Failed to parse effect type from item name: {item_name}")
-                    return item
-        return None
-
-    async def give_items(self, items: list[NetworkItem]) -> list[NetworkItem]:
-        """
-        Give the player the list of items. Returns only the list of items successfully given.
-
-        Args:
-            items: The list of NetworkItems from the server.
-        """
-        given_items: list[NetworkItem] = []
-        # create a copy of the list to avoid iterating over a possibly changing item list
-        for item in list(items):
-            item_given = self.give_item(item)
-            if item_given is not None:
-                given_items.append(item_given)
-
-        # write to the items file to ensure we've saved items that were given
-        if given_items:
-            self.write_items_file()
-
-        return given_items
-
-    async def shutdown(self) -> None:
-        """Shutdown the client and clean up resources."""
-        if self.dolphin_interface.is_hooked():
-            self.dolphin_interface.unhook()
-
-        await super().shutdown()
-
-    async def send_energy(self, value: float) -> None:
-        """
-        Adds the given amount of energy to energylink.
-        """
-        Utils.async_start(
-            self.send_msgs(
-                [{"cmd": "Set", "key": f"EnergyLink{self.team}", "operations": [{"operation": "add", "value": value}]}]
-            )
+    def _handle_invalid_packet(self, args: dict[str, Any]) -> None:
+        """Server rejected a packet we sent. InvalidPacket doesn't echo the offending
+        packet's contents, so for tagged Set flows we can't pinpoint which tag failed.
+        Drop all pending_energy_withdrawals to prevent indefinite accounting leak; the cost is
+        losing under-subtraction warnings for any in-flight withdrawal at the time."""
+        logger.error(
+            "[KAR] AP server rejected %s: %s",
+            args.get("type"),
+            args.get("text"),
         )
+        if args.get("type") == "Set" and self.pending_energy_withdrawals:
+            logger.warning(
+                "[KAR] Dropping %d pending EnergyLink withdrawals due to schema error.",
+                len(self.pending_energy_withdrawals),
+            )
+            self.pending_energy_withdrawals.clear()
 
-    async def remove_energy(self, value: int) -> None:
+    def _handle_set_reply(self, args: dict[str, Any]) -> None:
+        """Reconcile tagged EnergyLink withdrawals against the server's actual subtraction.
+
+        For a withdrawal (negative add + max:0), `original_value - value` is the
+        amount the server actually subtracted from the pool. If less than what
+        the mod asked to withdraw, the pool ran out — log the discrepancy.
         """
-        Removes the given amount of energy from energylink.
-        """
-        if self.current_energy_link_value is not None:
+        tag = args.get("tag")
+        if not tag or tag not in self.pending_energy_withdrawals:
+            return
+        expected = self.pending_energy_withdrawals.pop(tag)
+        original_value = args.get("original_value")
+        value = args.get("value")
+        if original_value is None or value is None:
+            return
+        actual = original_value - value
+        if actual < expected:
+            shortfall = expected - actual
+            logger.warning(
+                "[EnergyLink] withdrawal under-subtracted by %d J "
+                "(asked %d, got %d). Pool was lower than the mod expected.",
+                shortfall,
+                expected,
+                actual,
+            )
+
+    def _handle_connected(self, args: dict[str, Any]) -> None:
+        sd = args.get("slot_data", {})
+        self.slot_options = sd
+
+        # Reset connection-dependent state so the handshake re-runs.
+        # `finished_game` is intentionally NOT reset: the base CommonClient re-sends
+        # StatusUpdate(CLIENT_GOAL) on reconnect iff it stays True, which is how a
+        # post-goal disconnect/reconnect is recovered. _check_goal owns the flag.
+        self.options_written = False
+        self.locations_written = False
+        self.location_arrays = {m: [0xFFFF] * REWARDS_PER_MODE for m in GameMode}
+        self.location_arrays_ready = False
+        self.pending_scout_ids.clear()
+        self.backfill_pending = True
+
+        # DeathLink setup (initial toggle from slot options).
+        Utils.async_start(self.update_death_link(bool(sd.get("death_link", 0))))
+
+        # EnergyLink setup.
+        self.energy_link_enabled = bool(sd.get("energy_link", 0))
+        if self.energy_link_enabled:
+            self.set_notify(f"EnergyLink{self.team}")
+            if self.ui:
+                self.ui.enable_energy_link()
+
+        # TrapLink setup (seed from yaml; in-game menu may override later via
+        # _poll_menu_toggles). Independent of trap_chance — players can
+        # participate in TrapLink without having traps in their own pool.
+        trap_enabled = bool(sd.get("trap_link", 0))
+        Utils.async_start(self._update_traplink_tags(trap_enabled))
+
+        # Scout all our locations to build the reward→checkbox mapping.
+        all_locs = list(self.missing_locations | self.checked_locations)
+        if all_locs:
+            self.pending_scout_ids = set(all_locs)
             Utils.async_start(
                 self.send_msgs(
                     [
                         {
-                            "cmd": "Set",
-                            "key": f"EnergyLink{self.team}",
-                            "operations": [{"operation": "add", "value": -value}, {"operation": "max", "value": 0}],
+                            "cmd": "LocationScouts",
+                            "locations": all_locs,
+                            "create_as_hint": 0,
                         }
                     ]
                 )
             )
+        else:
+            self.location_arrays_ready = True
 
-    async def update_energy_link(self) -> None:
-        """
-        Check if the player has created energy and update the energy link value accordingly.
-        Additionally, add spent items to the item queue.
+        # Log goals for the player.
+        goals = []
+        for mode_name, goal_key, amount_key in [
+            ("City Trial", "city_trial_goal", "city_trial_checklist_amount"),
+            ("Air Ride", "air_ride_goal", "air_ride_checklist_amount"),
+            ("Top Ride", "top_ride_goal", "top_ride_checklist_amount"),
+        ]:
+            goal_val = GoalKind(int(sd.get(goal_key, GoalKind.NONE)))
+            if goal_val != GoalKind.NONE:
+                goal_str = GOAL_NAMES.get(goal_val, str(int(goal_val)))
+                if goal_val == GoalKind.N_CHECKLIST:
+                    goal_str += f" ({int(sd.get(amount_key, 60))})"
+                goals.append(f"{mode_name}: {goal_str}")
+        if goals:
+            logger.info(f"Goal(s): {', '.join(goals)}")
 
-        Energylink value is increased for each patch a player collects and for each object destroyed in City Trial.
-        """
-        energy = 0
-
-        if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
-            # TODO: fix this giving energy from patches received from /energylink_spend
-            # TODO: fix this giving energy for permanent patches when transitioning into City Trial
-            diff = 0
-            for stat_type, stat_count in self.dolphin_interface.player_1_patches.items():
-                if stat_count > self.dolphin_interface.player_1_patches_old[stat_type]:
-                    diff += stat_count - self.dolphin_interface.player_1_patches_old[stat_type]
-            if diff > 0:
-                energy += diff
-
-            # give energy for destroying things
-            old_count = self.dolphin_interface.destruction_count
-            self.dolphin_interface.update_destruction_count()
-            if self.dolphin_interface.destruction_count > old_count:
-                # send .1 Joules of energy for every thing destroyed
-                destruction_energy = (self.dolphin_interface.destruction_count - old_count) / 10
-                energy += destruction_energy
-
-        # send energy to the server
-        if energy > 0:
-            Utils.async_start(self.send_energy(energy))
-
-    async def energy_link_spend(self, item_name: str, amount: str) -> None:
-        """
-        Spends EnergyLink energy on the requested amount of an item.
-        """
-
-        if self.current_energy_link_value is None:
-            logger.info("No energy in pool.")
-            return
-
-        if int(amount) > 20:
-            logger.info("The max amount of items you can purchase at once is 20.")
-            return
-
-        item_data = ITEM_TABLE.get(item_name)
-        if not item_data or not item_data.code:
-            logger.info(f"Invalid item name: {item_name}")
-            return
-
-        # base cost
-        cost = self.energy_link_base_item_cost * int(amount)
-
-        # determine costs for specific items
-        match item_data.type:
-            case KARItemType.PATCH:
-                patch_type = get_patch_type_from_item_name(item_name)
-                if patch_type is not None:
-                    if patch_type in (PatchType.ALL_UP, PatchType.ALL_DOWN):
-                        # ALL patches cost 9x as much
-                        cost *= 9
-                    # set purchased dict for the permanent patch type
-                    if "Permanent" in patch_type.value:
-                        cost *= 20
-            case KARItemType.CHECKBOX_FILLER:
-                cost *= 150
-            case KARItemType.PATCH_CAP_INCREASE:
-                cost *= 150
-            case KARItemType.PROGRESSIVE_STADIUM:
-                logger.info(f"Cannot buy a {KARItemType.PROGRESSIVE_STADIUM} item with energy.")
+    def _handle_bounced(self, args: dict[str, Any]) -> None:
+        tags = args.get("tags", [])
+        # Defensive: AP server filters Bounced by tag membership, but double-check
+        # in case of a race during tag updates. Also self-source filter so our own
+        # outgoing traps don't loop back. We intentionally ignore the incoming
+        # `trap_name` field — KAR's receive path picks a random local trap from
+        # its own pool (see docs/traplink-send.md) since cross-world trap names
+        # don't have a clean 1:1 mapping to our trap kinds.
+        if "TrapLink" in self.tags and "TrapLink" in tags:
+            data = args.get("data", {})
+            if self.slot is None or data.get("source") == self.player_names.get(self.slot, ""):
                 return
+            # Dedupe server resends by payload timestamp. Same pattern as DeathLink
+            # at CommonClient.py:1092. Missing or non-numeric `time` falls through
+            # to accept-once-then-block (won't match the float comparison again
+            # until a sender with a real timestamp arrives).
+            t = data.get("time")
+            if isinstance(t, (int, float)) and t == self.last_traplink_receive:
+                return
+            if isinstance(t, (int, float)):
+                self.last_traplink_receive = t
+            self.pending_trap_receives += 1
 
-        if self.current_energy_link_value < cost:
-            logger.info(
-                f"Not enough energy. Current amount: {self.current_energy_link_value:.2f} \
-                    Need: {cost} for {amount} {item_name}."
-            )
-            return
+    def _handle_location_info(self, args: dict[str, Any]) -> None:
+        """Build location arrays from scout results.
 
-        # save purchased permanent patches
-        if item_data.type == KARItemType.PATCH and "Permanent" in item_name:
-            if self.purchased_permanent_patches.get(item_name, False):
-                self.purchased_permanent_patches[item_name] += int(amount)
-            else:
-                self.purchased_permanent_patches[item_name] = int(amount)
-            self.write_items_file()
-
-        self.energy_link_items_queue.extend([item_data.code] * int(amount))
-        Utils.async_start(self.remove_energy(cost))
-        logger.info(f"Spent {cost} energy on {amount} {item_name}.")
-
-    def make_gui(self):
+        For each of our checklist reward items placed at a location in our world,
+        record which checkbox it maps to.  Everything else stays 0xFFFF (remote).
         """
-        Initialize the GUI for Kirby Air Ride client.
+        for raw in args["locations"]:
+            item = NetworkItem(*raw) if not isinstance(raw, NetworkItem) else raw
+            # Drain outstanding scout IDs regardless of whether the item is a reward,
+            # since LocationScouts requested every location we own.
+            self.pending_scout_ids.discard(item.location)
+            # Only care about checklist rewards belonging to us.
+            if item.player != self.slot:
+                continue
+            decoded = reward_code_to_mode_index(item.item)
+            if decoded is None:
+                continue
+            reward_mode, reward_index = decoded
+            mapping = location_code_to_mode_clear(item.location)
+            if mapping is not None and reward_index < REWARDS_PER_MODE:
+                target_mode, clear_kind = mapping
+                self.location_arrays[reward_mode][reward_index] = (target_mode << 8) | clear_kind
 
-        Returns:
-            The client's GUI.
-        """
-        ui = super().make_gui()
-        ui.base_title = "Archipelago Kirby Air Ride Client"
-        return ui
+        if not self.pending_scout_ids:
+            self.location_arrays_ready = True
+            logger.info("Location data built from scout results.")
 
-    async def handle_connected_state(self) -> None:
-        """Handle the logic when Dolphin is connected."""
-        if self.slot is None:
-            return
+    async def _update_traplink_tags(self, enabled: bool) -> None:
+        old = self.tags.copy()
+        if enabled:
+            self.tags.add("TrapLink")
+        else:
+            self.tags.discard("TrapLink")
+        if old != self.tags and self.server and not self.server.socket.closed:
+            await self.send_msgs([{"cmd": "ConnectUpdate", "tags": self.tags}])
 
-        # update current_stage and check if a transition into a stage has happend
-        _, transition_trigger = self.dolphin_interface.check_transition()
+    def on_deathlink(self, data: dict[str, Any]) -> None:
+        super().on_deathlink(data)
+        if "DeathLink" in self.tags and self.ap_data_base is not None:
+            self.dolphin.write_u32(self._addr(MemoryAddress.DEATHLINK_RECEIVE), 1)
 
-        # handle stage transitions
-        if transition_trigger:
-            # handle the trigger events needed for transitioning into city trial
-            # TODO: fix this giving the player items again if they close and reopen the client.
-            if self.dolphin_interface.current_stage == StageName.CITY_TRIAL:
-                logger.debug("queueing permanent patches...")
-                # skip adding permanent patches to the item queue if they are already in it (from ReceivedItems)
-                permanent_patches = [
-                    item
-                    for item in self.items_received
-                    if "Permanent" in self.item_names.lookup_in_game(item.item) and item not in self.items_queue
-                ]
-
-                logger.debug("queueing purchased permanent patches...")
-                for patch_name, patch_amount in self.purchased_permanent_patches.items():
-                    item_data = ITEM_TABLE.get(patch_name)
-                    if not item_data or not item_data.code:
-                        logger.debug(f"Invalid item name: {patch_name}")
-                        return
-                    item = NetworkItem(item_data.code, 0, 0, 0)
-                    permanent_patches.extend([item] * patch_amount)
-
-                self.items_queue.extend(permanent_patches)
-
-                # set the stadium event. if the game-chosen stadium (which will either be random or selected at
-                # random via category specified by the player in city trial settings) is one that is already unlocked,
-                # no need to choose one here. if it is locked, still select randomly from the category of stadium that
-                # was selected.
-                if self.city_trial_progressive_stadiums_enabled:
-                    _, current_stage_name = self.dolphin_interface.get_city_trial_current_stadium()
-                    if current_stage_name not in self.dolphin_interface.unlocked_stadiums:
-                        logger.debug(f"game chose a locked stadium: {current_stage_name.value}")
-                        # get the unlocked stadiums that are in the same category as the current stadium
-                        category_unlocks = [
-                            stage
-                            for stage in self.dolphin_interface.unlocked_stadiums
-                            if " ".join(current_stage_name.split(" ")[1:-1]) in stage.value
-                        ]
-                        if category_unlocks:
-                            logger.debug(
-                                f"choosing a random unlocked stadium from the same category: \
-                                      {[stage.value for stage in category_unlocks]}"
-                            )
-                            rand_stadium = random.choice(category_unlocks)
-                            logger.debug(f"setting stadium to {rand_stadium.value}")
-                            self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
-                        else:
-                            logger.debug("no unlocked stadiums in the same category.")
-                            try:
-                                logger.debug(
-                                    f"choosing a random unlocked stadium from: \
-                                        {list(self.dolphin_interface.unlocked_stadiums)}"
-                                )
-                                rand_stadium = random.choice(list(self.dolphin_interface.unlocked_stadiums))
-                                logger.debug(f"setting stadium to {rand_stadium.value}")
-                                self.dolphin_interface.set_city_trial_current_stadium(rand_stadium)
-                            except IndexError:
-                                # no stadiums unlocked yet, just use the game-chosen value in this case
-                                logger.debug(
-                                    f"no stadiums were unlocked, leaving the game-set value of \
-                                        {current_stage_name.value}"
-                                )
-
-        # set the stadium event at the end of the current trial. will only choose randomly from unlocked stadiums
-        if self.city_trial_progressive_stadiums_enabled:
-            # update the unlocked stadiums in-game to reflect our local state. this does not require the player
-            # to be in a stage
-            self.dolphin_interface.update_unlocked_stadiums()
-
-        # update player patch counts and handle patch caps if player is in City Trial
-        if self.dolphin_interface.current_stage == StageName.CITY_TRIAL and self.dolphin_interface.transition_waited():
-            self.dolphin_interface.update_player_patch_counts()
-
-            # reset the values for each patch to the cap if they are over the cap
-            if self.city_trial_patch_cap_enabled:
-                for stat_type, stat_count in self.dolphin_interface.player_1_patches.items():
-                    # +2 offset for everything but HP
-                    offset = 2 if stat_type != StatType.HP else 0
-                    if stat_count + offset > self.city_trial_patch_cap_amount:
-                        diff = int(self.city_trial_patch_cap_amount - (stat_count + offset))
-                        logger.debug(
-                            f"incrementing player stat {stat_type} by {diff} due to being over the cap of \
-                            {self.city_trial_patch_cap_amount}"
-                        )
-                        self.dolphin_interface.increment_player_patch_stat(stat_type, diff)
-
-        # handle energylink
-        if self.energy_link_enabled:
-            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
-                await self.update_energy_link()
-
-            # if there are items that have been aquired by spending energy, queue those to be received
-            # spending does not require the player to be in a stage
-            if len(self.energy_link_items_queue) > 0:
-                for item_id in self.energy_link_items_queue:
-                    self.items_queue.append(NetworkItem(item_id, 0, 0, 0))
-                self.energy_link_items_queue.clear()
-
-        # check for death when in City Trial and past transition period
-        if self.death_link_enabled:
-            if (
-                self.dolphin_interface.current_stage == StageName.CITY_TRIAL
-                and self.dolphin_interface.transition_waited()
-            ):
-                # logger.debug("in deathlink check...")
-                await self.check_death()
-
-        # check if any items are in the items queue and give them
-        if len(self.items_queue) > 0:
-            # give items that do not require a player to be in a stage
-            if self.dolphin_interface.current_stage is None:
-                items = [
-                    item
-                    for item in self.items_queue
-                    if ITEM_TABLE[self.item_names.lookup_in_game(item.item)].type
-                    in (KARItemType.CHECKBOX_FILLER, KARItemType.PATCH_CAP_INCREASE, KARItemType.PROGRESSIVE_STADIUM)
-                ]
-                if len(items) > 0:
-                    given_items = await self.give_items(items)
-                    for item in given_items:
-                        self.items_queue.remove(item)
-
-            # give items that were received/purchased while in a stage
-            if self.dolphin_interface.current_stage is not None and self.dolphin_interface.transition_waited():
-                given_items = await self.give_items(self.items_queue)
-                for item in given_items:
-                    self.items_queue.remove(item)
-
-        # check locations
-        await self.send_check_locations()
-
-    async def handle_disconnected_state(self) -> None:
-        """Handle the logic when Dolphin is disconnected."""
-
-        logger.info("Attempting to connect to Dolphin...")
-        await self.attempt_dolphin_connection()
-
-    async def attempt_dolphin_connection(self) -> bool:
-        """
-        Try to establish a connection to Dolphin.
-
-        Returns:
-            Whether connection was successful
-        """
-        self.dolphin_interface.hook()
-        if self.dolphin_interface.is_hooked():
-            if not self.dolphin_interface.check_game_running():
-                self.dolphin_interface.unhook()
-                self.dolphin_status = self.connection_refused_game_status
-                logger.info(self.dolphin_status)
-                await asyncio.sleep(self.dolphin_reconnect_delay)
-                return False
-
-            self.dolphin_status = self.connection_connected_game_status
-            logger.info(self.dolphin_status)
-            return True
-
-        self.dolphin_status = self.connection_refused_game_status
-        logger.info(self.dolphin_status)
-        await asyncio.sleep(self.dolphin_reconnect_delay)
-        return False
+    def _addr(self, offset: int) -> int:
+        """Compute an absolute Dolphin address from an APData struct offset."""
+        assert self.ap_data_base is not None
+        return self.ap_data_base + offset
 
     async def run_dolphin_sync(self) -> None:
-        """The task loop for managing the connection to Dolphin."""
         logger.info("Starting Dolphin connector. Use /dolphin for status information.")
-
         while not self.exit_event.is_set():
+            has_pending_work = (
+                not self.locations_written
+                or self.item_send_index < len(self.items_received)
+                or self.pending_trap_receives > 0
+            )
+            timeout = 0.1 if has_pending_work else 1.0
+
             try:
-                # self.watcher_event gets set when receiving ReceivedItems or LocationInfo, or when shutting down.
-                await asyncio.wait_for(self.watcher_event.wait(), 1)
+                async with asyncio.timeout(timeout):
+                    await self.watcher_event.wait()
             except TimeoutError:
                 pass
             finally:
                 self.watcher_event.clear()
 
             try:
-                if (
-                    self.dolphin_interface.is_hooked()
-                    and self.dolphin_interface.check_game_running()
-                    and self.dolphin_status == self.connection_connected_game_status
-                ):
-                    await self.handle_connected_state()
+                if self.dolphin.is_hooked() and self.dolphin.check_game_running():
+                    await self._dolphin_tick()
                 else:
-                    self.dolphin_interface.unhook()
-                    await self.handle_disconnected_state()
+                    await self._try_connect_dolphin()
             except Exception as e:
-                if self.dolphin_interface.is_hooked():
-                    self.dolphin_interface.unhook()
-                self.dolphin_status = self.connection_refused_game_status
-                logger.info(self.dolphin_status)
-                logger.error(f"Error in dolphin sync task: {e}")
-                logger.error(traceback.format_exc())
+                logger.error(f"Dolphin sync error: {e}")
+                if self.dolphin.is_hooked():
+                    self.dolphin.unhook()
+                self._reset_dolphin_state()
+
+            now_connected = self.dolphin.is_hooked() and self.dolphin.check_game_running()
+            if now_connected and not self._dolphin_was_connected:
+                logger.info("Dolphin connected.")
+            elif not now_connected and self._dolphin_was_connected:
+                logger.info("Dolphin disconnected.")
+            elif not now_connected and self._dolphin_was_connected is None:
+                logger.info("Dolphin not connected. Waiting for Dolphin emulator...")
+            self._dolphin_was_connected = now_connected
+
+    async def _try_connect_dolphin(self) -> None:
+        if self.dolphin.is_hooked():
+            self.dolphin.unhook()
+        self._reset_dolphin_state()
+
+        self.dolphin.hook()
+        if not (self.dolphin.is_hooked() and self.dolphin.check_game_running()):
+            if self.dolphin.is_hooked():
+                self.dolphin.unhook()
+            await asyncio.sleep(5)
+
+    async def _dolphin_tick(self) -> None:
+        # Resolve / verify APData pointer
+        ptr = self.dolphin.resolve_ap_data()
+        if ptr is None:
+            if self.ap_data_base is not None:
+                logger.info("APData pointer lost. Game may have restarted.")
+                self._reset_dolphin_state()
+            return
+        if ptr != self.ap_data_base:
+            if self.ap_data_base is not None:
+                logger.info("APData pointer changed. Re-handshaking.")
+                self._reset_dolphin_state()
+            self.ap_data_base = ptr
+            logger.info(f"APData struct at {ptr:#010x}")
+
+        # Wait for game_ready
+        if not self.game_ready:
+            if self.dolphin.read_u32(self._addr(MemoryAddress.GAME_READY)) != 1:
+                return
+            self.game_ready = True
+            logger.info("Game initialized and save loaded.")
+
+        # Write slot options (requires AP server connection)
+        if not self.options_written:
+            if not self.slot_options:
+                return  # Waiting for AP server Connected packet.
+            self._write_options()
+            self.options_written = True
+            self.item_send_index = self.dolphin.read_u32(self._addr(MemoryAddress.ITEM_RECEIVED_INDEX))
+            logger.info(f"Options written. Game has received {self.item_send_index} items.")
+
+        # Write location data (requires scout results)
+        if not self.locations_written:
+            if not self.location_arrays_ready:
+                return  # Waiting for LocationInfo scout response.
+            self._write_location_data()
+            self.locations_written = True
+            logger.info("Location data written. Client fully operational.")
+
+        # Normal operation
+        await self._poll_game()
+
+    def _write_options(self) -> None:
+        """Write all APSlotOptions fields to game memory and signal options_valid."""
+        sd = self.slot_options
+        d = self.dolphin
+        a = self._addr
+
+        d.write_u32(a(MemoryAddress.OPTION_DEATH_LINK_ENABLED), int(bool(sd.get("death_link", 0))))
+        d.write_u32(a(MemoryAddress.OPTION_ENERGY_LINK_ENABLED), int(bool(sd.get("energy_link", 0))))
+        d.write_u32(a(MemoryAddress.OPTION_TRAP_LINK_ENABLED), int(bool(sd.get("trap_link", 0))))
+        d.write_u32(a(MemoryAddress.OPTION_REVEAL_CHECKLISTS), int(bool(sd.get("reveal_checklists", 0))))
+
+        # Goals per mode — option values map directly to the GoalKind enum.
+        d.write_u32(a(MemoryAddress.OPTION_GOAL_AIRRIDE), int(sd.get("air_ride_goal", 4)))
+        d.write_u32(a(MemoryAddress.OPTION_GOAL_TOPRIDE), int(sd.get("top_ride_goal", 4)))
+        d.write_u32(a(MemoryAddress.OPTION_GOAL_CITYTRIAL), int(sd.get("city_trial_goal", 0)))
+
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_AIRRIDE), int(sd.get("air_ride_checklist_amount", 60)))
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd.get("city_trial_checklist_amount", 60)))
+
+        d.write_u32(
+            a(MemoryAddress.OPTION_CT_PROGRESSIVE_PATCH_CAPS), int(bool(sd.get("city_trial_progressive_patch_caps", 0)))
+        )
+        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_AMOUNT), int(sd.get("city_trial_patch_cap_amount", 18)))
+        d.write_u32(a(MemoryAddress.OPTION_SPAWN_RATE_MIN), int(sd.get("spawn_rate_min", 100)))
+
+        # Goal checks bitmasks for GOAL_CHECKLIST_LIST.
+        goal_loc_keys = {
+            GameMode.AIRRIDE: "air_ride_goal_locations",
+            GameMode.TOPRIDE: "top_ride_goal_locations",
+            GameMode.CITYTRIAL: "city_trial_goal_locations",
+        }
+        for mode, addr in OPTION_GOAL_CHECKS_PER_MODE.items():
+            self._write_goal_checks_bitmask(mode, sd.get(goal_loc_keys[mode], []), a(addr))
+
+        # Per-category access gating. 1 = gated (default — AP unlock items required).
+        # 0 = ungated (mod pre-fills the unlock mask at connect; AP world ships no
+        # unlock items for that category). Stadium gating mirrors the existing
+        # `city_trial_progressive_stadiums` slot option for back-compat.
+        d.write_u32(a(MemoryAddress.OPTION_MACHINE_GATING_ENABLED), int(bool(sd.get("machines_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_ABILITY_GATING_ENABLED), int(bool(sd.get("abilities_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_EVENT_GATING_ENABLED), int(bool(sd.get("events_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_PATCH_GATING_ENABLED), int(bool(sd.get("patches_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_ITEM_GATING_ENABLED), int(bool(sd.get("city_trial_items_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_BOX_GATING_ENABLED), int(bool(sd.get("boxes_gated", 1))))
+        d.write_u32(
+            a(MemoryAddress.OPTION_AIRRIDE_STAGE_GATING_ENABLED), int(bool(sd.get("air_ride_courses_gated", 1)))
+        )
+        d.write_u32(
+            a(MemoryAddress.OPTION_TOPRIDE_STAGE_GATING_ENABLED), int(bool(sd.get("top_ride_courses_gated", 1)))
+        )
+        d.write_u32(a(MemoryAddress.OPTION_TOPRIDE_ITEM_GATING_ENABLED), int(bool(sd.get("top_ride_items_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_COLOR_GATING_ENABLED), int(bool(sd.get("colors_gated", 1))))
+        d.write_u32(
+            a(MemoryAddress.OPTION_STADIUM_GATING_ENABLED), int(bool(sd.get("city_trial_progressive_stadiums", 1)))
+        )
+
+        d.write_u32(a(MemoryAddress.OPTIONS_VALID), 1)
+
+    def _write_goal_checks_bitmask(self, mode: GameMode, location_names: list | set, addr: int) -> None:
+        """Convert a set of location names to a u64[2] bitmask and write to memory."""
+        words = [0, 0]
+        for name in location_names:
+            data = LOCATION_TABLE.get(name)
+            if data is None:
+                continue
+            mapping = location_code_to_mode_clear(data.code)
+            if mapping is None or mapping[0] != mode:
+                continue
+            ck = mapping[1]
+            words[ck // 64] |= 1 << (ck % 64)
+        self.dolphin.write_u64(addr, words[0])
+        self.dolphin.write_u64(addr + 8, words[1])
+
+    def _write_location_data(self) -> None:
+        """Write the three location arrays to game memory and signal location_data_valid."""
+        for mode, offset in LOCATIONS_PER_MODE.items():
+            base_addr = self._addr(offset)
+            for i, val in enumerate(self.location_arrays[mode]):
+                self.dolphin.write_u16(base_addr + i * 2, val)
+        self.dolphin.write_u32(self._addr(MemoryAddress.LOCATION_DATA_VALID), 1)
+
+    async def _poll_game(self) -> None:
+        if self.slot is None:
+            return
+        self._deliver_items()
+        await self._check_locations()
+        self._check_goal()
+        await self._poll_menu_toggles()
+        await self._handle_deathlink()
+        await self._handle_traplink()
+        await self._handle_energylink()
+        self._handle_backfill()
+
+    def _deliver_items(self) -> None:
+        """Deliver pending items to the game one at a time via the incoming_item_id mailbox."""
+        while self.item_send_index < len(self.items_received):
+            if self.dolphin.read_u32(self._addr(MemoryAddress.INCOMING_ITEM_ID)) != 0:
+                return  # Game hasn't consumed the previous item yet.
+            item = self.items_received[self.item_send_index]
+            self.dolphin.write_u32(self._addr(MemoryAddress.INCOMING_ITEM_ID), item.item)
+            logger.debug(f"Delivered item #{self.item_send_index}: {self.item_names.lookup_in_game(item.item)}")
+            self.item_send_index += 1
+
+    async def _check_locations(self) -> None:
+        """Read the sent_checks bitmask and send any newly-set bits to the AP server."""
+        new_checks: set[int] = set()
+        for mode, offset in SENT_CHECKS_PER_MODE.items():
+            for word_idx in range(2):
+                addr = self._addr(offset) + word_idx * 8
+                current = self.dolphin.read_u64(addr)
+                diff = current & ~self.last_sent_checks[mode][word_idx]
+                if diff:
+                    self.last_sent_checks[mode][word_idx] = current
+                    for bit in range(64):
+                        if diff & (1 << bit):
+                            ck = word_idx * 64 + bit
+                            new_checks.add(mode_clear_to_location_code(mode, ck))
+
+        if new_checks:
+            sent = await self.check_locations(new_checks)
+            if sent:
+                names = [self.location_names.lookup_in_game(loc) for loc in sent]
+                logger.info(f"New checks sent: {names}")
+
+    def _check_goal(self) -> None:
+        """Forward the game's goal_complete flag to the AP server as a victory."""
+        if self.finished_game:
+            return
+        if self.dolphin.read_u8(self._addr(MemoryAddress.GOAL_COMPLETE)) == 1:
+            self.finished_game = True
+            logger.info("Goal complete! Sending victory.")
+            Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
+
+    async def _poll_menu_toggles(self) -> None:
+        """Read the mod's live in-game menu toggle mirrors and update AP server state if changed.
+
+        The OPTION_*_ENABLED fields only set initial values on first connect and are not
+        updated when the player toggles in-game. The *_MENU_ENABLED mirrors are
+        the authoritative live state, written by the mod on every menu change.
+        """
+        dl_enabled = self.dolphin.read_u32(self._addr(MemoryAddress.DEATHLINK_MENU_ENABLED)) != 0
+        dl_currently_on = "DeathLink" in self.tags
+        if dl_enabled != dl_currently_on:
+            logger.info(f"DeathLink toggled {'on' if dl_enabled else 'off'} from in-game menu.")
+            await self.update_death_link(dl_enabled)
+
+        tl_enabled = self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_MENU_ENABLED)) != 0
+        tl_currently_on = "TrapLink" in self.tags
+        if tl_enabled != tl_currently_on:
+            logger.info(f"TrapLink toggled {'on' if tl_enabled else 'off'} from in-game menu.")
+            await self._update_traplink_tags(tl_enabled)
+
+        el_enabled = self.dolphin.read_u32(self._addr(MemoryAddress.ENERGYLINK_MENU_ENABLED)) != 0
+        if el_enabled != self.energy_link_enabled:
+            logger.info(f"EnergyLink toggled {'on' if el_enabled else 'off'} from in-game menu.")
+            self.energy_link_enabled = el_enabled
+            if el_enabled:
+                self.set_notify(f"EnergyLink{self.team}")
+                if self.ui:
+                    self.ui.enable_energy_link()
+
+    async def _handle_deathlink(self) -> None:
+        if "DeathLink" not in self.tags:
+            return
+
+        # forward death to AP server and clear the flag.
+        if self.dolphin.read_u32(self._addr(MemoryAddress.DEATHLINK_SEND)) == 1:
+            self.dolphin.write_u32(self._addr(MemoryAddress.DEATHLINK_SEND), 0)
+            assert self.slot is not None
+            name = self.player_names.get(self.slot, "Unknown")
+            await self.send_death(f"{name} exploded.")
+
+    async def _handle_traplink(self) -> None:
+        if "TrapLink" not in self.tags:
+            return
+
+        # forward trap to AP server. The mod writes a TrapLinkKind
+        # enum (>0) into TRAPLINK_SEND; we map to a name for the Bounce payload
+        # so other worlds can translate to local equivalents. Burst collapsing
+        # is handled mod-side: multiple triggers in quick succession overwrite
+        # the same u32, and the polling interval (≥0.1s) is long enough that
+        # we read one final value per logical burst.
+        kind = self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_SEND))
+        if kind != 0:
+            self.dolphin.write_u32(self._addr(MemoryAddress.TRAPLINK_SEND), 0)
+            assert self.slot is not None
+            name = self.player_names.get(self.slot, "Unknown")
+            try:
+                trap_name = TRAPLINK_NAMES[TrapLinkKind(kind)]
+            except ValueError:
+                # Mod wrote a kind value this client doesn't know about yet.
+                trap_name = "Trap"
+            await self.send_msgs(
+                [
+                    {
+                        "cmd": "Bounce",
+                        "tags": ["TrapLink"],
+                        "data": {"time": time.time(), "source": name, "trap_name": trap_name},
+                    }
+                ]
+            )
+
+        # deliver one pending trap when the game's receive flag is clear.
+        if self.pending_trap_receives > 0:
+            if self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_RECEIVE)) == 0:
+                self.pending_trap_receives -= 1
+                self.dolphin.write_u32(self._addr(MemoryAddress.TRAPLINK_RECEIVE), 1)
+
+    async def _handle_energylink(self) -> None:
+        if not self.energy_link_enabled:
+            return
+
+        # Write current AP EnergyLink pool balance to the game. Pool is stored
+        # in Joules on the server; mod expects raw MJ units. Integer floor
+        # division - sub-MJ remainders aren't representable mod-side.
+        if self.current_energy_link_value is not None:
+            raw_mj = self.current_energy_link_value // ENERGY_LINK_EXCHANGE_RATE
+            # The mod's field is s64; raw_mj is always non-negative because
+            # the pool is clamped at 0 by the server's max:0 op. Use write_u64
+            # since dolphin-memory-engine has no signed variant; identical
+            # bytes either way for non-negative values.
+            self.dolphin.write_u64(self._addr(MemoryAddress.ENERGY_BALANCE), raw_mj)
+
+        # Process energy sends from the game. s64 signed raw MJ delta.
+        # Positive = deposit, negative = withdrawal.
+        raw = self.dolphin.read_u64(self._addr(MemoryAddress.ENERGY_SEND))
+        if raw == 0:
+            return
+        # Reinterpret as signed.
+        energy_mj = raw - (1 << 64) if raw >= (1 << 63) else raw
+        # Clear the mailbox immediately so the mod can write the next batch
+        # without blocking on us.
+        self.dolphin.write_u64(self._addr(MemoryAddress.ENERGY_SEND), 0)
+
+        joules = energy_mj * ENERGY_LINK_EXCHANGE_RATE
+        if joules == 0:
+            return
+
+        ops: list[dict[str, Any]] = [{"operation": "add", "value": joules}]
+        if joules < 0:
+            # Withdraw: tag + want_reply so we can match the SetReply and
+            # detect server-side clamping at 0 (pool was emptier than the
+            # mod thought).
+            ops.append({"operation": "max", "value": 0})
+            tag = uuid.uuid4().hex
+            # Record the pending tag only after the send is dispatched. send_msgs
+            # silently no-ops on a closed socket, so a pre-send insert would leak
+            # the entry indefinitely when the connection drops mid-flight.
+            await self.send_msgs(
+                [
+                    {
+                        "cmd": "Set",
+                        "key": f"EnergyLink{self.team}",
+                        "default": 0,
+                        "tag": tag,
+                        "want_reply": True,
+                        "operations": ops,
+                    }
+                ]
+            )
+            self.pending_energy_withdrawals[tag] = -joules  # store as positive expected subtraction
+        else:
+            # Deposit: no tag needed, the set_notify subscription delivers
+            # the updated balance to all clients.
+            await self.send_msgs(
+                [
+                    {
+                        "cmd": "Set",
+                        "key": f"EnergyLink{self.team}",
+                        "default": 0,
+                        "operations": ops,
+                    }
+                ]
+            )
+
+    def _handle_backfill(self) -> None:
+        """Write bits to client_backfill for checks the AP server knows about but the game doesn't.
+
+        This handles fresh saves, slot takeovers, and !collect from other players.
+        """
+        if not self.backfill_pending:
+            return
+
+        # Wait for the game to finish processing previous backfill.
+        for off in CLIENT_BACKFILL_PER_MODE.values():
+            if self.dolphin.read_u64(self._addr(off)) != 0 or self.dolphin.read_u64(self._addr(off) + 8) != 0:
+                return
+
+        # Build bitmask of all server-known checks.
+        server_bits: dict[GameMode, list[int]] = {m: [0, 0] for m in GameMode}
+        for loc_code in self.checked_locations:
+            mapping = location_code_to_mode_clear(loc_code)
+            if mapping is None:
+                continue
+            mode, ck = mapping
+            server_bits[mode][ck // 64] |= 1 << (ck % 64)
+
+        # Diff against the game's sent_checks (using the last-read values to avoid extra reads).
+        wrote_any = False
+        for mode, backfill_addr in CLIENT_BACKFILL_PER_MODE.items():
+            for word_idx in range(2):
+                diff = server_bits[mode][word_idx] & ~self.last_sent_checks[mode][word_idx]
+                if diff:
+                    self.dolphin.write_u64(self._addr(backfill_addr) + word_idx * 8, diff)
+                    wrote_any = True
+
+        if wrote_any:
+            logger.info("Backfilled server-known checks to game.")
+        self.backfill_pending = False
+
+    def make_gui(self):
+        ui = super().make_gui()
+        ui.base_title = "Archipelago Kirby Air Ride Client"
+        return ui
+
+    async def shutdown(self) -> None:
+        if self.dolphin.is_hooked():
+            self.dolphin.unhook()
+        await super().shutdown()
 
 
 async def async_main(connect: str | None, password: str | None) -> None:
-    """
-    Main async function to run the Kirby Air Ride client.
-
-    Args:
-        connect: Address of the Archipelago server
-        password: Password for server authentication
-    """
     ctx = KARContext(connect, password)
-
-    # Start UI if enabled
-    if gui_enabled:
+    if Utils.gui_enabled:
         ctx.run_gui()
     ctx.run_cli()
-
-    # Give time for UI/CLI to initialize
     await asyncio.sleep(1)
-
-    # Create and start server task
     ctx.server_task = asyncio.create_task(server_loop(ctx), name="server loop")
-
-    # Create and start dolphin sync task
     ctx.dolphin_sync_task = asyncio.create_task(ctx.run_dolphin_sync(), name="dolphin sync")
-
     try:
         await ctx.exit_event.wait()
     finally:
-        # Signal the dolphin sync task to check for exit_event
         ctx.watcher_event.set()
-
         await ctx.shutdown()
-
-        # Wait for the dolphin sync task to finish if it exists
         if ctx.dolphin_sync_task:
             await ctx.dolphin_sync_task
 
 
 def main(connect: str | None = None, password: str | None = None) -> None:
-    """
-    Run the main async loop for the Kirby Air Ride client.
-
-    Args:
-        connect: Address of the Archipelago server.
-        password: Password for server authentication.
-    """
     Utils.init_logging("Kirby Air Ride Client")
-
     import colorama
 
     try:

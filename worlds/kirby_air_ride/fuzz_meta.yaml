@@ -1,0 +1,70 @@
+# Fuzz meta for Kirby Air Ride.
+#
+# Pass to the fuzzer:
+#   uv run python fuzz/fuzz.py -g kirby_air_ride -m worlds/kirby_air_ride/fuzz_meta.yaml -r 200
+#
+# Each constraint here corresponds to an OptionError that the world's
+# _validate_options would always raise. Pruning these at YAML-generation time
+# avoids wasting fuzzer cycles on combos the world rejects by design.
+#
+# What this file does NOT cover:
+#   - _validate_pool_fits_locations failures (pool > available locations).
+#     The constraint mini-language can't cleanly express the cross-option
+#     arithmetic these need. They continue to land in "ignored" and that's fine.
+#   - All-goals-none. The constraint language can only check one option's value
+#     at a time, so the only single-constraint fix is to pin one goal (e.g. CT)
+#     to non-none — which would eliminate random AR-only / TR-only coverage.
+#     ~1% rejection rate is cheaper than that lost coverage.
+#   - checklist_list with wrong-mode locations. The fuzzer doesn't randomize
+#     LocationSet contents, so wrong-mode names can't appear in random YAMLs.
+
+Kirby Air Ride:
+  fuzz_constraints:
+    # spawn_rate_max must be >= spawn_rate_min when progressive is on.
+    # The constraint language can only pin a value, not enforce ordering, so
+    # we pin min to its range_start (100) whenever progressive is on. Max is
+    # then always valid by construction. Loses coverage of "high min" cases
+    # but those are equivalent in behavior to higher max with min=100.
+    - option: spawn_rate_progressive
+      if_value: "true"
+      then:
+        spawn_rate_min: 100
+
+    # checkbox_fillers must be < checklist_amount when goal is n_checklist_blocks.
+    # Same limitation: can't express "less than the rolled amount", only pin a
+    # value. Pin fillers to 0 when n_checklist_blocks is the goal for each mode.
+    # This costs coverage of the "small filler count + small goal amount" combo
+    # but keeps the more interesting "many fillers + non-n_checklist goals" case.
+    - option: city_trial_goal
+      if_value: "n_checklist_blocks"
+      then:
+        city_trial_checkbox_fillers: 0
+    - option: air_ride_goal
+      if_value: "n_checklist_blocks"
+      then:
+        air_ride_checkbox_fillers: 0
+    - option: top_ride_goal
+      if_value: "n_checklist_blocks"
+      then:
+        top_ride_checkbox_fillers: 0
+
+    # checklist_list goal requires at least one location in *_goal_locations.
+    # The fuzzer doesn't randomize LocationSet contents, so a random YAML that
+    # rolls checklist_list always has an empty list and OptionErrors out. Seed
+    # one valid per-mode location when the goal is checklist_list so the
+    # generation can actually exercise that goal path.
+    - option: city_trial_goal
+      if_value: "checklist_list"
+      then_include:
+        city_trial_goal_locations:
+          - "City Trial: Knock down all of the trees in the forest!"
+    - option: air_ride_goal
+      if_value: "checklist_list"
+      then_include:
+        air_ride_goal_locations:
+          - "Air Ride: Race all of the standard Air Ride courses!"
+    - option: top_ride_goal
+      if_value: "checklist_list"
+      then_include:
+        top_ride_goal_locations:
+          - "Top Ride: Take 1st place while holding the Hammer!"

@@ -1,3 +1,4 @@
+.claude
 .idea
 .vscode
 
@@ -204,4 +205,5 @@ Thumbs.db
 [Dd]esktop.ini
 
 # fuzzer
-fuzz_output/
+fuzz/output/
+fuzz/results/

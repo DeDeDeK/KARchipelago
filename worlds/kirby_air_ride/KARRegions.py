@@ -1,776 +1,701 @@
 import typing
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
+from enum import StrEnum
 
 from BaseClasses import CollectionState, LocationProgressType, Region
+from rule_builder.rules import CanReachLocation, Has, HasAll, Rule
 
-from .KARData import VictoryEventType
-from .KARLocations import (
-    AIR_RIDE_LOCATION_TABLE,
-    CITY_TRIAL_LOCATION_TABLE,
-    TOP_RIDE_LOCATION_TABLE,
-    KARLocation,
-    KARLocationData,
-    KARLocationType,
-)
+from .KARItems import KARItem, KARItemName
+from .KAROptions import CityTrialGoal
+
+
+class KARRegion(StrEnum):
+    """Region names for Kirby Air Ride."""
+
+    # City Trial
+    CITY_TRIAL = "City Trial"
+    CT_FREE_RUN = "City Trial: Free Run"
+
+    # Stadiums
+    STADIUM_DR1 = "Stadium: DRAG RACE 1"
+    STADIUM_DR2 = "Stadium: DRAG RACE 2"
+    STADIUM_DR3 = "Stadium: DRAG RACE 3"
+    STADIUM_DR4 = "Stadium: DRAG RACE 4"
+    STADIUM_HJ = "Stadium: HIGH JUMP"
+    STADIUM_TF = "Stadium: TARGET FLIGHT"
+    STADIUM_AG = "Stadium: AIR GLIDER"
+    STADIUM_DD_ALL = "Stadium: DESTRUCTION DERBY ALL"
+    STADIUM_DD1 = "Stadium: DESTRUCTION DERBY 1"
+    STADIUM_DD2 = "Stadium: DESTRUCTION DERBY 2"
+    STADIUM_DD3 = "Stadium: DESTRUCTION DERBY 3"
+    STADIUM_DD4 = "Stadium: DESTRUCTION DERBY 4"
+    STADIUM_DD5 = "Stadium: DESTRUCTION DERBY 5"
+    STADIUM_KM_ALL = "Stadium: KIRBY MELEE ALL"
+    STADIUM_KM1 = "Stadium: KIRBY MELEE 1"
+    STADIUM_KM2 = "Stadium: KIRBY MELEE 2"
+    STADIUM_VSKD = "Stadium: VS. KING DEDEDE"
+    STADIUM_SR1 = "Stadium: SINGLE RACE 1"
+    STADIUM_SR2 = "Stadium: SINGLE RACE 2"
+    STADIUM_SR3 = "Stadium: SINGLE RACE 3"
+    STADIUM_SR4 = "Stadium: SINGLE RACE 4"
+    STADIUM_SR5 = "Stadium: SINGLE RACE 5"
+    STADIUM_SR6 = "Stadium: SINGLE RACE 6"
+    STADIUM_SR7 = "Stadium: SINGLE RACE 7"
+    STADIUM_SR8 = "Stadium: SINGLE RACE 8"
+    STADIUM_SR9 = "Stadium: SINGLE RACE 9"
+
+    # Air Ride
+    AIR_RIDE = "Air Ride"
+    AR_TIME_ATTACK = "Air Ride: Time Attack"
+    AR_FREE_RUN = "Air Ride: Free Run"
+    AR_MAGMA_FLOWS = "Air Ride: MAGMA FLOWS"
+    AR_FANTASY_MEADOWS = "Air Ride: FANTASY MEADOWS"
+    AR_CELESTIAL_VALLEY = "Air Ride: CELESTIAL VALLEY"
+    AR_BEANSTALK_PARK = "Air Ride: BEANSTALK PARK"
+    AR_FROZEN_HILLSIDE = "Air Ride: FROZEN HILLSIDE"
+    AR_MACHINE_PASSAGE = "Air Ride: MACHINE PASSAGE"
+    AR_SKY_SANDS = "Air Ride: SKY SANDS"
+    AR_CHECKER_KNIGHTS = "Air Ride: CHECKER KNIGHTS"
+    AR_NEBULA_BELT = "Air Ride: NEBULA BELT"
+    AR_TA_MAGMA_FLOWS = "Air Ride: Time Attack: MAGMA FLOWS"
+    AR_TA_FANTASY_MEADOWS = "Air Ride: Time Attack: FANTASY MEADOWS"
+    AR_TA_CELESTIAL_VALLEY = "Air Ride: Time Attack: CELESTIAL VALLEY"
+    AR_TA_BEANSTALK_PARK = "Air Ride: Time Attack: BEANSTALK PARK"
+    AR_TA_FROZEN_HILLSIDE = "Air Ride: Time Attack: FROZEN HILLSIDE"
+    AR_TA_MACHINE_PASSAGE = "Air Ride: Time Attack: MACHINE PASSAGE"
+    AR_TA_SKY_SANDS = "Air Ride: Time Attack: SKY SANDS"
+    AR_TA_CHECKER_KNIGHTS = "Air Ride: Time Attack: CHECKER KNIGHTS"
+    AR_TA_NEBULA_BELT = "Air Ride: Time Attack: NEBULA BELT"
+    AR_FR_MAGMA_FLOWS = "Air Ride: Free Run: MAGMA FLOWS"
+    AR_FR_FANTASY_MEADOWS = "Air Ride: Free Run: FANTASY MEADOWS"
+    AR_FR_CELESTIAL_VALLEY = "Air Ride: Free Run: CELESTIAL VALLEY"
+    AR_FR_BEANSTALK_PARK = "Air Ride: Free Run: BEANSTALK PARK"
+    AR_FR_FROZEN_HILLSIDE = "Air Ride: Free Run: FROZEN HILLSIDE"
+    AR_FR_MACHINE_PASSAGE = "Air Ride: Free Run: MACHINE PASSAGE"
+    AR_FR_SKY_SANDS = "Air Ride: Free Run: SKY SANDS"
+    AR_FR_CHECKER_KNIGHTS = "Air Ride: Free Run: CHECKER KNIGHTS"
+    AR_FR_NEBULA_BELT = "Air Ride: Free Run: NEBULA BELT"
+
+    # Top Ride
+    TOP_RIDE = "Top Ride"
+    TR_TIME_ATTACK = "Top Ride: Time Attack"
+    TR_FREE_RUN = "Top Ride: Free Run"
+    TR_GRASS = "Top Ride: GRASS"
+    TR_SAND = "Top Ride: SAND"
+    TR_SKY = "Top Ride: SKY"
+    TR_FIRE = "Top Ride: FIRE"
+    TR_LIGHT = "Top Ride: LIGHT"
+    TR_WATER = "Top Ride: WATER"
+    TR_METAL = "Top Ride: METAL"
+    TR_TA_GRASS = "Top Ride: Time Attack: GRASS"
+    TR_TA_SAND = "Top Ride: Time Attack: SAND"
+    TR_TA_SKY = "Top Ride: Time Attack: SKY"
+    TR_TA_FIRE = "Top Ride: Time Attack: FIRE"
+    TR_TA_LIGHT = "Top Ride: Time Attack: LIGHT"
+    TR_TA_WATER = "Top Ride: Time Attack: WATER"
+    TR_TA_METAL = "Top Ride: Time Attack: METAL"
+    TR_FR_GRASS = "Top Ride: Free Run: GRASS"
+    TR_FR_SAND = "Top Ride: Free Run: SAND"
+    TR_FR_SKY = "Top Ride: Free Run: SKY"
+    TR_FR_FIRE = "Top Ride: Free Run: FIRE"
+    TR_FR_LIGHT = "Top Ride: Free Run: LIGHT"
+    TR_FR_WATER = "Top Ride: Free Run: WATER"
+    TR_FR_METAL = "Top Ride: Free Run: METAL"
+
+
+# KARLocations imports are deferred into function bodies to break the circular
+# dependency: KARLocations imports KARRegion from this module.
 
 if typing.TYPE_CHECKING:
     from . import KARWorld
 
 
-def create_event_location(
+def create_regions_batch(world: "KARWorld", *names: str) -> list[Region]:
+    """Create multiple regions and register them all with the multiworld at once."""
+    regions = [Region(name, world.player, world.multiworld) for name in names]
+    world.multiworld.regions += regions
+    return regions
+
+
+def assign_locations_to_regions(
     world: "KARWorld",
-    region: Region,
-    event_name: str,
-    event_item_name: str,
-    rule: Callable[[CollectionState], bool] | None = None,
+    location_table: dict,
+    default_locations: Iterable[str],
+    excluded_locations: Iterable[str],
+    goal_locations_to_exclude: set[str],
 ) -> None:
     """
-    Create an event location and place the associated event item on it.
-
-    :param world: The KARWorld instance
-    :param region: The region to place the event location in
-    :param event_name: Name of the event location
-    :param event_item_name: Name of the event item to place
-    :param rule: Optional rule to apply to this event location
+    Assign locations to their regions with the appropriate progress type.
     """
-    from worlds.generic.Rules import set_rule
+    from .KARLocations import KARLocation
 
-    # Create event location with code=None
-    event_location_data = KARLocationData(
-        code=None, region=region.name, reward=event_item_name, type=KARLocationType.EVENT, mem_address=None
-    )
-
-    event_location = KARLocation(world.player, event_name, region, event_location_data)
-    region.locations.append(event_location)
-
-    # Apply rule if provided
-    if rule is not None:
-        set_rule(event_location, rule)
-
-    # Create and place locked event item
-    event_item = world.create_item(event_item_name)
-    event_location.place_locked_item(event_item)
+    for locations, progress_type in [
+        (default_locations, LocationProgressType.DEFAULT),
+        (excluded_locations, LocationProgressType.EXCLUDED),
+    ]:
+        for location_name in locations:
+            if location_name in goal_locations_to_exclude:
+                continue
+            data = location_table[location_name]
+            region = world.get_region(data.region)
+            location = KARLocation(world.player, location_name, data.code, region)
+            location.progress_type = progress_type
+            region.locations.append(location)
 
 
 def create_regions(world: "KARWorld"):
     """
     Create regions, place locations in regions, and connect regions for the Kirby Air Ride world.
     """
-    # Collect goal locations that should be excluded from the multiworld
-    # These will be replaced by event locations
-    goal_locations_to_exclude: set[str] = set()
-
-    # Check each mode's goal - if it's a specific location (not "N checklist blocks"), exclude it
-    if world.city_trial_enabled and world.options.city_trial_goal.current_key not in [
-        world.options.city_trial_goal.option_none,
-        world.options.city_trial_goal.option_n_checklist_blocks,
-    ]:
-        goal_locations_to_exclude.add(world.options.city_trial_goal.current_key)
-
-    if world.air_ride_enabled and world.options.air_ride_goal.current_key not in [
-        world.options.air_ride_goal.option_none,
-        world.options.air_ride_goal.option_n_checklist_blocks,
-    ]:
-        goal_locations_to_exclude.add(world.options.air_ride_goal.current_key)
-
-    if world.top_ride_enabled and world.options.top_ride_goal.current_key not in [
-        world.options.top_ride_goal.option_none,
-        world.options.top_ride_goal.option_n_checklist_blocks,
-    ]:
-        goal_locations_to_exclude.add(world.options.top_ride_goal.current_key)
+    from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
 
     # create the "Menu" default Region, which will connect all game modes.
     menu_region = Region(world.origin_region_name, world.player, world.multiworld)
     world.multiworld.regions.append(menu_region)
 
-    # create and connect "City Trial" region to menu
+    # create and connect KARRegion.CITY_TRIAL region to menu
     if world.city_trial_enabled:
-        city_trial_region = Region("City Trial", world.player, world.multiworld)
+        city_trial_region = Region(KARRegion.CITY_TRIAL, world.player, world.multiworld)
         world.multiworld.regions.append(city_trial_region)
         menu_region.connect(city_trial_region)
         connect_city_trial_region(world, city_trial_region)
 
-    # create and connect "Air Ride" region to menu
+    # create and connect KARRegion.AIR_RIDE region to menu
     if world.air_ride_enabled:
-        air_ride_region = Region("Air Ride", world.player, world.multiworld)
+        air_ride_region = Region(KARRegion.AIR_RIDE, world.player, world.multiworld)
         world.multiworld.regions.append(air_ride_region)
         menu_region.connect(air_ride_region)
         connect_air_ride_region(world, air_ride_region)
 
-    # create and connect "Top Ride" region to menu
+    # create and connect KARRegion.TOP_RIDE region to menu
     if world.top_ride_enabled:
-        top_ride_region = Region("Top Ride", world.player, world.multiworld)
+        top_ride_region = Region(KARRegion.TOP_RIDE, world.player, world.multiworld)
         world.multiworld.regions.append(top_ride_region)
         menu_region.connect(top_ride_region)
         connect_top_ride_region(world, top_ride_region)
 
-    # Assign City Trial progress locations to their region if City Trial is not disabled in options.
-    # Progress locations are sorted for deterministic results.
+    # Assign locations to their regions for each enabled game mode
     if world.city_trial_enabled:
-        # priority locations
-        for location_name in sorted(world.city_trial_priority_locations):
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = CITY_TRIAL_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.PRIORITY
-            region.locations.append(location)
+        assign_locations_to_regions(
+            world,
+            CITY_TRIAL_LOCATION_TABLE,
+            world.city_trial_default_locations,
+            world.city_trial_excluded_locations,
+            world.goal_locations_to_exclude,
+        )
 
-        # default locations
-        for location_name in world.city_trial_default_locations:
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = CITY_TRIAL_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.DEFAULT
-            region.locations.append(location)
-
-        # excluded locations
-        for location_name in world.city_trial_excluded_locations:
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = CITY_TRIAL_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.EXCLUDED
-            region.locations.append(location)
-
-    # Assign Air Ride locations to their region if Air Ride is not disabled in options.
-    # Progress locations are sorted for deterministic results.
     if world.air_ride_enabled:
-        # priority locations
-        for location_name in sorted(world.air_ride_priority_locations):
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = AIR_RIDE_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.PRIORITY
-            region.locations.append(location)
+        assign_locations_to_regions(
+            world,
+            AIR_RIDE_LOCATION_TABLE,
+            world.air_ride_default_locations,
+            world.air_ride_excluded_locations,
+            world.goal_locations_to_exclude,
+        )
 
-        # default locations
-        for location_name in world.air_ride_default_locations:
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = AIR_RIDE_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.DEFAULT
-            region.locations.append(location)
-
-        # excluded locations
-        for location_name in world.air_ride_excluded_locations:
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = AIR_RIDE_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.EXCLUDED
-            region.locations.append(location)
-
-    # Assign Top Ride locations to their region if Top Ride is not disabled in options.
-    # Progress locations are sorted for deterministic results.
     if world.top_ride_enabled:
-        # priority locations
-        for location_name in sorted(world.top_ride_priority_locations):
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = TOP_RIDE_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.PRIORITY
-            region.locations.append(location)
-
-        # default locations
-        for location_name in world.top_ride_default_locations:
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = TOP_RIDE_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.DEFAULT
-            region.locations.append(location)
-
-        # excluded locations
-        for location_name in world.top_ride_excluded_locations:
-            if location_name in goal_locations_to_exclude:
-                continue  # Skip goal locations - they'll be replaced by event locations
-            data = TOP_RIDE_LOCATION_TABLE[location_name]
-            region = world.get_region(data.region)
-            location = KARLocation(world.player, location_name, region, data)
-            location.progress_type = LocationProgressType.EXCLUDED
-            region.locations.append(location)
+        assign_locations_to_regions(
+            world,
+            TOP_RIDE_LOCATION_TABLE,
+            world.top_ride_default_locations,
+            world.top_ride_excluded_locations,
+            world.goal_locations_to_exclude,
+        )
 
     # determine the goal for the world, given player options
     determine_goal(world)
 
-    # from Utils import visualize_regions
-    # visualize_regions(world.multiworld.get_region("Menu", world.player), "my_world.puml", show_entrance_names=True)
-
 
 def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> None:
-    # free run region
-    free_run = Region("City Trial: Free Run", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run)
-    city_trial_region.connect(free_run)
-
-    # stadium regions
-    stadium_destruction_derby_all = Region("Stadium: DESTRUCTION DERBY ALL", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_destruction_derby_all)
-    stadium_destruction_derby_1 = Region("Stadium: DESTRUCTION DERBY 1", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_destruction_derby_1)
-    stadium_destruction_derby_2 = Region("Stadium: DESTRUCTION DERBY 2", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_destruction_derby_2)
-    stadium_destruction_derby_3 = Region("Stadium: DESTRUCTION DERBY 3", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_destruction_derby_3)
-    stadium_destruction_derby_4 = Region("Stadium: DESTRUCTION DERBY 4", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_destruction_derby_4)
-    stadium_destruction_derby_5 = Region("Stadium: DESTRUCTION DERBY 5", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_destruction_derby_5)
-
-    stadium_drag_race_1 = Region("Stadium: DRAG RACE 1", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_drag_race_1)
-    stadium_drag_race_2 = Region("Stadium: DRAG RACE 2", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_drag_race_2)
-    stadium_drag_race_3 = Region("Stadium: DRAG RACE 3", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_drag_race_3)
-    stadium_drag_race_4 = Region("Stadium: DRAG RACE 4", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_drag_race_4)
-
-    stadium_high_jump = Region("Stadium: HIGH JUMP", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_high_jump)
-
-    stadium_target_flight = Region("Stadium: TARGET FLIGHT", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_target_flight)
-
-    stadium_air_glider = Region("Stadium: AIR GLIDER", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_air_glider)
-
-    stadium_kirby_melee_all = Region("Stadium: KIRBY MELEE ALL", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_kirby_melee_all)
-    stadium_kirby_melee_1 = Region("Stadium: KIRBY MELEE 1", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_kirby_melee_1)
-    stadium_kirby_melee_2 = Region("Stadium: KIRBY MELEE 2", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_kirby_melee_2)
-
-    stadium_vs_king_dedede = Region("Stadium: VS. KING DEDEDE", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_vs_king_dedede)
-
-    stadium_single_race_1 = Region("Stadium: SINGLE RACE 1", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_1)
-    stadium_single_race_2 = Region("Stadium: SINGLE RACE 2", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_2)
-    stadium_single_race_3 = Region("Stadium: SINGLE RACE 3", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_3)
-    stadium_single_race_4 = Region("Stadium: SINGLE RACE 4", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_4)
-    stadium_single_race_5 = Region("Stadium: SINGLE RACE 5", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_5)
-    stadium_single_race_6 = Region("Stadium: SINGLE RACE 6", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_6)
-    stadium_single_race_7 = Region("Stadium: SINGLE RACE 7", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_7)
-    stadium_single_race_8 = Region("Stadium: SINGLE RACE 8", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_8)
-    stadium_single_race_9 = Region("Stadium: SINGLE RACE 9", world.player, world.multiworld)
-    world.multiworld.regions.append(stadium_single_race_9)
-
-    # connect stadium regions
-    city_trial_region.connect(stadium_destruction_derby_all)
-    stadium_destruction_derby_all.connect(stadium_destruction_derby_1)
-    stadium_destruction_derby_all.connect(stadium_destruction_derby_2)
-    stadium_destruction_derby_all.connect(
-        stadium_destruction_derby_3,
-        None,
-        lambda state: state.can_reach_location(
-            "Stadium: DESTRUCTION DERBY 2 In one game, KO a rival 10 times or more!", world.player
-        ),
-    )
-    stadium_destruction_derby_all.connect(
-        stadium_destruction_derby_4,
-        None,
-        lambda state: state.can_reach_location(
-            "Stadium: DESTRUCTION DERBY 3 In one game, KO your rivals 5 or more times!", world.player
-        ),
-    )
-    stadium_destruction_derby_all.connect(
-        stadium_destruction_derby_5,
-        None,
-        lambda state: state.can_reach_location(
-            "Stadium: DESTRUCTION DERBY 4 In one game, KO a rival 10 times or more!", world.player
-        ),
+    # Create all stadium/sub-regions and register them in batch
+    create_regions_batch(
+        world,
+        KARRegion.CT_FREE_RUN,
+        KARRegion.STADIUM_DD_ALL,
+        KARRegion.STADIUM_DD1,
+        KARRegion.STADIUM_DD2,
+        KARRegion.STADIUM_DD3,
+        KARRegion.STADIUM_DD4,
+        KARRegion.STADIUM_DD5,
+        KARRegion.STADIUM_DR1,
+        KARRegion.STADIUM_DR2,
+        KARRegion.STADIUM_DR3,
+        KARRegion.STADIUM_DR4,
+        KARRegion.STADIUM_HJ,
+        KARRegion.STADIUM_TF,
+        KARRegion.STADIUM_AG,
+        KARRegion.STADIUM_KM_ALL,
+        KARRegion.STADIUM_KM1,
+        KARRegion.STADIUM_KM2,
+        KARRegion.STADIUM_VSKD,
+        KARRegion.STADIUM_SR1,
+        KARRegion.STADIUM_SR2,
+        KARRegion.STADIUM_SR3,
+        KARRegion.STADIUM_SR4,
+        KARRegion.STADIUM_SR5,
+        KARRegion.STADIUM_SR6,
+        KARRegion.STADIUM_SR7,
+        KARRegion.STADIUM_SR8,
+        KARRegion.STADIUM_SR9,
     )
 
-    city_trial_region.connect(stadium_drag_race_1)
-    city_trial_region.connect(stadium_drag_race_2)
-    city_trial_region.connect(stadium_drag_race_3)
-    city_trial_region.connect(
-        stadium_drag_race_4,
-        None,
-        lambda state: state.can_reach_location("Stadium: DRAG RACE 3 Finish in less than 00:27:00!", world.player),
+    # connect city trial to free run and all stadium regions (rules applied later in set_rules)
+    city_trial_region.add_exits(
+        [
+            KARRegion.CT_FREE_RUN,
+            KARRegion.STADIUM_DD_ALL,
+            KARRegion.STADIUM_DR1,
+            KARRegion.STADIUM_DR2,
+            KARRegion.STADIUM_DR3,
+            KARRegion.STADIUM_DR4,
+            KARRegion.STADIUM_HJ,
+            KARRegion.STADIUM_TF,
+            KARRegion.STADIUM_AG,
+            KARRegion.STADIUM_KM_ALL,
+            KARRegion.STADIUM_VSKD,
+            KARRegion.STADIUM_SR1,
+            KARRegion.STADIUM_SR2,
+            KARRegion.STADIUM_SR3,
+            KARRegion.STADIUM_SR4,
+            KARRegion.STADIUM_SR5,
+            KARRegion.STADIUM_SR6,
+            KARRegion.STADIUM_SR7,
+            KARRegion.STADIUM_SR8,
+            KARRegion.STADIUM_SR9,
+        ]
     )
 
-    city_trial_region.connect(stadium_high_jump)
-    city_trial_region.connect(stadium_target_flight)
-    city_trial_region.connect(stadium_air_glider)
-
-    city_trial_region.connect(stadium_kirby_melee_all)
-    stadium_kirby_melee_all.connect(stadium_kirby_melee_1)
-    stadium_kirby_melee_all.connect(
-        stadium_kirby_melee_2,
-        None,
-        lambda state: state.can_reach_location(
-            "Stadium: KIRBY MELEE 1 In one game, KO over 75 enemies by yourself!", world.player
-        ),
+    # connect destruction derby and kirby melee sub-regions (rules applied later in set_rules)
+    world.get_region(KARRegion.STADIUM_DD_ALL).add_exits(
+        [
+            KARRegion.STADIUM_DD1,
+            KARRegion.STADIUM_DD2,
+            KARRegion.STADIUM_DD3,
+            KARRegion.STADIUM_DD4,
+            KARRegion.STADIUM_DD5,
+        ]
     )
 
-    city_trial_region.connect(stadium_vs_king_dedede)
+    world.get_region(KARRegion.STADIUM_KM_ALL).add_exits(
+        [
+            KARRegion.STADIUM_KM1,
+            KARRegion.STADIUM_KM2,
+        ]
+    )
 
-    city_trial_region.connect(stadium_single_race_1)
-    city_trial_region.connect(stadium_single_race_2)
-    city_trial_region.connect(stadium_single_race_3)
-    city_trial_region.connect(stadium_single_race_4)
-    city_trial_region.connect(stadium_single_race_5)
-    city_trial_region.connect(stadium_single_race_6)
-    city_trial_region.connect(stadium_single_race_7)
-    city_trial_region.connect(stadium_single_race_8)
-    city_trial_region.connect(stadium_single_race_9)
+
+AR_COURSE_REGIONS = [
+    KARRegion.AR_MAGMA_FLOWS,
+    KARRegion.AR_FANTASY_MEADOWS,
+    KARRegion.AR_CELESTIAL_VALLEY,
+    KARRegion.AR_BEANSTALK_PARK,
+    KARRegion.AR_FROZEN_HILLSIDE,
+    KARRegion.AR_MACHINE_PASSAGE,
+    KARRegion.AR_SKY_SANDS,
+    KARRegion.AR_CHECKER_KNIGHTS,
+    KARRegion.AR_NEBULA_BELT,
+]
+AR_TA_COURSE_REGIONS = [
+    KARRegion.AR_TA_MAGMA_FLOWS,
+    KARRegion.AR_TA_FANTASY_MEADOWS,
+    KARRegion.AR_TA_CELESTIAL_VALLEY,
+    KARRegion.AR_TA_BEANSTALK_PARK,
+    KARRegion.AR_TA_FROZEN_HILLSIDE,
+    KARRegion.AR_TA_MACHINE_PASSAGE,
+    KARRegion.AR_TA_SKY_SANDS,
+    KARRegion.AR_TA_CHECKER_KNIGHTS,
+    KARRegion.AR_TA_NEBULA_BELT,
+]
+AR_FR_COURSE_REGIONS = [
+    KARRegion.AR_FR_MAGMA_FLOWS,
+    KARRegion.AR_FR_FANTASY_MEADOWS,
+    KARRegion.AR_FR_CELESTIAL_VALLEY,
+    KARRegion.AR_FR_BEANSTALK_PARK,
+    KARRegion.AR_FR_FROZEN_HILLSIDE,
+    KARRegion.AR_FR_MACHINE_PASSAGE,
+    KARRegion.AR_FR_SKY_SANDS,
+    KARRegion.AR_FR_CHECKER_KNIGHTS,
+    KARRegion.AR_FR_NEBULA_BELT,
+]
+
+TR_COURSE_REGIONS = [
+    KARRegion.TR_GRASS,
+    KARRegion.TR_METAL,
+    KARRegion.TR_LIGHT,
+    KARRegion.TR_SAND,
+    KARRegion.TR_FIRE,
+    KARRegion.TR_WATER,
+    KARRegion.TR_SKY,
+]
+TR_TA_COURSE_REGIONS = [
+    KARRegion.TR_TA_GRASS,
+    KARRegion.TR_TA_METAL,
+    KARRegion.TR_TA_LIGHT,
+    KARRegion.TR_TA_SAND,
+    KARRegion.TR_TA_FIRE,
+    KARRegion.TR_TA_WATER,
+    KARRegion.TR_TA_SKY,
+]
+TR_FR_COURSE_REGIONS = [
+    KARRegion.TR_FR_GRASS,
+    KARRegion.TR_FR_METAL,
+    KARRegion.TR_FR_LIGHT,
+    KARRegion.TR_FR_SAND,
+    KARRegion.TR_FR_FIRE,
+    KARRegion.TR_FR_WATER,
+    KARRegion.TR_FR_SKY,
+]
+
+
+# Region-to-unlock-item mappings used by set_rules() for entrance gating.
+
+STADIUM_REGION_TO_UNLOCK: dict[str, KARItemName] = {
+    KARRegion.STADIUM_DR1: KARItemName.UNLOCK_STADIUM_DRAG_RACE_1,
+    KARRegion.STADIUM_DR2: KARItemName.UNLOCK_STADIUM_DRAG_RACE_2,
+    KARRegion.STADIUM_DR3: KARItemName.UNLOCK_STADIUM_DRAG_RACE_3,
+    KARRegion.STADIUM_DR4: KARItemName.UNLOCK_STADIUM_DRAG_RACE_4,
+    KARRegion.STADIUM_HJ: KARItemName.UNLOCK_STADIUM_HIGH_JUMP,
+    KARRegion.STADIUM_TF: KARItemName.UNLOCK_STADIUM_TARGET_FLIGHT,
+    KARRegion.STADIUM_AG: KARItemName.UNLOCK_STADIUM_AIR_GLIDER,
+    KARRegion.STADIUM_KM1: KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1,
+    KARRegion.STADIUM_KM2: KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2,
+    KARRegion.STADIUM_DD1: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1,
+    KARRegion.STADIUM_DD2: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2,
+    KARRegion.STADIUM_DD3: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
+    KARRegion.STADIUM_DD4: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
+    KARRegion.STADIUM_DD5: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5,
+    KARRegion.STADIUM_SR1: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_1,
+    KARRegion.STADIUM_SR2: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_2,
+    KARRegion.STADIUM_SR3: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_3,
+    KARRegion.STADIUM_SR4: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_4,
+    KARRegion.STADIUM_SR5: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_5,
+    KARRegion.STADIUM_SR6: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_6,
+    KARRegion.STADIUM_SR7: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_7,
+    KARRegion.STADIUM_SR8: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_8,
+    KARRegion.STADIUM_SR9: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_9,
+    KARRegion.STADIUM_VSKD: KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE,
+}
+
+STADIUM_ALL_REGION_TO_UNLOCKS: dict[str, list[KARItemName]] = {
+    KARRegion.STADIUM_DD_ALL: [
+        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1,
+        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2,
+        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
+        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
+        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5,
+    ],
+    KARRegion.STADIUM_KM_ALL: [
+        KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1,
+        KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2,
+    ],
+}
+
+AR_COURSE_REGION_TO_UNLOCK: dict[str, KARItemName] = {
+    KARRegion.AR_MAGMA_FLOWS: KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARRegion.AR_FANTASY_MEADOWS: KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARRegion.AR_CELESTIAL_VALLEY: KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARRegion.AR_BEANSTALK_PARK: KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARRegion.AR_FROZEN_HILLSIDE: KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARRegion.AR_MACHINE_PASSAGE: KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+    KARRegion.AR_SKY_SANDS: KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARRegion.AR_CHECKER_KNIGHTS: KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    KARRegion.AR_NEBULA_BELT: KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
+    KARRegion.AR_TA_MAGMA_FLOWS: KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARRegion.AR_TA_FANTASY_MEADOWS: KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARRegion.AR_TA_CELESTIAL_VALLEY: KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARRegion.AR_TA_BEANSTALK_PARK: KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARRegion.AR_TA_FROZEN_HILLSIDE: KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARRegion.AR_TA_MACHINE_PASSAGE: KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+    KARRegion.AR_TA_SKY_SANDS: KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARRegion.AR_TA_CHECKER_KNIGHTS: KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    KARRegion.AR_TA_NEBULA_BELT: KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
+    KARRegion.AR_FR_MAGMA_FLOWS: KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARRegion.AR_FR_FANTASY_MEADOWS: KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARRegion.AR_FR_CELESTIAL_VALLEY: KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARRegion.AR_FR_BEANSTALK_PARK: KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARRegion.AR_FR_FROZEN_HILLSIDE: KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARRegion.AR_FR_MACHINE_PASSAGE: KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+    KARRegion.AR_FR_SKY_SANDS: KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARRegion.AR_FR_CHECKER_KNIGHTS: KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    KARRegion.AR_FR_NEBULA_BELT: KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
+}
+
+TR_COURSE_REGION_TO_UNLOCK: dict[str, KARItemName] = {
+    KARRegion.TR_GRASS: KARItemName.UNLOCK_TR_COURSE_GRASS,
+    KARRegion.TR_SAND: KARItemName.UNLOCK_TR_COURSE_SAND,
+    KARRegion.TR_SKY: KARItemName.UNLOCK_TR_COURSE_SKY,
+    KARRegion.TR_FIRE: KARItemName.UNLOCK_TR_COURSE_FIRE,
+    KARRegion.TR_LIGHT: KARItemName.UNLOCK_TR_COURSE_LIGHT,
+    KARRegion.TR_WATER: KARItemName.UNLOCK_TR_COURSE_WATER,
+    KARRegion.TR_METAL: KARItemName.UNLOCK_TR_COURSE_METAL,
+    KARRegion.TR_TA_GRASS: KARItemName.UNLOCK_TR_COURSE_GRASS,
+    KARRegion.TR_TA_SAND: KARItemName.UNLOCK_TR_COURSE_SAND,
+    KARRegion.TR_TA_SKY: KARItemName.UNLOCK_TR_COURSE_SKY,
+    KARRegion.TR_TA_FIRE: KARItemName.UNLOCK_TR_COURSE_FIRE,
+    KARRegion.TR_TA_LIGHT: KARItemName.UNLOCK_TR_COURSE_LIGHT,
+    KARRegion.TR_TA_WATER: KARItemName.UNLOCK_TR_COURSE_WATER,
+    KARRegion.TR_TA_METAL: KARItemName.UNLOCK_TR_COURSE_METAL,
+    KARRegion.TR_FR_GRASS: KARItemName.UNLOCK_TR_COURSE_GRASS,
+    KARRegion.TR_FR_SAND: KARItemName.UNLOCK_TR_COURSE_SAND,
+    KARRegion.TR_FR_SKY: KARItemName.UNLOCK_TR_COURSE_SKY,
+    KARRegion.TR_FR_FIRE: KARItemName.UNLOCK_TR_COURSE_FIRE,
+    KARRegion.TR_FR_LIGHT: KARItemName.UNLOCK_TR_COURSE_LIGHT,
+    KARRegion.TR_FR_WATER: KARItemName.UNLOCK_TR_COURSE_WATER,
+    KARRegion.TR_FR_METAL: KARItemName.UNLOCK_TR_COURSE_METAL,
+}
 
 
 def connect_air_ride_region(world: "KARWorld", air_ride_region: Region) -> None:
-    # create Air Ride Regions
-    time_attack_region = Region("Air Ride: Time Attack", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_region)
-
-    free_run_region = Region("Air Ride: Free Run", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_region)
-
-    air_ride_magma_flows = Region("Air Ride: MAGMA FLOWS", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_magma_flows)
-    air_ride_fantasy_meadows = Region("Air Ride: FANTASY MEADOWS", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_fantasy_meadows)
-    air_ride_celestial_valley = Region("Air Ride: CELESTIAL VALLEY", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_celestial_valley)
-    air_ride_beanstalk_park = Region("Air Ride: BEANSTALK PARK", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_beanstalk_park)
-    air_ride_frozen_hillside = Region("Air Ride: FROZEN HILLSIDE", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_frozen_hillside)
-    air_ride_machine_passage = Region("Air Ride: MACHINE PASSAGE", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_machine_passage)
-    air_ride_sky_sands = Region("Air Ride: SKY SANDS", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_sky_sands)
-    air_ride_checker_knights = Region("Air Ride: CHECKER KNIGHTS", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_checker_knights)
-    air_ride_nebula_belt = Region("Air Ride: NEBULA BELT", world.player, world.multiworld)
-    world.multiworld.regions.append(air_ride_nebula_belt)
-
-    time_attack_magma_flows = Region("Air Ride: Time Attack: MAGMA FLOWS", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_magma_flows)
-    time_attack_fantasy_meadows = Region("Air Ride: Time Attack: FANTASY MEADOWS", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_fantasy_meadows)
-    time_attack_celestial_valley = Region("Air Ride: Time Attack: CELESTIAL VALLEY", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_celestial_valley)
-    time_attack_beanstalk_park = Region("Air Ride: Time Attack: BEANSTALK PARK", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_beanstalk_park)
-    time_attack_frozen_hillside = Region("Air Ride: Time Attack: FROZEN HILLSIDE", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_frozen_hillside)
-    time_attack_machine_passage = Region("Air Ride: Time Attack: MACHINE PASSAGE", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_machine_passage)
-    time_attack_sky_sands = Region("Air Ride: Time Attack: SKY SANDS", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_sky_sands)
-    time_attack_checker_knights = Region("Air Ride: Time Attack: CHECKER KNIGHTS", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_checker_knights)
-    time_attack_nebula_belt = Region("Air Ride: Time Attack: NEBULA BELT", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_nebula_belt)
-
-    free_run_magma_flows = Region("Air Ride: Free Run: MAGMA FLOWS", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_magma_flows)
-    free_run_fantasy_meadows = Region("Air Ride: Free Run: FANTASY MEADOWS", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_fantasy_meadows)
-    free_run_celestial_valley = Region("Air Ride: Free Run: CELESTIAL VALLEY", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_celestial_valley)
-    free_run_beanstalk_park = Region("Air Ride: Free Run: BEANSTALK PARK", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_beanstalk_park)
-    free_run_frozen_hillside = Region("Air Ride: Free Run: FROZEN HILLSIDE", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_frozen_hillside)
-    free_run_machine_passage = Region("Air Ride: Free Run: MACHINE PASSAGE", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_machine_passage)
-    free_run_sky_sands = Region("Air Ride: Free Run: SKY SANDS", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_sky_sands)
-    free_run_checker_knights = Region("Air Ride: Free Run: CHECKER KNIGHTS", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_checker_knights)
-    free_run_nebula_belt = Region("Air Ride: Free Run: NEBULA BELT", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_nebula_belt)
-
-    # connect main Air Ride Regions
-    air_ride_region.connect(time_attack_region)
-    air_ride_region.connect(free_run_region)
-
-    # connect courses to air ride
-    air_ride_region.connect(air_ride_magma_flows)
-    air_ride_region.connect(air_ride_fantasy_meadows)
-    air_ride_region.connect(air_ride_celestial_valley)
-    air_ride_region.connect(air_ride_beanstalk_park)
-    air_ride_region.connect(air_ride_frozen_hillside)
-    air_ride_region.connect(air_ride_machine_passage)
-    air_ride_region.connect(air_ride_sky_sands)
-    air_ride_region.connect(air_ride_checker_knights)
-    air_ride_region.connect(
-        air_ride_nebula_belt,
-        None,
-        lambda state: state.can_reach_location("Air Ride: Race over 100 laps!", world.player),
+    # Create all Air Ride sub-regions in batch
+    create_regions_batch(
+        world,
+        KARRegion.AR_TIME_ATTACK,
+        KARRegion.AR_FREE_RUN,
+        *AR_COURSE_REGIONS,
+        *AR_TA_COURSE_REGIONS,
+        *AR_FR_COURSE_REGIONS,
     )
 
-    # connect courses to time attack
-    time_attack_region.connect(time_attack_magma_flows)
-    time_attack_region.connect(time_attack_fantasy_meadows)
-    time_attack_region.connect(time_attack_celestial_valley)
-    time_attack_region.connect(time_attack_beanstalk_park)
-    time_attack_region.connect(time_attack_frozen_hillside)
-    time_attack_region.connect(time_attack_machine_passage)
-    time_attack_region.connect(time_attack_sky_sands)
-    time_attack_region.connect(time_attack_checker_knights)
-    time_attack_region.connect(
-        time_attack_nebula_belt,
-        None,
-        lambda state: state.can_reach_location("Air Ride: Race over 100 laps!", world.player),
-    )
+    # connect main Air Ride sub-regions
+    air_ride_region.add_exits([KARRegion.AR_TIME_ATTACK, KARRegion.AR_FREE_RUN])
 
-    # connect courses to free run
-    free_run_region.connect(free_run_magma_flows)
-    free_run_region.connect(free_run_fantasy_meadows)
-    free_run_region.connect(free_run_celestial_valley)
-    free_run_region.connect(free_run_beanstalk_park)
-    free_run_region.connect(free_run_frozen_hillside)
-    free_run_region.connect(free_run_machine_passage)
-    free_run_region.connect(free_run_sky_sands)
-    free_run_region.connect(free_run_checker_knights)
-    free_run_region.connect(
-        free_run_nebula_belt,
-        None,
-        lambda state: state.can_reach_location("Air Ride: Race over 100 laps!", world.player),
-    )
+    # connect all courses (Nebula Belt rules applied later in set_rules)
+    air_ride_region.add_exits(AR_COURSE_REGIONS)
+
+    # connect time attack courses
+    world.get_region(KARRegion.AR_TIME_ATTACK).add_exits(AR_TA_COURSE_REGIONS)
+
+    # connect free run courses
+    world.get_region(KARRegion.AR_FREE_RUN).add_exits(AR_FR_COURSE_REGIONS)
 
 
 def connect_top_ride_region(world: "KARWorld", top_ride_region: Region) -> None:
-    # create Top Ride Regions
-    time_attack_region = Region("Top Ride: Time Attack", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_region)
+    # Create all Top Ride sub-regions in batch
+    create_regions_batch(
+        world,
+        KARRegion.TR_TIME_ATTACK,
+        KARRegion.TR_FREE_RUN,
+        *TR_COURSE_REGIONS,
+        *TR_TA_COURSE_REGIONS,
+        *TR_FR_COURSE_REGIONS,
+    )
 
-    free_run_region = Region("Top Ride: Free Run", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_region)
+    # connect main Top Ride sub-regions and all courses (no rules)
+    top_ride_region.add_exits([KARRegion.TR_TIME_ATTACK, KARRegion.TR_FREE_RUN, *TR_COURSE_REGIONS])
 
-    top_ride_grass = Region("Top Ride: GRASS", world.player, world.multiworld)
-    top_ride_metal = Region("Top Ride: METAL", world.player, world.multiworld)
-    top_ride_light = Region("Top Ride: LIGHT", world.player, world.multiworld)
-    top_ride_sand = Region("Top Ride: SAND", world.player, world.multiworld)
-    top_ride_fire = Region("Top Ride: FIRE", world.player, world.multiworld)
-    top_ride_water = Region("Top Ride: WATER", world.player, world.multiworld)
-    top_ride_sky = Region("Top Ride: SKY", world.player, world.multiworld)
-    world.multiworld.regions.append(top_ride_grass)
-    world.multiworld.regions.append(top_ride_metal)
-    world.multiworld.regions.append(top_ride_light)
-    world.multiworld.regions.append(top_ride_sand)
-    world.multiworld.regions.append(top_ride_fire)
-    world.multiworld.regions.append(top_ride_water)
-    world.multiworld.regions.append(top_ride_sky)
+    world.get_region(KARRegion.TR_FREE_RUN).add_exits(TR_FR_COURSE_REGIONS)
 
-    free_run_grass = Region("Top Ride: Free Run: GRASS", world.player, world.multiworld)
-    free_run_metal = Region("Top Ride: Free Run: METAL", world.player, world.multiworld)
-    free_run_light = Region("Top Ride: Free Run: LIGHT", world.player, world.multiworld)
-    free_run_sand = Region("Top Ride: Free Run: SAND", world.player, world.multiworld)
-    free_run_fire = Region("Top Ride: Free Run: FIRE", world.player, world.multiworld)
-    free_run_water = Region("Top Ride: Free Run: WATER", world.player, world.multiworld)
-    free_run_sky = Region("Top Ride: Free Run: SKY", world.player, world.multiworld)
-    world.multiworld.regions.append(free_run_grass)
-    world.multiworld.regions.append(free_run_metal)
-    world.multiworld.regions.append(free_run_light)
-    world.multiworld.regions.append(free_run_sand)
-    world.multiworld.regions.append(free_run_fire)
-    world.multiworld.regions.append(free_run_water)
-    world.multiworld.regions.append(free_run_sky)
-
-    time_attack_grass = Region("Top Ride: Time Attack: GRASS", world.player, world.multiworld)
-    time_attack_metal = Region("Top Ride: Time Attack: METAL", world.player, world.multiworld)
-    time_attack_light = Region("Top Ride: Time Attack: LIGHT", world.player, world.multiworld)
-    time_attack_sand = Region("Top Ride: Time Attack: SAND", world.player, world.multiworld)
-    time_attack_fire = Region("Top Ride: Time Attack: FIRE", world.player, world.multiworld)
-    time_attack_water = Region("Top Ride: Time Attack: WATER", world.player, world.multiworld)
-    time_attack_sky = Region("Top Ride: Time Attack: SKY", world.player, world.multiworld)
-    world.multiworld.regions.append(time_attack_grass)
-    world.multiworld.regions.append(time_attack_metal)
-    world.multiworld.regions.append(time_attack_light)
-    world.multiworld.regions.append(time_attack_sand)
-    world.multiworld.regions.append(time_attack_fire)
-    world.multiworld.regions.append(time_attack_water)
-    world.multiworld.regions.append(time_attack_sky)
-
-    # connect main Top Ride regions
-    top_ride_region.connect(time_attack_region)
-    top_ride_region.connect(free_run_region)
-
-    # connect courses to Top Ride region
-    top_ride_region.connect(top_ride_grass)
-    top_ride_region.connect(top_ride_metal)
-    top_ride_region.connect(top_ride_light)
-    top_ride_region.connect(top_ride_sand)
-    top_ride_region.connect(top_ride_fire)
-    top_ride_region.connect(top_ride_water)
-    top_ride_region.connect(top_ride_sky)
-
-    # connect free run courses to free run region
-    free_run_region.connect(free_run_grass)
-    free_run_region.connect(free_run_metal)
-    free_run_region.connect(free_run_light)
-    free_run_region.connect(free_run_sand)
-    free_run_region.connect(free_run_fire)
-    free_run_region.connect(free_run_water)
-    free_run_region.connect(free_run_sky)
-
-    # connect time attack courses to time attack region
-    time_attack_region.connect(time_attack_grass)
-    time_attack_region.connect(time_attack_metal)
-    time_attack_region.connect(time_attack_light)
-    time_attack_region.connect(time_attack_sand)
-    time_attack_region.connect(time_attack_fire)
-    time_attack_region.connect(time_attack_water)
-    time_attack_region.connect(time_attack_sky)
-
-
-def count_locations_by_region(world: "KARWorld") -> dict[str, int]:
-    """
-    Count the number of locations in each region.
-
-    :param world: The KARWorld instance
-    :return: Dict mapping region name to location count
-    """
-    region_location_counts: dict[str, int] = {}
-
-    for region in world.multiworld.get_regions(world.player):
-        # Count actual locations (not event locations, which have address=None)
-        location_count = sum(1 for loc in region.locations if loc.address is not None)
-        if location_count > 0:
-            region_location_counts[region.name] = location_count
-
-    return region_location_counts
+    world.get_region(KARRegion.TR_TIME_ATTACK).add_exits(TR_TA_COURSE_REGIONS)
 
 
 def create_n_blocks_rule(
     world: "KARWorld", mode_prefix: str, required_blocks: int
 ) -> Callable[[CollectionState], bool]:
     """
-    Create a rule that checks if the player can access enough locations to complete N blocks.
-
-    :param world: The KARWorld instance
-    :param mode_prefix: The mode prefix (e.g., "City Trial", "Air Ride", "Top Ride")
-    :param required_blocks: The number of blocks required for victory
-    :return: A rule function that checks if N blocks can be completed
+    Create a rule that checks if the player can access enough locations to complete N blocks
+    in a given mode, by counting reachable locations whose region belongs to that mode.
     """
-    from .KARData import ProgressiveStadiumUnlockType
+    player = world.player
+    is_city_trial = mode_prefix == KARRegion.CITY_TRIAL
 
-    # Get location counts per region
-    region_counts = count_locations_by_region(world)
-
-    # Separate base locations from stadium locations
-    # Map specific stadium unlocks to their region location counts
-    # Track "ALL" regions separately to avoid double-counting
-    base_count = 0
-    stadium_unlock_to_count: dict[str, int] = {}
-    all_region_to_unlocks: dict[str, tuple[int, list[str]]] = {}  # region_name -> (count, [unlock_items])
-
-    for region_name, count in region_counts.items():
-        # For City Trial, stadium regions are separate regions that start with "Stadium:"
-        # For Air Ride and Top Ride, all regions start with the mode prefix
-        is_stadium_region = region_name.startswith("Stadium:")
-        is_mode_region = region_name.startswith(mode_prefix)
-
-        # Include this region if it's either a mode-specific region OR a stadium (for City Trial only)
-        if is_mode_region or (mode_prefix == "City Trial" and is_stadium_region):
-            if is_stadium_region:
-                # This is a stadium region
-                if "ALL" in region_name:
-                    # This is an "ALL" region - track it separately
-                    # Extract base stadium name (e.g., "Stadium: DESTRUCTION DERBY ALL" -> "DESTRUCTION DERBY")
-                    stadium_base = region_name.replace("Stadium:", "").replace("ALL", "").strip()
-
-                    # Find all unlocks that match this stadium type
-                    matching_unlocks = []
-                    for unlock in ProgressiveStadiumUnlockType:
-                        unlock_name = unlock.value.replace("Unlock Stadium:", "").strip()
-                        if stadium_base in unlock_name:
-                            matching_unlocks.append(unlock.value)
-
-                    all_region_to_unlocks[region_name] = (count, matching_unlocks)
-                else:
-                    # This is a specific numbered region - find exact match
-                    stadium_name = region_name.replace("Stadium:", "").strip()
-
-                    # Find exact matching unlock item
-                    for unlock in ProgressiveStadiumUnlockType:
-                        unlock_name = unlock.value.replace("Unlock Stadium:", "").strip()
-                        if unlock_name == stadium_name:
-                            stadium_unlock_to_count[unlock.value] = count
-                            break
-            else:
-                # This is a base region (e.g., "City Trial", "Air Ride", "Top Ride")
-                base_count += count
-
-    # If we can already reach the required blocks without stadiums, no rule needed
-    if base_count >= required_blocks:
-        return lambda state: True
-
-    # Create a rule that counts accessible locations based on stadium unlocks
     def can_access_n_blocks(state: CollectionState) -> bool:
-        accessible_count = base_count
-
-        # Add specific stadium region counts
-        for unlock_item, count in stadium_unlock_to_count.items():
-            if state.has(unlock_item, world.player):
-                accessible_count += count
-
-        # Add "ALL" region counts (only once per ALL region, if ANY matching unlock is present)
-        for count, matching_unlocks in all_region_to_unlocks.values():
-            if state.has_any(matching_unlocks, world.player):
-                accessible_count += count
-
-        return accessible_count >= required_blocks
+        count = 0
+        # Skip event locations (address is None), notably the victory event whose
+        # access rule is this very function — iterating it would recurse infinitely.
+        for loc in state.multiworld.get_locations(player):
+            if loc.address is None or loc.parent_region is None:
+                continue
+            name = loc.parent_region.name
+            if not (name.startswith(mode_prefix) or (is_city_trial and name.startswith("Stadium:"))):
+                continue
+            if loc.can_reach(state):
+                count += 1
+                if count >= required_blocks:
+                    return True
+        return False
 
     return can_access_n_blocks
+
+
+# Patch type unlocks consulted by the Max Stats Insanity goal's "all 9 patches"
+# alternative. Each entry is the unlock item whose presence opens up CT spawns of
+# that patch stat type — required when patches_gated is on.
+_MAX_STATS_PATCH_UNLOCKS: tuple[str, ...] = (
+    KARItemName.UNLOCK_PATCH_WEIGHT,
+    KARItemName.UNLOCK_PATCH_ACCEL,
+    KARItemName.UNLOCK_PATCH_TOP_SPEED,
+    KARItemName.UNLOCK_PATCH_TURN,
+    KARItemName.UNLOCK_PATCH_CHARGE,
+    KARItemName.UNLOCK_PATCH_GLIDE,
+    KARItemName.UNLOCK_PATCH_OFFENSE,
+    KARItemName.UNLOCK_PATCH_DEFENSE,
+    KARItemName.UNLOCK_PATCH_HP,
+)
+
+
+def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
+    """
+    Build the access rule for the Max Stats Insanity goal event.
+
+    Requires:
+      - All Patch Cap Increase items collected (only when progressive caps are on; otherwise the
+        cap is locked at the target from the start, so no cap items exist in the pool).
+      - At least one route to maxing all 9 stats: either all 9 patch type unlocks (patches gated
+        path) or the All-Up patch unlock (items gated path). Routes that aren't gated are
+        trivially open, so the constraint is only emitted when both gates are on.
+
+    Returns None if every clause would be trivially satisfied — caller then attaches the event
+    with no access rule.
+    """
+    options = world.options
+    rule_parts: list[Rule] = []
+
+    if options.city_trial_progressive_patch_caps:
+        count = max(0, options.city_trial_patch_cap_amount.value - 1)
+        if count > 0:
+            rule_parts.append(Has(KARItemName.PATCH_CAP_INCREASE, count=count))
+
+    if options.patches_gated and options.city_trial_items_gated:
+        # HasAll/HasAny only accept item names, not nested rules. Compose with the | operator
+        # (defined on Rule) to express "all 9 patches OR all-up unlock".
+        rule_parts.append(HasAll(*_MAX_STATS_PATCH_UNLOCKS) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
+
+    if not rule_parts:
+        return None
+    rule = rule_parts[0]
+    for part in rule_parts[1:]:
+        rule = rule & part
+    return rule
+
+
+def _create_goal_events(
+    world: "KARWorld",
+    goal_option,
+    checklist_amount_option,
+    goal_locations_option,
+    mode_prefix: str,
+    location_table: dict,
+    goal_location_map: Mapping[int, str],
+    victory_event_type: str,
+) -> str | None:
+    """
+    Create goal event locations for a single game mode.
+
+    :return: The victory event item name if a goal was created, None otherwise.
+    """
+    if goal_option.value == goal_option.option_none:
+        return None
+
+    # Local import: KARLocations imports KARRegion from this module, so a top-level
+    # import would cycle. Only needed here for the add_event item_type/location_type.
+    from .KARLocations import KARLocation
+
+    region = world.get_region(mode_prefix)
+
+    if goal_option.value == goal_option.option_n_checklist_blocks:
+        n_blocks_rule = create_n_blocks_rule(world, mode_prefix, checklist_amount_option.value)
+        region.add_event(
+            f"{mode_prefix}: Complete {checklist_amount_option.value} Checklist Blocks",
+            victory_event_type,
+            n_blocks_rule,
+            location_type=KARLocation,
+            item_type=KARItem,
+        )
+    elif goal_option.value == goal_option.option_checklist_list:
+        goal_locs = list(goal_locations_option.value)
+        rule: Rule | None = None
+        if goal_locs:
+            rule = CanReachLocation(goal_locs[0])
+            for loc in goal_locs[1:]:
+                rule = rule & CanReachLocation(loc)
+        region.add_event(
+            f"{mode_prefix}: Complete Required Checklist Locations",
+            victory_event_type,
+            rule,
+            location_type=KARLocation,
+            item_type=KARItem,
+        )
+    elif goal_option.value in goal_location_map:
+        goal_location_name = goal_location_map[goal_option.value]
+        goal_location_data = location_table[goal_location_name]
+        goal_region = world.get_region(goal_location_data.region)
+
+        blocks_rule = None
+        if goal_option.value == goal_option.option_100_checklist_blocks:
+            blocks_rule = create_n_blocks_rule(world, mode_prefix, 100)
+
+        goal_region.add_event(
+            f"{goal_location_name} (Victory)",
+            victory_event_type,
+            blocks_rule,
+            location_type=KARLocation,
+            item_type=KARItem,
+        )
+    elif goal_option.value == CityTrialGoal.option_max_stats_in_one_run:
+        # Synthetic goal event in the City Trial region. There is no checklist
+        # location to bind to — the mod sets max_stats_ct_achieved at runtime
+        # when the player's stats all hit the per-slot patch-cap target.
+        region.add_event(
+            f"{mode_prefix}: Max Stats (Insanity)",
+            victory_event_type,
+            _build_max_stats_goal_rule(world),
+            location_type=KARLocation,
+            item_type=KARItem,
+        )
+
+    return victory_event_type
 
 
 def determine_goal(world: "KARWorld") -> None:
     """
     Determine the goal for the world and create event locations for each enabled mode's goal.
-    Event items placed on these locations are checked for completion.
     """
+    # Imports are deferred because KARLocations imports KARRegion from this module.
+    from .KARLocations import (
+        AIR_RIDE_GOAL_TO_LOCATION,
+        AIR_RIDE_LOCATION_TABLE,
+        CITY_TRIAL_GOAL_TO_LOCATION,
+        CITY_TRIAL_LOCATION_TABLE,
+        TOP_RIDE_GOAL_TO_LOCATION,
+        TOP_RIDE_LOCATION_TABLE,
+    )
 
-    goal_event_items: list[str] = []
+    goal_event_items = [
+        result
+        for result in [
+            _create_goal_events(
+                world,
+                world.options.city_trial_goal,
+                world.options.city_trial_checklist_amount,
+                world.options.city_trial_goal_locations,
+                KARRegion.CITY_TRIAL,
+                CITY_TRIAL_LOCATION_TABLE,
+                CITY_TRIAL_GOAL_TO_LOCATION,
+                KARItemName.CITY_TRIAL_VICTORY,
+            ),
+            _create_goal_events(
+                world,
+                world.options.air_ride_goal,
+                world.options.air_ride_checklist_amount,
+                world.options.air_ride_goal_locations,
+                KARRegion.AIR_RIDE,
+                AIR_RIDE_LOCATION_TABLE,
+                AIR_RIDE_GOAL_TO_LOCATION,
+                KARItemName.AIR_RIDE_VICTORY,
+            ),
+            _create_goal_events(
+                world,
+                world.options.top_ride_goal,
+                world.options.top_ride_checklist_amount,
+                world.options.top_ride_goal_locations,
+                KARRegion.TOP_RIDE,
+                TOP_RIDE_LOCATION_TABLE,
+                TOP_RIDE_GOAL_TO_LOCATION,
+                KARItemName.TOP_RIDE_VICTORY,
+            ),
+        ]
+        if result is not None
+    ]
 
-    # City Trial goal handling
-    if world.options.city_trial_goal.value != world.options.city_trial_goal.option_none:
-        goal_event_items.append(VictoryEventType.CITY_TRIAL_VICTORY.value)
-
-        match world.options.city_trial_goal.current_key:
-            case world.options.city_trial_goal.option_n_checklist_blocks:
-                # For N checklist blocks, place event in the main City Trial region
-                city_trial_region = world.get_region("City Trial")
-                # Create rule to ensure player has access to enough locations
-                n_blocks_rule = (
-                    create_n_blocks_rule(world, "City Trial", world.options.city_trial_checklist_amount.value)
-                    if world.options.city_trial_progressive_stadiums
-                    else None
-                )
-                create_event_location(
-                    world,
-                    city_trial_region,
-                    f"City Trial: Complete {world.options.city_trial_checklist_amount.value} Checklist Blocks",
-                    VictoryEventType.CITY_TRIAL_VICTORY.value,
-                    n_blocks_rule,
-                )
-            case _:
-                # For specific goal locations (100 blocks, Hydra+Dragoon, King Dedede)
-                # Get the region from the location table since the actual location was excluded
-                goal_location_data = CITY_TRIAL_LOCATION_TABLE[world.options.city_trial_goal.current_key]
-                goal_region = world.get_region(goal_location_data.region)
-
-                # For 100 blocks goal in main region, add rule if progressive stadiums enabled
-                blocks_rule = None
-                if (
-                    world.options.city_trial_progressive_stadiums
-                    and world.options.city_trial_goal.current_key
-                    == world.options.city_trial_goal.option_100_checklist_blocks
-                    and goal_location_data.region == "City Trial"
-                ):
-                    blocks_rule = create_n_blocks_rule(world, "City Trial", 100)
-
-                create_event_location(
-                    world,
-                    goal_region,
-                    f"{world.options.city_trial_goal.current_key} (Victory)",
-                    VictoryEventType.CITY_TRIAL_VICTORY.value,
-                    blocks_rule,
-                )
-
-    # Air Ride goal handling
-    if world.options.air_ride_goal.value != world.options.air_ride_goal.option_none:
-        goal_event_items.append(VictoryEventType.AIR_RIDE_VICTORY.value)
-
-        match world.options.air_ride_goal.current_key:
-            case world.options.air_ride_goal.option_n_checklist_blocks:
-                air_ride_region = world.get_region("Air Ride")
-                # Create rule to ensure player has access to enough locations
-                n_blocks_rule = create_n_blocks_rule(world, "Air Ride", world.options.air_ride_checklist_amount.value)
-                create_event_location(
-                    world,
-                    air_ride_region,
-                    f"Air Ride: Complete {world.options.air_ride_checklist_amount.value} Checklist Blocks",
-                    VictoryEventType.AIR_RIDE_VICTORY.value,
-                    n_blocks_rule,
-                )
-            case _:
-                # For 100 blocks goal
-                # Get the region from the location table since the actual location was excluded
-                goal_location_data = AIR_RIDE_LOCATION_TABLE[world.options.air_ride_goal.current_key]
-                goal_region = world.get_region(goal_location_data.region)
-
-                # For 100 blocks goal in main region, add rule
-                blocks_rule = None
-                if (
-                    world.options.air_ride_goal.current_key == world.options.air_ride_goal.option_100_checklist_blocks
-                    and goal_location_data.region == "Air Ride"
-                ):
-                    blocks_rule = create_n_blocks_rule(world, "Air Ride", 100)
-
-                create_event_location(
-                    world,
-                    goal_region,
-                    f"{world.options.air_ride_goal.current_key} (Victory)",
-                    VictoryEventType.AIR_RIDE_VICTORY.value,
-                    blocks_rule,
-                )
-
-    # Top Ride goal handling
-    if world.options.top_ride_goal.value != world.options.top_ride_goal.option_none:
-        goal_event_items.append(VictoryEventType.TOP_RIDE_VICTORY.value)
-
-        match world.options.top_ride_goal.current_key:
-            case world.options.top_ride_goal.option_n_checklist_blocks:
-                top_ride_region = world.get_region("Top Ride")
-                # Create rule to ensure player has access to enough locations
-                n_blocks_rule = create_n_blocks_rule(world, "Top Ride", world.options.top_ride_checklist_amount.value)
-                create_event_location(
-                    world,
-                    top_ride_region,
-                    f"Top Ride: Complete {world.options.top_ride_checklist_amount.value} Checklist Blocks",
-                    VictoryEventType.TOP_RIDE_VICTORY.value,
-                    n_blocks_rule,
-                )
-            case _:
-                # For 100 blocks goal
-                # Get the region from the location table since the actual location was excluded
-                goal_location_data = TOP_RIDE_LOCATION_TABLE[world.options.top_ride_goal.current_key]
-                goal_region = world.get_region(goal_location_data.region)
-
-                # For 100 blocks goal in main region, add rule
-                blocks_rule = None
-                if (
-                    world.options.top_ride_goal.current_key == world.options.top_ride_goal.option_100_checklist_blocks
-                    and goal_location_data.region == "Top Ride"
-                ):
-                    blocks_rule = create_n_blocks_rule(world, "Top Ride", 100)
-
-                create_event_location(
-                    world,
-                    goal_region,
-                    f"{world.options.top_ride_goal.current_key} (Victory)",
-                    VictoryEventType.TOP_RIDE_VICTORY.value,
-                    blocks_rule,
-                )
-
-    # Set multiworld completion condition to check for all victory event items
-    if len(goal_event_items) > 0:
-        world.multiworld.completion_condition[world.player] = lambda state: all(
-            state.has(event_item, world.player) for event_item in goal_event_items
-        )
+    if goal_event_items:
+        world.set_completion_rule(HasAll(*goal_event_items))
