@@ -1,0 +1,47 @@
+name: SinkSlot
+description: Combines plando + start_inventory + local/non_local + exclude/priority on a CT+AR+TR multi-mode setup
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: 100_checklist_blocks
+  air_ride_goal: n_checklist_blocks
+  air_ride_checklist_amount: 40
+  air_ride_checkbox_fillers: 3
+  top_ride_goal: n_checklist_blocks
+  top_ride_checklist_amount: 40
+  top_ride_checkbox_fillers: 3
+  cross_mode_placement: false
+  events_gated: true
+  abilities_gated: true
+  patches_gated: true
+  machines_gated: true
+  boxes_gated: true
+  air_ride_courses_gated: true
+  top_ride_courses_gated: true
+  colors_gated: true
+  top_ride_items_gated: true
+  city_trial_items_gated: true
+  city_trial_progressive_stadiums: true
+  trap_chance: 25
+  effect_items_enabled: true
+  spawn_rate_progressive: true
+  spawn_rate_min: 100
+  spawn_rate_max: 300
+  start_inventory:
+    "Unlock Stadium: HIGH JUMP": 1
+    "Unlock Patch: Top Speed": 1
+  local_items:
+    - "Event Unlocks"
+  non_local_items:
+    - "Color Unlocks"
+  exclude_locations:
+    - "City Trial: Bust the star pole!"
+  priority_locations:
+    - "Air Ride: Race all of the standard Air Ride courses!"
+  plando_items:
+    - item: "Unlock Event: Tac"
+      location: "City Trial: Steal over 8 items from Tac by yourself!"
+      from_pool: true
+      force: silent
+      percentage: 100

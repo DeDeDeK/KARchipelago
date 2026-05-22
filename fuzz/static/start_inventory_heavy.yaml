@@ -1,0 +1,34 @@
+name: StartInvSlot
+description: Heavy start_inventory exercising both per-item starters and category overrides for random starter logic
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: n_checklist_blocks
+  city_trial_checklist_amount: 30
+  city_trial_checkbox_fillers: 5
+  air_ride_goal: 100_checklist_blocks
+  top_ride_goal: 100_checklist_blocks
+  events_gated: true
+  abilities_gated: true
+  patches_gated: true
+  machines_gated: true
+  boxes_gated: true
+  air_ride_courses_gated: true
+  top_ride_courses_gated: true
+  colors_gated: true
+  top_ride_items_gated: true
+  city_trial_progressive_stadiums: true
+  city_trial_progressive_patch_caps: true
+  city_trial_patch_cap_amount: 25
+  effect_items_enabled: true
+  spawn_rate_progressive: true
+  spawn_rate_min: 100
+  spawn_rate_max: 250
+  start_inventory:
+    "Unlock Patch: Top Speed": 1
+    "Unlock Patch: Accel": 1
+    "Unlock Machine: Warp Star": 1
+    "Unlock AR Course: Sky Sands": 1
+    "Unlock TR Course: Light": 1
+    "Unlock Stadium: HIGH JUMP": 1
