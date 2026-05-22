@@ -1,0 +1,131 @@
+from ..KARItems import item_name_groups
+from ..KARLocations import (
+    AIR_RIDE_LOCATION_TABLE,
+    CITY_TRIAL_LOCATION_TABLE,
+    TOP_RIDE_LOCATION_TABLE,
+    ARLocation,
+    CTLocation,
+    TRLocation,
+)
+from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_AND_AR, CT_AND_TR, CT_ONLY, TR_ONLY, KARTestBase
+
+
+class TestCTOnly(KARTestBase):
+    options = CT_ONLY
+
+    def test_flags(self):
+        self.assertTrue(self.world.city_trial_enabled)
+        self.assertFalse(self.world.air_ride_enabled)
+        self.assertFalse(self.world.top_ride_enabled)
+
+    def test_no_off_mode_locations(self):
+        loc_names = self.real_location_names()
+        self.assertFalse(loc_names & set(AIR_RIDE_LOCATION_TABLE))
+        self.assertFalse(loc_names & set(TOP_RIDE_LOCATION_TABLE))
+
+    def test_no_off_mode_rewards_in_pool(self):
+        pool = set(self.itempool_names())
+        self.assertFalse(pool & item_name_groups["Air Ride Rewards"])
+        self.assertFalse(pool & item_name_groups["Top Ride Rewards"])
+
+
+class TestAROnly(KARTestBase):
+    options = AR_ONLY
+
+    def test_flags(self):
+        self.assertFalse(self.world.city_trial_enabled)
+        self.assertTrue(self.world.air_ride_enabled)
+        self.assertFalse(self.world.top_ride_enabled)
+
+    def test_no_off_mode_locations(self):
+        loc_names = self.real_location_names()
+        self.assertFalse(loc_names & set(CITY_TRIAL_LOCATION_TABLE))
+        self.assertFalse(loc_names & set(TOP_RIDE_LOCATION_TABLE))
+
+    def test_no_off_mode_rewards_in_pool(self):
+        pool = set(self.itempool_names())
+        self.assertFalse(pool & item_name_groups["City Trial Rewards"])
+        self.assertFalse(pool & item_name_groups["Top Ride Rewards"])
+
+
+class TestTROnly(KARTestBase):
+    options = TR_ONLY
+
+    def test_flags(self):
+        self.assertFalse(self.world.city_trial_enabled)
+        self.assertFalse(self.world.air_ride_enabled)
+        self.assertTrue(self.world.top_ride_enabled)
+
+    def test_no_off_mode_locations(self):
+        loc_names = self.real_location_names()
+        self.assertFalse(loc_names & set(CITY_TRIAL_LOCATION_TABLE))
+        self.assertFalse(loc_names & set(AIR_RIDE_LOCATION_TABLE))
+
+    def test_no_off_mode_rewards_in_pool(self):
+        pool = set(self.itempool_names())
+        self.assertFalse(pool & item_name_groups["City Trial Rewards"])
+        self.assertFalse(pool & item_name_groups["Air Ride Rewards"])
+
+
+class TestCTAndAR(KARTestBase):
+    options = CT_AND_AR
+
+    def test_flags(self):
+        self.assertTrue(self.world.city_trial_enabled)
+        self.assertTrue(self.world.air_ride_enabled)
+        self.assertFalse(self.world.top_ride_enabled)
+
+    def test_no_tr_rewards_in_pool(self):
+        pool = set(self.itempool_names())
+        self.assertFalse(pool & item_name_groups["Top Ride Rewards"])
+
+
+class TestCTAndTR(KARTestBase):
+    options = CT_AND_TR
+
+    def test_flags(self):
+        self.assertTrue(self.world.city_trial_enabled)
+        self.assertFalse(self.world.air_ride_enabled)
+        self.assertTrue(self.world.top_ride_enabled)
+
+    def test_no_ar_locations(self):
+        loc_names = self.real_location_names()
+        self.assertFalse(loc_names & set(AIR_RIDE_LOCATION_TABLE))
+
+    def test_no_ar_rewards_in_pool(self):
+        pool = set(self.itempool_names())
+        self.assertFalse(pool & item_name_groups["Air Ride Rewards"])
+
+
+class TestARAndTR(KARTestBase):
+    options = AR_AND_TR
+
+    def test_flags(self):
+        self.assertFalse(self.world.city_trial_enabled)
+        self.assertTrue(self.world.air_ride_enabled)
+        self.assertTrue(self.world.top_ride_enabled)
+
+    def test_no_ct_locations(self):
+        loc_names = self.real_location_names()
+        self.assertFalse(loc_names & set(CITY_TRIAL_LOCATION_TABLE))
+
+    def test_no_ct_rewards_in_pool(self):
+        pool = set(self.itempool_names())
+        self.assertFalse(pool & item_name_groups["City Trial Rewards"])
+
+
+class TestAllModes(KARTestBase):
+    options = ALL_MODES
+
+    def test_flags(self):
+        self.assertTrue(self.world.city_trial_enabled)
+        self.assertTrue(self.world.air_ride_enabled)
+        self.assertTrue(self.world.top_ride_enabled)
+
+    def test_all_mode_locations_present(self):
+        loc_names = self.real_location_names()
+        # Excluded-by-default progression locations (multiplayer, free run, etc.) still exist;
+        # they're just excluded for progression. Use a sentinel non-excluded location per mode.
+        self.assertIn(CTLocation.DESTROY_ALL_HOUSES, loc_names)
+        self.assertIn(ARLocation.RACE_100_LAPS, loc_names)
+        self.assertIn(TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS, loc_names)
