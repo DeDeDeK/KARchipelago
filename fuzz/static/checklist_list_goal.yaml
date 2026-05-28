@@ -20,12 +20,11 @@ Kirby Air Ride:
   city_trial_progression_free_run: true
   air_ride_progression_high_effort: true
   air_ride_progression_time_attack: true
-  events_gated: true
+  city_trial_events_gated: true
   abilities_gated: true
-  patches_gated: true
+  city_trial_patches_gated: true
   machines_gated: true
-  boxes_gated: true
+  city_trial_boxes_gated: true
   air_ride_courses_gated: true
   colors_gated: true
   top_ride_courses_gated: true
-  effect_items_enabled: true

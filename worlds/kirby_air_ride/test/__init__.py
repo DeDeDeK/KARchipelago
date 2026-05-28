@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from test.bases import WorldTestBase
 
-from ..KARItems import ITEM_TABLE, KARItemName, KARItemType
+from ..KARItems import KARItemName, KARItemType, items_by_type
 from ..KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
 
 if TYPE_CHECKING:
@@ -10,8 +10,9 @@ if TYPE_CHECKING:
 
 
 def items_of_type(t: KARItemType) -> set[str]:
-    """All item names in ITEM_TABLE whose type matches `t`."""
-    return {n for n, d in ITEM_TABLE.items() if d.type == t}
+    """All item names in ITEM_TABLE whose type matches `t`. Thin wrapper over the
+    precomputed items_by_type (copied so callers can't mutate the shared bucket)."""
+    return set(items_by_type.get(t, set()))
 
 
 class KARTestBase(WorldTestBase):

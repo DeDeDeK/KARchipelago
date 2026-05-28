@@ -1,120 +1,77 @@
 """
-Cross-mode placement fill tests.
+Cross-mode placement tests.
 
-When cross_mode_placement is off, KAR reward items are item-rule-locked to their
-source mode (Air Ride Rewards → AR locations, etc.). The random useful sampling
-in create_items used to pick uniformly from useful_pool, which can overcommit a
-mode whose locations are scarce and crash remaining_fill. Regression tests below
-exercise configurations near that ceiling.
+cross_mode_placement is a progression-only concern. When it is off, KAR locks only its
+PROGRESSION items to their source mode(s) via item_rules (so each mode's required progression
+stays reachable by playing that mode). Non-progression items (checklist rewards, traps, filler,
+counted-useful) are deliberately left unrestricted and may be placed in any mode, since they
+gate nothing.
+
+These tests pin three things:
+  - progression items are mode-locked by item_rule; non-progression items are not;
+  - configurations that overcommit a mode with non-progression rewards generate fine (no FillError);
+  - a config whose PROGRESSION genuinely can't fit a mode raises a clean OptionError, while the same
+    config with cross_mode_placement ON (progression free to spread) generates.
 """
 
-from Options import Toggle
+from BaseClasses import ItemClassification
+from Options import OptionError, Toggle
 
-from ..KARItems import item_name_groups
-from ..KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
+from ..KARData import GameMode, location_code_to_mode
+from ..KARItems import ITEM_TABLE
 from ..KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
-from . import KARTestBase
-
-# Symbolic mode tags. Values are arbitrary as long as they're hashable + distinct;
-# the dicts below use them as keys but never assume a particular order.
-_CT, _AR, _TR = "city_trial", "air_ride", "top_ride"
-
-_LOCATION_NAME_TO_MODE: dict[str, str] = {
-    **dict.fromkeys(CITY_TRIAL_LOCATION_TABLE, _CT),
-    **dict.fromkeys(AIR_RIDE_LOCATION_TABLE, _AR),
-    **dict.fromkeys(TOP_RIDE_LOCATION_TABLE, _TR),
-}
-
-_REWARD_NAME_TO_MODE: dict[str, str] = {
-    **dict.fromkeys(item_name_groups["City Trial Rewards"], _CT),
-    **dict.fromkeys(item_name_groups["Air Ride Rewards"], _AR),
-    **dict.fromkeys(item_name_groups["Top Ride Rewards"], _TR),
-}
+from . import ALL_MODES, KARTestBase
 
 
-def _assert_no_mode_overcommit(test_case):
-    """Each mode's placeable locations must be at least the count of player-owned reward
-    items targeting that mode in the itempool + precollected. If this holds, fill will
-    not exhaust a mode."""
-    player = test_case.player
-    mode_locs: dict[str, int] = {_CT: 0, _AR: 0, _TR: 0}
-    for loc in test_case.multiworld.get_locations(player):
-        if loc.address is None or loc.locked:
-            continue
-        m = _LOCATION_NAME_TO_MODE.get(loc.name)
-        if m is not None:
-            mode_locs[m] += 1
+def _first_item(predicate) -> str:
+    """First ITEM_TABLE entry (sorted by name) matching predicate, for deterministic tests."""
+    for name, data in sorted(ITEM_TABLE.items(), key=lambda kv: str(kv[0])):
+        if predicate(data):
+            return str(name)
+    raise AssertionError("no ITEM_TABLE entry matched predicate")
 
-    mode_items: dict[str, int] = {_CT: 0, _AR: 0, _TR: 0}
-    for item in test_case.itempool_items():
-        m = _REWARD_NAME_TO_MODE.get(item.name)
-        if m is not None:
-            mode_items[m] += 1
 
-    for m in (_CT, _AR, _TR):
-        test_case.assertLessEqual(
-            mode_items[m],
-            mode_locs[m],
-            f"mode {m} has {mode_items[m]} mode-locked reward items but only {mode_locs[m]} locations to receive them",
+class TestProgressionModeLockedRewardsFree(KARTestBase):
+    """Under cross_mode_placement=false, an Air Ride location's item_rule rejects a City-Trial
+    progression item but accepts a (non-progression) City-Trial reward and remote items."""
+
+    options = {**ALL_MODES, "cross_mode_placement": Toggle.option_false}
+
+    def _location_of_mode(self, mode: GameMode):
+        for loc in self.multiworld.get_locations(self.player):
+            if loc.address is not None and location_code_to_mode(loc.address) == mode:
+                return loc
+        raise AssertionError(f"no real location found for mode {mode}")
+
+    def test_progression_locked_but_rewards_cross(self):
+        ar_loc = self._location_of_mode(GameMode.AIRRIDE)
+
+        ct_progression_name = _first_item(
+            lambda d: (d.classification & ItemClassification.progression) and d.source_modes == {GameMode.CITYTRIAL}
+        )
+        ct_reward_name = _first_item(
+            lambda d: not (d.classification & ItemClassification.progression) and d.source_modes == {GameMode.CITYTRIAL}
         )
 
+        ct_progression = self.world.create_item(ct_progression_name)
+        ct_reward = self.world.create_item(ct_reward_name)
 
-class TestCrossModeOffSmallSecondaryModes(KARTestBase):
-    # Mirrors the fuzzer-discovered seed: CT 100-blocks (lots of CT locs), AR/TR
-    # n_blocks with small N, and many gates on so the pool has many AR reward items.
-    # Pre-fix this combination's random useful sampling would overcommit AR.
-    options = {
-        "cross_mode_placement": Toggle.option_false,
-        "city_trial_goal": CityTrialGoal.option_100_checklist_blocks,
-        "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
-        "air_ride_checklist_amount": 5,
-        "air_ride_checkbox_fillers": 0,
-        "top_ride_goal": TopRideGoal.option_n_checklist_blocks,
-        "top_ride_checklist_amount": 5,
-        "top_ride_checkbox_fillers": 0,
-        "events_gated": Toggle.option_true,
-        "abilities_gated": Toggle.option_true,
-        "patches_gated": Toggle.option_true,
-        "machines_gated": Toggle.option_true,
-        "boxes_gated": Toggle.option_true,
-        "air_ride_courses_gated": Toggle.option_true,
-        "top_ride_courses_gated": Toggle.option_true,
-        "colors_gated": Toggle.option_true,
-    }
+        # Progression CT item must not be allowed at an AR location; a CT reward (non-prog) may.
+        self.assertFalse(ar_loc.item_rule(ct_progression), "CT progression should be locked out of an AR location")
+        self.assertTrue(ar_loc.item_rule(ct_reward), "CT reward (non-progression) should be allowed at an AR location")
 
-    def test_no_mode_overcommitted(self):
-        _assert_no_mode_overcommit(self)
+    def test_progression_allowed_in_its_own_mode(self):
+        ct_loc = self._location_of_mode(GameMode.CITYTRIAL)
+        ct_progression_name = _first_item(
+            lambda d: (d.classification & ItemClassification.progression) and d.source_modes == {GameMode.CITYTRIAL}
+        )
+        self.assertTrue(ct_loc.item_rule(self.world.create_item(ct_progression_name)))
 
 
-class TestCrossModeOffARTinyMode(KARTestBase):
-    # Pathological: AR has only a few locations and machine/color/course gating is off,
-    # which leaves their reward items in the useful pool. The unsampled-cap pre-fix
-    # version of create_items would routinely dump more AR rewards than AR can hold.
-    options = {
-        "cross_mode_placement": Toggle.option_false,
-        "city_trial_goal": CityTrialGoal.option_100_checklist_blocks,
-        "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
-        "air_ride_checklist_amount": 3,
-        "air_ride_checkbox_fillers": 0,
-        "air_ride_progression_high_effort": Toggle.option_false,
-        "air_ride_progression_free_run": Toggle.option_false,
-        "air_ride_progression_time_attack": Toggle.option_false,
-        "top_ride_goal": TopRideGoal.option_none,
-        "machines_gated": Toggle.option_false,
-        "colors_gated": Toggle.option_false,
-        "air_ride_courses_gated": Toggle.option_false,
-    }
+class TestCrossModeOnNoItemRule(KARTestBase):
+    """With cross_mode_placement ON, _set_cross_mode_placement_rules is a no-op: locations keep the
+    default no-op item_rule and the pool still exactly fills the placeable locations."""
 
-    def test_no_mode_overcommitted(self):
-        _assert_no_mode_overcommit(self)
-
-
-class TestCrossModeOnAllowsOvercommit(KARTestBase):
-    # Sanity counter-test: with cross_mode_placement ON, the per-mode invariant does NOT
-    # need to hold — items can cross modes freely. Uses the same near-overcommit shape as
-    # TestCrossModeOffARTinyMode (AR shrunk to 3 locations, CT at 100 blocks) and verifies
-    # both (a) pool size still matches placeable locations and (b) at least one mode would
-    # have failed the cross-mode-off invariant — i.e. the overcommit really is allowed.
     options = {
         "cross_mode_placement": Toggle.option_true,
         "city_trial_goal": CityTrialGoal.option_100_checklist_blocks,
@@ -133,10 +90,7 @@ class TestCrossModeOnAllowsOvercommit(KARTestBase):
         ]
         self.assertEqual(len(self.itempool_items()), len(placeable))
 
-    def test_no_cross_mode_item_rule_attached(self):
-        # _set_cross_mode_placement_rules is a no-op when cross_mode_placement is ON,
-        # so locations should keep the default no-op item_rule. (A mode-locked rule
-        # would also reject foreign items, which is the wrong semantics here.)
+    def test_no_item_rule_attached(self):
         from BaseClasses import Location
 
         non_default = [
@@ -145,3 +99,72 @@ class TestCrossModeOnAllowsOvercommit(KARTestBase):
             if loc.address is not None and loc.item_rule is not Location.item_rule
         ]
         self.assertEqual(non_default, [], f"cross-mode-on leaked an item_rule: {non_default}")
+
+
+class TestCrossModeOffRewardOvercommitOk(KARTestBase):
+    """A config that crams far more (non-progression) Air Ride rewards into the pool than AR has
+    locations used to crash fill. Now that only progression is mode-locked, the rewards spill into
+    other modes freely and generation succeeds. We just assert the world built and the pool matches
+    the placeable location count."""
+
+    options = {
+        "cross_mode_placement": Toggle.option_false,
+        "city_trial_goal": CityTrialGoal.option_100_checklist_blocks,
+        "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
+        "air_ride_checklist_amount": 3,
+        "air_ride_checkbox_fillers": 0,
+        "top_ride_goal": TopRideGoal.option_none,
+        "machines_gated": Toggle.option_false,
+        "colors_gated": Toggle.option_false,
+        "air_ride_courses_gated": Toggle.option_false,
+    }
+
+    def test_pool_size_matches_locations(self):
+        placeable = [
+            loc for loc in self.multiworld.get_locations(self.player) if loc.address is not None and not loc.locked
+        ]
+        self.assertEqual(len(self.itempool_items()), len(placeable))
+
+
+# A config whose City-Trial PROGRESSION (126 Patch Cap Increase + stadium unlocks = 149 items) cannot
+# fit City Trial's 90 default locations, while Top Ride supplies enough empty locations that the global
+# pool-fits check still passes. With cross-mode off this must raise the per-mode OptionError; with
+# cross-mode on the progression is free to spill into Top Ride, so it generates.
+_PROGRESSION_OVERFLOW_OPTIONS = {
+    "city_trial_goal": CityTrialGoal.option_max_stats_in_one_run,
+    "city_trial_patch_cap_amount": 127,
+    "city_trial_progressive_patch_caps": Toggle.option_true,
+    "spawn_rate_progressive": Toggle.option_false,
+    "top_ride_goal": TopRideGoal.option_n_checklist_blocks,
+    "top_ride_checklist_amount": 5,
+    "top_ride_checkbox_fillers": 0,
+    "city_trial_events_gated": Toggle.option_false,
+    "abilities_gated": Toggle.option_false,
+    "city_trial_patches_gated": Toggle.option_false,
+    "city_trial_items_gated": Toggle.option_false,
+    "machines_gated": Toggle.option_false,
+    "city_trial_boxes_gated": Toggle.option_false,
+    "colors_gated": Toggle.option_false,
+    "top_ride_courses_gated": Toggle.option_false,
+    "top_ride_items_gated": Toggle.option_false,
+}
+
+
+class TestCrossModeOffProgressionOverflowRaises(KARTestBase):
+    options = {**_PROGRESSION_OVERFLOW_OPTIONS, "cross_mode_placement": Toggle.option_false}
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaises(OptionError):
+            self.world_setup()
+
+
+class TestCrossModeOnProgressionOverflowGenerates(KARTestBase):
+    options = {**_PROGRESSION_OVERFLOW_OPTIONS, "cross_mode_placement": Toggle.option_true}
+
+    def test_generates(self):
+        # No per-mode lock with cross-mode on, so the same item counts fit across both modes.
+        placeable = [
+            loc for loc in self.multiworld.get_locations(self.player) if loc.address is not None and not loc.locked
+        ]
+        self.assertEqual(len(self.itempool_items()), len(placeable))
