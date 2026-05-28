@@ -1,6 +1,6 @@
 from Options import Toggle
 
-from ..KARItems import GATED_CHECKLIST_REWARDS, KARItemType, item_name_groups
+from ..KARItems import GATED_CHECKLIST_REWARDS, GATING_CATEGORIES
 from . import ALL_MODES, KARTestBase, items_of_type
 
 
@@ -8,19 +8,9 @@ def _all_modes_with(**overrides):
     return {**ALL_MODES, **overrides}
 
 
-# Group expectations per gate. Each tuple is (option_name, item-set when gate is ON).
-_GATE_GROUPS: dict[str, set[str]] = {
-    "events_gated": items_of_type(KARItemType.EVENT_UNLOCK),
-    "abilities_gated": items_of_type(KARItemType.ABILITY_UNLOCK),
-    "patches_gated": items_of_type(KARItemType.PATCH_UNLOCK),
-    "city_trial_items_gated": items_of_type(KARItemType.ITEM_UNLOCK),
-    "machines_gated": items_of_type(KARItemType.MACHINE_UNLOCK),
-    "boxes_gated": items_of_type(KARItemType.BOX_UNLOCK),
-    "air_ride_courses_gated": set(item_name_groups["AR Course Unlocks"]),
-    "colors_gated": items_of_type(KARItemType.COLOR_UNLOCK),
-    "top_ride_courses_gated": set(item_name_groups["TR Course Unlocks"]),
-    "top_ride_items_gated": items_of_type(KARItemType.TOPRIDE_ITEM_UNLOCK),
-}
+# Group expectations per gate: the unlock items that should appear when the gate is ON.
+# Derived from GATING_CATEGORIES so this stays in sync with the gating source of truth.
+_GATE_GROUPS: dict[str, set[str]] = {cat.option: items_of_type(cat.item_type) for cat in GATING_CATEGORIES}
 
 
 _ALL_ON = dict.fromkeys(_GATE_GROUPS, Toggle.option_true)

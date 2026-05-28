@@ -97,7 +97,7 @@ class MemoryAddress(IntEnum):
     OPTION_GOAL_CHECKS_TOPRIDE = 0x078  # u64[2], 16 bytes
     OPTION_GOAL_CHECKS_CITYTRIAL = 0x088  # u64[2], 16 bytes
 
-    # Per-category access gating toggles. 1 = gated (default — players unlock via AP
+    # Per-category access gating toggles. 1 = gated (default: players unlock via AP
     # items). 0 = ungated (mod pre-fills the corresponding unlock mask with all-1s
     # at connect time; AP world ships no unlock items for that category).
     OPTION_MACHINE_GATING_ENABLED = 0x098  # u32, 0 or 1
@@ -119,8 +119,8 @@ class MemoryAddress(IntEnum):
     # Client writes 1 after all location arrays are written. Game reads and clears to 0.
     LOCATION_DATA_VALID = 0x0C8  # u32
 
-    # Location arrays: u16[3][46] — locations[source_mode][source_reward_index].
-    # Indexed by the source reward's (mode, reward_index) — i.e. which vanilla
+    # Location arrays: u16[3][46], locations[source_mode][source_reward_index].
+    # Indexed by the source reward's (mode, reward_index), i.e. which vanilla
     # checklist reward this entry refers to. Value: (target_mode << 8) | clear_kind
     # for a local placement (the cell that holds this reward), 0xFFFF for remote
     # or unused slots. 46 entries per mode, 2 bytes each = 92 bytes per mode.
@@ -147,11 +147,11 @@ class MemoryAddress(IntEnum):
     GOAL_COMPLETE = 0x240  # u8
 
     # Live menu toggle mirrors. Game writes (on boot, on first-connect option
-    # transfer, and on every menu change). Client reads only — these are the
+    # transfer, and on every menu change). Client reads only; these are the
     # authoritative current state of the in-game DeathLink/EnergyLink/TrapLink
     # toggles. Diff against last-seen to forward to the AP server (tags / pool
-    # membership). The OPTION_*_ENABLED slot fields above only set initial
-    # values on first connect and are NOT updated on subsequent toggles.
+    # membership). The OPTION_*_ENABLED slot fields above set initial values on
+    # first connect only and are NOT updated on subsequent toggles.
     DEATHLINK_MENU_ENABLED = 0x244  # u32
     ENERGYLINK_MENU_ENABLED = 0x248  # u32
     TRAPLINK_MENU_ENABLED = 0x24C  # u32

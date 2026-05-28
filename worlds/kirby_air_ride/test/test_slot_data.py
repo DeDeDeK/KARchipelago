@@ -3,9 +3,9 @@ Slot data contract tests.
 
 KARWorld.fill_slot_data() returns the dict that the client (KARClient.py) consumes on
 connect. These tests pin the contract: required keys present, types correct, and
-the spawn_rate_min override applied when progressive spawn rate is off.
+spawn-rate option values shipped to the mod verbatim.
 
-Update the EXPECTED_KEYS set when intentionally adding or removing a slot_data field —
+Update the EXPECTED_KEYS set when intentionally adding or removing a slot_data field;
 the client must be updated in lockstep.
 """
 
@@ -24,7 +24,6 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "trap_link",
         "reveal_checklists",
         "trap_chance",
-        "effect_items_enabled",
         # Goals
         "city_trial_goal",
         "city_trial_checklist_amount",
@@ -44,12 +43,12 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "spawn_rate_min",
         "spawn_rate_max",
         # Gating
-        "events_gated",
+        "city_trial_events_gated",
         "abilities_gated",
-        "patches_gated",
+        "city_trial_patches_gated",
         "city_trial_items_gated",
         "machines_gated",
-        "boxes_gated",
+        "city_trial_boxes_gated",
         "air_ride_courses_gated",
         "colors_gated",
         "top_ride_courses_gated",
@@ -100,21 +99,23 @@ class TestSlotDataDefaults(KARTestBase):
         # LocationSet fields serialize as iterable of strings.
         for locset_key in ("city_trial_goal_locations", "air_ride_goal_locations", "top_ride_goal_locations"):
             with self.subTest(key=locset_key):
-                # LocationSet's serialized form is iterable; coerce to list and check.
                 self.assertIsInstance(list(data[locset_key]), list)
 
 
 class TestSlotDataSpawnRateProgressiveOff(KARTestBase):
-    """spawn_rate_min must be pinned to 100 when spawn_rate_progressive is off,
-    regardless of the player's spawn_rate_min option value. The mod consumes a
-    single floor; shipping the player-provided value when progressive is off would
-    inappropriately elevate the static rate."""
+    """The player's spawn_rate_min flows through unchanged even when progressive is off.
+    The mod owns the "ignore spawn_rate_min unless progressive is on" rule, so generation
+    ships the raw option value rather than pinning it here."""
 
     options = {**CT_ONLY, "spawn_rate_progressive": Toggle.option_false, "spawn_rate_min": 250}
 
-    def test_min_pinned_to_100(self):
+    def test_min_passes_through(self):
         data = self.world.fill_slot_data()
-        self.assertEqual(data["spawn_rate_min"], 100, "spawn_rate_min should be 100 when spawn_rate_progressive is off")
+        self.assertEqual(
+            data["spawn_rate_min"],
+            250,
+            "spawn_rate_min should ship unchanged; the mod ignores it when progressive is off",
+        )
 
 
 class TestSlotDataSpawnRateProgressiveOn(KARTestBase):

@@ -149,32 +149,28 @@ def create_regions(world: "KARWorld"):
     """
     from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
 
-    # create the "Menu" default Region, which will connect all game modes.
+    # The Menu region is the origin that connects all enabled game modes.
     menu_region = Region(world.origin_region_name, world.player, world.multiworld)
     world.multiworld.regions.append(menu_region)
 
-    # create and connect KARRegion.CITY_TRIAL region to menu
     if world.city_trial_enabled:
         city_trial_region = Region(KARRegion.CITY_TRIAL, world.player, world.multiworld)
         world.multiworld.regions.append(city_trial_region)
         menu_region.connect(city_trial_region)
         connect_city_trial_region(world, city_trial_region)
 
-    # create and connect KARRegion.AIR_RIDE region to menu
     if world.air_ride_enabled:
         air_ride_region = Region(KARRegion.AIR_RIDE, world.player, world.multiworld)
         world.multiworld.regions.append(air_ride_region)
         menu_region.connect(air_ride_region)
         connect_air_ride_region(world, air_ride_region)
 
-    # create and connect KARRegion.TOP_RIDE region to menu
     if world.top_ride_enabled:
         top_ride_region = Region(KARRegion.TOP_RIDE, world.player, world.multiworld)
         world.multiworld.regions.append(top_ride_region)
         menu_region.connect(top_ride_region)
         connect_top_ride_region(world, top_ride_region)
 
-    # Assign locations to their regions for each enabled game mode
     if world.city_trial_enabled:
         assign_locations_to_regions(
             world,
@@ -202,12 +198,10 @@ def create_regions(world: "KARWorld"):
             world.goal_locations_to_exclude,
         )
 
-    # determine the goal for the world, given player options
     determine_goal(world)
 
 
 def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> None:
-    # Create all stadium/sub-regions and register them in batch
     create_regions_batch(
         world,
         KARRegion.CT_FREE_RUN,
@@ -239,7 +233,7 @@ def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> N
         KARRegion.STADIUM_SR9,
     )
 
-    # connect city trial to free run and all stadium regions (rules applied later in set_rules)
+    # Entrance gating rules for these exits are applied later in set_rules.
     city_trial_region.add_exits(
         [
             KARRegion.CT_FREE_RUN,
@@ -265,7 +259,7 @@ def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> N
         ]
     )
 
-    # connect destruction derby and kirby melee sub-regions (rules applied later in set_rules)
+    # DD_ALL and KM_ALL are parents nesting their numbered sub-stadiums.
     world.get_region(KARRegion.STADIUM_DD_ALL).add_exits(
         [
             KARRegion.STADIUM_DD1,
@@ -446,7 +440,6 @@ TR_COURSE_REGION_TO_UNLOCK: dict[str, KARItemName] = {
 
 
 def connect_air_ride_region(world: "KARWorld", air_ride_region: Region) -> None:
-    # Create all Air Ride sub-regions in batch
     create_regions_batch(
         world,
         KARRegion.AR_TIME_ATTACK,
@@ -456,21 +449,16 @@ def connect_air_ride_region(world: "KARWorld", air_ride_region: Region) -> None:
         *AR_FR_COURSE_REGIONS,
     )
 
-    # connect main Air Ride sub-regions
     air_ride_region.add_exits([KARRegion.AR_TIME_ATTACK, KARRegion.AR_FREE_RUN])
 
-    # connect all courses (Nebula Belt rules applied later in set_rules)
+    # Course entrance rules (e.g. Nebula Belt) are applied later in set_rules.
     air_ride_region.add_exits(AR_COURSE_REGIONS)
 
-    # connect time attack courses
     world.get_region(KARRegion.AR_TIME_ATTACK).add_exits(AR_TA_COURSE_REGIONS)
-
-    # connect free run courses
     world.get_region(KARRegion.AR_FREE_RUN).add_exits(AR_FR_COURSE_REGIONS)
 
 
 def connect_top_ride_region(world: "KARWorld", top_ride_region: Region) -> None:
-    # Create all Top Ride sub-regions in batch
     create_regions_batch(
         world,
         KARRegion.TR_TIME_ATTACK,
@@ -480,7 +468,6 @@ def connect_top_ride_region(world: "KARWorld", top_ride_region: Region) -> None:
         *TR_FR_COURSE_REGIONS,
     )
 
-    # connect main Top Ride sub-regions and all courses (no rules)
     top_ride_region.add_exits([KARRegion.TR_TIME_ATTACK, KARRegion.TR_FREE_RUN, *TR_COURSE_REGIONS])
 
     world.get_region(KARRegion.TR_FREE_RUN).add_exits(TR_FR_COURSE_REGIONS)
@@ -501,7 +488,7 @@ def create_n_blocks_rule(
     def can_access_n_blocks(state: CollectionState) -> bool:
         count = 0
         # Skip event locations (address is None), notably the victory event whose
-        # access rule is this very function — iterating it would recurse infinitely.
+        # access rule is this very function; iterating it would recurse infinitely.
         for loc in state.multiworld.get_locations(player):
             if loc.address is None or loc.parent_region is None:
                 continue
@@ -518,8 +505,8 @@ def create_n_blocks_rule(
 
 
 # Patch type unlocks consulted by the Max Stats Insanity goal's "all 9 patches"
-# alternative. Each entry is the unlock item whose presence opens up CT spawns of
-# that patch stat type — required when patches_gated is on.
+# alternative. Each entry is the unlock item that opens up CT spawns of that patch
+# stat type, required when city_trial_patches_gated is on.
 _MAX_STATS_PATCH_UNLOCKS: tuple[str, ...] = (
     KARItemName.UNLOCK_PATCH_WEIGHT,
     KARItemName.UNLOCK_PATCH_ACCEL,
@@ -544,7 +531,7 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
         path) or the All-Up patch unlock (items gated path). Routes that aren't gated are
         trivially open, so the constraint is only emitted when both gates are on.
 
-    Returns None if every clause would be trivially satisfied — caller then attaches the event
+    Returns None if every clause would be trivially satisfied; caller then attaches the event
     with no access rule.
     """
     options = world.options
@@ -555,7 +542,7 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
         if count > 0:
             rule_parts.append(Has(KARItemName.PATCH_CAP_INCREASE, count=count))
 
-    if options.patches_gated and options.city_trial_items_gated:
+    if options.city_trial_patches_gated and options.city_trial_items_gated:
         # HasAll/HasAny only accept item names, not nested rules. Compose with the | operator
         # (defined on Rule) to express "all 9 patches OR all-up unlock".
         rule_parts.append(HasAll(*_MAX_STATS_PATCH_UNLOCKS) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
@@ -633,7 +620,7 @@ def _create_goal_events(
         )
     elif goal_option.value == CityTrialGoal.option_max_stats_in_one_run:
         # Synthetic goal event in the City Trial region. There is no checklist
-        # location to bind to — the mod sets max_stats_ct_achieved at runtime
+        # location to bind to; the mod sets max_stats_ct_achieved at runtime
         # when the player's stats all hit the per-slot patch-cap target.
         region.add_event(
             f"{mode_prefix}: Max Stats (Insanity)",

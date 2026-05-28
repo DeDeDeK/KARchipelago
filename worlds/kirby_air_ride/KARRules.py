@@ -15,7 +15,7 @@ from .KARRegions import (
 if typing.TYPE_CHECKING:
     from . import KARWorld
 
-# Event-dependent CT locations (when events_gated is ON)
+# Event-dependent CT locations (when city_trial_events_gated is ON)
 _EVENT_LOCATION_RULES: dict[str, str] = {
     CTLocation.DO_SOME_DAMAGE_TO_DYNA_BLADE: KARItemName.UNLOCK_EVENT_DYNA_BLADE,
     CTLocation.GET_TRAMPLED_BY_DYNA_BLADE: KARItemName.UNLOCK_EVENT_DYNA_BLADE,
@@ -118,7 +118,7 @@ _ITEM_LOCATION_RULES: dict[str, str] = {
     CTLocation.USE_GOLD_SPIKES_TO_KO_RIVALS_3X: KARItemName.UNLOCK_ITEM_GORDO,
 }
 
-# Patch-dependent CT locations (when patches_gated is ON)
+# Patch-dependent CT locations (when city_trial_patches_gated is ON)
 _PATCH_LOCATION_RULES: dict[str, str] = {
     CTLocation.GET_10_BOOST_PATCHES: KARItemName.UNLOCK_PATCH_ACCEL,
     CTLocation.GET_10_TURN_PATCHES: KARItemName.UNLOCK_PATCH_TURN,
@@ -132,7 +132,7 @@ _PATCH_LOCATION_RULES: dict[str, str] = {
 
 # TR item-dependent locations (when top_ride_items_gated is ON).
 # TR items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are gated
-# by the ability unlock in the mod, not by topride_item_unlocked_mask — so the
+# by the ability unlock in the mod, not by topride_item_unlocked_mask, so the
 # corresponding locations are gated via _ABILITY_TR_ITEM_RULES below (under
 # abilities_gated), not here.
 _TR_ITEM_LOCATION_RULES: dict[str, str] = {
@@ -142,7 +142,7 @@ _TR_ITEM_LOCATION_RULES: dict[str, str] = {
 }
 
 # TR locations that depend on ability-themed TR items (Fire, Bomb, etc.).
-# Applied when abilities_gated is ON — the ability unlock is the gate for both
+# Applied when abilities_gated is ON: the ability unlock is the gate for both
 # the Air-Ride ability and the corresponding Top-Ride item.
 _ABILITY_TR_ITEM_RULES: dict[str, str] = {
     TRLocation.FIRE_FIRST_WHILE_HOLDING_FIRE_ITEM: KARItemName.UNLOCK_ABILITY_FIRE,
@@ -307,7 +307,7 @@ def set_rules(world: "KARWorld"):
     )
 
     # Location rules: gating categories (applied only when gating option is ON)
-    if world.options.events_gated:
+    if world.options.city_trial_events_gated:
         for loc, item in _EVENT_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
@@ -327,7 +327,7 @@ def set_rules(world: "KARWorld"):
         for loc, item in _ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    if world.options.patches_gated:
+    if world.options.city_trial_patches_gated:
         for loc, item in _PATCH_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 

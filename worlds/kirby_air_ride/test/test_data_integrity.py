@@ -18,7 +18,7 @@ from ..KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, T
 
 
 class TestItemCodeUniqueness(unittest.TestCase):
-    """No two distinct items in ITEM_TABLE share a code (None excluded — events)."""
+    """No two distinct items in ITEM_TABLE share a code (None excluded, events)."""
 
     def test_codes_unique(self):
         codes: dict[int, str] = {}

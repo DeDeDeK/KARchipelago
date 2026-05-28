@@ -2,8 +2,8 @@
 Option validation tests: every OptionError-raising branch in KARWorld lives here.
 
 Covers KARWorld.generate_early, _validate_options, _validate_pool_fits_locations,
-and _determine_starter_items. The point of co-location is auditability — easy to
-see which branches are exercised at a glance.
+and _determine_starter_items. Co-located so the exercised error branches are
+auditable at a glance.
 """
 
 from Options import OptionError, Toggle
@@ -70,7 +70,7 @@ class TestTRFillerExceedsGoalAmount(KARTestBase):
 
 
 class TestCTChecklistListWrongMode(KARTestBase):
-    # CT goal_locations containing an AR location — should be rejected.
+    # CT goal_locations containing an AR location should be rejected.
     options = {
         **CT_ONLY,
         "city_trial_goal": CityTrialGoal.option_checklist_list,
@@ -84,7 +84,7 @@ class TestCTChecklistListWrongMode(KARTestBase):
 
 
 class TestARChecklistListWrongMode(KARTestBase):
-    # AR goal_locations contains a CT location — should be rejected.
+    # AR goal_locations containing a CT location should be rejected.
     options = {
         "city_trial_goal": CityTrialGoal.option_none,
         "air_ride_goal": AirRideGoal.option_checklist_list,
@@ -189,12 +189,12 @@ _TIGHT_POOL = {
     **CT_ONLY,
     "city_trial_progressive_patch_caps": Toggle.option_true,
     "city_trial_patch_cap_amount": 85,
-    "events_gated": Toggle.option_false,
+    "city_trial_events_gated": Toggle.option_false,
     "abilities_gated": Toggle.option_false,
-    "patches_gated": Toggle.option_false,
+    "city_trial_patches_gated": Toggle.option_false,
     "city_trial_items_gated": Toggle.option_false,
     "machines_gated": Toggle.option_false,
-    "boxes_gated": Toggle.option_false,
+    "city_trial_boxes_gated": Toggle.option_false,
     "colors_gated": Toggle.option_false,
     "city_trial_progressive_stadiums": Toggle.option_false,
 }

@@ -7,22 +7,21 @@ Kirby Air Ride:
   city_trial_goal: 100_checklist_blocks
   air_ride_goal: 100_checklist_blocks
   top_ride_goal: 100_checklist_blocks
-  events_gated: true
+  city_trial_events_gated: true
   abilities_gated: true
-  patches_gated: true
+  city_trial_patches_gated: true
   machines_gated: true
-  boxes_gated: true
+  city_trial_boxes_gated: true
   air_ride_courses_gated: true
   top_ride_courses_gated: true
   colors_gated: true
   top_ride_items_gated: true
   city_trial_items_gated: false
-  effect_items_enabled: true
   cross_mode_placement: true
   trap_chance: 20
   local_items:
-    - "Event Unlocks"
+    - "City Trial Event Unlocks"
     - "Machine Unlocks"
   non_local_items:
     - "Color Unlocks"
-    - "AR Course Unlocks"
+    - "Air Ride Course Unlocks"

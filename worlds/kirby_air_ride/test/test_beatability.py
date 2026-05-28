@@ -2,7 +2,7 @@
 Beatability tests for KAR.
 
 `assertBeatable(bool)` checks whether `multiworld.state` can satisfy the completion
-condition (HasAll(*victory_events) — one victory per enabled mode). These tests verify
+condition (HasAll(*victory_events), one victory per enabled mode). These tests verify
 which items are actually load-bearing for the goal, and which goal variants have no
 AP-side gate (the game itself enforces).
 
@@ -62,9 +62,9 @@ class TestCTBeatKingDededeRequiresStadiumUnlock(KARTestBase):
     """beat_king_dedede + progressive_stadiums on: UNLOCK_STADIUM_VS_KING_DEDEDE
     is required to reach the victory event (placed in the VSKD stadium region).
 
-    Note: collect_all_but iterates multiworld.get_items() which includes items at
-    filled (event) locations. We must explicitly exclude CITY_TRIAL_VICTORY so the
-    sweep, not the pre-population, decides whether it gets collected."""
+    collect_all_but iterates multiworld.get_items(), which includes the filled (event)
+    victory location. CITY_TRIAL_VICTORY must be excluded explicitly so the sweep, not
+    the pre-population, decides whether it gets collected."""
 
     options = {
         **CT_ONLY,
@@ -87,7 +87,7 @@ class TestCTBeatKingDededeRequiresStadiumUnlock(KARTestBase):
 class TestCTBeatKingDededeNoGateWithoutProgressiveStadiums(KARTestBase):
     """beat_king_dedede + progressive_stadiums off: the victory event sits in the
     VSKD region but no AP-side rule guards the entrance. The game enforces stadium
-    unlock through its vanilla path. Pins current behavior — change with care."""
+    unlock through its vanilla path. Pins current behavior; change with care."""
 
     options = {
         **CT_ONLY,
@@ -102,7 +102,7 @@ class TestCTBeatKingDededeNoGateWithoutProgressiveStadiums(KARTestBase):
 class TestCTHydraAndDragoonNoItemGate(KARTestBase):
     """hydra_and_dragoon goal: the victory event is placed in the CITY_TRIAL root
     region with no AP-side access rule. Beatable from precollected state.
-    Pins current behavior — change with care if an item gate is added."""
+    Pins current behavior; change with care if an item gate is added."""
 
     options = {**CT_ONLY, "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon}
 
@@ -130,8 +130,8 @@ class TestALLMODESNeedsCTVictory(KARTestBase):
     """ALL_MODES + CT beat_king_dedede: removing the CT-binding item makes the
     overall multi-mode goal unbeatable even with AR and TR fully collectible.
 
-    See TestCTBeatKingDededeRequiresStadiumUnlock for why CITY_TRIAL_VICTORY is
-    also excluded — get_items() includes filled event items, which would otherwise
+    CITY_TRIAL_VICTORY is excluded for the get_items() reason documented on
+    TestCTBeatKingDededeRequiresStadiumUnlock: filled event items would otherwise
     short-circuit the completion check."""
 
     options = {**ALL_MODES, "city_trial_goal": CityTrialGoal.option_beat_king_dedede}
@@ -234,5 +234,5 @@ class TestARGoalAloneNotEnoughForALLMODES(KARTestBase):
 
     def test_precollected_not_beatable_even_with_trivial_ar_tr_goals(self):
         # AR and TR goals are trivial (N=1) so reachable from precollected, but CT
-        # 100-blocks is not — so overall beatability is False.
+        # 100-blocks is not, so overall beatability is False.
         self.assertBeatable(False)
