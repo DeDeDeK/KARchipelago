@@ -68,15 +68,6 @@ class TrapWeightHazards(TrapWeight):
     display_name = "Hazard Trap Weight"
 
 
-class EffectItemsEnabled(Toggle):
-    """
-    This controls whether "effect" items such as "1 HP" trap, "Full Heal", etc. will be placed into the item pool.
-    """
-
-    display_name = "Effect Items Enabled"
-    default = 1
-
-
 class ProgressiveSpawnRate(Toggle):
     """
     If on, the City Trial / Top Ride item spawn rate starts at "Spawn Rate Min" and grows toward
@@ -122,7 +113,7 @@ class EnergyLink(Toggle):
     energy to get specific patches or other items immediately.
 
     This value seeds the in-game Energy Link menu toggle on first connect. After that, the in-game menu
-    is authoritative — toggling it there will override this setting for the rest of the session.
+    is authoritative: toggling it there will override this setting for the rest of the session.
     """
 
     default = 0
@@ -132,12 +123,12 @@ class EnergyLink(Toggle):
 class TrapLink(Toggle):
     """
     This enables or disables TrapLink. When on, traps you receive in-game are broadcast to other players
-    with TrapLink enabled, and you receive traps they broadcast in return. Independent of "Trap Chance" —
+    with TrapLink enabled, and you receive traps they broadcast in return. Independent of "Trap Chance":
     you can participate in TrapLink even with no traps in your own pool (you'll still receive others'),
     and you can disable TrapLink while keeping traps in your pool.
 
     This value seeds the in-game Trap Link menu toggle on first connect. After that, the in-game menu
-    is authoritative — toggling it there will override this setting for the rest of the session.
+    is authoritative: toggling it there will override this setting for the rest of the session.
     """
 
     default = 0
@@ -155,13 +146,21 @@ class RevealChecklists(Toggle):
 
 class CrossModePlacement(DefaultOnToggle):
     """
-    Controls whether checklist reward items can be placed cross-mode in your own world.
+    Controls whether your own game modes share progression, when you have more than one enabled.
 
-    If on (default), a reward item originally from one game mode (e.g. an Air Ride reward) can land
-    at any of your checklist locations across all enabled modes. If off, your own checklist reward
-    items are restricted to locations in their source mode — Air Ride rewards on Air Ride
-    checkboxes, Top Ride on Top Ride, City Trial on City Trial. Rewards placed remotely (in other
-    players' worlds) are not affected either way.
+    If on (default), all of your items can be placed at any of your checklist locations across every
+    enabled mode: an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
+
+    If off, your modes are kept separate for progression: an item needed to progress a single mode is
+    restricted to that mode's locations, so City Trial progress comes only from City Trial checks, Air
+    Ride from Air Ride, and Top Ride from Top Ride. Two caveats:
+      - Unlocks that genuinely apply to more than one mode (copy abilities and machines affect both
+        City Trial and Air Ride; colors affect all three) may be placed in any mode they apply to, so
+        those few items can still tie modes together.
+      - Only progression is locked. Non-progression items (checklist rewards, spawn-rate-ups, traps,
+        and filler) gate nothing, so they are still placed freely across all enabled modes.
+
+    Items placed remotely (in other players' worlds) are never affected either way.
     """
 
     display_name = "Cross-Mode Placement"
@@ -295,7 +294,7 @@ class CityTrialPatchCapAmount(Range):
     Sets the target (maximum) per-stat patch cap.
 
     With Progressive Patch Caps ON, the cap starts at 1 and grows toward this value as Patch Cap
-    Increase items are received — one item is added to the pool for each step (target - 1 items).
+    Increase items are received (one item is added to the pool for each step, target - 1 items).
     With Progressive Patch Caps OFF, the cap is locked at this value from the start.
 
     The "max_stats_in_one_run" City Trial goal uses this value as the per-stat threshold all 9 stats
@@ -483,7 +482,7 @@ class TopRideCheckboxFillers(NamedRange):
     special_range_names = {"disabled": 0}  # noqa: RUF012
 
 
-class EventsGated(DefaultOnToggle):
+class CityTrialEventsGated(DefaultOnToggle):
     """
     When enabled, City Trial events (Dyna Blade, Meteor, Tac, etc.) are locked and must be
     unlocked by finding their corresponding items.
@@ -501,20 +500,20 @@ class AbilitiesGated(DefaultOnToggle):
     display_name = "Copy Abilities Gated"
 
 
-class PatchesGated(DefaultOnToggle):
+class CityTrialPatchesGated(DefaultOnToggle):
     """
     When enabled, patch stat types (Accel, Top Speed, Offense, etc.) are locked and must be
     unlocked by finding their corresponding items.
     """
 
-    display_name = "Patch Types Gated"
+    display_name = "City Trial Patch Types Gated"
 
 
 class CityTrialItemsGated(Toggle):
     """
     When enabled, game items (All Up, Speed Max, Candy, food, hazards, legendary parts, etc.)
     are locked and must be unlocked by finding their corresponding items.
-    Adds 30 unlock items to the progression pool — enable more game modes for more locations.
+    Adds 30 unlock items to the progression pool; enable more game modes for more locations.
     """
 
     display_name = "City Trial Items Gated"
@@ -524,19 +523,19 @@ class MachinesGated(Toggle):
     """
     When enabled, air ride machines are locked and must be unlocked by finding their
     corresponding items. Applies to both City Trial and Air Ride.
-    Adds 25 unlock items to the progression pool — enable more game modes for more locations.
+    Adds 25 unlock items to the progression pool; enable more game modes for more locations.
     """
 
     display_name = "Machines Gated"
 
 
-class BoxesGated(DefaultOnToggle):
+class CityTrialBoxesGated(DefaultOnToggle):
     """
     When enabled, box types (Blue, Green, Red) are locked and must be unlocked by finding
     their corresponding items.
     """
 
-    display_name = "Boxes Gated"
+    display_name = "City Trial Boxes Gated"
 
 
 class AirRideCoursesGated(DefaultOnToggle):
@@ -587,7 +586,6 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     trap_weight_fake_patches: TrapWeightFakePatches
     trap_weight_hazards: TrapWeightHazards
     trap_link: TrapLink
-    effect_items_enabled: EffectItemsEnabled
     spawn_rate_progressive: ProgressiveSpawnRate
     spawn_rate_min: SpawnRateMin
     spawn_rate_max: SpawnRateMax
@@ -630,12 +628,12 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     top_ride_checkbox_fillers: TopRideCheckboxFillers
 
     # Access Gating
-    events_gated: EventsGated
+    city_trial_events_gated: CityTrialEventsGated
     abilities_gated: AbilitiesGated
-    patches_gated: PatchesGated
+    city_trial_patches_gated: CityTrialPatchesGated
     city_trial_items_gated: CityTrialItemsGated
     machines_gated: MachinesGated
-    boxes_gated: BoxesGated
+    city_trial_boxes_gated: CityTrialBoxesGated
     air_ride_courses_gated: AirRideCoursesGated
     colors_gated: ColorsGated
     top_ride_courses_gated: TopRideCoursesGated
@@ -643,12 +641,20 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 
 
 kar_option_groups = [
-    OptionGroup("General Options", [EnergyLink, RevealChecklists, CrossModePlacement]),
+    OptionGroup("General Options", [EnergyLink, TrapLink, RevealChecklists, CrossModePlacement]),
     OptionGroup(
-        "Trap Options",
-        [TrapChance, TrapWeightDirectDamage, TrapWeightStatDebuff, TrapWeightFakePatches, TrapWeightHazards, TrapLink],
+        "Item Options",
+        [
+            ProgressiveSpawnRate,
+            SpawnRateMin,
+            SpawnRateMax,
+            TrapChance,
+            TrapWeightDirectDamage,
+            TrapWeightStatDebuff,
+            TrapWeightFakePatches,
+            TrapWeightHazards,
+        ],
     ),
-    OptionGroup("Item Options", [EffectItemsEnabled, ProgressiveSpawnRate, SpawnRateMin, SpawnRateMax]),
     OptionGroup(
         "City Trial Options",
         [
@@ -665,6 +671,10 @@ kar_option_groups = [
             CityTrialProgressivePatchCaps,
             CityTrialPatchCapAmount,
             CityTrialProgressiveStadiums,
+            CityTrialEventsGated,
+            CityTrialPatchesGated,
+            CityTrialItemsGated,
+            CityTrialBoxesGated,
         ],
     ),
     OptionGroup(
@@ -677,6 +687,7 @@ kar_option_groups = [
             AirRideProgressionTimeAttack,
             AirRideProgressionHighEffort,
             AirRideCheckboxFillers,
+            AirRideCoursesGated,
         ],
     ),
     OptionGroup(
@@ -690,21 +701,16 @@ kar_option_groups = [
             TopRideProgressionHighEffort,
             TopRideProgressionMultiplayer,
             TopRideCheckboxFillers,
+            TopRideCoursesGated,
+            TopRideItemsGated,
         ],
     ),
     OptionGroup(
-        "Access Gating",
+        "Other Gating",
         [
-            EventsGated,
             AbilitiesGated,
-            PatchesGated,
-            CityTrialItemsGated,
-            MachinesGated,
-            BoxesGated,
-            AirRideCoursesGated,
             ColorsGated,
-            TopRideCoursesGated,
-            TopRideItemsGated,
+            MachinesGated,
         ],
     ),
 ]

@@ -795,8 +795,48 @@ LOCATION_TABLE: dict[str, KARLocationData] = (
 )
 
 
+class KARLocationGroup(StrEnum):
+    """Player-facing location-group names. Reference these members instead of hardcoding
+    the strings; YAML configs must match the values verbatim.
+    """
+
+    CT_STADIUMS = "City Trial: Stadiums"
+    CT_FREE_RUN = "City Trial: Free Run"
+    CT_MULTIPLAYER = "City Trial: Multiplayer"
+    CT_CPUS = "City Trial: CPUs"
+    CT_BUST_VEHICLE_ON_VEHICLE = "City Trial: Bust Vehicle on Vehicle"
+    CT_EVENTS = "City Trial: Events"
+    CT_PATCHES = "City Trial: Patches"
+    CT_HIGH_EFFORT = "City Trial: High Effort"
+    CT_RNG = "City Trial: RNG"
+    CT_PVP = "City Trial: PVP"
+    AR_RACES = "Air Ride: Races"
+    AR_FREE_RUN = "Air Ride: Free Run"
+    AR_TIME_ATTACK = "Air Ride: Time Attack"
+    AR_MAGMA_FLOWS = "Air Ride: MAGMA FLOWS"
+    AR_FANTASY_MEADOWS = "Air Ride: FANTASY MEADOWS"
+    AR_SKY_SANDS = "Air Ride: SKY SANDS"
+    AR_MACHINE_PASSAGE = "Air Ride: MACHINE PASSAGE"
+    AR_CELESTIAL_VALLEY = "Air Ride: CELESTIAL VALLEY"
+    AR_FROZEN_HILLSIDE = "Air Ride: FROZEN HILLSIDE"
+    AR_BEANSTALK_PARK = "Air Ride: BEANSTALK PARK"
+    AR_CHECKER_KNIGHTS = "Air Ride: CHECKER KNIGHTS"
+    AR_HIGH_EFFORT = "Air Ride: High Effort"
+    TR_TIME_ATTACK = "Top Ride: Time Attack"
+    TR_FREE_RUN = "Top Ride: Free Run"
+    TR_LIGHT = "Top Ride: LIGHT"
+    TR_SKY = "Top Ride: SKY"
+    TR_GRASS = "Top Ride: GRASS"
+    TR_WATER = "Top Ride: WATER"
+    TR_SAND = "Top Ride: SAND"
+    TR_FIRE = "Top Ride: FIRE"
+    TR_METAL = "Top Ride: METAL"
+    TR_HIGH_EFFORT = "Top Ride: High Effort"
+    TR_MULTIPLAYER = "Top Ride: Multiplayer"
+
+
 location_name_groups: dict[str, set[str]] = {
-    "City Trial: Stadiums": {
+    KARLocationGroup.CT_STADIUMS: {
         CTLocation.STADIUM_PLAY_10_STADIUM_MODES,
         CTLocation.STADIUM_DR2_FINISH_00_24_00,
         CTLocation.STADIUM_DR4_FINISH_00_24_00,
@@ -848,23 +888,23 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.STADIUM_DR1_26_00_WARPSTAR,
         CTLocation.STADIUM_DR3_28_00_SWERVE,
     },
-    "City Trial: Free Run": {
+    KARLocationGroup.CT_FREE_RUN: {
         CTLocation.FR_DRIVE_FOR_2_HOURS,
         CTLocation.FR_DRIVE_FOR_30_MINUTES,
         CTLocation.FR_DRIVE_FOR_10_MINUTES,
         CTLocation.FR_CHANGE_AIR_RIDE_MACHINES_10X,
     },
-    "City Trial: Multiplayer": {
+    KARLocationGroup.CT_MULTIPLAYER: {
         CTLocation.TIMEOUT_ALL_ON_RAILS,
         CTLocation.ALL_PLAYERS_OFF_MACHINES,
         CTLocation.TIMEOUT_ALL_OFF_MACHINES,
     },
-    "City Trial: CPUs": {
+    KARLocationGroup.CT_CPUS: {
         CTLocation.BREAK_A_CPUS_MACHINE_5_X,
         CTLocation.DAMAGE_ALL_3_CPUS,
         CTLocation.DAMAGE_RIVAL_WITHIN_10S,
     },
-    "City Trial: Bust Vehicle on Vehicle": {
+    KARLocationGroup.CT_BUST_VEHICLE_ON_VEHICLE: {
         CTLocation.BUST_WHEELIE_BIKE_ON_WARPSTAR,
         CTLocation.BUST_SLICK_STAR_ON_FORMULA_STAR,
         CTLocation.BUST_SWERVE_STAR_ON_WHEELIE_BIKE,
@@ -874,7 +914,7 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.BUST_WHEELIE_SCOOTER_ON_COMPACT_STAR,
         CTLocation.BUST_FORMULA_STAR_ON_TURBO_STAR,
     },
-    "City Trial: Events": {
+    KARLocationGroup.CT_EVENTS: {
         CTLocation.USE_UP_ONE_OF_RESTORATION_AREAS,
         CTLocation.THE_METEOR_ATTACKS_CITY_3,
         CTLocation.DO_SOME_DAMAGE_TO_DYNA_BLADE,
@@ -884,7 +924,7 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.BREAK_PILLAR_WITHIN_40S,
         CTLocation.ENTER_CASTLE_CHAMBER,
     },
-    "City Trial: Patches": {
+    KARLocationGroup.CT_PATCHES: {
         CTLocation.GET_10_BOOST_PATCHES,
         CTLocation.GET_10_TURN_PATCHES,
         CTLocation.GET_10_WEIGHT_PATCHES,
@@ -894,7 +934,7 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.GET_10_CHARGE_PATCHES,
         CTLocation.GET_10_DEFENSE_PATCHES,
     },
-    "City Trial: High Effort": {
+    KARLocationGroup.CT_HIGH_EFFORT: {
         CTLocation.BREAK_500_BOXES,
         CTLocation.BREAK_1000_BOXES,
         CTLocation.PICKUP_1000_ITEMS,
@@ -908,7 +948,7 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.GET_50_ITEMS,
         CTLocation.RACE_200_MILES,
     },
-    "City Trial: RNG": {
+    KARLocationGroup.CT_RNG: {
         CTLocation.EAT_3_PLATES_OF_SUSHI,
         CTLocation.EAT_3_HOT_DOGS,
         CTLocation.EAT_2_MAXIM_TOMATOES,
@@ -916,12 +956,12 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.COPY_CHANCE_WHEEL_BOMB,
         CTLocation.COPY_CHANCE_WHEEL_SLEEP,
     },
-    "City Trial: PVP": {
+    KARLocationGroup.CT_PVP: {
         CTLocation.USE_FIREWORKS_TO_KO_RIVALS_10X,
         CTLocation.USE_SENSOR_BOMBS_TO_KO_RIVALS_3X,
         CTLocation.USE_GOLD_SPIKES_TO_KO_RIVALS_3X,
     },
-    "Air Ride: Races": {
+    KARLocationGroup.AR_RACES: {
         ARLocation.MF_RACE_4800_FEET,
         ARLocation.SWALL_5_GARBAGE_AND_FIRST,
         ARLocation.FM_RACE_4500_FEET,
@@ -956,7 +996,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.FIRST_WHILE_TAKING_DAMAGE,
         ARLocation.FIRST_WITH_NEEDLE_ABILITY,
     },
-    "Air Ride: Free Run": {
+    KARLocationGroup.AR_FREE_RUN: {
         ARLocation.FR_FM_LAP_00_21_00,
         ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR,
         ARLocation.FR_FH_LAP_01_10_00,
@@ -982,7 +1022,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.FR_BP_LAP_00_58_00,
         ARLocation.FR_MP_LAP_00_57_00_ON_SWERVE_STAR,
     },
-    "Air Ride: Time Attack": {
+    KARLocationGroup.AR_TIME_ATTACK: {
         ARLocation.TA_FM_FINISH_01_00_00,
         ARLocation.TA_SS_FINISH_02_40_00,
         ARLocation.TA_MF_FINISH_03_04_00,
@@ -1008,7 +1048,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR,
         ARLocation.TA_CK_FINISH_03_55_00_ON_WARPSTAR,
     },
-    "Air Ride: MAGMA FLOWS": {
+    KARLocationGroup.AR_MAGMA_FLOWS: {
         ARLocation.MF_RACE_4800_FEET,
         ARLocation.TA_MF_FINISH_03_04_00,
         ARLocation.FR_MF_LAP_01_01_00,
@@ -1022,7 +1062,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.MF_BUMP_INTO_A_FLAMING_DRAGON,
         ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR,
     },
-    "Air Ride: FANTASY MEADOWS": {
+    KARLocationGroup.AR_FANTASY_MEADOWS: {
         ARLocation.FM_RACE_4500_FEET,
         ARLocation.TA_FM_FINISH_01_00_00,
         ARLocation.FR_FM_LAP_00_21_00,
@@ -1035,7 +1075,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.FR_FM_LAP_00_24_00,
         ARLocation.FM_SWALL_20_AND_FIRST,
     },
-    "Air Ride: SKY SANDS": {
+    KARLocationGroup.AR_SKY_SANDS: {
         ARLocation.TA_SS_FINISH_02_40_00,
         ARLocation.SS_ENTER_QUICKSAND_3_X_AND_FIRST,
         ARLocation.TA_SS_FINISH_02_40_00_ON_WAGON_STAR,
@@ -1049,7 +1089,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.FR_SS_LAP_01_05_00_ON_BULK_STAR,
         ARLocation.SS_BREAK_ALL_CORAL_AND_FIRST,
     },
-    "Air Ride: MACHINE PASSAGE": {
+    KARLocationGroup.AR_MACHINE_PASSAGE: {
         ARLocation.TA_MP_FINISH_02_48_00,
         ARLocation.MP_RACE_4500_FEET,
         ARLocation.MP_FINISH_2_LAPS_IN_UNDER_01_48_00,
@@ -1062,7 +1102,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.FR_MP_LAP_00_57_00_ON_SWERVE_STAR,
         ARLocation.MP_CANNON_SHOOT_3,
     },
-    "Air Ride: CELESTIAL VALLEY": {
+    KARLocationGroup.AR_CELESTIAL_VALLEY: {
         ARLocation.CV_FINISH_2_LAPS_IN_UNDER_01_56_00,
         ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR,
         ARLocation.CV_COPY_CHANCE_WHEEL_TREE,
@@ -1075,7 +1115,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.CV_RIDE_BOTH_BRIDGE_RAILS,
         ARLocation.FR_CV_LAP_00_57_00,
     },
-    "Air Ride: FROZEN HILLSIDE": {
+    KARLocationGroup.AR_FROZEN_HILLSIDE: {
         ARLocation.FR_FH_LAP_01_10_00,
         ARLocation.FH_RACE_2_LAPS_IN_UNDER_02_20_00,
         ARLocation.TA_FH_FINISH_03_14_00,
@@ -1087,7 +1127,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.FH_SPLIT_20_ICE_AND_FIRST,
         ARLocation.FH_RACE_5300_FEET,
     },
-    "Air Ride: BEANSTALK PARK": {
+    KARLocationGroup.AR_BEANSTALK_PARK: {
         ARLocation.BP_FINISH_2_LAPS_IN_UNDER_01_56_00,
         ARLocation.FR_BP_LAP_00_58_00_ON_WINGED_STAR,
         ARLocation.BP_FINISH_2_LAPS_IN_UNDER_02_18_00,
@@ -1100,7 +1140,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.BP_SWALL_20_AND_FIRST,
         ARLocation.FR_BP_LAP_00_58_00,
     },
-    "Air Ride: CHECKER KNIGHTS": {
+    KARLocationGroup.AR_CHECKER_KNIGHTS: {
         ARLocation.FR_CK_LAP_01_35_00,
         ARLocation.CK_BREAK_2_WALLS_AND_FIRST,
         ARLocation.TA_CK_FINISH_04_30_00,
@@ -1114,7 +1154,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.CK_USE_SPIN_PANELS_7_X_AND_FIRST,
         ARLocation.TA_CK_FINISH_03_55_00_ON_WARPSTAR,
     },
-    "Air Ride: High Effort": {
+    KARLocationGroup.AR_HIGH_EFFORT: {
         ARLocation.DEFEAT_100_ENEMIES_WITH_EXHALED_STARS,
         ARLocation.GLIDE_FOR_1_HOUR,
         ARLocation.SWALL_200_ENEMIES,
@@ -1125,7 +1165,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.DEFEAT_300_OF_YOUR_ENEMIES,
         ARLocation.RACE_100_LAPS,
     },
-    "Top Ride: Time Attack": {
+    KARLocationGroup.TR_TIME_ATTACK: {
         TRLocation.TA_SAND_FINISH_00_35_00,
         TRLocation.TA_FIRE_FINISH_00_46_00,
         TRLocation.TA_LIGHT_FINISH_00_33_00,
@@ -1142,7 +1182,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.TA_SAND_FINISH_00_29_00,
         TRLocation.TA_FIRE_FINISH_00_39_00,
     },
-    "Top Ride: Free Run": {
+    KARLocationGroup.TR_FREE_RUN: {
         TRLocation.FR_RACE_100_LAPS,
         TRLocation.FR_SKY_LAP_00_11_00,
         TRLocation.FR_GRASS_LAP_00_04_50,
@@ -1159,7 +1199,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.FR_METAL_LAP_00_11_50,
         TRLocation.FR_SKY_LAP_00_09_00,
     },
-    "Top Ride: LIGHT": {
+    KARLocationGroup.TR_LIGHT: {
         TRLocation.LIGHT_FIRST_WITHOUT_USING_BOOST,
         TRLocation.LIGHT_RACE_100_LAPS,
         TRLocation.TA_LIGHT_FINISH_00_33_00,
@@ -1173,7 +1213,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.LIGHT_FIRST_AND_BUST_6_COLUMNS,
         TRLocation.FR_LIGHT_LAP_00_07_50,
     },
-    "Top Ride: SKY": {
+    KARLocationGroup.TR_SKY: {
         TRLocation.SKY_FIRST_10X,
         TRLocation.SKY_FIRST_WITHOUT_USING_JUMP_PLATE,
         TRLocation.FR_SKY_LAP_00_11_00,
@@ -1186,7 +1226,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.SKY_FIRST_AND_HIT_ISLE_KNOB_5,
         TRLocation.FR_SKY_LAP_00_09_00,
     },
-    "Top Ride: GRASS": {
+    KARLocationGroup.TR_GRASS: {
         TRLocation.GRASS_FIRST_WITH_CPUS_SET_TO_LEVEL_5,
         TRLocation.GRASS_FIRST_AND_HIT_5_DASH_PANELS,
         TRLocation.FR_GRASS_LAP_00_04_50,
@@ -1198,7 +1238,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.GRASS_RACE_100_LAPS,
         TRLocation.TA_GRASS_FINISH_00_33_00,
     },
-    "Top Ride: WATER": {
+    KARLocationGroup.TR_WATER: {
         TRLocation.WATER_FIRST_WITHOUT_USING_BOOST,
         TRLocation.WATER_RACE_100_LAPS,
         TRLocation.FR_WATER_LAP_00_10_50,
@@ -1210,7 +1250,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.WATER_FINISH_5_LAPS_IN_UNDER_01_02_00,
         TRLocation.TA_WATER_FINISH_01_06_00,
     },
-    "Top Ride: SAND": {
+    KARLocationGroup.TR_SAND: {
         TRLocation.SAND_FIRST_WITHOUT_USING_BOOST,
         TRLocation.SAND_RACE_100_LAPS,
         TRLocation.TA_SAND_FINISH_00_35_00,
@@ -1224,7 +1264,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.SAND_ANT_DOOM_20X,
         TRLocation.TA_SAND_FINISH_00_29_00,
     },
-    "Top Ride: FIRE": {
+    KARLocationGroup.TR_FIRE: {
         TRLocation.FIRE_FIRST_WITH_CPUS_SET_TO_LEVEL_5,
         TRLocation.FIRE_CAUSE_A_HUGE_ERUPTION_3X,
         TRLocation.TA_FIRE_FINISH_00_46_00,
@@ -1236,7 +1276,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.FIRE_RACE_100_LAPS,
         TRLocation.TA_FIRE_FINISH_00_39_00,
     },
-    "Top Ride: METAL": {
+    KARLocationGroup.TR_METAL: {
         TRLocation.METAL_FIRST_10X,
         TRLocation.METAL_FIRST_AND_HIT_SWITCH_10X,
         TRLocation.TA_METAL_FINISH_00_51_00,
@@ -1250,7 +1290,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.METAL_FIRST_NO_GEAR_WALLS,
         TRLocation.FR_METAL_LAP_00_11_50,
     },
-    "Top Ride: High Effort": {
+    KARLocationGroup.TR_HIGH_EFFORT: {
         TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
         TRLocation.FR_RACE_100_LAPS,
         TRLocation.SAND_RACE_100_LAPS,
@@ -1266,7 +1306,7 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
         TRLocation.RACE_300_LAPS,
     },
-    "Top Ride: Multiplayer": {
+    KARLocationGroup.TR_MULTIPLAYER: {
         TRLocation.COMPETE_IN_50_MULTIPLAYER_RACES,
         TRLocation.COMPETE_IN_10_MULTIPLAYER_RACES,
     },

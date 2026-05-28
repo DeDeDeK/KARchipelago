@@ -7,11 +7,12 @@ Two helpers in KARWorld.set_rules attach item_rule callables to specific locatio
   local items (item.player == self.player). Prevents other players' /collect
   from auto-completing the goal.
 - `_set_cross_mode_placement_rules`: under cross_mode_placement=false, restricts
-  our own mode-tagged items so each only lands at a location whose mode is in
-  the item's source_modes. Items with empty source_modes are unrestricted.
+  our own mode-tagged PROGRESSION items so each only lands at a location whose mode
+  is in the item's source_modes. Non-progression items (rewards, traps, filler) and
+  items with empty source_modes are unrestricted.
 
 Both are tested by constructing stub items and invoking the location's
-item_rule callable directly — the rule is a property of the Location object,
+item_rule callable directly: the rule is a property of the Location object,
 so we don't need to drive a full fill to inspect it.
 """
 
@@ -52,7 +53,7 @@ class TestGoalLocationsLocalOnly(KARTestBase):
                 loc = self.world.get_location(loc_name)
                 self.assertFalse(
                     loc.item_rule(foreign),
-                    f"{loc_name} accepted a foreign item — local-only rule missing or broken",
+                    f"{loc_name} accepted a foreign item: local-only rule missing or broken",
                 )
 
     def test_local_item_accepted_on_each_goal_location(self):
@@ -73,13 +74,14 @@ class TestGoalLocationsLocalOnly(KARTestBase):
         loc = self.world.get_location(CTLocation.GET_10_BOOST_PATCHES)
         self.assertTrue(
             loc.item_rule(foreign),
-            "non-goal location wrongly rejected foreign item — rule leaked outside the goal-locs set",
+            "non-goal location wrongly rejected foreign item: rule leaked outside the goal-locs set",
         )
 
 
 class TestCrossModePlacementRulesOff(KARTestBase):
-    """cross_mode_placement OFF: own AR-tagged items rejected on CT locations,
-    own neutral items accepted on any location, foreign items unaffected."""
+    """cross_mode_placement OFF: own AR-tagged PROGRESSION items rejected on CT locations,
+    own non-progression AR items accepted anywhere, neutral items accepted anywhere,
+    foreign items unaffected."""
 
     options = {**ALL_MODES, "cross_mode_placement": Toggle.option_false}
 
@@ -92,27 +94,38 @@ class TestCrossModePlacementRulesOff(KARTestBase):
     def _tr_location(self):
         return self.world.get_location(TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS)
 
-    def test_own_ar_reward_rejected_on_ct_location(self):
-        # AR_REWARD_FILLER_BOX_1 is tagged with source_modes = {AIRRIDE}.
-        ar_item = _make_kar_item(self.world, KARItemName.AR_REWARD_FILLER_BOX_1)
+    def test_own_ar_progression_rejected_on_ct_location(self):
+        # An AR course unlock is progression tagged with source_modes = {AIRRIDE}.
+        ar_item = _make_kar_item(self.world, KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK)
         self.assertIn(GameMode.AIRRIDE, ar_item.source_modes)
+        self.assertTrue(ar_item.classification & ItemClassification.progression)
         self.assertFalse(
             self._ct_location().item_rule(ar_item),
-            "AR-tagged own item should be rejected on a CT location under cross-mode-off",
+            "AR-tagged progression item should be rejected on a CT location under cross-mode-off",
         )
 
-    def test_own_ar_reward_accepted_on_ar_location(self):
-        ar_item = _make_kar_item(self.world, KARItemName.AR_REWARD_FILLER_BOX_1)
+    def test_own_ar_progression_accepted_on_ar_location(self):
+        ar_item = _make_kar_item(self.world, KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK)
         self.assertTrue(
             self._ar_location().item_rule(ar_item),
-            "AR-tagged own item should be accepted on an AR location",
+            "AR-tagged progression item should be accepted on an AR location",
         )
 
-    def test_neutral_own_item_accepted_on_ct_and_ar(self):
-        # No real ITEM_TABLE entry has empty source_modes today, but the cross-mode
-        # rule handles that path (mode-neutral items skip the mode constraint). Use a
-        # synthetic KARItem with empty source_modes to exercise the branch.
-        neutral = KARItem(KARItemName.SPAWN_RATE_UP, ItemClassification.useful, 11, self.player)
+    def test_own_ar_reward_crosses_to_ct_location(self):
+        # AR_REWARD_FILLER_BOX_1 is tagged {AIRRIDE} but is non-progression, so cross-mode
+        # locking does NOT apply: it may land on a CT location.
+        ar_reward = _make_kar_item(self.world, KARItemName.AR_REWARD_FILLER_BOX_1)
+        self.assertIn(GameMode.AIRRIDE, ar_reward.source_modes)
+        self.assertFalse(ar_reward.classification & ItemClassification.progression)
+        self.assertTrue(
+            self._ct_location().item_rule(ar_reward),
+            "AR non-progression reward should be allowed on a CT location (only progression is locked)",
+        )
+
+    def test_neutral_own_progression_accepted_on_ct_and_ar(self):
+        # A progression item with empty source_modes is mode-neutral and skips the mode
+        # constraint. No real ITEM_TABLE entry is like this today, so use a synthetic item.
+        neutral = KARItem(KARItemName.SPAWN_RATE_UP, ItemClassification.progression, 11, self.player)
         neutral.source_modes = frozenset()
         self.assertTrue(self._ct_location().item_rule(neutral))
         self.assertTrue(self._ar_location().item_rule(neutral))

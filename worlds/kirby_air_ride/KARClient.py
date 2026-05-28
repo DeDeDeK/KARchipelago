@@ -27,15 +27,13 @@ from .KARLocations import LOCATION_TABLE
 # 1 raw KAR energy unit = 1 MJ in the multiworld pool (AP stores integer Joules).
 ENERGY_LINK_EXCHANGE_RATE = 1_000_000
 
-# Display names for TrapLink kinds. Used in the outgoing Bounce so other worlds
-# can translate to local equivalents.
+# Sent in the outgoing Bounce so other worlds can translate to local equivalents.
 TRAPLINK_NAMES: dict[TrapLinkKind, str] = {
     TrapLinkKind.BAD_PATCH: "Bad Patch",
     TrapLinkKind.SLEEP: "Sleep",
     TrapLinkKind.SPEED_DOWN: "Speed Down",
 }
 
-# Display names for goal kinds.
 GOAL_NAMES: dict[GoalKind, str] = {
     GoalKind.CHECKLIST_100: "100 Checklist Blocks",
     GoalKind.N_CHECKLIST: "N Checklist Blocks",
@@ -85,7 +83,6 @@ class KARContext(CommonContext):
         # APData struct base address (resolved from static pointer).
         self.ap_data_base: int | None = None
 
-        # Handshake progress flags.
         self.game_ready = False
         self.options_written = False
         self.locations_written = False
@@ -93,7 +90,7 @@ class KARContext(CommonContext):
         # Slot data received from the AP server on connect.
         self.slot_options: dict[str, Any] = {}
 
-        # Location arrays built from scout results. Per-mode u16[46], default 0xFFFF (remote).
+        # Location arrays built from scout results. Per-mode u16[REWARDS_PER_MODE], default 0xFFFF (remote).
         self.location_arrays: dict[GameMode, list[int]] = {m: [0xFFFF] * REWARDS_PER_MODE for m in GameMode}
         self.location_arrays_ready = False
         # Outstanding scouted location IDs; populated when LocationScouts is sent,
@@ -129,7 +126,7 @@ class KARContext(CommonContext):
         """Reset state tied to the Dolphin connection/mod memory.
 
         Safe to call whenever the Dolphin hook drops or the APData pointer
-        changes — this state is rebuilt from memory on the next handshake.
+        changes; this state is rebuilt from memory on the next handshake.
         """
         self.ap_data_base = None
         self.game_ready = False
@@ -141,7 +138,7 @@ class KARContext(CommonContext):
     def _reset_server_state(self) -> None:
         """Reset state tied to the AP server session (scouts, bounces).
 
-        Only call on actual server disconnect — not on Dolphin flapping —
+        Only call on actual server disconnect, not on Dolphin flapping,
         since this state is populated by server packets that arrive once
         per session (LocationInfo, RoomUpdate, bounces).
         """
@@ -152,7 +149,7 @@ class KARContext(CommonContext):
         self.pending_trap_receives = 0
 
     def _reset_game_state(self) -> None:
-        """Reset everything — both Dolphin and server-side state."""
+        """Reset everything: both Dolphin and server-side state."""
         self._reset_dolphin_state()
         self._reset_server_state()
 
@@ -204,7 +201,7 @@ class KARContext(CommonContext):
 
         For a withdrawal (negative add + max:0), `original_value - value` is the
         amount the server actually subtracted from the pool. If less than what
-        the mod asked to withdraw, the pool ran out — log the discrepancy.
+        the mod asked to withdraw, the pool ran out; log the discrepancy.
         """
         tag = args.get("tag")
         if not tag or tag not in self.pending_energy_withdrawals:
@@ -251,7 +248,7 @@ class KARContext(CommonContext):
                 self.ui.enable_energy_link()
 
         # TrapLink setup (seed from yaml; in-game menu may override later via
-        # _poll_menu_toggles). Independent of trap_chance — players can
+        # _poll_menu_toggles). Independent of trap_chance: players can
         # participate in TrapLink without having traps in their own pool.
         trap_enabled = bool(sd.get("trap_link", 0))
         Utils.async_start(self._update_traplink_tags(trap_enabled))
@@ -295,17 +292,17 @@ class KARContext(CommonContext):
         # Defensive: AP server filters Bounced by tag membership, but double-check
         # in case of a race during tag updates. Also self-source filter so our own
         # outgoing traps don't loop back. We intentionally ignore the incoming
-        # `trap_name` field — KAR's receive path picks a random local trap from
-        # its own pool (see docs/traplink-send.md) since cross-world trap names
-        # don't have a clean 1:1 mapping to our trap kinds.
+        # `trap_name` field; KAR's receive path picks a random local trap from its
+        # own pool since cross-world trap names don't have a clean 1:1 mapping to
+        # our trap kinds.
         if "TrapLink" in self.tags and "TrapLink" in tags:
             data = args.get("data", {})
             if self.slot is None or data.get("source") == self.player_names.get(self.slot, ""):
                 return
-            # Dedupe server resends by payload timestamp. Same pattern as DeathLink
-            # at CommonClient.py:1092. Missing or non-numeric `time` falls through
-            # to accept-once-then-block (won't match the float comparison again
-            # until a sender with a real timestamp arrives).
+            # Dedupe server resends by payload timestamp, mirroring DeathLink's
+            # last_death_link check in CommonClient. Missing or non-numeric `time`
+            # falls through to accept-once-then-block (won't match the float
+            # comparison again until a sender with a real timestamp arrives).
             t = data.get("time")
             if isinstance(t, (int, float)) and t == self.last_traplink_receive:
                 return
@@ -317,7 +314,7 @@ class KARContext(CommonContext):
         """Build location arrays from scout results.
 
         For each of our checklist reward items placed at a location in our world,
-        record which checkbox it maps to.  Everything else stays 0xFFFF (remote).
+        record which checkbox it maps to. Everything else stays 0xFFFF (remote).
         """
         for raw in args["locations"]:
             item = NetworkItem(*raw) if not isinstance(raw, NetworkItem) else raw
@@ -461,7 +458,7 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_TRAP_LINK_ENABLED), int(bool(sd.get("trap_link", 0))))
         d.write_u32(a(MemoryAddress.OPTION_REVEAL_CHECKLISTS), int(bool(sd.get("reveal_checklists", 0))))
 
-        # Goals per mode — option values map directly to the GoalKind enum.
+        # Goals per mode: option values map directly to the GoalKind enum.
         d.write_u32(a(MemoryAddress.OPTION_GOAL_AIRRIDE), int(sd.get("air_ride_goal", 4)))
         d.write_u32(a(MemoryAddress.OPTION_GOAL_TOPRIDE), int(sd.get("top_ride_goal", 4)))
         d.write_u32(a(MemoryAddress.OPTION_GOAL_CITYTRIAL), int(sd.get("city_trial_goal", 0)))
@@ -485,16 +482,16 @@ class KARContext(CommonContext):
         for mode, addr in OPTION_GOAL_CHECKS_PER_MODE.items():
             self._write_goal_checks_bitmask(mode, sd.get(goal_loc_keys[mode], []), a(addr))
 
-        # Per-category access gating. 1 = gated (default — AP unlock items required).
+        # Per-category access gating. 1 = gated (default, AP unlock items required).
         # 0 = ungated (mod pre-fills the unlock mask at connect; AP world ships no
-        # unlock items for that category). Stadium gating mirrors the existing
+        # unlock items for that category). Stadium gating reuses the existing
         # `city_trial_progressive_stadiums` slot option for back-compat.
         d.write_u32(a(MemoryAddress.OPTION_MACHINE_GATING_ENABLED), int(bool(sd.get("machines_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_ABILITY_GATING_ENABLED), int(bool(sd.get("abilities_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_EVENT_GATING_ENABLED), int(bool(sd.get("events_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_PATCH_GATING_ENABLED), int(bool(sd.get("patches_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_EVENT_GATING_ENABLED), int(bool(sd.get("city_trial_events_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_PATCH_GATING_ENABLED), int(bool(sd.get("city_trial_patches_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_ITEM_GATING_ENABLED), int(bool(sd.get("city_trial_items_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_BOX_GATING_ENABLED), int(bool(sd.get("boxes_gated", 1))))
+        d.write_u32(a(MemoryAddress.OPTION_BOX_GATING_ENABLED), int(bool(sd.get("city_trial_boxes_gated", 1))))
         d.write_u32(
             a(MemoryAddress.OPTION_AIRRIDE_STAGE_GATING_ENABLED), int(bool(sd.get("air_ride_courses_gated", 1)))
         )

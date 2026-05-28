@@ -513,6 +513,7 @@ def call_generate(yaml_path, args, output_path):
     args = Namespace(
         **{
             "weights_file_path": settings.generator.weights_file_path,
+            "allow_quantity": settings.generator.allow_quantity,
             "sameoptions": False,
             "player_files_path": yaml_path,
             "seed": random.randint(0, 1000000000),

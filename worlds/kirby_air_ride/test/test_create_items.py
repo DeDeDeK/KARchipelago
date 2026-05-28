@@ -6,26 +6,16 @@ For every entry in ITEM_TABLE, KARWorld.create_item must produce a KARItem with:
 - a classification matching the ITEM_TABLE entry (modulo the progressive_stadiums
   override that promotes 6 checklist rewards to progression)
 
-Also pins the invariant that every UNLOCK-type item is progression — players cannot
+Also pins the invariant that every UNLOCK-type item is progression: players cannot
 soft-lock through misclassified UNLOCK items getting placed at non-progression slots.
 """
 
-from ..KARItems import ITEM_TABLE, KARItem, KARItemType
+from ..KARItems import GATING_CATEGORIES, ITEM_TABLE, KARItem, KARItemType
 from . import CT_ONLY, KARTestBase
 
+# Every gated unlock type plus stadium unlocks (which gate separately).
 _UNLOCK_TYPES: frozenset[KARItemType] = frozenset(
-    {
-        KARItemType.STADIUM_UNLOCK,
-        KARItemType.EVENT_UNLOCK,
-        KARItemType.ABILITY_UNLOCK,
-        KARItemType.PATCH_UNLOCK,
-        KARItemType.ITEM_UNLOCK,
-        KARItemType.MACHINE_UNLOCK,
-        KARItemType.BOX_UNLOCK,
-        KARItemType.STAGE_UNLOCK,
-        KARItemType.COLOR_UNLOCK,
-        KARItemType.TOPRIDE_ITEM_UNLOCK,
-    }
+    {cat.item_type for cat in GATING_CATEGORIES} | {KARItemType.CT_STADIUM_UNLOCK}
 )
 
 
@@ -97,7 +87,7 @@ class TestAllUnlocksAreProgression(KARTestBase):
             with self.subTest(item=name, type=data.type):
                 self.assertTrue(
                     data.classification & ItemClassification.progression,
-                    f"{name} ({data.type}) must be progression — UNLOCK items gate access "
+                    f"{name} ({data.type}) must be progression: UNLOCK items gate access "
                     "and cannot be classified as useful/filler",
                 )
 
@@ -115,7 +105,7 @@ class TestCreateItemUnknownNameRaises(KARTestBase):
 
 class TestEveryItemRegisteredInItemNameToId(KARTestBase):
     """Every ITEM_TABLE entry with a non-None code is registered in item_name_to_id.
-    Event items (code=None) are intentionally excluded — they have no network code."""
+    Event items (code=None) are intentionally excluded; they have no network code."""
 
     options = CT_ONLY
 
