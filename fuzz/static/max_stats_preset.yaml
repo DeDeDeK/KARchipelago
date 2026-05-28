@@ -1,31 +1,30 @@
 name: MaxStatsSlot
-description: Max Stats Insanity preset — patch_cap_amount 127 with heavy patch-cap/spawn-rate progression items
+description: Max Stats Insanity preset — patch_cap_amount 50 with patch-cap/spawn-rate progression items
 game: Kirby Air Ride
 requires:
   version: 0.5.0
 Kirby Air Ride:
   city_trial_goal: max_stats_in_one_run
-  city_trial_patch_cap_amount: 127
+  city_trial_patch_cap_amount: 50
   city_trial_progressive_patch_caps: true
   spawn_rate_progressive: true
   spawn_rate_min: 100
-  spawn_rate_max: 500
+  spawn_rate_max: 300
   air_ride_goal: n_checklist_blocks
   air_ride_checklist_amount: 20
   air_ride_checkbox_fillers: 0
   top_ride_goal: n_checklist_blocks
   top_ride_checklist_amount: 20
   top_ride_checkbox_fillers: 0
-  events_gated: false
+  city_trial_events_gated: false
   abilities_gated: false
-  patches_gated: false
+  city_trial_patches_gated: false
   city_trial_items_gated: false
   machines_gated: false
-  boxes_gated: false
+  city_trial_boxes_gated: false
   air_ride_courses_gated: false
   colors_gated: false
   top_ride_courses_gated: false
   top_ride_items_gated: false
   city_trial_progressive_stadiums: false
   city_trial_permanent_patches: false
-  effect_items_enabled: true

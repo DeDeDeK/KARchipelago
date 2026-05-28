@@ -10,7 +10,7 @@ Invoke via:
         --hook worlds.kirby_air_ride.fuzz_hook:KARHook -r 200
 
 Note: this class deliberately does NOT inherit from fuzz.BaseHook. fuzz.find_hook
-has an inverted issubclass check (line 766) that rejects real BaseHook subclasses.
+has an inverted issubclass check that rejects real BaseHook subclasses.
 Duck-typing avoids that and lets us drop the hook in without patching the fuzzer.
 """
 
@@ -23,9 +23,11 @@ from BaseClasses import ItemClassification
 from worlds.kirby_air_ride.KARData import location_code_to_mode
 from worlds.kirby_air_ride.KARItems import (
     GATED_CHECKLIST_REWARDS,
+    GATING_CATEGORIES,
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
     STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
+    KARItemGroup,
     KARItemName,
     KARItemType,
     item_name_groups,
@@ -91,7 +93,7 @@ class KARHook:
         tr_on = opts.top_ride_goal.value != TopRideGoal.option_none
 
         if not any((ct_on, ar_on, tr_on)):
-            raise HookError(f"{tag} Generated with all modes disabled — should have OptionError'd in generate_early")
+            raise HookError(f"{tag} Generated with all modes disabled, should have OptionError'd in generate_early")
 
         # Items in our slot, partitioned by where they live.
         pool_items = [it for it in mw.itempool if it.player == player]
@@ -138,9 +140,10 @@ class KARHook:
             )
 
         # SPAWN_RATE_UP = (max - min) // 10 when progressive on, else 0.
-        # SPAWN_RATE_UP is typed EFFECT but exempt from effect_items_enabled gating
-        # (see __init__._build_item_pools: it's governed by spawn_rate_progressive alone).
-        if opts.spawn_rate_progressive:
+        # It is its own KARItemType.SPAWN_RATE with source_modes {CITYTRIAL, TOPRIDE}; spawn rate is
+        # only meaningful in those modes, so the world's source-mode backstop drops it entirely when
+        # neither City Trial nor Top Ride is enabled (even with progressive on). Mirror that here.
+        if opts.spawn_rate_progressive and (ct_on or tr_on):
             expected = max(0, (opts.spawn_rate_max.value - opts.spawn_rate_min.value) // 10)
         else:
             expected = 0
@@ -149,7 +152,6 @@ class KARHook:
             raise HookError(
                 f"{tag} SPAWN_RATE_UP count={actual}, expected {expected} "
                 f"(progressive={bool(opts.spawn_rate_progressive)}, "
-                f"effect_items_enabled={bool(opts.effect_items_enabled)}, "
                 f"min={opts.spawn_rate_min.value}, max={opts.spawn_rate_max.value})"
             )
 
@@ -166,19 +168,9 @@ class KARHook:
 
     def _check_unlock_classifications(self, tag, pool_items):
         # All UNLOCK-type items in the pool must be progression-classified.
-        # (Memory note: feedback_item_classification — all *_UNLOCK items must be progression.)
-        unlock_types = {
-            KARItemType.EVENT_UNLOCK,
-            KARItemType.ABILITY_UNLOCK,
-            KARItemType.PATCH_UNLOCK,
-            KARItemType.ITEM_UNLOCK,
-            KARItemType.MACHINE_UNLOCK,
-            KARItemType.BOX_UNLOCK,
-            KARItemType.STAGE_UNLOCK,
-            KARItemType.COLOR_UNLOCK,
-            KARItemType.TOPRIDE_ITEM_UNLOCK,
-            KARItemType.STADIUM_UNLOCK,
-        }
+        # Every gated unlock type (from GATING_CATEGORIES) plus stadium unlocks, which
+        # gate separately via city_trial_progressive_stadiums.
+        unlock_types = {cat.item_type for cat in GATING_CATEGORIES} | {KARItemType.CT_STADIUM_UNLOCK}
         for it in pool_items:
             data = ITEM_TABLE.get(it.name)
             if data is None or data.type not in unlock_types:
@@ -194,16 +186,16 @@ class KARHook:
         # (They can show up in precollected only if the player force-added them via start_inventory,
         # which is exotic; we still flag because it indicates a misconfigured YAML.)
         mode_groups = [
-            (ct_on, "City Trial Rewards"),
-            (ar_on, "Air Ride Rewards"),
-            (tr_on, "Top Ride Rewards"),
+            (ct_on, KARItemGroup.CT_REWARDS),
+            (ar_on, KARItemGroup.AR_REWARDS),
+            (tr_on, KARItemGroup.TR_REWARDS),
         ]
         for enabled, group in mode_groups:
             if enabled:
                 continue
             for item_name in item_name_groups[group]:
                 in_pool = pool_counts.get(item_name, 0)
-                # Precollected from start_inventory is the player's fault — skip those.
+                # Precollected from start_inventory is the player's fault, skip those.
                 in_precollected_from_start = opts.start_inventory.value.get(item_name, 0)
                 in_precollected = precollected_counts.get(item_name, 0) - in_precollected_from_start
                 if in_pool or in_precollected:
@@ -263,17 +255,17 @@ class KARHook:
             )
 
         if (ct_on or ar_on) and opts.machines_gated:
-            machines = category_members("Machine Unlocks") - {
+            machines = category_members(KARItemGroup.MACHINE_UNLOCKS) - {
                 str(KARItemName.UNLOCK_MACHINE_HYDRA),
                 str(KARItemName.UNLOCK_MACHINE_DRAGOON),
             }
             self._check_one_starter(tag, "machine", machines, opts.start_inventory.value, precollected_counts)
 
-        if ct_on and opts.patches_gated:
+        if ct_on and opts.city_trial_patches_gated:
             self._check_one_starter(
                 tag,
                 "patch",
-                category_members("Patch Type Unlocks"),
+                category_members(KARItemGroup.CT_PATCH_UNLOCKS),
                 opts.start_inventory.value,
                 precollected_counts,
             )
@@ -282,7 +274,7 @@ class KARHook:
             self._check_one_starter(
                 tag,
                 "AR course",
-                category_members("AR Course Unlocks"),
+                category_members(KARItemGroup.AR_COURSE_UNLOCKS),
                 opts.start_inventory.value,
                 precollected_counts,
             )
@@ -291,7 +283,7 @@ class KARHook:
             self._check_one_starter(
                 tag,
                 "TR course",
-                category_members("TR Course Unlocks"),
+                category_members(KARItemGroup.TR_COURSE_UNLOCKS),
                 opts.start_inventory.value,
                 precollected_counts,
             )
@@ -299,7 +291,7 @@ class KARHook:
     def _check_one_starter(self, tag, label, category_set, start_inventory, precollected_counts):
         si_in_cat = {n: c for n, c in start_inventory.items() if n in category_set and c > 0}
         if si_in_cat:
-            # Player preset items — those should all be precollected; no random starter added.
+            # Player preset items: those should all be precollected; no random starter added.
             for n, c in si_in_cat.items():
                 if precollected_counts.get(n, 0) < c:
                     raise HookError(
@@ -307,7 +299,7 @@ class KARHook:
                         f"{precollected_counts.get(n, 0)} in precollected"
                     )
             return
-        # No start_inventory override — expect exactly one random pick from this category in precollected.
+        # No start_inventory override: expect exactly one random pick from this category in precollected.
         precollected_in_cat = sum(c for n, c in precollected_counts.items() if n in category_set)
         if precollected_in_cat != 1:
             raise HookError(
@@ -318,7 +310,7 @@ class KARHook:
         # Every item in start_inventory should appear in precollected with at least that count,
         # and should NOT appear in the itempool (start_inventory items are removed from the pool
         # when start_inventory_from_pool is the mechanism, but for plain start_inventory they're
-        # given to the player AND remain absent from the pool — KAR excludes them in _build_item_pools).
+        # given to the player AND remain absent from the pool; KAR excludes them in _build_item_pools).
         for name, count in opts.start_inventory.value.items():
             if count <= 0:
                 continue
@@ -331,9 +323,14 @@ class KARHook:
             return
 
         for loc, item in items_we_own_with_loc:
-            # Only check items that landed at one of OUR locations — the rule explicitly
+            # Only check items that landed at one of OUR locations; the rule explicitly
             # excludes remote placements.
             if loc.player != player:
+                continue
+            # Only PROGRESSION items are mode-locked under cross_mode_placement=off. Non-progression
+            # items (checklist rewards, traps, filler, counted-useful) gate nothing, so the world
+            # deliberately leaves them unrestricted and they may land in any mode. Mirror that here.
+            if not (item.classification & ItemClassification.progression):
                 continue
             data = ITEM_TABLE.get(item.name)
             if data is None or not data.source_modes:

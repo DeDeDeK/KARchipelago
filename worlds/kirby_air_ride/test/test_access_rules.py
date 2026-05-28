@@ -1,14 +1,12 @@
 """
 Access-rule tests for KARRules.set_rules().
 
-Each test exercises one rule branch (events_gated, machines_gated, etc.) by asserting
-that the rule-protected locations are unreachable without the gating item and reachable
-when it is collected. Uses WorldTestBase.assertAccessDependency with only_check_listed=True
-so we focus on the specific rule under test without cross-checking unrelated locations.
+Each test exercises one rule branch by asserting the rule-protected locations are unreachable
+without the gating item and reachable when it is collected. only_check_listed=True keeps each
+test focused on its rule without cross-checking unrelated locations.
 
-Starter items (machine_starter_choice, ar_course_starter_choice, etc.) are non-deterministic
-under default options. Where a test depends on a specific starter not having been chosen, the
-test pins the starter via start_inventory.
+Random starter picks are non-deterministic under default options. Where a test depends on a
+specific starter not having been chosen, it pins the starter via start_inventory.
 """
 
 from Options import Toggle
@@ -26,9 +24,9 @@ _PIN_STADIUM_STARTER = {"start_inventory": {KARItemName.UNLOCK_STADIUM_AIR_GLIDE
 
 
 class TestEventsGatingApplied(KARTestBase):
-    """events_gated ON: event-specific locations need their unlock items."""
+    """city_trial_events_gated ON: event-specific locations need their unlock items."""
 
-    options = {**CT_ONLY, "events_gated": Toggle.option_true}
+    options = {**CT_ONLY, "city_trial_events_gated": Toggle.option_true}
 
     def test_dyna_blade_locations_need_unlock(self):
         self.assertAccessDependency(
@@ -46,24 +44,23 @@ class TestEventsGatingApplied(KARTestBase):
 
 
 class TestEventsGatingNotApplied(KARTestBase):
-    """events_gated OFF: event unlocks aren't in the pool and event locations have no rule."""
+    """city_trial_events_gated OFF: event unlocks aren't in the pool and event locations have no rule."""
 
-    options = {**CT_ONLY, "events_gated": Toggle.option_false}
+    options = {**CT_ONLY, "city_trial_events_gated": Toggle.option_false}
 
     def test_dyna_blade_location_reachable_empty(self):
-        # No items, no unlocks — but no rule either, so reachable.
+        # No unlocks collected, but gate off means no rule, so reachable.
         self.assertTrue(self.can_reach_location(CTLocation.DO_SOME_DAMAGE_TO_DYNA_BLADE))
 
     def test_event_unlock_items_absent_from_pool(self):
-        # Concrete check that the gate-off branch dropped the unlocks from the pool.
         self.assertNotIn(KARItemName.UNLOCK_EVENT_DYNA_BLADE, self.world_item_names())
         self.assertNotIn(KARItemName.UNLOCK_EVENT_TAC, self.world_item_names())
 
 
 class TestAbilitiesGatingApplied(KARTestBase):
     """abilities_gated ON: ability-specific locations need their unlock items.
-    Covers both Air Ride locations and the TR locations gated by ability unlocks
-    (_ABILITY_TR_ITEM_RULES — Fire, Bomb)."""
+    Covers Air Ride locations and the TR locations gated by ability unlocks
+    (_ABILITY_TR_ITEM_RULES: Fire, Bomb)."""
 
     options = {**ALL_MODES, "abilities_gated": Toggle.option_true}
 
@@ -77,7 +74,7 @@ class TestAbilitiesGatingApplied(KARTestBase):
 
     def test_tr_fire_location_needs_fire_unlock(self):
         # TORCH_3_RIVALS is in the top-level TOP_RIDE region (no course gating);
-        # _ABILITY_TR_ITEM_RULES adds the UNLOCK_ABILITY_FIRE requirement.
+        # the fire requirement comes from _ABILITY_TR_ITEM_RULES, not course gating.
         self.assertAccessDependency(
             [TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM],
             [[KARItemName.UNLOCK_ABILITY_FIRE]],
@@ -94,11 +91,11 @@ class TestAbilitiesGatingApplied(KARTestBase):
 
 
 class TestPatchesGatingApplied(KARTestBase):
-    """patches_gated ON: patch-specific locations need their unlock items."""
+    """city_trial_patches_gated ON: patch-specific locations need their unlock items."""
 
     # Pin the random patch starter to UNLOCK_PATCH_HP so the locations we test
     # (which all require non-HP patch unlocks) aren't accidentally pre-unlocked.
-    options = {**CT_ONLY, "patches_gated": Toggle.option_true, **_PIN_PATCH_STARTER}
+    options = {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true, **_PIN_PATCH_STARTER}
 
     def test_boost_patches_need_accel_unlock(self):
         self.assertAccessDependency(
@@ -117,8 +114,8 @@ class TestPatchesGatingApplied(KARTestBase):
 
 class TestCityTrialItemsGatingApplied(KARTestBase):
     """city_trial_items_gated ON: item-specific locations need their unlock items.
-    Uses ALL_MODES because city_trial_items_gated adds 30 unlock items to the
-    progression pool and CT-only alone doesn't have enough default locations."""
+    Uses ALL_MODES because the 30 added unlock items need more default locations
+    than CT-only provides."""
 
     options = {**ALL_MODES, "city_trial_items_gated": Toggle.option_true}
 
@@ -150,9 +147,8 @@ class TestMachinesSingleGatingApplied(KARTestBase):
         )
 
     def test_shadow_ar_location_needs_unlock(self):
-        # TA_MF_FINISH_03_15_00_ON_SHADOW_STAR also has a CanReachLocation prerequisite on
-        # DEFEAT_10_ENEMIES_USING_QUICK_SPIN; that location lives in AR root and is
-        # reachable, so the SHADOW_STAR unlock is the binding constraint in this test.
+        # The location also has a CanReachLocation prereq on DEFEAT_10_ENEMIES_USING_QUICK_SPIN,
+        # but that AR-root location stays reachable, so SHADOW_STAR is the binding constraint.
         self.assertAccessDependency(
             [ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR],
             [[KARItemName.UNLOCK_MACHINE_SHADOW_STAR]],
@@ -161,8 +157,7 @@ class TestMachinesSingleGatingApplied(KARTestBase):
 
 
 class TestMachinesPairGatingApplied(KARTestBase):
-    """machines_gated ON: 'bust X on Y' locations need BOTH machine unlocks.
-    Uses ALL_MODES because machines_gated adds 25 unlock items to the progression pool."""
+    """machines_gated ON: 'bust X on Y' locations need BOTH machine unlocks."""
 
     options = {**ALL_MODES, "machines_gated": Toggle.option_true, **_PIN_MACHINE_STARTER}
 
@@ -206,7 +201,7 @@ class TestProgressiveStadiumGating(KARTestBase):
     }
 
     def test_dr1_stadium_location_needs_dr1_unlock(self):
-        # DRAG_RACE_1 isn't a checklist-reward overlap, so the unlock item gates it directly.
+        # DRAG_RACE_1 has no checklist-reward overlap, so the unlock item gates it directly.
         self.assertAccessDependency(
             [CTLocation.STADIUM_DR1_FINISH_00_24_00],
             [[KARItemName.UNLOCK_STADIUM_DRAG_RACE_1]],
@@ -214,10 +209,9 @@ class TestProgressiveStadiumGating(KARTestBase):
         )
 
     def test_dr4_stadium_location_needs_reward_item(self):
-        # DRAG_RACE_4 IS a checklist-reward overlap: the unlock item is excluded from
-        # the pool and the checklist reward item carries progression instead.
-        # DR4's entrance also has a CanReachLocation(STADIUM_DR3_FINISH_00_27_00) prereq;
-        # collect_all_but leaves all other unlocks in place, so DR3 stays reachable.
+        # DRAG_RACE_4 IS a checklist-reward overlap: its unlock item is excluded from the
+        # pool and CT_REWARD_DRAG_RACE_4_STADIUM carries progression instead. DR4 also has a
+        # CanReachLocation(DR3_FINISH) prereq, but collect_all_but leaves DR3 reachable here.
         self.assertAccessDependency(
             [CTLocation.STADIUM_DR4_FINISH_00_24_00],
             [[KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM]],
@@ -236,10 +230,9 @@ class TestProgressiveStadiumAllGroupGating(KARTestBase):
     }
 
     def test_dd_all_reachable_via_any_dd_unlock(self):
-        # DD3/4/5 unlocks are excluded from the pool — their checklist-reward
-        # equivalents (CT_REWARD_*) carry progression instead. The HasAny rule
-        # accepts any of these five items, so all five must be in possible_items
-        # for the negative-case assertion to hold.
+        # DD3/4/5 are checklist-reward overlaps, so their CT_REWARD_* items carry
+        # progression in place of the excluded unlocks. The HasAny rule accepts any of
+        # these five, so all five must be listed for the unreachable-without assertion.
         self.assertAccessDependency(
             [CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X],
             [
@@ -269,11 +262,10 @@ class TestProgressiveStadiumAllGroupGating(KARTestBase):
 class TestProgressiveStadiumPreservesChain(KARTestBase):
     """Regression: progressive_stadiums must compose with the DD/KM/DR chain prereqs, not overwrite.
 
-    Detection trick: assertAccessDependency with [[chain_unlock]] excludes only the chain
-    prerequisite from collect_all_but, leaving the stadium's own gating item collected.
-    With the bug (chain rule overwritten), the stadium would be reachable as soon as its
-    own gate is satisfied — even with the chain broken. The fix preserves the chain check,
-    so the location stays unreachable until the chain prereq is also satisfied."""
+    Stripping only the chain prerequisite (via [[chain_unlock]]) leaves the stadium's own gating
+    item collected. If the chain rule were overwritten, the stadium would become reachable from
+    its own gate alone, with the chain broken. Preserving the chain keeps it unreachable until
+    the chain prereq is also satisfied."""
 
     options = {
         **CT_ONLY,
@@ -338,10 +330,9 @@ class TestTRCourseGatingApplied(KARTestBase):
 
 class TestARNebulaBeltEntranceRule(KARTestBase):
     """The three Nebula Belt regions are gated by CanReachLocation(RACE_100_LAPS).
-    No AP checklist locations live inside Nebula Belt today, so we pin the rule
-    structurally: each of the three Nebula Belt entrances has a non-default
-    access_rule installed. If KARRules ever drops the rule, the access_rule will
-    revert to the framework's no-op."""
+    No AP checklist locations live inside Nebula Belt, so we pin the rule structurally:
+    each entrance must have a non-default access_rule. If KARRules ever drops the rule,
+    the entrance reverts to the framework's no-op access_rule and this test fails."""
 
     options = AR_ONLY
 
@@ -368,9 +359,8 @@ class TestARNebulaBeltEntranceRule(KARTestBase):
 
 
 class TestARChainPrereqs(KARTestBase):
-    """Sanity that each chain's dependent location is gated by its own machine unlock.
-    The chain rule itself is tested in TestARChainBreaksWhenPrereqGated below; this is
-    a simpler regression that the dependent's machine gate works under collect_all_but."""
+    """Sanity that each chain's dependent location is gated by its own machine unlock under
+    collect_all_but. The chain rule itself is tested in TestARChainBreaksWhenPrereqGated."""
 
     options = {
         **AR_ONLY,
@@ -382,24 +372,18 @@ class TestARChainPrereqs(KARTestBase):
         },
     }
 
-    # (dependent location, prereq location, item-to-strip to make the prereq unreachable)
-    # The stripped item is the prereq location's gating unlock (course unlock or chain item).
+    # (dependent location, prereq location, item-to-strip).
+    # The prereq here is the AR-root DEFEAT_10_ENEMIES, which course gating can't make
+    # unreachable, so we strip SHADOW_STAR to exercise the dependent's own gate in isolation.
     _CHAINS: list[tuple[str, str, str]] = [
         (
             ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR,
             ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN,
-            # Strip MF course unlock so the dependent location's region is unreachable,
-            # which also covers the chain (the chain reaches DEFEAT_10_ENEMIES, an AR-root
-            # location, so we can't break the prereq via course gating). Strip the SHADOW
-            # STAR unlock to isolate the dependent location's own gate — the chain is a
-            # separate rule. Test below covers an actual chain break.
             KARItemName.UNLOCK_MACHINE_SHADOW_STAR,
         ),
     ]
 
     def test_dependent_unreachable_when_its_own_unlock_missing(self):
-        # Sanity that the dependent location's own gate works under collect_all_but. The
-        # broader chain regression tests are covered in TestARChainBreaksWhenPrereqGated below.
         for dep, _, strip in self._CHAINS:
             with self.subTest(location=dep):
                 self.assertAccessDependency(
@@ -410,14 +394,13 @@ class TestARChainPrereqs(KARTestBase):
 
 
 class TestARChainBreaksWhenPrereqGated(KARTestBase):
-    """Subset of AR chains where the prereq location lives in a *course* region. Strip the
-    course unlock to make the prereq unreachable and verify the dependent location
-    becomes unreachable as well (the chain rule must compose with the dependent's own gate).
+    """Subset of AR chains where the prereq location lives in a *course* region. Stripping the
+    course unlock makes the prereq unreachable, which must make the dependent unreachable too
+    (the chain rule must compose with the dependent's own gate).
 
-    Both starter pins must live in the same start_inventory dict — naive dict-merge of two
-    `{"start_inventory": {...}}` shapes would drop the first one. The starter pins are
-    important because the random AR-course pick could otherwise land on one of the courses
-    we're stripping, leaving it precollected and the assertion vacuous."""
+    Both starter pins live in one start_inventory dict: a naive merge of two
+    `{"start_inventory": {...}}` shapes would drop the first. Pinning matters because the random
+    AR-course pick could otherwise precollect a course we strip, making the assertion vacuous."""
 
     options = {
         **AR_ONLY,
@@ -429,8 +412,7 @@ class TestARChainBreaksWhenPrereqGated(KARTestBase):
         },
     }
 
-    # (dependent, prereq, course-unlock-of-prereq) — stripping the course unlock makes the
-    # prereq location unreachable, which should make the dependent unreachable via the chain.
+    # (dependent, prereq, course-unlock-of-prereq).
     _COURSE_CHAINS: list[tuple[str, str, str]] = [
         (
             ARLocation.FR_FH_LAP_01_10_00_ON_FORMULA_STAR,
@@ -467,8 +449,6 @@ class TestARChainBreaksWhenPrereqGated(KARTestBase):
     def test_chain_break_makes_dependent_unreachable(self):
         for dep, prereq, course_unlock in self._COURSE_CHAINS:
             with self.subTest(dependent=dep, prereq=prereq, stripped=course_unlock):
-                # Strip the course unlock for the prereq's region. The prereq becomes
-                # unreachable, so the dependent's chain rule should fail.
                 self.assertAccessDependency(
                     [dep],
                     [[course_unlock]],
@@ -492,17 +472,17 @@ class TestTRBombAbilityGating(KARTestBase):
 
 class TestCTPrerequisiteChainsAllGatingOff(KARTestBase):
     """With every gate off, the CanReachLocation prerequisite chains
-    (UNLOCK_HYDRA_CHECKLIST, UNLOCK_DRAGOON_CHECKLIST) should still be reachable —
+    (UNLOCK_HYDRA_CHECKLIST, UNLOCK_DRAGOON_CHECKLIST) should still be reachable:
     no item gate blocks the constituent prereq locations."""
 
     options = {
         **CT_ONLY,
-        "events_gated": Toggle.option_false,
+        "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,
-        "patches_gated": Toggle.option_false,
+        "city_trial_patches_gated": Toggle.option_false,
         "city_trial_items_gated": Toggle.option_false,
         "machines_gated": Toggle.option_false,
-        "boxes_gated": Toggle.option_false,
+        "city_trial_boxes_gated": Toggle.option_false,
         "colors_gated": Toggle.option_false,
         "city_trial_progressive_stadiums": Toggle.option_false,
     }

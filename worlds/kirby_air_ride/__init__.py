@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from itertools import combinations
 from typing import Any, ClassVar
 
 from BaseClasses import ItemClassification, Tutorial
@@ -16,7 +17,7 @@ from worlds.LauncherComponents import (
 
 from .KARData import GameMode, location_code_to_mode
 from .KARItems import (
-    GATED_CHECKLIST_REWARDS,
+    GATING_CATEGORIES,
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
     STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
@@ -26,6 +27,7 @@ from .KARItems import (
     KARItemName,
     KARItemType,
     item_name_groups,
+    items_by_type,
 )
 from .KARLocations import (
     AIR_RIDE_GOAL_TO_LOCATION,
@@ -35,6 +37,7 @@ from .KARLocations import (
     LOCATION_TABLE,
     TOP_RIDE_GOAL_TO_LOCATION,
     TOP_RIDE_LOCATION_TABLE,
+    KARLocationGroup,
     location_name_groups,
 )
 from .KAROptions import (
@@ -49,9 +52,6 @@ from .KARRules import set_rules
 
 
 def run_client() -> None:
-    """
-    Launch Kirby Air Ride client.
-    """
     from .KARClient import main
 
     launch_subprocess(main, name="KirbyAirRideClient")
@@ -70,9 +70,7 @@ icon_paths["Kirby Air Ride"] = "ap:worlds.kirby_air_ride/assets/allpatch.png"
 
 class KARWeb(WebWorld):
     """
-    This class handles the web interface for Kirby Air Ride.
-
-    The web interface includes the setup guide and the options page for generating YAMLs.
+    Web interface for Kirby Air Ride: setup guide and the YAML options page.
     """
 
     tutorials = [  # noqa: RUF012
@@ -90,27 +88,28 @@ class KARWeb(WebWorld):
     rich_text_options_doc = True
     options_presets = {  # noqa: RUF012
         # Max Stats Insanity bundles a runnable seed: City Trial goal is reaching the patch cap
-        # target (127) on every stat in one trial round; pool is heavy on Patch Cap Increase and
-        # Spawn Rate Up items; most gating is off so the patch-cap items fit. Players will likely
-        # also want to enable AR and/or TR with low-effort goals to add more locations.
+        # target (50) on every stat in one trial round; pool is heavy on Patch Cap Increase and
+        # Spawn Rate Up items; most gating is off so the patch-cap items fit. The patch-cap target
+        # and spawn-rate ceiling are kept modest so the guaranteed counted items fit even in a
+        # CT-only single-world pool. Players can still enable AR and/or TR for more locations.
         "Max Stats Insanity": {
             "city_trial_goal": "max_stats_in_one_run",
-            "city_trial_patch_cap_amount": 127,
+            "city_trial_patch_cap_amount": 50,
             "city_trial_progressive_patch_caps": True,
             "spawn_rate_progressive": True,
             "spawn_rate_min": 100,
-            "spawn_rate_max": 500,
+            "spawn_rate_max": 300,
             "air_ride_goal": "n_checklist_blocks",
             "air_ride_checklist_amount": 20,
             "top_ride_goal": "n_checklist_blocks",
             "top_ride_checklist_amount": 20,
             # Disable most gating so the pool isn't dominated by unlock items.
-            "events_gated": False,
+            "city_trial_events_gated": False,
             "abilities_gated": False,
-            "patches_gated": False,
+            "city_trial_patches_gated": False,
             "city_trial_items_gated": False,
             "machines_gated": False,
-            "boxes_gated": False,
+            "city_trial_boxes_gated": False,
             "air_ride_courses_gated": False,
             "colors_gated": False,
             "top_ride_courses_gated": False,
@@ -142,9 +141,11 @@ class KARWorld(World):
         if location_data.code is not None
     }
 
-    item_name_groups: ClassVar[dict[str, set[str]]] = {k: {str(v) for v in vs} for k, vs in item_name_groups.items()}
+    item_name_groups: ClassVar[dict[str, set[str]]] = {
+        str(k): {str(v) for v in vs} for k, vs in item_name_groups.items()
+    }
     location_name_groups: ClassVar[dict[str, set[str]]] = {
-        k: {str(v) for v in vs} for k, vs in location_name_groups.items()
+        str(k): {str(v) for v in vs} for k, vs in location_name_groups.items()
     }
 
     web: ClassVar[KARWeb] = KARWeb()
@@ -161,25 +162,14 @@ class KARWorld(World):
         self.top_ride_enabled: bool = False
         self.top_ride_default_locations: set[str] = set()
         self.top_ride_excluded_locations: set[str] = set()
-
-        # Flat pools of useful and filler items. Each item carries its own source_modes
-        # (frozenset of GameMode) in ITEM_TABLE — sampling consults that field to enforce
-        # cross-mode constraints rather than pre-bucketing here. Empty source_modes means
-        # the item is mode-neutral (places anywhere).
         self.useful_pool: set[str] = set()
         self.filler_pool: set[str] = set()
-        # Maps each enabled trap item to its weight (the per-category trap_weight_* option
-        # value). Empty when no traps are eligible. Sampled with random.choices.
         self.trap_weights: dict[str, int] = {}
         self.progression_pool: list[str] = []
         self.counted_useful_pool: list[str] = []
         self.stadium_starter_choice: KARItemName | None = None
         self.goal_locations_to_exclude: set[str] = set()
         self.stadium_rewards_as_progression: set[str] = set()
-
-        # One random starter per gated category to avoid soft-locking the player at boot.
-        # Each is filled by _determine_starter_items() in generate_early if the player
-        # didn't preset an item from that category in start_inventory.
         self.machine_starter_choice: str | None = None
         self.patch_starter_choice: str | None = None
         self.ar_course_starter_choice: str | None = None
@@ -209,13 +199,19 @@ class KARWorld(World):
         self.city_trial_default_locations, self.city_trial_excluded_locations = self._categorize_locations(
             CITY_TRIAL_LOCATION_TABLE,
             [
-                (not self.options.city_trial_progression_high_effort, location_name_groups["City Trial: High Effort"]),
-                (not self.options.city_trial_progression_multiplayer, location_name_groups["City Trial: Multiplayer"]),
-                (not self.options.city_trial_progression_free_run, location_name_groups["City Trial: Free Run"]),
-                (not self.options.city_trial_progression_rng, location_name_groups["City Trial: RNG"]),
+                (
+                    not self.options.city_trial_progression_high_effort,
+                    location_name_groups[KARLocationGroup.CT_HIGH_EFFORT],
+                ),
+                (
+                    not self.options.city_trial_progression_multiplayer,
+                    location_name_groups[KARLocationGroup.CT_MULTIPLAYER],
+                ),
+                (not self.options.city_trial_progression_free_run, location_name_groups[KARLocationGroup.CT_FREE_RUN]),
+                (not self.options.city_trial_progression_rng, location_name_groups[KARLocationGroup.CT_RNG]),
                 (
                     not self.options.city_trial_progression_bust_vehicles,
-                    location_name_groups["City Trial: Bust Vehicle on Vehicle"],
+                    location_name_groups[KARLocationGroup.CT_BUST_VEHICLE_ON_VEHICLE],
                 ),
             ],
         )
@@ -223,19 +219,34 @@ class KARWorld(World):
         self.air_ride_default_locations, self.air_ride_excluded_locations = self._categorize_locations(
             AIR_RIDE_LOCATION_TABLE,
             [
-                (not self.options.air_ride_progression_high_effort, location_name_groups["Air Ride: High Effort"]),
-                (not self.options.air_ride_progression_free_run, location_name_groups["Air Ride: Free Run"]),
-                (not self.options.air_ride_progression_time_attack, location_name_groups["Air Ride: Time Attack"]),
+                (
+                    not self.options.air_ride_progression_high_effort,
+                    location_name_groups[KARLocationGroup.AR_HIGH_EFFORT],
+                ),
+                (not self.options.air_ride_progression_free_run, location_name_groups[KARLocationGroup.AR_FREE_RUN]),
+                (
+                    not self.options.air_ride_progression_time_attack,
+                    location_name_groups[KARLocationGroup.AR_TIME_ATTACK],
+                ),
             ],
         )
 
         self.top_ride_default_locations, self.top_ride_excluded_locations = self._categorize_locations(
             TOP_RIDE_LOCATION_TABLE,
             [
-                (not self.options.top_ride_progression_high_effort, location_name_groups["Top Ride: High Effort"]),
-                (not self.options.top_ride_progression_free_run, location_name_groups["Top Ride: Free Run"]),
-                (not self.options.top_ride_progression_time_attack, location_name_groups["Top Ride: Time Attack"]),
-                (not self.options.top_ride_progression_multiplayer, location_name_groups["Top Ride: Multiplayer"]),
+                (
+                    not self.options.top_ride_progression_high_effort,
+                    location_name_groups[KARLocationGroup.TR_HIGH_EFFORT],
+                ),
+                (not self.options.top_ride_progression_free_run, location_name_groups[KARLocationGroup.TR_FREE_RUN]),
+                (
+                    not self.options.top_ride_progression_time_attack,
+                    location_name_groups[KARLocationGroup.TR_TIME_ATTACK],
+                ),
+                (
+                    not self.options.top_ride_progression_multiplayer,
+                    location_name_groups[KARLocationGroup.TR_MULTIPLAYER],
+                ),
             ],
         )
 
@@ -269,19 +280,17 @@ class KARWorld(World):
 
     def _determine_starter_items(self) -> None:
         """
-        Pre-determine one random starter item per gated category that the player should not
-        boot into without. Each is push_precollected in generate_early. Categories handled:
-          - Stadiums (excludes the 6 stadium unlocks that double as checklist rewards, plus
-            VS King Dedede when that's the goal) when city_trial_progressive_stadiums and
-            CT enabled
-          - Machines (excludes Hydra/Dragoon — special legendary vehicles) when machines_gated
-            and CT or AR enabled
-          - Patch types when patches_gated and CT enabled
-          - Air Ride courses when air_ride_courses_gated and AR enabled
-          - Top Ride courses when top_ride_courses_gated and TR enabled
+        Pre-determine one random starter item per gated category the player should not boot
+        into without. Each is push_precollected in generate_early. Categories:
+          - Stadiums (when city_trial_progressive_stadiums + CT): excludes the 6 stadium
+            unlocks that double as checklist rewards, plus VS King Dedede when it's the goal.
+          - Machines (when machines_gated + CT or AR): excludes Hydra/Dragoon (legendary).
+          - Patch types (when city_trial_patches_gated + CT).
+          - Air Ride courses (when air_ride_courses_gated + AR).
+          - Top Ride courses (when top_ride_courses_gated + TR).
 
-        Categories deliberately skipped (player can play without): events, abilities, boxes,
-        CT items, TR items, colors (Pink is the implicit default starter).
+        Deliberately skipped (playable without): events, abilities, boxes, CT items, TR items,
+        colors (Pink is the implicit default starter).
         """
         if self.city_trial_enabled and self.options.city_trial_progressive_stadiums:
             beat_dedede = self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
@@ -303,20 +312,20 @@ class KARWorld(World):
                 self.stadium_starter_choice = self.random.choice(stadiums)
 
         if (self.city_trial_enabled or self.air_ride_enabled) and self.options.machines_gated:
-            machines = item_name_groups["Machine Unlocks"] - {
+            machines = items_by_type[KARItemType.MACHINE_UNLOCK] - {
                 KARItemName.UNLOCK_MACHINE_HYDRA,
                 KARItemName.UNLOCK_MACHINE_DRAGOON,
             }
             self.machine_starter_choice = self._pick_random_starter(machines)
 
-        if self.city_trial_enabled and self.options.patches_gated:
-            self.patch_starter_choice = self._pick_random_starter(item_name_groups["Patch Type Unlocks"])
+        if self.city_trial_enabled and self.options.city_trial_patches_gated:
+            self.patch_starter_choice = self._pick_random_starter(items_by_type[KARItemType.CT_PATCH_UNLOCK])
 
         if self.air_ride_enabled and self.options.air_ride_courses_gated:
-            self.ar_course_starter_choice = self._pick_random_starter(item_name_groups["AR Course Unlocks"])
+            self.ar_course_starter_choice = self._pick_random_starter(items_by_type[KARItemType.AR_COURSE_UNLOCK])
 
         if self.top_ride_enabled and self.options.top_ride_courses_gated:
-            self.tr_course_starter_choice = self._pick_random_starter(item_name_groups["TR Course Unlocks"])
+            self.tr_course_starter_choice = self._pick_random_starter(items_by_type[KARItemType.TR_COURSE_UNLOCK])
 
     def _validate_options(self) -> None:
         """
@@ -445,100 +454,63 @@ class KARWorld(World):
 
     def _build_item_pools(self) -> None:
         """
-        Determine which items are excluded, then sort the remaining items into pools
+        Determine which items are excluded based on player options, then sort the remaining items into pools
         (progression, useful, filler, trap) for placement during create_items().
         """
 
-        def items_of_type(item_type: KARItemType) -> set[str]:
-            return {n for n, d in ITEM_TABLE.items() if d.type == item_type}
-
-        def items_matching(item_filter: KARItemType | str) -> set[str]:
-            if isinstance(item_filter, KARItemType):
-                return items_of_type(item_filter)
-            return set(item_name_groups[item_filter])
-
-        # Gating categories — exclude when gating is OFF or no relevant mode is enabled
-        gating_config: list[tuple[str, KARItemType | str, set[str]]] = [
-            ("events_gated", KARItemType.EVENT_UNLOCK, {"city_trial_enabled"}),
-            # TR is included because _ABILITY_TR_ITEM_RULES gates 3 TR locations (Fire/Bomb)
-            # behind ability unlocks whenever abilities_gated is on.
-            (
-                "abilities_gated",
-                KARItemType.ABILITY_UNLOCK,
-                {"city_trial_enabled", "air_ride_enabled", "top_ride_enabled"},
-            ),
-            ("patches_gated", KARItemType.PATCH_UNLOCK, {"city_trial_enabled"}),
-            ("city_trial_items_gated", KARItemType.ITEM_UNLOCK, {"city_trial_enabled"}),
-            ("machines_gated", KARItemType.MACHINE_UNLOCK, {"city_trial_enabled", "air_ride_enabled"}),
-            ("boxes_gated", KARItemType.BOX_UNLOCK, {"city_trial_enabled"}),
-            ("air_ride_courses_gated", "AR Course Unlocks", {"air_ride_enabled"}),
-            ("colors_gated", KARItemType.COLOR_UNLOCK, set()),
-            ("top_ride_courses_gated", "TR Course Unlocks", {"top_ride_enabled"}),
-            ("top_ride_items_gated", KARItemType.TOPRIDE_ITEM_UNLOCK, {"top_ride_enabled"}),
-        ]
-
+        # Gating categories (GATING_CATEGORIES, the single source of truth in KARItems):
+        # exclude a category's unlock items when its gate is OFF or no relevant mode is
+        # enabled. When the gate is ON, exclude the overlapping checklist rewards instead
+        # so only the UNLOCK items handle that content.
         excluded: set[str] = set()
-        for gated_attr, item_filter, required_modes in gating_config:
-            gated_off = not getattr(self.options, gated_attr)
-            no_mode = required_modes and not any(getattr(self, mode) for mode in required_modes)
+        for cat in GATING_CATEGORIES:
+            gated_off = not getattr(self.options, cat.option)
+            no_mode = cat.required_modes and not any(getattr(self, mode) for mode in cat.required_modes)
             if gated_off or no_mode:
-                excluded |= items_matching(item_filter)
-            elif gated_attr in GATED_CHECKLIST_REWARDS:
-                # Gating is ON — exclude the overlapping checklist rewards so only
-                # the UNLOCK items handle this functionality.
-                excluded |= GATED_CHECKLIST_REWARDS[gated_attr]
+                excluded |= items_by_type[cat.item_type]
+            elif cat.overlapping_rewards:
+                excluded |= set(cat.overlapping_rewards)
 
-        # Mode-specific checklist rewards — excluded when their mode is disabled.
+        # Mode-specific checklist rewards - excluded when their mode is disabled.
         # Without this, with cross_mode_placement off, rewards have no valid landing spots.
         if not self.air_ride_enabled:
-            excluded |= item_name_groups["Air Ride Rewards"]
+            excluded |= items_by_type[KARItemType.AR_CHECKLIST_REWARD]
         if not self.top_ride_enabled:
-            excluded |= item_name_groups["Top Ride Rewards"]
+            excluded |= items_by_type[KARItemType.TR_CHECKLIST_REWARD]
         if not self.city_trial_enabled:
-            excluded |= item_name_groups["City Trial Rewards"]
+            excluded |= items_by_type[KARItemType.CT_CHECKLIST_REWARD]
 
-        # Stadium unlocks — excluded unless CT enabled AND progressive stadiums ON.
+        # Stadium unlocks: excluded unless CT enabled AND progressive stadiums ON.
         # When progressive stadiums IS on, the 6 unlock items that overlap with
-        # checklist rewards are still excluded — those stadiums are gated by their
+        # checklist rewards are still excluded; those stadiums are gated by their
         # checklist reward items instead (promoted to progression).
         if not self.city_trial_enabled or not self.options.city_trial_progressive_stadiums:
-            excluded |= items_of_type(KARItemType.STADIUM_UNLOCK)
+            excluded |= items_by_type[KARItemType.CT_STADIUM_UNLOCK]
         else:
             excluded |= set(STADIUM_UNLOCK_TO_CHECKLIST_REWARD.keys())
             self.stadium_rewards_as_progression = set(STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values())
 
-        # Permanent patches — excluded unless CT enabled AND option ON
+        # Permanent patches: excluded unless CT enabled AND option ON
         if not self.city_trial_enabled or not self.options.city_trial_permanent_patches:
-            excluded |= items_of_type(KARItemType.PERMANENT_PATCH)
+            excluded |= items_by_type[KARItemType.PERMANENT_PATCH]
 
-        # Patch cap increase — excluded unless CT enabled AND progressive caps ON
+        # Patch cap increase: excluded unless CT enabled AND progressive caps ON
         if not self.city_trial_enabled or not self.options.city_trial_progressive_patch_caps:
             excluded.add(KARItemName.PATCH_CAP_INCREASE)
 
-        # Effect items. SPAWN_RATE_UP is typed EFFECT but governed by spawn_rate_progressive,
-        # not effect_items_enabled — exclude it via that option only.
-        if not self.options.effect_items_enabled:
-            excluded |= items_of_type(KARItemType.EFFECT) - {KARItemName.SPAWN_RATE_UP}
-
-        # Spawn Rate Up — excluded unless progressive spawn rate is ON and there's room to grow.
+        # Spawn Rate Up: excluded unless progressive spawn rate is ON and there's room to grow.
         if (
             not self.options.spawn_rate_progressive
             or self.options.spawn_rate_max.value <= self.options.spawn_rate_min.value
         ):
             excluded.add(KARItemName.SPAWN_RATE_UP)
 
-        # Top Ride item gives — spawn an item at the player's Kirby position. Only
-        # effective in a Top Ride scene, so exclude when Top Ride is disabled.
-        # Also folded under effect_items_enabled (these are in-race effect items).
-        if not self.top_ride_enabled or not self.options.effect_items_enabled:
-            excluded |= items_of_type(KARItemType.TOPRIDE_ITEM_GIVE)
-
-        # Drop Patches Trap — only meaningful in City Trial (the mod's handler
+        # Drop Patches Trap: only meaningful in City Trial (the mod's handler
         # guards on Gm_IsInCity), and only when traps are enabled at all.
         if not self.city_trial_enabled or self.options.trap_chance.value == 0:
             excluded.add(KARItemName.DROP_PATCHES_TRAP)
 
-        # Checkbox fillers — excluded per mode when mode disabled or amount is 0
+        # Checkbox fillers: excluded per mode when mode disabled or amount is 0
         if not self.city_trial_enabled or self.options.city_trial_checkbox_fillers.value == 0:
             excluded.add(KARItemName.CHECKBOX_FILLER_CITY_TRIAL)
         if not self.air_ride_enabled or self.options.air_ride_checkbox_fillers.value == 0:
@@ -560,15 +532,15 @@ class KARWorld(World):
             if data.source_modes and not (data.source_modes & enabled_modes):
                 excluded.add(name)
 
-        # Precollected starter items (one per gated category — see _determine_starter_items).
+        # Precollected starter items (one per gated category, see _determine_starter_items).
         # Exclude start_inventory items of each category plus the random pick so they don't
         # show up in the multiworld pool a second time.
         starter_groups: list[tuple[str | None, set[str]]] = [
             (self.stadium_starter_choice, set(STADIUM_UNLOCK_ITEMS)),
-            (self.machine_starter_choice, item_name_groups["Machine Unlocks"]),
-            (self.patch_starter_choice, item_name_groups["Patch Type Unlocks"]),
-            (self.ar_course_starter_choice, item_name_groups["AR Course Unlocks"]),
-            (self.tr_course_starter_choice, item_name_groups["TR Course Unlocks"]),
+            (self.machine_starter_choice, items_by_type[KARItemType.MACHINE_UNLOCK]),
+            (self.patch_starter_choice, items_by_type[KARItemType.CT_PATCH_UNLOCK]),
+            (self.ar_course_starter_choice, items_by_type[KARItemType.AR_COURSE_UNLOCK]),
+            (self.tr_course_starter_choice, items_by_type[KARItemType.TR_COURSE_UNLOCK]),
         ]
         for choice, group in starter_groups:
             for item_name in self.options.start_inventory:
@@ -597,10 +569,7 @@ class KARWorld(World):
             if classification & ItemClassification.progression:
                 quantity = self._get_item_quantity(item_name, item_data)
                 self.progression_pool.extend([item_name] * quantity)
-            elif item_data.type == KARItemType.CHECKBOX_FILLER or item_name == KARItemName.SPAWN_RATE_UP:
-                # SPAWN_RATE_UP's docstring promises a specific count tied to the min/max range;
-                # routing it through counted_useful_pool enforces that, rather than dropping it
-                # into useful_pool where it would be sampled randomly.
+            elif item_data.type in (KARItemType.CHECKBOX_FILLER, KARItemType.SPAWN_RATE):
                 quantity = self._get_item_quantity(item_name, item_data)
                 self.counted_useful_pool.extend([item_name] * quantity)
             elif classification & ItemClassification.useful:
@@ -640,6 +609,8 @@ class KARWorld(World):
 
         self._build_item_pools()
         self._validate_pool_fits_locations()
+        if not self.options.cross_mode_placement:
+            self._validate_progression_fits_modes()
 
     def _validate_pool_fits_locations(self) -> None:
         """
@@ -685,12 +656,65 @@ class KARWorld(World):
             f"make room.{hint_str}"
         )
 
+    def _validate_progression_fits_modes(self) -> None:
+        """
+        Under cross_mode_placement=false, progression items are item-rule-locked to their source
+        mode(s), so each enabled mode's locations must hold the progression that can only land there.
+        Multi-mode progression (abilities/machines/colors) may go in any of its modes, making this a
+        bipartite feasibility check: for every subset S of enabled modes, the progression whose source
+        modes all fall within S must fit S's combined default locations (Hall's condition, exact for
+        the at-most-three modes here). Raises OptionError naming the overcommitted modes so the player
+        gets a clear message instead of a downstream FillError.
+        """
+        mode_locs: dict[GameMode, int] = {}
+        for mode_enum, enabled, default_locs in [
+            (GameMode.CITYTRIAL, self.city_trial_enabled, self.city_trial_default_locations),
+            (GameMode.AIRRIDE, self.air_ride_enabled, self.air_ride_default_locations),
+            (GameMode.TOPRIDE, self.top_ride_enabled, self.top_ride_default_locations),
+        ]:
+            if not enabled:
+                continue
+            mode_locs[mode_enum] = sum(
+                1
+                for loc in default_locs
+                if loc not in self.goal_locations_to_exclude and loc not in self.options.exclude_locations
+            )
+        enabled_set = frozenset(mode_locs)
+
+        # Effective placement modes of each progression item, intersected with the enabled set.
+        # Empty source_modes means mode-neutral progression, placeable in any enabled mode.
+        prog_effective: list[frozenset[GameMode]] = []
+        for name in self.progression_pool:
+            data = ITEM_TABLE.get(name)
+            if data is None:
+                continue
+            if data.source_modes:
+                eff = data.source_modes & enabled_set
+                if not eff:
+                    continue
+            else:
+                eff = enabled_set
+            prog_effective.append(eff)
+
+        modes = sorted(enabled_set, key=lambda m: m.value)
+        for r in range(1, len(modes) + 1):
+            for subset in combinations(modes, r):
+                subset_set = frozenset(subset)
+                demand = sum(1 for eff in prog_effective if eff <= subset_set)
+                capacity = sum(mode_locs[m] for m in subset)
+                if demand > capacity:
+                    mode_names = ", ".join(m.name for m in subset)
+                    raise OptionError(
+                        f"Cross-mode placement is off, but {demand} progression items can only be placed "
+                        f"in mode(s) [{mode_names}], which have {capacity} available locations between them. "
+                        f"Enable cross_mode_placement, enable more modes, reduce gating / progressive options, "
+                        f"or turn on more progression location flags to make room."
+                    )
+
     def create_regions(self) -> None:
-        """Method for creating and connecting regions for the World."""
         create_regions(self)
 
     def set_rules(self) -> None:
-        """Method for setting the rules on the World's regions and locations."""
         set_rules(self)
         self._set_goal_location_item_rules()
         self._set_cross_mode_placement_rules()
@@ -715,10 +739,13 @@ class KARWorld(World):
 
     def _set_cross_mode_placement_rules(self) -> None:
         """
-        When cross_mode_placement is off, restrict our own mode-tagged items so each one
-        only lands at a location belonging to one of its declared source modes. Items with
-        empty source_modes are mode-neutral and unrestricted. Items from other worlds
-        (item.player != self.player) are unaffected — they're remote and not under our control.
+        When cross_mode_placement is off, lock our own PROGRESSION items to their declared source
+        mode(s): a mode-tagged progression item only lands at a location of one of its source modes,
+        keeping each mode's required progression reachable by playing that mode. Non-progression
+        items (checklist rewards, traps, filler, counted-useful) gate nothing and are left
+        unrestricted, so they may land in any mode. Progression with empty source_modes is
+        mode-neutral and unrestricted. Items from other worlds (item.player != self.player) are
+        remote and unaffected.
         """
         if self.options.cross_mode_placement:
             return
@@ -731,7 +758,10 @@ class KARWorld(World):
             add_item_rule(
                 location,
                 lambda item, lm=loc_mode, p=player: (
-                    item.player != p or not (sm := getattr(item, "source_modes", frozenset())) or lm in sm
+                    item.player != p
+                    or not (item.classification & ItemClassification.progression)
+                    or not (sm := getattr(item, "source_modes", frozenset()))
+                    or lm in sm
                 ),
             )
 
@@ -747,6 +777,9 @@ class KARWorld(World):
         raise KeyError(f"Invalid item name: {name}")
 
     def create_items(self) -> None:
+        # Cross-mode placement is purely a progression concern (see _set_cross_mode_placement_rules):
+        # only progression items are mode-locked, so create_items mints everything with no mode
+        # awareness and AP's fill enforces the item rules.
         pool: list[str] = []
 
         # Determine excluded locations. Add in excluded locations only if the respective game modes are
@@ -767,169 +800,74 @@ class KARWorld(World):
             for location in self.get_locations()
             if location.name not in excluded_locations and not location.locked
         ]
+        num_excluded = sum(
+            1 for location in self.get_locations() if location.name in excluded_locations and not location.locked
+        )
 
-        # Filler for excluded locations. Under cross_mode_placement=false, _pick_filler
-        # restricts to neutral + target_mode so the item-rule can't reject the placement.
-        # Under cross_mode_placement=true, target_mode is ignored.
-        for loc_name in excluded_locations:
-            loc_mode = location_code_to_mode(self.get_location(loc_name).address)
-            pool.append(self._pick_filler(loc_mode))
+        # One filler per excluded location (get_filler_item_name may roll a trap).
+        pool.extend(self.get_filler_item_name() for _ in range(num_excluded))
 
-        # Add items with guaranteed quantities (progression items + counted useful items like checkbox fillers).
-        # _validate_pool_fits_locations() in generate_early already enforced that this fits.
+        # Progression items. Under cross_mode_placement=false these are item-rule-locked to their
+        # source mode(s); multi-mode unlocks (ability/machine/color) may land in any applicable
+        # mode. _validate_progression_fits_modes guarantees they fit per mode.
         pool.extend(self.progression_pool)
+
+        # Counted-useful items (checkbox fillers, spawn rate up): guaranteed quantities, but
+        # non-progression so never mode-locked.
         pool.extend(self.counted_useful_pool)
+
+        # Remaining locations: random useful items, traps, and filler. None are mode-restricted.
         num_items_left_to_place = (
             len(nonexcluded_locations) - len(self.progression_pool) - len(self.counted_useful_pool)
         )
-
-        # Fill remaining locations with a mix of useful items and traps. Under cross-mode-off,
-        # mode_capacity caps how many mode-locked rewards we add per mode so fill can't over-
-        # commit (which would explode remaining_fill). Under cross-mode-on, capacity is unused.
-        mode_capacity: dict[GameMode, int] | None = (
-            None if self.options.cross_mode_placement else self._compute_initial_mode_capacity(nonexcluded_locations)
-        )
         has_traps = self.trap_weights and self.options.trap_chance.value > 0
         for _ in range(num_items_left_to_place):
+            name: str | None = None
             if has_traps and self.random.random() * 100 < self.options.trap_chance.value:
-                pool.append(self._pick_trap())
-                continue
-            picked = self._sample_useful(mode_capacity)
-            if picked is None:
-                # All mode capacity hit zero and no neutral useful items — fall back to
-                # neutral filler (target_mode=None forces neutral-only under cross-mode-off).
-                picked = self._pick_filler(None)
-            pool.append(picked)
+                name = self._random_trap()
+            if name is None and self.useful_pool:
+                name = self.random.choice(sorted(self.useful_pool))
+            if name is None:
+                name = self._random_filler()
+            pool.append(name)
 
         self.multiworld.itempool += [self.create_item(name) for name in pool]
 
-    def _compute_initial_mode_capacity(self, nonexcluded_locations: list) -> dict[GameMode, int]:
-        """
-        Per-mode remaining capacity for the random-fill phase: mode_M nonexcluded locations
-        minus items already committed (progression + counted_useful) that consume mode_M's
-        capacity. Multi-mode items charge one of their source modes weighted by remaining
-        capacity (see _charge_to_mode).
+    def _random_trap(self) -> str | None:
+        """Pick a random trap weighted by per-type trap weight options, or None if none are enabled."""
+        if not self.trap_weights:
+            return None
+        return self.random.choices(list(self.trap_weights), weights=list(self.trap_weights.values()), k=1)[0]
 
-        Only meaningful under cross_mode_placement=false, where source-mode tags constrain
-        placement to one of the item's source modes.
-        """
-        mode_remaining: dict[GameMode, int] = dict.fromkeys(GameMode, 0)
-        for loc in nonexcluded_locations:
-            m = location_code_to_mode(loc.address)
-            if m is not None:
-                mode_remaining[m] += 1
-        for name in self.progression_pool + self.counted_useful_pool:
-            data = ITEM_TABLE.get(name)
-            if data is None:
-                continue
-            self._charge_to_mode(data.source_modes, mode_remaining)
-        return mode_remaining
-
-    def _charge_to_mode(self, source_modes: frozenset[GameMode], mode_capacity: dict[GameMode, int]) -> None:
-        """Decrement one of the item's source modes from mode_capacity, weighted by remaining
-        capacity (proportional charging). No-op for mode-neutral items (empty source_modes)."""
-        if not source_modes:
-            return
-        eligible = [m for m in source_modes if mode_capacity.get(m, 0) > 0]
-        if eligible:
-            weights = [mode_capacity[m] for m in eligible]
-        else:
-            # All of the item's modes already at zero — charge anyway so the over-commit
-            # shows up in the accounting instead of being silently swallowed.
-            eligible = sorted(source_modes, key=lambda m: m.value)
-            weights = [1] * len(eligible)
-        chosen = self.random.choices(eligible, weights=weights, k=1)[0]
-        mode_capacity[chosen] -= 1
-
-    def _pick_trap(self) -> str:
-        """Pick a random trap, weighted by per-type trap weight options. Caller must check
-        that trap_weights is non-empty and that a trap_chance roll has succeeded."""
-        return self.random.choices(
-            list(self.trap_weights.keys()),
-            weights=list(self.trap_weights.values()),
-            k=1,
-        )[0]
-
-    def _pick_filler(self, target_mode: GameMode | None) -> str:
-        """
-        Pick a filler item (or trap, by trap_chance roll).
-
-        Under cross_mode_placement=true, any filler is eligible regardless of target_mode.
-        Under cross_mode_placement=false:
-          - target_mode=GameMode.X → items with empty source_modes or containing X.
-          - target_mode=None → only items with empty source_modes (safe at any location).
-        Falls back to the broadest filler set in ITEM_TABLE if filler_pool hasn't been built
-        (e.g. ItemLink generation) or the restricted eligibility set is empty.
-        """
-        if self.trap_weights and self.options.trap_chance.value > 0:
-            if self.random.random() * 100 < self.options.trap_chance.value:
-                return self._pick_trap()
-
-        if self.options.cross_mode_placement:
-            eligible = set(self.filler_pool)
-        elif target_mode is None:
-            eligible = {n for n in self.filler_pool if not ITEM_TABLE[n].source_modes}
-        else:
-            eligible = {
-                n
-                for n in self.filler_pool
-                if not ITEM_TABLE[n].source_modes or target_mode in ITEM_TABLE[n].source_modes
-            }
-
+    def _random_filler(self) -> str:
+        """Pick a random filler item. Falls back to the broadest filler set in ITEM_TABLE if
+        filler_pool hasn't been built (e.g. the ItemLink path that bypasses _build_item_pools)."""
+        eligible = set(self.filler_pool)
         if not eligible:
-            # Pool was empty (pathological config or ItemLink path that bypasses _build_item_pools).
-            # Fall back to any filler item declared in ITEM_TABLE so the framework gets a name.
             eligible = {n for n, d in ITEM_TABLE.items() if d.classification == ItemClassification.filler}
         return self.random.choice(sorted(eligible))
 
-    def _sample_useful(self, mode_capacity: dict[GameMode, int] | None) -> str | None:
-        """
-        Pick a random useful item. When mode_capacity is None (cross_mode_placement=true),
-        sample uniformly from useful_pool. When mode_capacity is provided (cross-mode-off),
-        an item is eligible if it's mode-neutral (empty source_modes) or its source_modes
-        intersects with the set of modes still holding capacity. After picking, charge one
-        of the item's source modes (weighted by remaining capacity).
-
-        Returns None when no eligible items remain (caller should fall back to filler).
-        """
-        if mode_capacity is None:
-            eligible = self.useful_pool
-        else:
-            active_modes = {m for m, cap in mode_capacity.items() if cap > 0}
-            eligible = {
-                n
-                for n in self.useful_pool
-                if not ITEM_TABLE[n].source_modes or (ITEM_TABLE[n].source_modes & active_modes)
-            }
-        if not eligible:
-            return None
-        picked = self.random.choice(sorted(eligible))
-        if mode_capacity is not None:
-            self._charge_to_mode(ITEM_TABLE[picked].source_modes, mode_capacity)
-        return picked
-
     def get_filler_item_name(self) -> str:
-        """
-        Called by the AP framework when the item pool needs additional filler. The caller has
-        no location context, so under cross-mode-off we restrict to neutral filler (safe at
-        any location); under cross-mode-on, any filler is eligible.
-        """
-        return self._pick_filler(None)
+        """Called by the AP framework when the item pool needs additional filler. Rolls a trap when
+        traps are enabled (by trap_chance), otherwise returns a plain filler item."""
+        if self.trap_weights and self.options.trap_chance.value > 0:
+            if self.random.random() * 100 < self.options.trap_chance.value:
+                trap = self._random_trap()
+                if trap is not None:
+                    return trap
+        return self._random_filler()
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         """
         Return the `slot_data` field that will be in the `Connected` network package.
         """
-        data = dict(
+        return dict(
             self.options.as_dict(
-                # General
                 "death_link",
                 "energy_link",
                 "trap_link",
                 "reveal_checklists",
                 "trap_chance",
-                "effect_items_enabled",
-                # Goals
                 "city_trial_goal",
                 "city_trial_checklist_amount",
                 "city_trial_goal_locations",
@@ -939,29 +877,21 @@ class KARWorld(World):
                 "top_ride_goal",
                 "top_ride_checklist_amount",
                 "top_ride_goal_locations",
-                # City Trial specifics
                 "city_trial_progressive_patch_caps",
                 "city_trial_patch_cap_amount",
                 "city_trial_progressive_stadiums",
-                # Item generation
                 "spawn_rate_progressive",
                 "spawn_rate_min",
                 "spawn_rate_max",
-                # Gating
-                "events_gated",
+                "city_trial_events_gated",
                 "abilities_gated",
-                "patches_gated",
+                "city_trial_patches_gated",
                 "city_trial_items_gated",
                 "machines_gated",
-                "boxes_gated",
+                "city_trial_boxes_gated",
                 "air_ride_courses_gated",
                 "colors_gated",
                 "top_ride_courses_gated",
                 "top_ride_items_gated",
             )
         )
-        # The mod only consumes a single spawn rate floor. When progressive is off,
-        # ship vanilla baseline (100) so no static rate elevation is applied.
-        if not self.options.spawn_rate_progressive:
-            data["spawn_rate_min"] = 100
-        return data

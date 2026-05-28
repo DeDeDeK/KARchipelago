@@ -1,4 +1,4 @@
-from ..KARItems import item_name_groups
+from ..KARItems import KARItemGroup, item_name_groups
 from ..KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
@@ -25,8 +25,8 @@ class TestCTOnly(KARTestBase):
 
     def test_no_off_mode_rewards_in_pool(self):
         pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups["Air Ride Rewards"])
-        self.assertFalse(pool & item_name_groups["Top Ride Rewards"])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.AR_REWARDS])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.TR_REWARDS])
 
 
 class TestAROnly(KARTestBase):
@@ -44,8 +44,8 @@ class TestAROnly(KARTestBase):
 
     def test_no_off_mode_rewards_in_pool(self):
         pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups["City Trial Rewards"])
-        self.assertFalse(pool & item_name_groups["Top Ride Rewards"])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.CT_REWARDS])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.TR_REWARDS])
 
 
 class TestTROnly(KARTestBase):
@@ -63,8 +63,8 @@ class TestTROnly(KARTestBase):
 
     def test_no_off_mode_rewards_in_pool(self):
         pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups["City Trial Rewards"])
-        self.assertFalse(pool & item_name_groups["Air Ride Rewards"])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.CT_REWARDS])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.AR_REWARDS])
 
 
 class TestCTAndAR(KARTestBase):
@@ -77,7 +77,7 @@ class TestCTAndAR(KARTestBase):
 
     def test_no_tr_rewards_in_pool(self):
         pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups["Top Ride Rewards"])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.TR_REWARDS])
 
 
 class TestCTAndTR(KARTestBase):
@@ -94,7 +94,7 @@ class TestCTAndTR(KARTestBase):
 
     def test_no_ar_rewards_in_pool(self):
         pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups["Air Ride Rewards"])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.AR_REWARDS])
 
 
 class TestARAndTR(KARTestBase):
@@ -111,7 +111,7 @@ class TestARAndTR(KARTestBase):
 
     def test_no_ct_rewards_in_pool(self):
         pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups["City Trial Rewards"])
+        self.assertFalse(pool & item_name_groups[KARItemGroup.CT_REWARDS])
 
 
 class TestAllModes(KARTestBase):

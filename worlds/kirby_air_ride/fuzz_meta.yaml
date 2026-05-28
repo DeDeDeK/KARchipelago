@@ -8,12 +8,14 @@
 # avoids wasting fuzzer cycles on combos the world rejects by design.
 #
 # What this file does NOT cover:
-#   - _validate_pool_fits_locations failures (pool > available locations).
+#   - _validate_pool_fits_locations failures (pool > available locations) and
+#     _validate_progression_fits_modes failures (cross_mode_placement off, where
+#     a mode's progression can't fit its own locations - a Hall's-condition check).
 #     The constraint mini-language can't cleanly express the cross-option
 #     arithmetic these need. They continue to land in "ignored" and that's fine.
 #   - All-goals-none. The constraint language can only check one option's value
 #     at a time, so the only single-constraint fix is to pin one goal (e.g. CT)
-#     to non-none — which would eliminate random AR-only / TR-only coverage.
+#     to non-none - which would eliminate random AR-only / TR-only coverage.
 #     ~1% rejection rate is cheaper than that lost coverage.
 #   - checklist_list with wrong-mode locations. The fuzzer doesn't randomize
 #     LocationSet contents, so wrong-mode names can't appear in random YAMLs.

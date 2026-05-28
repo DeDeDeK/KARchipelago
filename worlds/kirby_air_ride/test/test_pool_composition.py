@@ -26,8 +26,7 @@ class TestPatchCapDisabled(KARTestBase):
 
 
 class TestSpawnRateUpCount(KARTestBase):
-    # Use ALL_MODES so there's room for 20 Spawn Rate Up items alongside the
-    # gating unlock progression items.
+    # ALL_MODES gives room for 20 Spawn Rate Up items alongside the gating unlocks.
     options = {
         **ALL_MODES,
         "spawn_rate_progressive": Toggle.option_true,
@@ -59,40 +58,6 @@ class TestCheckboxFillerCounts(KARTestBase):
         self.assertEqual(self.count_in_pool(KARItemName.CHECKBOX_FILLER_CITY_TRIAL), 3)
         self.assertEqual(self.count_in_pool(KARItemName.CHECKBOX_FILLER_AIR_RIDE), 7)
         self.assertEqual(self.count_in_pool(KARItemName.CHECKBOX_FILLER_TOP_RIDE), 2)
-
-
-class TestEffectItemsDisabled(KARTestBase):
-    options = {**CT_ONLY, "effect_items_enabled": Toggle.option_false}
-
-    def test_no_effect_items_in_pool(self):
-        # SPAWN_RATE_UP is EFFECT-typed but governed by spawn_rate_progressive, so it
-        # legitimately can appear even with effect_items_enabled off when progressive is on.
-        # CT_ONLY defaults to progressive off, so we don't need to exclude it here.
-        effect_names = items_of_type(KARItemType.EFFECT)
-        pool_names = set(self.itempool_names())
-        leaked = pool_names & effect_names
-        self.assertFalse(leaked, f"Effect items leaked when disabled: {sorted(leaked)}")
-
-
-class TestSpawnRateUpSurvivesEffectItemsDisabled(KARTestBase):
-    # Regression: SPAWN_RATE_UP was typed EFFECT and got swept out by effect_items_enabled=off,
-    # contradicting spawn_rate_progressive's docstring promise that it ships these items.
-    options = {
-        **ALL_MODES,
-        "effect_items_enabled": Toggle.option_false,
-        "spawn_rate_progressive": Toggle.option_true,
-        "spawn_rate_min": 100,
-        "spawn_rate_max": 200,
-    }
-
-    def test_spawn_rate_up_in_pool(self):
-        self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 10)
-
-    def test_other_effect_items_still_absent(self):
-        other_effects = items_of_type(KARItemType.EFFECT) - {KARItemName.SPAWN_RATE_UP}
-        pool_names = set(self.itempool_names())
-        leaked = pool_names & other_effects
-        self.assertFalse(leaked, f"Non-SPAWN_RATE_UP effect items leaked: {sorted(leaked)}")
 
 
 class TestPermanentPatchesDisabled(KARTestBase):
@@ -135,11 +100,11 @@ class TestPatchCapAmountMax(KARTestBase):
         "city_trial_progressive_patch_caps": Toggle.option_true,
         "city_trial_patch_cap_amount": 127,
         "city_trial_progressive_stadiums": Toggle.option_false,
-        "events_gated": Toggle.option_false,
+        "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,
-        "patches_gated": Toggle.option_false,
+        "city_trial_patches_gated": Toggle.option_false,
         "machines_gated": Toggle.option_false,
-        "boxes_gated": Toggle.option_false,
+        "city_trial_boxes_gated": Toggle.option_false,
         "city_trial_items_gated": Toggle.option_false,
         "colors_gated": Toggle.option_false,
         "top_ride_items_gated": Toggle.option_false,
@@ -185,8 +150,8 @@ class TestChecklistAmountMax(KARTestBase):
 
 class TestSpawnRateMinEqualsMax(KARTestBase):
     """Boundary: spawn_rate_min == spawn_rate_max produces no Spawn Rate Up items.
-    The exclusion at KARWorld._build_item_pools must trigger; otherwise stale items
-    would land in the pool with no progression range to traverse."""
+    The exclusion in _build_item_pools must trigger; otherwise stale items would
+    land in the pool with no progression range to traverse."""
 
     options = {
         **CT_ONLY,
@@ -214,7 +179,7 @@ class TestPoolFillsAllLocations(KARTestBase):
 class TestStadiumRewardsNotPromotedWhenProgressiveOff(KARTestBase):
     """Counter-test for TestStadiumRewardsPromotedWhenProgressiveOn: when progressive_stadiums
     is OFF, the 6 checklist-reward stadium overlaps keep their ITEM_TABLE classification and
-    do NOT get promoted to progression. Pins the second branch of the conditional in
+    are NOT promoted to progression. Pins the second branch of the conditional in
     _build_item_pools / create_item."""
 
     options = {**CT_ONLY, "city_trial_progressive_stadiums": Toggle.option_false}
@@ -227,9 +192,8 @@ class TestStadiumRewardsNotPromotedWhenProgressiveOff(KARTestBase):
         )
 
     def test_overlapping_rewards_keep_table_classification(self):
-        # The same 6 reward items that would be promoted under progressive ON should
-        # NOT be progression-classified under progressive OFF — they keep their
-        # ITEM_TABLE classification (filler / useful).
+        # Reward items that would be promoted under progressive ON keep their
+        # ITEM_TABLE classification (filler / useful) under progressive OFF.
         from ..KARItems import ITEM_TABLE
 
         for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values():
@@ -243,9 +207,8 @@ class TestStadiumRewardsNotPromotedWhenProgressiveOff(KARTestBase):
 
 
 class TestPatchCapExcludedWhenCTDisabled(KARTestBase):
-    """progressive_patch_caps is a CT-only mechanic. With CT disabled (AR-only goal) and
-    progressive_patch_caps ON, the Patch Cap Increase items should still be excluded —
-    they have no effect outside CT."""
+    """progressive_patch_caps is a CT-only mechanic. With CT disabled (AR-only) and the
+    toggle ON, Patch Cap Increase items are still excluded: they have no effect outside CT."""
 
     options = {
         **AR_ONLY,
@@ -284,7 +247,7 @@ class TestDropPatchesTrapExcludedWhenCTDisabled(KARTestBase):
 
 class TestAllTrapWeightsZeroWithTrapChance(KARTestBase):
     """trap_chance > 0 but every per-category trap weight = 0: trap_weights dict ends up
-    empty, _pick_trap is never called, and no trap items land in the pool. Regression pin
+    empty, _random_trap is never called, and no trap items land in the pool. Regression pin
     that the weight=0 short-circuit in _build_item_pools is honoured."""
 
     options = {

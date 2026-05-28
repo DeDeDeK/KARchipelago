@@ -3,6 +3,7 @@ from Options import Toggle
 from ..KARItems import (
     STADIUM_UNLOCK_ITEMS,
     STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
+    KARItemGroup,
     KARItemName,
     item_name_groups,
 )
@@ -52,9 +53,9 @@ class TestStadiumStarterRespectsStartInventory(KARTestBase):
     }
 
     def test_no_random_pick_when_preset(self):
-        # The world should skip its random pick when the player presets a stadium.
+        # World skips its random pick when the player presets a stadium; the preset
+        # still lands in precollected (pushed by setUp).
         self.assertIsNone(self.world.stadium_starter_choice)
-        # And the preset stadium should still end up in precollected (pushed by setUp).
         self.assertIn(KARItemName.UNLOCK_STADIUM_AIR_GLIDER, self.precollected_names())
 
 
@@ -66,7 +67,7 @@ class TestMachineStarter(KARTestBase):
 
     def test_exactly_one_machine_precollected(self):
         precollected = self.precollected_names()
-        machine_starters = [n for n in precollected if n in item_name_groups["Machine Unlocks"]]
+        machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
         self.assertEqual(len(machine_starters), 1)
 
     def test_starter_not_hydra_or_dragoon(self):
@@ -76,11 +77,11 @@ class TestMachineStarter(KARTestBase):
 
 
 class TestPatchStarter(KARTestBase):
-    options = {**CT_ONLY, "patches_gated": Toggle.option_true}
+    options = {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true}
 
     def test_exactly_one_patch_precollected(self):
         precollected = self.precollected_names()
-        patch_starters = [n for n in precollected if n in item_name_groups["Patch Type Unlocks"]]
+        patch_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.CT_PATCH_UNLOCKS]]
         self.assertEqual(len(patch_starters), 1)
 
 
@@ -89,7 +90,7 @@ class TestARCourseStarter(KARTestBase):
 
     def test_exactly_one_ar_course_precollected(self):
         precollected = self.precollected_names()
-        ar_starters = [n for n in precollected if n in item_name_groups["AR Course Unlocks"]]
+        ar_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.AR_COURSE_UNLOCKS]]
         self.assertEqual(len(ar_starters), 1)
 
 
@@ -98,42 +99,40 @@ class TestTRCourseStarter(KARTestBase):
 
     def test_exactly_one_tr_course_precollected(self):
         precollected = self.precollected_names()
-        tr_starters = [n for n in precollected if n in item_name_groups["TR Course Unlocks"]]
+        tr_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.TR_COURSE_UNLOCKS]]
         self.assertEqual(len(tr_starters), 1)
 
 
 class TestAROnlyMachineAndPatchGating(KARTestBase):
-    # AR on, CT off. machines apply to CT or AR (AR is on, so picked), patches apply
-    # to CT only (CT is off, so skipped). Covers both halves of "starter only when its
-    # owning mode is enabled" without claiming to test the no-mode-enabled case.
-    options = {**AR_ONLY, "machines_gated": Toggle.option_true, "patches_gated": Toggle.option_true}
+    # AR on, CT off. Machines apply to CT or AR (AR on, so picked); patches apply
+    # to CT only (CT off, so skipped). Covers both halves of "starter only when its
+    # owning mode is enabled".
+    options = {**AR_ONLY, "machines_gated": Toggle.option_true, "city_trial_patches_gated": Toggle.option_true}
 
     def test_machine_starter_picked(self):
         precollected = self.precollected_names()
-        machine_starters = [n for n in precollected if n in item_name_groups["Machine Unlocks"]]
+        machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
         self.assertEqual(len(machine_starters), 1)
 
     def test_no_patch_starter_when_ct_disabled(self):
         precollected = self.precollected_names()
-        patch_starters = [n for n in precollected if n in item_name_groups["Patch Type Unlocks"]]
+        patch_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.CT_PATCH_UNLOCKS]]
         self.assertEqual(patch_starters, [])
 
 
 class TestNoMachineStarterWhenOnlyTREnabled(KARTestBase):
-    # TR on, CT+AR off. machines apply only to CT or AR, so the machine starter should
-    # not be precollected. Patch-starter-skip is covered by TestAROnlyMachineAndPatchGating.
-    options = {**TR_ONLY, "machines_gated": Toggle.option_true, "patches_gated": Toggle.option_true}
+    # TR on, CT+AR off. Machines apply only to CT or AR, so no machine starter is picked.
+    options = {**TR_ONLY, "machines_gated": Toggle.option_true, "city_trial_patches_gated": Toggle.option_true}
 
     def test_no_machine_starter(self):
         precollected = self.precollected_names()
-        machine_starters = [n for n in precollected if n in item_name_groups["Machine Unlocks"]]
+        machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
         self.assertEqual(machine_starters, [])
 
 
-# Each starter category: when the player presets an item from that category in start_inventory,
-# the world should skip its random pick (starter_choice attr is None) and the preset item should
-# end up in precollected (pushed by KARTestBase.setUp). Generated as a parametric block so adding
-# a new starter category requires one row, not a copy-pasted class.
+# Per starter category: presetting an item in start_inventory makes the world skip its
+# random pick (starter_choice attr is None) and the preset lands in precollected (via
+# KARTestBase.setUp). Parametric so a new category is one row, not a copy-pasted class.
 _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
     # (label, options, world starter_choice attribute, preset item name)
     (
@@ -144,7 +143,7 @@ _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
     ),
     (
         "patch",
-        {**CT_ONLY, "patches_gated": Toggle.option_true},
+        {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true},
         "patch_starter_choice",
         KARItemName.UNLOCK_PATCH_HP,
     ),

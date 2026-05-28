@@ -1,0 +1,10 @@
+name: HydraDragoonSlot
+description: City Trial hydra_and_dragoon goal — exercises legendary-machine (Hydra + Dragoon) assembly victory with default gating, alongside an Air Ride checklist goal
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: hydra_and_dragoon
+  air_ride_goal: 100_checklist_blocks
+  top_ride_goal: none
+  machines_gated: true
