@@ -9,11 +9,11 @@ Kirby Air Ride:
   city_trial_checkbox_fillers: 5
   air_ride_goal: 100_checklist_blocks
   top_ride_goal: 100_checklist_blocks
-  events_gated: true
+  city_trial_events_gated: true
   abilities_gated: true
-  patches_gated: true
+  city_trial_patches_gated: true
   machines_gated: true
-  boxes_gated: true
+  city_trial_boxes_gated: true
   air_ride_courses_gated: true
   top_ride_courses_gated: true
   colors_gated: true
@@ -21,7 +21,6 @@ Kirby Air Ride:
   city_trial_progressive_stadiums: true
   city_trial_progressive_patch_caps: true
   city_trial_patch_cap_amount: 25
-  effect_items_enabled: true
   spawn_rate_progressive: true
   spawn_rate_min: 100
   spawn_rate_max: 250

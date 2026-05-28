@@ -97,10 +97,10 @@ class TestCTGoalMaxStats(KARTestBase):
         "city_trial_progressive_patch_caps": Toggle.option_true,
         "city_trial_patch_cap_amount": 5,
         # max_stats pool is dominated by patch-cap items; turn off broad gating so it fits.
-        "events_gated": Toggle.option_false,
+        "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,
-        "patches_gated": Toggle.option_false,
-        "boxes_gated": Toggle.option_false,
+        "city_trial_patches_gated": Toggle.option_false,
+        "city_trial_boxes_gated": Toggle.option_false,
         "colors_gated": Toggle.option_false,
         "city_trial_progressive_stadiums": Toggle.option_false,
     }

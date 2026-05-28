@@ -13,33 +13,71 @@ class KARItemType(StrEnum):
     CHECKBOX_FILLER = "Checkbox Filler"
     PATCH_CAP_INCREASE = "Patch Cap Increase"
     PERMANENT_PATCH = "Permanent Patch"
+    SPAWN_RATE = "Spawn Rate"
 
-    # Immediate effect items
-    TRAP = "Trap"
-    EFFECT = "Effect"
-    EVENT_TRIGGER = "Event Trigger"
-    GAME_ITEM = "Game Item"
+    # Give items: the mod spawns/applies the game thing on receipt.
+    # Trap-ness is carried by ItemClassification.trap, not by a separate type.
+    CT_ITEM_GIVE = "City Trial Item Give"
+    CT_EVENT_GIVE = "City Trial Event Give"
+    ABILITY_GIVE = "Copy Ability Give"
 
-    # Unlock items (each potentially toggled by player options)
-    STADIUM_UNLOCK = "Stadium Unlock"
-    EVENT_UNLOCK = "Event Unlock"
+    # Unlock items. Single-mode types carry a mode prefix (CT_/AR_/TR_); cross-mode
+    # ones (ABILITY/COLOR/MACHINE) stay unprefixed because their items span modes.
+    CT_STADIUM_UNLOCK = "City Trial Stadium Unlock"
+    CT_EVENT_UNLOCK = "City Trial Event Unlock"
+    CT_PATCH_UNLOCK = "City Trial Patch Type Unlock"
+    CT_ITEM_UNLOCK = "City Trial Item Unlock"
+    CT_BOX_UNLOCK = "City Trial Box Unlock"
+    AR_COURSE_UNLOCK = "Air Ride Course Unlock"
+    TR_COURSE_UNLOCK = "Top Ride Course Unlock"
+    TR_ITEM_UNLOCK = "Top Ride Item Unlock"
     ABILITY_UNLOCK = "Copy Ability Unlock"
-    PATCH_UNLOCK = "Patch Type Unlock"
-    ITEM_UNLOCK = "Item Unlock"
     MACHINE_UNLOCK = "Machine Unlock"
-    BOX_UNLOCK = "Box Unlock"
-    STAGE_UNLOCK = "Stage Unlock"
     COLOR_UNLOCK = "Color Unlock"
-    TOPRIDE_ITEM_UNLOCK = "Top Ride Item Unlock"
 
-    # Top Ride item give — spawns the item at human Kirby positions (Top Ride scene only)
-    TOPRIDE_ITEM_GIVE = "Top Ride Item Give"
+    # Top Ride item give: spawns the item at human Kirby positions (Top Ride scene only)
+    TR_ITEM_GIVE = "Top Ride Item Give"
 
-    # Checklist rewards (vanilla rewards from completing checklist entries)
-    CHECKLIST_REWARD = "Checklist Reward"
+    # Checklist rewards (vanilla rewards from completing checklist entries).
+    # Single-mode, so each carries a mode prefix.
+    CT_CHECKLIST_REWARD = "City Trial Checklist Reward"
+    AR_CHECKLIST_REWARD = "Air Ride Checklist Reward"
+    TR_CHECKLIST_REWARD = "Top Ride Checklist Reward"
 
     # Internal (event items with no network code)
     GOAL = "Goal"
+
+
+class KARItemGroup(StrEnum):
+    """Player-facing item-group names. Reference these members instead of hardcoding
+    the strings (YAML configs must match the values verbatim).
+
+    Most map 1:1 from a KARItemType via _TYPE_TO_GROUP; TRAPS is classification-derived.
+    """
+
+    CHECKBOX_FILLERS = "Checkbox Fillers"
+    PATCH_CAP_INCREASES = "Patch Cap Increases"
+    PERMANENT_PATCHES = "Permanent Patches"
+    SPAWN_RATES = "Spawn Rates"
+    CT_ITEM_GIVES = "City Trial Item Gives"
+    CT_EVENT_GIVES = "City Trial Event Gives"
+    ABILITY_GIVES = "Copy Ability Gives"
+    TR_ITEM_GIVES = "Top Ride Item Gives"
+    CT_STADIUM_UNLOCKS = "City Trial Stadium Unlocks"
+    CT_EVENT_UNLOCKS = "City Trial Event Unlocks"
+    CT_PATCH_UNLOCKS = "City Trial Patch Type Unlocks"
+    CT_ITEM_UNLOCKS = "City Trial Item Unlocks"
+    CT_BOX_UNLOCKS = "City Trial Box Unlocks"
+    AR_COURSE_UNLOCKS = "Air Ride Course Unlocks"
+    TR_COURSE_UNLOCKS = "Top Ride Course Unlocks"
+    TR_ITEM_UNLOCKS = "Top Ride Item Unlocks"
+    ABILITY_UNLOCKS = "Copy Ability Unlocks"
+    MACHINE_UNLOCKS = "Machine Unlocks"
+    COLOR_UNLOCKS = "Color Unlocks"
+    CT_REWARDS = "City Trial Rewards"
+    AR_REWARDS = "Air Ride Rewards"
+    TR_REWARDS = "Top Ride Rewards"
+    TRAPS = "Traps"
 
 
 class KARItemName(StrEnum):
@@ -88,12 +126,12 @@ class KARItemName(StrEnum):
     EVENT_TRIGGER_FOG = "Event Trigger: Fog"
     EVENT_TRIGGER_FAKE_POWERUPS = "Event Trigger: Fake Powerups"
 
-    # Direct Game Items — Boxes (300-302)
+    # Direct Game Items: Boxes (300-302)
     BLUE_BOX = "Blue Box"
     GREEN_BOX = "Green Box"
     RED_BOX = "Red Box"
 
-    # Direct Game Items — Stat Patches Up (303-320)
+    # Direct Game Items: Stat Patches Up (303-320)
     ACCEL_PATCH = "Accel Patch"
     TOP_SPEED_PATCH = "Top Speed Patch"
     OFFENSE_PATCH = "Offense Patch"
@@ -105,7 +143,7 @@ class KARItemName(StrEnum):
     HP_PATCH = "HP Patch"
     ALL_UP_PATCH = "All Up Patch"
 
-    # Direct Game Items — Stat Patches Down (304-318)
+    # Direct Game Items: Stat Patches Down (304-318)
     ACCEL_DOWN_PATCH = "Accel Down Patch"
     TOP_SPEED_DOWN_PATCH = "Top Speed Down Patch"
     OFFENSE_DOWN_PATCH = "Offense Down Patch"
@@ -115,7 +153,7 @@ class KARItemName(StrEnum):
     CHARGE_DOWN_PATCH = "Charge Down Patch"
     WEIGHT_DOWN_PATCH = "Weight Down Patch"
 
-    # Direct Game Items — Extreme Stat Patches (321-326)
+    # Direct Game Items: Extreme Stat Patches (321-326)
     SPEED_MAX_PATCH = "Speed Max Patch"
     SPEED_MIN_PATCH = "Speed Min Patch"
     OFFENSE_MAX_PATCH = "Offense Max Patch"
@@ -123,10 +161,10 @@ class KARItemName(StrEnum):
     CHARGE_MAX_PATCH = "Charge Max Patch"
     CHARGE_NONE_PATCH = "Charge None Patch"
 
-    # Direct Game Items — Special (327)
+    # Direct Game Items: Special (327)
     CANDY = "Candy"
 
-    # Direct Game Items — Copy Abilities (328-338)
+    # Direct Game Items: Copy Abilities (328-338)
     COPY_ABILITY_BOMB = "Copy Ability: Bomb"
     COPY_ABILITY_FIRE = "Copy Ability: Fire"
     COPY_ABILITY_ICE = "Copy Ability: Ice"
@@ -139,7 +177,7 @@ class KARItemName(StrEnum):
     COPY_ABILITY_NEEDLE = "Copy Ability: Needle"
     COPY_ABILITY_MIC = "Copy Ability: Mic"
 
-    # Direct Game Items — Food (339-350)
+    # Direct Game Items: Food (339-350)
     MAXIM_TOMATO = "Maxim Tomato"
     ENERGY_DRINK = "Energy Drink"
     ICE_CREAM = "Ice Cream"
@@ -153,13 +191,13 @@ class KARItemName(StrEnum):
     HOT_DOG = "Hot Dog"
     APPLE = "Apple"
 
-    # Direct Game Items — Hazards (351-354)
+    # Direct Game Items: Hazards (351-354)
     FIREWORKS = "Fireworks"
     PANIC_SPIN = "Panic Spin"
     SENSOR_BOMB = "Sensor Bomb"
     GORDO = "Gordo"
 
-    # Direct Game Items — Legendary Machine Parts (355-360)
+    # Direct Game Items: Legendary Machine Parts (355-360)
     HYDRA_PART_1 = "Hydra Part 1"
     HYDRA_PART_2 = "Hydra Part 2"
     HYDRA_PART_3 = "Hydra Part 3"
@@ -167,7 +205,7 @@ class KARItemName(StrEnum):
     DRAGOON_PART_2 = "Dragoon Part 2"
     DRAGOON_PART_3 = "Dragoon Part 3"
 
-    # Direct Game Items — Fake Patches (361-368)
+    # Direct Game Items: Fake Patches (361-368)
     FAKE_ACCEL_PATCH = "Fake Accel Patch"
     FAKE_TOP_SPEED_PATCH = "Fake Top Speed Patch"
     FAKE_OFFENSE_PATCH = "Fake Offense Patch"
@@ -203,7 +241,7 @@ class KARItemName(StrEnum):
     UNLOCK_STADIUM_SINGLE_RACE_9 = "Unlock Stadium: SINGLE RACE 9"
     UNLOCK_STADIUM_VS_KING_DEDEDE = "Unlock Stadium: VS. KING DEDEDE"
 
-    # Checklist Rewards — Air Ride (500-545)
+    # Checklist Rewards: Air Ride (500-545)
     AR_REWARD_NEBULA_BELT_COURSE = "Air Ride Reward: Nebula Belt Course"
     AR_REWARD_MUSIC_NEBULA = "Air Ride Reward: Music - Nebula"
     AR_REWARD_META_KNIGHT = "Air Ride Reward: Meta Knight"
@@ -251,7 +289,7 @@ class KARItemName(StrEnum):
     AR_REWARD_FILLER_BOX_5 = "Air Ride Reward: Filler Box 5"
     AR_REWARD_SOUND_TEST_NEBULA_BELT = "Air Ride Reward: Sound Test - Nebula Belt"
 
-    # Checklist Rewards — Top Ride (550-582)
+    # Checklist Rewards: Top Ride (550-582)
     TR_REWARD_GREEN_KIRBY = "Top Ride Reward: Green Kirby"
     TR_REWARD_PURPLE_KIRBY = "Top Ride Reward: Purple Kirby"
     TR_REWARD_DIAGONAL_CAMERA_RULE = "Top Ride Reward: Diagonal Camera Rule"
@@ -286,7 +324,7 @@ class KARItemName(StrEnum):
     TR_REWARD_SIDE_CAMERA_RULE = "Top Ride Reward: Side Camera Rule"
     TR_REWARD_ENDING = "Top Ride Reward: Ending"
 
-    # Checklist Rewards — City Trial (600-643)
+    # Checklist Rewards: City Trial (600-643)
     CT_REWARD_FILLER_BOX_1 = "City Trial Reward: Filler Box 1"
     CT_REWARD_SOUND_TEST_ITEM_BOUNCE = "City Trial Reward: Sound Test - Item Bounce"
     CT_REWARD_PAUSE_SCREEN_POWERUPS = "City Trial Reward: Pause Screen Power-ups"
@@ -407,7 +445,7 @@ class KARItemName(StrEnum):
     UNLOCK_ITEM_DRAGOON_PART_3 = "Unlock Item: Dragoon Part 3"
 
     # Machine Unlocks (830-854)
-    # VCKIND_WHEELVSDEDEDE (would be 855) is intentionally excluded — it is the
+    # VCKIND_WHEELVSDEDEDE (would be 855) is intentionally excluded: it is the
     # Vs. King Dedede stadium's CPU-only machine and is not player-rideable.
     UNLOCK_MACHINE_WARP_STAR = "Unlock Machine: Warp Star"
     UNLOCK_MACHINE_COMPACT_STAR = "Unlock Machine: Compact Star"
@@ -452,14 +490,14 @@ class KARItemName(StrEnum):
     UNLOCK_AR_COURSE_NEBULA_BELT = "Unlock AR Course: Nebula Belt"
 
     # Kirby Color Unlocks (880-887)
-    UNLOCK_COLOR_PINK = "Unlock Color: Pink"
-    UNLOCK_COLOR_YELLOW = "Unlock Color: Yellow"
-    UNLOCK_COLOR_BLUE = "Unlock Color: Blue"
-    UNLOCK_COLOR_RED = "Unlock Color: Red"
-    UNLOCK_COLOR_GREEN = "Unlock Color: Green"
-    UNLOCK_COLOR_PURPLE = "Unlock Color: Purple"
-    UNLOCK_COLOR_BROWN = "Unlock Color: Brown"
-    UNLOCK_COLOR_WHITE = "Unlock Color: White"
+    UNLOCK_COLOR_PINK = "Unlock Kirby Color: Pink"
+    UNLOCK_COLOR_YELLOW = "Unlock Kirby Color: Yellow"
+    UNLOCK_COLOR_BLUE = "Unlock Kirby Color: Blue"
+    UNLOCK_COLOR_RED = "Unlock Kirby Color: Red"
+    UNLOCK_COLOR_GREEN = "Unlock Kirby Color: Green"
+    UNLOCK_COLOR_PURPLE = "Unlock Kirby Color: Purple"
+    UNLOCK_COLOR_BROWN = "Unlock Kirby Color: Brown"
+    UNLOCK_COLOR_WHITE = "Unlock Kirby Color: White"
 
     # Top Ride Course Unlocks (890-896)
     UNLOCK_TR_COURSE_GRASS = "Unlock TR Course: Grass"
@@ -471,13 +509,13 @@ class KARItemName(StrEnum):
     UNLOCK_TR_COURSE_METAL = "Unlock TR Course: Metal"
 
     # Top Ride Item Unlocks (900-921, minus 5 reserved slots)
-    # Freeze Fan (909), Fire (911), Bomb (913), Walky (916) are gated
-    # by `ability_unlocked_mask` in the mod, not by `topride_item_unlocked_mask`,
-    # so they have no unlock-item form here — the corresponding ability unlock
-    # is the gate. Their immediate-give forms still exist at 959/961/963/966.
-    # ID 912 is the engine's KirbyKusdama Party Ball variant; the visible
-    # Party Ball item lives at slot 21 (ID 921), and the mod mirrors bit 12
-    # onto bit 21's unlock state so both variants spawn together.
+    # Freeze Fan (909), Fire (911), Bomb (913), Walky (916) are gated by the mod's
+    # ability_unlocked_mask, not topride_item_unlocked_mask, so they have no unlock-item
+    # form; the corresponding ability unlock is the gate. Their give forms still exist
+    # at 959/961/963/966.
+    # ID 912 is the engine's KirbyKusdama Party Ball variant; the visible Party Ball
+    # lives at slot 21 (ID 921), and the mod mirrors bit 12 onto bit 21's unlock state
+    # so both variants spawn together.
     UNLOCK_TR_ITEM_HAMMER = "Unlock TR Item: Hammer"
     UNLOCK_TR_ITEM_BIG_CAKE = "Unlock TR Item: Big Cake"
     UNLOCK_TR_ITEM_SPEED_UP = "Unlock TR Item: Speed Up"
@@ -521,7 +559,7 @@ class KARItemName(StrEnum):
     GIVE_TR_ITEM_CHICKIE = "Give TR Item: Chickie"
     GIVE_TR_ITEM_PARTY_BALL = "Give TR Item: Party Ball"
 
-    # Goal Events (no network code — internal AP events only)
+    # Goal Events (no network code, internal AP events only)
     CITY_TRIAL_VICTORY = "City Trial Victory"
     AIR_RIDE_VICTORY = "Air Ride Victory"
     TOP_RIDE_VICTORY = "Top Ride Victory"
@@ -534,8 +572,9 @@ class KARItemData(NamedTuple):
     classification: Default AP classification (progression, useful, filler, trap).
     code: AP item code matching the mod's APItemId enum. None for event-only items.
     source_modes: Modes the item is meaningful for. Under cross_mode_placement=false,
-        the item can only land in a location belonging to one of these modes. Empty
-        frozenset means no restriction (item places anywhere).
+        a *progression* item can only land in a location of one of these modes; non-progression
+        items are unrestricted (see _set_cross_mode_placement_rules). Empty frozenset means
+        mode-neutral (no restriction).
     """
 
     type: KARItemType
@@ -544,7 +583,7 @@ class KARItemData(NamedTuple):
     source_modes: frozenset[GameMode] = frozenset()
 
 
-# Mode-source aliases — concise tags for ITEM_TABLE rows.
+# Mode-source aliases: concise tags for ITEM_TABLE rows.
 _AR = frozenset({GameMode.AIRRIDE})
 _TR = frozenset({GameMode.TOPRIDE})
 _CT = frozenset({GameMode.CITYTRIAL})
@@ -573,25 +612,26 @@ class KARItem(Item):
         return item
 
 
-# ITEM TABLE
-# Master table of all items. Codes match the mod's APItemId enum exactly —
-# the code is the value written to Dolphin memory for the mod to interpret.
-# Pool quantities are determined by options and pool-building logic in __init__.py.
+# Master table of all items. Codes match the mod's APItemId enum exactly: the code
+# is the value written to Dolphin memory for the mod to interpret. Pool quantities are
+# determined by options and pool-building logic in __init__.py.
 
 ITEM_TABLE: dict[str, KARItemData] = {
     # Standalone Items (1-12)
     KARItemName.CHECKBOX_FILLER_AIR_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 1, _AR),
     KARItemName.CHECKBOX_FILLER_TOP_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 2, _TR),
     KARItemName.CHECKBOX_FILLER_CITY_TRIAL: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 3, _CT),
-    KARItemName.PATCH_CAP_INCREASE: KARItemData(KARItemType.PATCH_CAP_INCREASE, ItemClassification.progression, 4, _CT),
-    KARItemName.ONE_HP_TRAP: KARItemData(KARItemType.TRAP, ItemClassification.trap, 5, _AR_CT),
-    KARItemName.ALL_UP: KARItemData(KARItemType.EFFECT, ItemClassification.useful, 6, _AR_CT),
+    KARItemName.PATCH_CAP_INCREASE: KARItemData(
+        KARItemType.PATCH_CAP_INCREASE, ItemClassification.progression_deprioritized_skip_balancing, 4, _CT
+    ),
+    KARItemName.ONE_HP_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 5, _AR_CT),
+    KARItemName.ALL_UP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 6, _AR_CT),
     KARItemName.PERMANENT_ALL_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 7, _CT),
-    KARItemName.ALL_DOWN: KARItemData(KARItemType.TRAP, ItemClassification.trap, 8, _AR_CT),
-    KARItemName.GIVE_DRAGOON: KARItemData(KARItemType.EFFECT, ItemClassification.useful, 9, _CT),
-    KARItemName.GIVE_HYDRA: KARItemData(KARItemType.EFFECT, ItemClassification.useful, 10, _CT),
-    KARItemName.SPAWN_RATE_UP: KARItemData(KARItemType.EFFECT, ItemClassification.useful, 11, _CT_TR),
-    KARItemName.DROP_PATCHES_TRAP: KARItemData(KARItemType.TRAP, ItemClassification.trap, 12, _CT),
+    KARItemName.ALL_DOWN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 8, _AR_CT),
+    KARItemName.GIVE_DRAGOON: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 9, _CT),
+    KARItemName.GIVE_HYDRA: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 10, _CT),
+    KARItemName.SPAWN_RATE_UP: KARItemData(KARItemType.SPAWN_RATE, ItemClassification.useful, 11, _CT_TR),
+    KARItemName.DROP_PATCHES_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 12, _CT),
     # Permanent +1 Patches (100-108)
     KARItemName.PERMANENT_WEIGHT_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 100, _CT),
     KARItemName.PERMANENT_ACCEL_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 101, _CT),
@@ -605,468 +645,582 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # City Trial Event Triggers (200-215)
     # Receiving one of these fires the corresponding event immediately.
     # Separate from event unlocks (700+), which gate whether events occur naturally.
-    KARItemName.EVENT_TRIGGER_DYNA_BLADE: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 200, _CT),
-    KARItemName.EVENT_TRIGGER_TAC: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 201, _CT),
-    KARItemName.EVENT_TRIGGER_METEOR: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 202, _CT),
-    KARItemName.EVENT_TRIGGER_PILLAR: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 203, _CT),
-    KARItemName.EVENT_TRIGGER_RUN_AMOK: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 204, _CT),
+    KARItemName.EVENT_TRIGGER_DYNA_BLADE: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 200, _CT),
+    KARItemName.EVENT_TRIGGER_TAC: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 201, _CT),
+    KARItemName.EVENT_TRIGGER_METEOR: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 202, _CT),
+    KARItemName.EVENT_TRIGGER_PILLAR: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 203, _CT),
+    KARItemName.EVENT_TRIGGER_RUN_AMOK: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 204, _CT),
     KARItemName.EVENT_TRIGGER_RESTORATION_AREA: KARItemData(
-        KARItemType.EVENT_TRIGGER, ItemClassification.useful, 205, _CT
+        KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 205, _CT
     ),
-    KARItemName.EVENT_TRIGGER_RAIL_FIRE: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 206, _CT),
-    KARItemName.EVENT_TRIGGER_SAME_ITEM: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 207, _CT),
-    KARItemName.EVENT_TRIGGER_LIGHTHOUSE: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 208, _CT),
+    KARItemName.EVENT_TRIGGER_RAIL_FIRE: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 206, _CT),
+    KARItemName.EVENT_TRIGGER_SAME_ITEM: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 207, _CT),
+    KARItemName.EVENT_TRIGGER_LIGHTHOUSE: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 208, _CT),
     KARItemName.EVENT_TRIGGER_SECRET_CHAMBER: KARItemData(
-        KARItemType.EVENT_TRIGGER, ItemClassification.useful, 209, _CT
+        KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 209, _CT
     ),
-    KARItemName.EVENT_TRIGGER_PREDICTION: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 210, _CT),
+    KARItemName.EVENT_TRIGGER_PREDICTION: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 210, _CT),
     KARItemName.EVENT_TRIGGER_MACHINE_FORMATION: KARItemData(
-        KARItemType.EVENT_TRIGGER, ItemClassification.useful, 211, _CT
+        KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 211, _CT
     ),
-    KARItemName.EVENT_TRIGGER_UFO: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 212, _CT),
-    KARItemName.EVENT_TRIGGER_BOUNCE: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 213, _CT),
-    KARItemName.EVENT_TRIGGER_FOG: KARItemData(KARItemType.EVENT_TRIGGER, ItemClassification.useful, 214, _CT),
+    KARItemName.EVENT_TRIGGER_UFO: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 212, _CT),
+    KARItemName.EVENT_TRIGGER_BOUNCE: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 213, _CT),
+    KARItemName.EVENT_TRIGGER_FOG: KARItemData(KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 214, _CT),
     KARItemName.EVENT_TRIGGER_FAKE_POWERUPS: KARItemData(
-        KARItemType.EVENT_TRIGGER, ItemClassification.useful, 215, _CT
+        KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 215, _CT
     ),
     # Direct Game Items (300-368)
     # The mod spawns/applies the actual in-game item when received.
-    # Available in fill pools, drawn as needed during pool building.
-    # Can be overridden to progression by options.
     # Boxes
-    KARItemName.BLUE_BOX: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 300, _CT),
-    KARItemName.GREEN_BOX: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 301, _CT),
-    KARItemName.RED_BOX: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 302, _CT),
+    KARItemName.BLUE_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 300, _CT),
+    KARItemName.GREEN_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 301, _CT),
+    KARItemName.RED_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 302, _CT),
     # Stat patches (up)
-    KARItemName.ACCEL_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 303, _CT),
-    KARItemName.TOP_SPEED_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 305, _CT),
-    KARItemName.OFFENSE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 307, _CT),
-    KARItemName.DEFENSE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 309, _CT),
-    KARItemName.TURN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 311, _CT),
-    KARItemName.GLIDE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 313, _CT),
-    KARItemName.CHARGE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 315, _CT),
-    KARItemName.WEIGHT_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 317, _CT),
-    KARItemName.HP_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 319, _CT),
-    KARItemName.ALL_UP_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 320, _CT),
+    KARItemName.ACCEL_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 303, _CT),
+    KARItemName.TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 305, _CT),
+    KARItemName.OFFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 307, _CT),
+    KARItemName.DEFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 309, _CT),
+    KARItemName.TURN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 311, _CT),
+    KARItemName.GLIDE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 313, _CT),
+    KARItemName.CHARGE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 315, _CT),
+    KARItemName.WEIGHT_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 317, _CT),
+    KARItemName.HP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 319, _CT),
+    KARItemName.ALL_UP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 320, _CT),
     # Stat patches (down)
-    KARItemName.ACCEL_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 304, _CT),
-    KARItemName.TOP_SPEED_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 306, _CT),
-    KARItemName.OFFENSE_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 308, _CT),
-    KARItemName.DEFENSE_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 310, _CT),
-    KARItemName.TURN_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 312, _CT),
-    KARItemName.GLIDE_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 314, _CT),
-    KARItemName.CHARGE_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 316, _CT),
-    KARItemName.WEIGHT_DOWN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 318, _CT),
+    KARItemName.ACCEL_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 304, _CT),
+    KARItemName.TOP_SPEED_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 306, _CT),
+    KARItemName.OFFENSE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 308, _CT),
+    KARItemName.DEFENSE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 310, _CT),
+    KARItemName.TURN_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 312, _CT),
+    KARItemName.GLIDE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 314, _CT),
+    KARItemName.CHARGE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 316, _CT),
+    KARItemName.WEIGHT_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 318, _CT),
     # Extreme stat patches
-    KARItemName.SPEED_MAX_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 321, _CT),
-    KARItemName.SPEED_MIN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 322, _CT),
-    KARItemName.OFFENSE_MAX_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 323, _CT),
-    KARItemName.DEFENSE_MAX_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 324, _CT),
-    KARItemName.CHARGE_MAX_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 325, _CT),
-    KARItemName.CHARGE_NONE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 326, _CT),
+    KARItemName.SPEED_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 321, _CT),
+    KARItemName.SPEED_MIN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 322, _CT),
+    KARItemName.OFFENSE_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 323, _CT),
+    KARItemName.DEFENSE_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 324, _CT),
+    KARItemName.CHARGE_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 325, _CT),
+    KARItemName.CHARGE_NONE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 326, _CT),
     # Special items
-    KARItemName.CANDY: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 327, _CT),
+    KARItemName.CANDY: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 327, _CT),
     # Copy abilities (in-game item form)
-    KARItemName.COPY_ABILITY_BOMB: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 328, _ALL_MODES),
-    KARItemName.COPY_ABILITY_FIRE: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 329, _ALL_MODES),
-    KARItemName.COPY_ABILITY_ICE: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 330, _ALL_MODES),
-    KARItemName.COPY_ABILITY_SLEEP: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 331, _AR_CT),
-    KARItemName.COPY_ABILITY_WHEEL: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 332, _AR_CT),
-    KARItemName.COPY_ABILITY_WING: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 333, _AR_CT),
-    KARItemName.COPY_ABILITY_PLASMA: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 334, _AR_CT),
-    KARItemName.COPY_ABILITY_TORNADO: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 335, _AR_CT),
-    KARItemName.COPY_ABILITY_SWORD: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 336, _AR_CT),
-    KARItemName.COPY_ABILITY_NEEDLE: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 337, _AR_CT),
-    KARItemName.COPY_ABILITY_MIC: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 338, _ALL_MODES),
+    KARItemName.COPY_ABILITY_BOMB: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 328, _ALL_MODES),
+    KARItemName.COPY_ABILITY_FIRE: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 329, _ALL_MODES),
+    KARItemName.COPY_ABILITY_ICE: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 330, _ALL_MODES),
+    KARItemName.COPY_ABILITY_SLEEP: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.trap, 331, _AR_CT),
+    KARItemName.COPY_ABILITY_WHEEL: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 332, _AR_CT),
+    KARItemName.COPY_ABILITY_WING: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 333, _AR_CT),
+    KARItemName.COPY_ABILITY_PLASMA: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 334, _AR_CT),
+    KARItemName.COPY_ABILITY_TORNADO: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 335, _AR_CT),
+    KARItemName.COPY_ABILITY_SWORD: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 336, _AR_CT),
+    KARItemName.COPY_ABILITY_NEEDLE: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 337, _AR_CT),
+    KARItemName.COPY_ABILITY_MIC: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 338, _ALL_MODES),
     # Food
-    KARItemName.MAXIM_TOMATO: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 339, _CT),
-    KARItemName.ENERGY_DRINK: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 340, _CT),
-    KARItemName.ICE_CREAM: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 341, _CT),
-    KARItemName.RICE_BALL: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 342, _CT),
-    KARItemName.CHICKEN: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 343, _CT),
-    KARItemName.CURRY: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 344, _CT),
-    KARItemName.RAMEN: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 345, _CT),
-    KARItemName.OMELET: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 346, _CT),
-    KARItemName.HAMBURGER: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 347, _CT),
-    KARItemName.SUSHI: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 348, _CT),
-    KARItemName.HOT_DOG: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 349, _CT),
-    KARItemName.APPLE: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 350, _CT),
+    KARItemName.MAXIM_TOMATO: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 339, _CT),
+    KARItemName.ENERGY_DRINK: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 340, _CT),
+    KARItemName.ICE_CREAM: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 341, _CT),
+    KARItemName.RICE_BALL: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 342, _CT),
+    KARItemName.CHICKEN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 343, _CT),
+    KARItemName.CURRY: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 344, _CT),
+    KARItemName.RAMEN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 345, _CT),
+    KARItemName.OMELET: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 346, _CT),
+    KARItemName.HAMBURGER: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 347, _CT),
+    KARItemName.SUSHI: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 348, _CT),
+    KARItemName.HOT_DOG: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 349, _CT),
+    KARItemName.APPLE: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 350, _CT),
     # Hazards / miscellaneous
-    KARItemName.FIREWORKS: KARItemData(KARItemType.GAME_ITEM, ItemClassification.filler, 351, _CT),
-    KARItemName.PANIC_SPIN: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 352, _CT),
-    KARItemName.SENSOR_BOMB: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 353, _CT),
-    KARItemName.GORDO: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 354, _CT),
+    KARItemName.FIREWORKS: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 351, _CT),
+    KARItemName.PANIC_SPIN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 352, _CT),
+    KARItemName.SENSOR_BOMB: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 353, _CT),
+    KARItemName.GORDO: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 354, _CT),
     # Legendary machine parts
-    KARItemName.HYDRA_PART_1: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 355, _CT),
-    KARItemName.HYDRA_PART_2: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 356, _CT),
-    KARItemName.HYDRA_PART_3: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 357, _CT),
-    KARItemName.DRAGOON_PART_1: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 358, _CT),
-    KARItemName.DRAGOON_PART_2: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 359, _CT),
-    KARItemName.DRAGOON_PART_3: KARItemData(KARItemType.GAME_ITEM, ItemClassification.useful, 360, _CT),
+    KARItemName.HYDRA_PART_1: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 355, _CT),
+    KARItemName.HYDRA_PART_2: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 356, _CT),
+    KARItemName.HYDRA_PART_3: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 357, _CT),
+    KARItemName.DRAGOON_PART_1: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 358, _CT),
+    KARItemName.DRAGOON_PART_2: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 359, _CT),
+    KARItemName.DRAGOON_PART_3: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 360, _CT),
     # Fake patches (look like stat ups but are traps)
-    KARItemName.FAKE_ACCEL_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 361, _CT),
-    KARItemName.FAKE_TOP_SPEED_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 362, _CT),
-    KARItemName.FAKE_OFFENSE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 363, _CT),
-    KARItemName.FAKE_DEFENSE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 364, _CT),
-    KARItemName.FAKE_TURN_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 365, _CT),
-    KARItemName.FAKE_GLIDE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 366, _CT),
-    KARItemName.FAKE_CHARGE_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 367, _CT),
-    KARItemName.FAKE_WEIGHT_PATCH: KARItemData(KARItemType.GAME_ITEM, ItemClassification.trap, 368, _CT),
+    KARItemName.FAKE_ACCEL_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 361, _CT),
+    KARItemName.FAKE_TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 362, _CT),
+    KARItemName.FAKE_OFFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 363, _CT),
+    KARItemName.FAKE_DEFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 364, _CT),
+    KARItemName.FAKE_TURN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 365, _CT),
+    KARItemName.FAKE_GLIDE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 366, _CT),
+    KARItemName.FAKE_CHARGE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 367, _CT),
+    KARItemName.FAKE_WEIGHT_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 368, _CT),
     # Stadium Unlocks (400-423)
-    # Each unlocks a specific City Trial stadium.
     KARItemName.UNLOCK_STADIUM_DRAG_RACE_1: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 400, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 400, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DRAG_RACE_2: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 401, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 401, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DRAG_RACE_3: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 402, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 402, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DRAG_RACE_4: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 403, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 403, _CT
     ),
     KARItemName.UNLOCK_STADIUM_AIR_GLIDER: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 404, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 404, _CT
     ),
     KARItemName.UNLOCK_STADIUM_TARGET_FLIGHT: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 405, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 405, _CT
     ),
     KARItemName.UNLOCK_STADIUM_HIGH_JUMP: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 406, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 406, _CT
     ),
     KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 407, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 407, _CT
     ),
     KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 408, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 408, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 409, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 409, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 410, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 410, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 411, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 411, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 412, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 412, _CT
     ),
     KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 413, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 413, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_1: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 414, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 414, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_2: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 415, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 415, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_3: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 416, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 416, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_4: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 417, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 417, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_5: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 418, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 418, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_6: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 419, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 419, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_7: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 420, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 420, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_8: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 421, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 421, _CT
     ),
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_9: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 422, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 422, _CT
     ),
     KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: KARItemData(
-        KARItemType.STADIUM_UNLOCK, ItemClassification.progression, 423, _CT
+        KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 423, _CT
     ),
-    # Checklist Rewards — Air Ride (500-545)
-    # Vanilla rewards from completing Air Ride checklist entries.
-    # Receiving these performs the actual unlock (machine, music, etc.)
+    # Checklist Rewards: Air Ride (500-545)
+    # Receiving one performs the actual vanilla unlock (machine, music, etc.).
     KARItemName.AR_REWARD_NEBULA_BELT_COURSE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 500, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 500, _AR
     ),
-    KARItemName.AR_REWARD_MUSIC_NEBULA: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 501, _AR),
-    KARItemName.AR_REWARD_META_KNIGHT: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 502, _AR),
+    KARItemName.AR_REWARD_MUSIC_NEBULA: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 501, _AR
+    ),
+    KARItemName.AR_REWARD_META_KNIGHT: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 502, _AR
+    ),
     KARItemName.AR_REWARD_SPECIAL_MACHINE_INTROS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 503, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 503, _AR
     ),
-    KARItemName.AR_REWARD_KING_DEDEDE: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 504, _AR),
-    KARItemName.AR_REWARD_GREEN_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 505, _AR),
-    KARItemName.AR_REWARD_WAGON_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 506, _AR),
+    KARItemName.AR_REWARD_KING_DEDEDE: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 504, _AR
+    ),
+    KARItemName.AR_REWARD_GREEN_KIRBY: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 505, _AR
+    ),
+    KARItemName.AR_REWARD_WAGON_STAR: KARItemData(KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 506, _AR),
     KARItemName.AR_REWARD_SOUND_TEST_MAGMA_FLOWS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 507, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 507, _AR
     ),
-    KARItemName.AR_REWARD_FILLER_BOX_1: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 508, _AR),
-    KARItemName.AR_REWARD_REX_WHEELIE: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 509, _AR),
-    KARItemName.AR_REWARD_PURPLE_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 510, _AR),
-    KARItemName.AR_REWARD_SLICK_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 511, _AR),
-    KARItemName.AR_REWARD_ENDING: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 512, _AR),
-    KARItemName.AR_REWARD_WHITE_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 513, _AR),
-    KARItemName.AR_REWARD_SWERVE_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 514, _AR),
-    KARItemName.AR_REWARD_SHADOW_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 515, _AR),
-    KARItemName.AR_REWARD_JET_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 516, _AR),
+    KARItemName.AR_REWARD_FILLER_BOX_1: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 508, _AR
+    ),
+    KARItemName.AR_REWARD_REX_WHEELIE: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 509, _AR
+    ),
+    KARItemName.AR_REWARD_PURPLE_KIRBY: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 510, _AR
+    ),
+    KARItemName.AR_REWARD_SLICK_STAR: KARItemData(KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 511, _AR),
+    KARItemName.AR_REWARD_ENDING: KARItemData(KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 512, _AR),
+    KARItemName.AR_REWARD_WHITE_KIRBY: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 513, _AR
+    ),
+    KARItemName.AR_REWARD_SWERVE_STAR: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 514, _AR
+    ),
+    KARItemName.AR_REWARD_SHADOW_STAR: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 515, _AR
+    ),
+    KARItemName.AR_REWARD_JET_STAR: KARItemData(KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 516, _AR),
     KARItemName.AR_REWARD_MUSIC_HILLSIDE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 517, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 517, _AR
     ),
     KARItemName.AR_REWARD_SOUND_TEST_CHECKER_KNIGHTS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 518, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 518, _AR
     ),
-    KARItemName.AR_REWARD_MUSIC_MEADOWS: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 519, _AR),
-    KARItemName.AR_REWARD_BULK_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 520, _AR),
+    KARItemName.AR_REWARD_MUSIC_MEADOWS: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 519, _AR
+    ),
+    KARItemName.AR_REWARD_BULK_STAR: KARItemData(KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 520, _AR),
     KARItemName.AR_REWARD_SOUND_TEST_SKY_SANDS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 521, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 521, _AR
     ),
-    KARItemName.AR_REWARD_FORMULA_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 522, _AR),
-    KARItemName.AR_REWARD_MUSIC_MAGMA: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 523, _AR),
+    KARItemName.AR_REWARD_FORMULA_STAR: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 522, _AR
+    ),
+    KARItemName.AR_REWARD_MUSIC_MAGMA: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 523, _AR
+    ),
     KARItemName.AR_REWARD_MUSIC_BEANSTALK: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 524, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 524, _AR
     ),
     KARItemName.AR_REWARD_SOUND_TEST_MACHINE_PASSAGE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 525, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 525, _AR
     ),
     KARItemName.AR_REWARD_SOUND_TEST_FANTASY_MEADOWS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 526, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 526, _AR
     ),
     KARItemName.AR_REWARD_SOUND_TEST_CELESTIAL_VALLEY: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 527, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 527, _AR
     ),
-    KARItemName.AR_REWARD_BROWN_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 528, _AR),
+    KARItemName.AR_REWARD_BROWN_KIRBY: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 528, _AR
+    ),
     KARItemName.AR_REWARD_SOUND_TEST_FROZEN_HILLSIDE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 529, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 529, _AR
     ),
     KARItemName.AR_REWARD_SOUND_TEST_BEANSTALK_PARK: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 530, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 530, _AR
     ),
-    KARItemName.AR_REWARD_ROCKET_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 531, _AR),
+    KARItemName.AR_REWARD_ROCKET_STAR: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 531, _AR
+    ),
     KARItemName.AR_REWARD_SOUND_TEST_RESULTS_SCREEN: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 532, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 532, _AR
     ),
-    KARItemName.AR_REWARD_WHEELIE_BIKE: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 533, _AR),
+    KARItemName.AR_REWARD_WHEELIE_BIKE: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 533, _AR
+    ),
     KARItemName.AR_REWARD_WHEELIE_SCOOTER: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 534, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 534, _AR
     ),
-    KARItemName.AR_REWARD_WINGED_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 535, _AR),
-    KARItemName.AR_REWARD_FILLER_BOX_2: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 536, _AR),
-    KARItemName.AR_REWARD_MUSIC_CHECKER: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 537, _AR),
-    KARItemName.AR_REWARD_FILLER_BOX_3: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 538, _AR),
+    KARItemName.AR_REWARD_WINGED_STAR: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 535, _AR
+    ),
+    KARItemName.AR_REWARD_FILLER_BOX_2: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 536, _AR
+    ),
+    KARItemName.AR_REWARD_MUSIC_CHECKER: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 537, _AR
+    ),
+    KARItemName.AR_REWARD_FILLER_BOX_3: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 538, _AR
+    ),
     KARItemName.AR_REWARD_MUSIC_SKY_SANDS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 539, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 539, _AR
     ),
-    KARItemName.AR_REWARD_MUSIC_MACHINE: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 540, _AR),
-    KARItemName.AR_REWARD_TURBO_STAR: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 541, _AR),
-    KARItemName.AR_REWARD_FILLER_BOX_4: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 542, _AR),
+    KARItemName.AR_REWARD_MUSIC_MACHINE: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 540, _AR
+    ),
+    KARItemName.AR_REWARD_TURBO_STAR: KARItemData(KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 541, _AR),
+    KARItemName.AR_REWARD_FILLER_BOX_4: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 542, _AR
+    ),
     KARItemName.AR_REWARD_MUSIC_CELESTIAL: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 543, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 543, _AR
     ),
-    KARItemName.AR_REWARD_FILLER_BOX_5: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 544, _AR),
+    KARItemName.AR_REWARD_FILLER_BOX_5: KARItemData(
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 544, _AR
+    ),
     KARItemName.AR_REWARD_SOUND_TEST_NEBULA_BELT: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 545, _AR
+        KARItemType.AR_CHECKLIST_REWARD, ItemClassification.filler, 545, _AR
     ),
-    # Checklist Rewards — Top Ride (550-582)
-    KARItemName.TR_REWARD_GREEN_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 550, _TR),
-    KARItemName.TR_REWARD_PURPLE_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 551, _TR),
+    # Checklist Rewards: Top Ride (550-582)
+    KARItemName.TR_REWARD_GREEN_KIRBY: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 550, _TR
+    ),
+    KARItemName.TR_REWARD_PURPLE_KIRBY: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 551, _TR
+    ),
     KARItemName.TR_REWARD_DIAGONAL_CAMERA_RULE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 552, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 552, _TR
     ),
     KARItemName.TR_REWARD_MYSTERY_ITEM_SET_RULE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 553, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 553, _TR
     ),
-    KARItemName.TR_REWARD_LANTERN_ITEM: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 554, _TR),
+    KARItemName.TR_REWARD_LANTERN_ITEM: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 554, _TR
+    ),
     KARItemName.TR_REWARD_WHO_PAINT_ITEM: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 555, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 555, _TR
     ),
-    KARItemName.TR_REWARD_FILLER_BOX_1: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 556, _TR),
-    KARItemName.TR_REWARD_CHICKIE_ITEM: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 557, _TR),
+    KARItemName.TR_REWARD_FILLER_BOX_1: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 556, _TR
+    ),
+    KARItemName.TR_REWARD_CHICKIE_ITEM: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 557, _TR
+    ),
     KARItemName.TR_REWARD_SOUND_TEST_GRASS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 558, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 558, _TR
     ),
-    KARItemName.TR_REWARD_MUSIC_GRASS: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 559, _TR),
+    KARItemName.TR_REWARD_MUSIC_GRASS: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 559, _TR
+    ),
     KARItemName.TR_REWARD_SOUND_TEST_SAND: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 560, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 560, _TR
     ),
-    KARItemName.TR_REWARD_FILLER_BOX_2: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 561, _TR),
-    KARItemName.TR_REWARD_BROWN_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 562, _TR),
+    KARItemName.TR_REWARD_FILLER_BOX_2: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 561, _TR
+    ),
+    KARItemName.TR_REWARD_BROWN_KIRBY: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 562, _TR
+    ),
     KARItemName.TR_REWARD_SOUND_TEST_SKY: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 563, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 563, _TR
     ),
     KARItemName.TR_REWARD_SOUND_TEST_FIRE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 564, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 564, _TR
     ),
-    KARItemName.TR_REWARD_FILLER_BOX_3: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 565, _TR),
-    KARItemName.TR_REWARD_MUSIC_FIRE: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 566, _TR),
+    KARItemName.TR_REWARD_FILLER_BOX_3: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 565, _TR
+    ),
+    KARItemName.TR_REWARD_MUSIC_FIRE: KARItemData(KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 566, _TR),
     KARItemName.TR_REWARD_SOUND_TEST_WATER: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 567, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 567, _TR
     ),
     KARItemName.TR_REWARD_DEVICE_QUANTITY_RULE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 568, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 568, _TR
     ),
-    KARItemName.TR_REWARD_MUSIC_WATER: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 569, _TR),
+    KARItemName.TR_REWARD_MUSIC_WATER: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 569, _TR
+    ),
     KARItemName.TR_REWARD_SOUND_TEST_LIGHT: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 570, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 570, _TR
     ),
-    KARItemName.TR_REWARD_FILLER_BOX_4: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 571, _TR),
-    KARItemName.TR_REWARD_MUSIC_METAL: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 572, _TR),
+    KARItemName.TR_REWARD_FILLER_BOX_4: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 571, _TR
+    ),
+    KARItemName.TR_REWARD_MUSIC_METAL: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 572, _TR
+    ),
     KARItemName.TR_REWARD_SOUND_TEST_METAL: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 573, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 573, _TR
     ),
-    KARItemName.TR_REWARD_WHITE_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 574, _TR),
-    KARItemName.TR_REWARD_FILLER_BOX_5: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 575, _TR),
-    KARItemName.TR_REWARD_MUSIC_SAND: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 576, _TR),
-    KARItemName.TR_REWARD_MUSIC_LIGHT: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 577, _TR),
+    KARItemName.TR_REWARD_WHITE_KIRBY: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 574, _TR
+    ),
+    KARItemName.TR_REWARD_FILLER_BOX_5: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 575, _TR
+    ),
+    KARItemName.TR_REWARD_MUSIC_SAND: KARItemData(KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 576, _TR),
+    KARItemName.TR_REWARD_MUSIC_LIGHT: KARItemData(
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 577, _TR
+    ),
     KARItemName.TR_REWARD_ATTACK_ITEM_SET_RULE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 578, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 578, _TR
     ),
     KARItemName.TR_REWARD_SOUND_TEST_RESULTS_SCREEN: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 579, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 579, _TR
     ),
-    KARItemName.TR_REWARD_MUSIC_SKY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 580, _TR),
+    KARItemName.TR_REWARD_MUSIC_SKY: KARItemData(KARItemType.TR_CHECKLIST_REWARD, ItemClassification.filler, 580, _TR),
     KARItemName.TR_REWARD_SIDE_CAMERA_RULE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 581, _TR
+        KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 581, _TR
     ),
-    KARItemName.TR_REWARD_ENDING: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 582, _TR),
-    # Checklist Rewards — City Trial (600-643)
-    KARItemName.CT_REWARD_FILLER_BOX_1: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 600, _CT),
+    KARItemName.TR_REWARD_ENDING: KARItemData(KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 582, _TR),
+    # Checklist Rewards: City Trial (600-643)
+    KARItemName.CT_REWARD_FILLER_BOX_1: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 600, _CT
+    ),
     KARItemName.CT_REWARD_SOUND_TEST_ITEM_BOUNCE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 601, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 601, _CT
     ),
     KARItemName.CT_REWARD_PAUSE_SCREEN_POWERUPS: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 602, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 602, _CT
     ),
-    KARItemName.CT_REWARD_MUSIC_CITY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 603, _CT),
+    KARItemName.CT_REWARD_MUSIC_CITY: KARItemData(KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 603, _CT),
     KARItemName.CT_REWARD_SOUND_TEST_LEGENDARY_MACHINE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 604, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 604, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_DENSE_FOG: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 605, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 605, _CT
     ),
     KARItemName.CT_REWARD_META_KNIGHT_FREE_RUN: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 606, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 606, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_CITY_TRIAL: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 607, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 607, _CT
     ),
-    KARItemName.CT_REWARD_FILLER_BOX_2: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 608, _CT),
+    KARItemName.CT_REWARD_FILLER_BOX_2: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 608, _CT
+    ),
     KARItemName.CT_REWARD_SINGLE_RACE_NEBULA_STADIUM: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 609, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 609, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_ROWDY_CHARGE_TANK: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 610, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 610, _CT
     ),
     KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 611, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 611, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_DRAG_RACE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 612, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 612, _CT
     ),
     KARItemName.CT_REWARD_DRAGOON_PART_A: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 613, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 613, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_TARGET_FLIGHT: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 614, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 614, _CT
     ),
     KARItemName.CT_REWARD_DRAGOON_PART_C: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 615, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 615, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_AIR_GLIDER: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 616, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 616, _CT
     ),
     KARItemName.CT_REWARD_DESTRUCTION_DERBY_4_STADIUM: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 617, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 617, _CT
     ),
-    KARItemName.CT_REWARD_FILLER_BOX_3: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 618, _CT),
-    KARItemName.CT_REWARD_HYDRA_PART_Y: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 619, _CT),
+    KARItemName.CT_REWARD_FILLER_BOX_3: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 618, _CT
+    ),
+    KARItemName.CT_REWARD_HYDRA_PART_Y: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 619, _CT
+    ),
     KARItemName.CT_REWARD_SOUND_TEST_WHATS_IN_THE_BOX: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 620, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 620, _CT
     ),
-    KARItemName.CT_REWARD_HYDRA_PART_Z: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 621, _CT),
+    KARItemName.CT_REWARD_HYDRA_PART_Z: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 621, _CT
+    ),
     KARItemName.CT_REWARD_KING_DEDEDE_FREE_RUN: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 622, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 622, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_DYNA_BLADE_INTRO: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 623, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 623, _CT
     ),
-    KARItemName.CT_REWARD_FILLER_BOX_4: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 624, _CT),
+    KARItemName.CT_REWARD_FILLER_BOX_4: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 624, _CT
+    ),
     KARItemName.CT_REWARD_SOUND_TEST_HUGE_PILLAR: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 625, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 625, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_TAC_CHALLENGE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 626, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 626, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_FLYING_METEOR: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 627, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 627, _CT
     ),
-    KARItemName.CT_REWARD_ENDING: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 628, _CT),
+    KARItemName.CT_REWARD_ENDING: KARItemData(KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 628, _CT),
     KARItemName.CT_REWARD_DRAGOON_PART_B: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 629, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 629, _CT
     ),
-    KARItemName.CT_REWARD_FILLER_BOX_5: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 630, _CT),
-    KARItemName.CT_REWARD_HYDRA_PART_X: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 631, _CT),
-    KARItemName.CT_REWARD_PURPLE_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 632, _CT),
+    KARItemName.CT_REWARD_FILLER_BOX_5: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 630, _CT
+    ),
+    KARItemName.CT_REWARD_HYDRA_PART_X: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 631, _CT
+    ),
+    KARItemName.CT_REWARD_PURPLE_KIRBY: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 632, _CT
+    ),
     KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 633, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 633, _CT
     ),
     KARItemName.CT_REWARD_DESTRUCTION_DERBY_5_STADIUM: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 634, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 634, _CT
     ),
     KARItemName.CT_REWARD_KIRBY_MELEE_2_STADIUM: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 635, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 635, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_KIRBY_MELEE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 636, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 636, _CT
     ),
-    KARItemName.CT_REWARD_GREEN_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 637, _CT),
-    KARItemName.CT_REWARD_BROWN_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 638, _CT),
+    KARItemName.CT_REWARD_GREEN_KIRBY: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 637, _CT
+    ),
+    KARItemName.CT_REWARD_BROWN_KIRBY: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 638, _CT
+    ),
     KARItemName.CT_REWARD_DRAGOON_FREE_RUN: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 639, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 639, _CT
     ),
     KARItemName.CT_REWARD_HYDRA_FREE_RUN: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.useful, 640, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 640, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_LIGHTHOUSE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 641, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 641, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_STATION_FIRE: KARItemData(
-        KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 642, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 642, _CT
     ),
-    KARItemName.CT_REWARD_WHITE_KIRBY: KARItemData(KARItemType.CHECKLIST_REWARD, ItemClassification.filler, 643, _CT),
+    KARItemName.CT_REWARD_WHITE_KIRBY: KARItemData(
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 643, _CT
+    ),
     # Event Unlocks (700-715)
     # Gate whether City Trial events can occur naturally during gameplay.
     KARItemName.UNLOCK_EVENT_DYNA_BLADE: KARItemData(
-        KARItemType.EVENT_UNLOCK, ItemClassification.progression, 700, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 700, _CT
     ),
-    KARItemName.UNLOCK_EVENT_TAC: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 701, _CT),
-    KARItemName.UNLOCK_EVENT_METEOR: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 702, _CT),
-    KARItemName.UNLOCK_EVENT_PILLAR: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 703, _CT),
-    KARItemName.UNLOCK_EVENT_RUN_AMOK: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 704, _CT),
+    KARItemName.UNLOCK_EVENT_TAC: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 701, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_METEOR: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 702, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_PILLAR: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 703, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_RUN_AMOK: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 704, _CT
+    ),
     KARItemName.UNLOCK_EVENT_RESTORATION_AREA: KARItemData(
-        KARItemType.EVENT_UNLOCK, ItemClassification.progression, 705, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 705, _CT
     ),
-    KARItemName.UNLOCK_EVENT_RAIL_FIRE: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 706, _CT),
-    KARItemName.UNLOCK_EVENT_SAME_ITEM: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 707, _CT),
+    KARItemName.UNLOCK_EVENT_RAIL_FIRE: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 706, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_SAME_ITEM: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 707, _CT
+    ),
     KARItemName.UNLOCK_EVENT_LIGHTHOUSE: KARItemData(
-        KARItemType.EVENT_UNLOCK, ItemClassification.progression, 708, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 708, _CT
     ),
     KARItemName.UNLOCK_EVENT_SECRET_CHAMBER: KARItemData(
-        KARItemType.EVENT_UNLOCK, ItemClassification.progression, 709, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 709, _CT
     ),
     KARItemName.UNLOCK_EVENT_PREDICTION: KARItemData(
-        KARItemType.EVENT_UNLOCK, ItemClassification.progression, 710, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 710, _CT
     ),
     KARItemName.UNLOCK_EVENT_MACHINE_FORMATION: KARItemData(
-        KARItemType.EVENT_UNLOCK, ItemClassification.progression, 711, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 711, _CT
     ),
-    KARItemName.UNLOCK_EVENT_UFO: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 712, _CT),
-    KARItemName.UNLOCK_EVENT_BOUNCE: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 713, _CT),
-    KARItemName.UNLOCK_EVENT_FOG: KARItemData(KARItemType.EVENT_UNLOCK, ItemClassification.progression, 714, _CT),
+    KARItemName.UNLOCK_EVENT_UFO: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 712, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_BOUNCE: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 713, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_FOG: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 714, _CT
+    ),
     KARItemName.UNLOCK_EVENT_FAKE_POWERUPS: KARItemData(
-        KARItemType.EVENT_UNLOCK, ItemClassification.progression, 715, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 715, _CT
     ),
     # Copy Ability Unlocks (760-770)
     # Gate whether copy abilities can appear in the game world.
@@ -1105,66 +1259,128 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     # Patch Type Unlocks (780-788)
     # Gate whether specific patch stat types can appear as in-game items.
-    KARItemName.UNLOCK_PATCH_WEIGHT: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 780, _CT),
-    KARItemName.UNLOCK_PATCH_ACCEL: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 781, _CT),
-    KARItemName.UNLOCK_PATCH_TOP_SPEED: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 782, _CT),
-    KARItemName.UNLOCK_PATCH_TURN: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 783, _CT),
-    KARItemName.UNLOCK_PATCH_CHARGE: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 784, _CT),
-    KARItemName.UNLOCK_PATCH_GLIDE: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 785, _CT),
-    KARItemName.UNLOCK_PATCH_OFFENSE: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 786, _CT),
-    KARItemName.UNLOCK_PATCH_DEFENSE: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 787, _CT),
-    KARItemName.UNLOCK_PATCH_HP: KARItemData(KARItemType.PATCH_UNLOCK, ItemClassification.progression, 788, _CT),
+    KARItemName.UNLOCK_PATCH_WEIGHT: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 780, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_ACCEL: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 781, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_TOP_SPEED: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 782, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_TURN: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 783, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_CHARGE: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 784, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_GLIDE: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 785, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_OFFENSE: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 786, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_DEFENSE: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 787, _CT
+    ),
+    KARItemName.UNLOCK_PATCH_HP: KARItemData(
+        KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 788, _CT
+    ),
     # Item Unlocks (790-819)
     # Gate whether specific items can appear in the game world.
-    KARItemName.UNLOCK_ITEM_ALL_UP: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 790, _CT),
-    KARItemName.UNLOCK_ITEM_SPEED_MAX: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 791, _CT),
-    KARItemName.UNLOCK_ITEM_SPEED_MIN: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 792, _CT),
-    KARItemName.UNLOCK_ITEM_OFFENSE_MAX: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 793, _CT),
-    KARItemName.UNLOCK_ITEM_DEFENSE_MAX: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 794, _CT),
-    KARItemName.UNLOCK_ITEM_CHARGE_MAX: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 795, _CT),
-    KARItemName.UNLOCK_ITEM_CHARGE_NONE: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 796, _CT),
-    KARItemName.UNLOCK_ITEM_CANDY: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 797, _CT),
+    KARItemName.UNLOCK_ITEM_ALL_UP: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 790, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_SPEED_MAX: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 791, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_SPEED_MIN: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 792, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_OFFENSE_MAX: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 793, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_DEFENSE_MAX: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 794, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_CHARGE_MAX: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 795, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_CHARGE_NONE: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 796, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_CANDY: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 797, _CT
+    ),
     KARItemName.UNLOCK_ITEM_MAXIM_TOMATO: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 798, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 798, _CT
     ),
     KARItemName.UNLOCK_ITEM_ENERGY_DRINK: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 799, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 799, _CT
     ),
-    KARItemName.UNLOCK_ITEM_ICE_CREAM: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 800, _CT),
-    KARItemName.UNLOCK_ITEM_RICE_BALL: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 801, _CT),
-    KARItemName.UNLOCK_ITEM_CHICKEN: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 802, _CT),
-    KARItemName.UNLOCK_ITEM_CURRY: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 803, _CT),
-    KARItemName.UNLOCK_ITEM_RAMEN: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 804, _CT),
-    KARItemName.UNLOCK_ITEM_OMELET: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 805, _CT),
-    KARItemName.UNLOCK_ITEM_HAMBURGER: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 806, _CT),
-    KARItemName.UNLOCK_ITEM_SUSHI: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 807, _CT),
-    KARItemName.UNLOCK_ITEM_HOT_DOG: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 808, _CT),
-    KARItemName.UNLOCK_ITEM_APPLE: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 809, _CT),
-    KARItemName.UNLOCK_ITEM_FIREWORKS: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 810, _CT),
-    KARItemName.UNLOCK_ITEM_PANIC_SPIN: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 811, _CT),
-    KARItemName.UNLOCK_ITEM_SENSOR_BOMB: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 812, _CT),
-    KARItemName.UNLOCK_ITEM_GORDO: KARItemData(KARItemType.ITEM_UNLOCK, ItemClassification.progression, 813, _CT),
+    KARItemName.UNLOCK_ITEM_ICE_CREAM: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 800, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_RICE_BALL: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 801, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_CHICKEN: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 802, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_CURRY: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 803, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_RAMEN: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 804, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_OMELET: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 805, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_HAMBURGER: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 806, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_SUSHI: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 807, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_HOT_DOG: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 808, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_APPLE: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 809, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_FIREWORKS: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 810, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_PANIC_SPIN: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 811, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_SENSOR_BOMB: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 812, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_GORDO: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 813, _CT
+    ),
     KARItemName.UNLOCK_ITEM_HYDRA_PART_1: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 814, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 814, _CT
     ),
     KARItemName.UNLOCK_ITEM_HYDRA_PART_2: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 815, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 815, _CT
     ),
     KARItemName.UNLOCK_ITEM_HYDRA_PART_3: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 816, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 816, _CT
     ),
     KARItemName.UNLOCK_ITEM_DRAGOON_PART_1: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 817, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 817, _CT
     ),
     KARItemName.UNLOCK_ITEM_DRAGOON_PART_2: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 818, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 818, _CT
     ),
     KARItemName.UNLOCK_ITEM_DRAGOON_PART_3: KARItemData(
-        KARItemType.ITEM_UNLOCK, ItemClassification.progression, 819, _CT
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 819, _CT
     ),
     # Machine Unlocks (830-854)
     # Gate whether specific air ride machines can be ridden. VCKIND_WHEELVSDEDEDE
-    # (would be 855) is intentionally excluded — CPU-only stadium machine.
+    # (would be 855) is intentionally excluded: CPU-only stadium machine.
     KARItemName.UNLOCK_MACHINE_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 830, _AR_CT
     ),
@@ -1242,175 +1458,177 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     # Box Unlocks (860-862)
     # Gate whether specific box colors can appear in-game.
-    KARItemName.UNLOCK_BOX_BLUE: KARItemData(KARItemType.BOX_UNLOCK, ItemClassification.progression, 860, _CT),
-    KARItemName.UNLOCK_BOX_GREEN: KARItemData(KARItemType.BOX_UNLOCK, ItemClassification.progression, 861, _CT),
-    KARItemName.UNLOCK_BOX_RED: KARItemData(KARItemType.BOX_UNLOCK, ItemClassification.progression, 862, _CT),
+    KARItemName.UNLOCK_BOX_BLUE: KARItemData(
+        KARItemType.CT_BOX_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 860, _CT
+    ),
+    KARItemName.UNLOCK_BOX_GREEN: KARItemData(
+        KARItemType.CT_BOX_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 861, _CT
+    ),
+    KARItemName.UNLOCK_BOX_RED: KARItemData(
+        KARItemType.CT_BOX_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 862, _CT
+    ),
     # Air Ride Course Unlocks (870-878)
     KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 870, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 870, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 871, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 871, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_SKY_SANDS: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 872, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 872, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 873, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 873, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 874, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 874, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 875, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 875, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 876, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 876, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 877, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 877, _AR
     ),
     KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT: KARItemData(
-        KARItemType.STAGE_UNLOCK, ItemClassification.progression, 878, _AR
+        KARItemType.AR_COURSE_UNLOCK, ItemClassification.progression, 878, _AR
     ),
     # Kirby Color Unlocks (880-887)
     KARItemName.UNLOCK_COLOR_PINK: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 880, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 880, _ALL_MODES
     ),
     KARItemName.UNLOCK_COLOR_YELLOW: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 881, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 881, _ALL_MODES
     ),
     KARItemName.UNLOCK_COLOR_BLUE: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 882, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 882, _ALL_MODES
     ),
     KARItemName.UNLOCK_COLOR_RED: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 883, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 883, _ALL_MODES
     ),
     KARItemName.UNLOCK_COLOR_GREEN: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 884, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 884, _ALL_MODES
     ),
     KARItemName.UNLOCK_COLOR_PURPLE: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 885, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 885, _ALL_MODES
     ),
     KARItemName.UNLOCK_COLOR_BROWN: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 886, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 886, _ALL_MODES
     ),
     KARItemName.UNLOCK_COLOR_WHITE: KARItemData(
-        KARItemType.COLOR_UNLOCK, ItemClassification.progression, 887, _ALL_MODES
+        KARItemType.COLOR_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 887, _ALL_MODES
     ),
     # Top Ride Course Unlocks (890-896)
-    KARItemName.UNLOCK_TR_COURSE_GRASS: KARItemData(KARItemType.STAGE_UNLOCK, ItemClassification.progression, 890, _TR),
-    KARItemName.UNLOCK_TR_COURSE_SAND: KARItemData(KARItemType.STAGE_UNLOCK, ItemClassification.progression, 891, _TR),
-    KARItemName.UNLOCK_TR_COURSE_SKY: KARItemData(KARItemType.STAGE_UNLOCK, ItemClassification.progression, 892, _TR),
-    KARItemName.UNLOCK_TR_COURSE_FIRE: KARItemData(KARItemType.STAGE_UNLOCK, ItemClassification.progression, 893, _TR),
-    KARItemName.UNLOCK_TR_COURSE_LIGHT: KARItemData(KARItemType.STAGE_UNLOCK, ItemClassification.progression, 894, _TR),
-    KARItemName.UNLOCK_TR_COURSE_WATER: KARItemData(KARItemType.STAGE_UNLOCK, ItemClassification.progression, 895, _TR),
-    KARItemName.UNLOCK_TR_COURSE_METAL: KARItemData(KARItemType.STAGE_UNLOCK, ItemClassification.progression, 896, _TR),
-    # Top Ride Item Unlocks (900-921, minus 5 reserved slots).
-    # IDs 909/911/913/916 (Freeze Fan/Fire/Bomb/Walky) are gated by the
-    # ability_unlocked_mask in the mod, not by topride_item_unlocked_mask, so
-    # they intentionally have no unlock-item form. The corresponding ability
-    # unlock (760-770 range) serves as the gate.
-    # ID 912 is the engine's KirbyKusdama Party Ball variant — the visible
-    # Party Ball at slot 21 (921) is the single AP item, and the mod sets
-    # bit 12 alongside bit 21 so both engine variants can spawn.
+    KARItemName.UNLOCK_TR_COURSE_GRASS: KARItemData(
+        KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 890, _TR
+    ),
+    KARItemName.UNLOCK_TR_COURSE_SAND: KARItemData(
+        KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 891, _TR
+    ),
+    KARItemName.UNLOCK_TR_COURSE_SKY: KARItemData(
+        KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 892, _TR
+    ),
+    KARItemName.UNLOCK_TR_COURSE_FIRE: KARItemData(
+        KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 893, _TR
+    ),
+    KARItemName.UNLOCK_TR_COURSE_LIGHT: KARItemData(
+        KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 894, _TR
+    ),
+    KARItemName.UNLOCK_TR_COURSE_WATER: KARItemData(
+        KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 895, _TR
+    ),
+    KARItemName.UNLOCK_TR_COURSE_METAL: KARItemData(
+        KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 896, _TR
+    ),
+    # Top Ride Item Unlocks (900-921, minus 5 reserved slots). See KARItemName for
+    # why 909/911/913/916 have no unlock form and how slot 12 mirrors onto 21.
     KARItemName.UNLOCK_TR_ITEM_HAMMER: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 900, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 900, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_BIG_CAKE: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 901, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 901, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_SPEED_UP: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 902, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 902, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_SPEED_DOWN: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 903, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 903, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_SPINNER: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 904, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 904, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_CHARGE_TANK: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 905, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 905, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_INVINCIBLE_CANDY: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 906, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 906, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_BUZZ_SAW: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 907, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 907, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_DRILL: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 908, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 908, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_MISSILE: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 910, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 910, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_STEP_BOOM: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 914, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 914, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_LANTERN: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 915, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 915, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_KRACKO: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 917, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 917, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_WHO_PAINT: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 918, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 918, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_SMOKESCREEN: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 919, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 919, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_CHICKIE: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 920, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 920, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_PARTY_BALL: KARItemData(
-        KARItemType.TOPRIDE_ITEM_UNLOCK, ItemClassification.progression, 921, _TR
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 921, _TR
     ),
     # Top Ride Item Gives (950-971)
-    # Spawn the matching TR item at every human Kirby's position. Only effective
-    # in a Top Ride scene; queued until the player is in one.
-    KARItemName.GIVE_TR_ITEM_HAMMER: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 950, _TR),
-    KARItemName.GIVE_TR_ITEM_BIG_CAKE: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 951, _TR),
-    KARItemName.GIVE_TR_ITEM_SPEED_UP: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 952, _TR),
-    KARItemName.GIVE_TR_ITEM_SPEED_DOWN: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.trap, 953, _TR),
-    KARItemName.GIVE_TR_ITEM_SPINNER: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 954, _TR),
-    KARItemName.GIVE_TR_ITEM_CHARGE_TANK: KARItemData(
-        KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 955, _TR
-    ),
+    KARItemName.GIVE_TR_ITEM_HAMMER: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 950, _TR),
+    KARItemName.GIVE_TR_ITEM_BIG_CAKE: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 951, _TR),
+    KARItemName.GIVE_TR_ITEM_SPEED_UP: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 952, _TR),
+    KARItemName.GIVE_TR_ITEM_SPEED_DOWN: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.trap, 953, _TR),
+    KARItemName.GIVE_TR_ITEM_SPINNER: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 954, _TR),
+    KARItemName.GIVE_TR_ITEM_CHARGE_TANK: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 955, _TR),
     KARItemName.GIVE_TR_ITEM_INVINCIBLE_CANDY: KARItemData(
-        KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 956, _TR
+        KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 956, _TR
     ),
-    KARItemName.GIVE_TR_ITEM_BUZZ_SAW: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 957, _TR),
-    KARItemName.GIVE_TR_ITEM_DRILL: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 958, _TR),
-    KARItemName.GIVE_TR_ITEM_FREEZE_FAN: KARItemData(
-        KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 959, _TR
-    ),
-    KARItemName.GIVE_TR_ITEM_MISSILE: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 960, _TR),
-    KARItemName.GIVE_TR_ITEM_FIRE: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 961, _TR),
-    KARItemName.GIVE_TR_ITEM_BOMB: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 963, _TR),
-    KARItemName.GIVE_TR_ITEM_STEP_BOOM: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 964, _TR),
-    KARItemName.GIVE_TR_ITEM_LANTERN: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 965, _TR),
-    KARItemName.GIVE_TR_ITEM_WALKY: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 966, _TR),
-    KARItemName.GIVE_TR_ITEM_KRACKO: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 967, _TR),
-    KARItemName.GIVE_TR_ITEM_WHO_PAINT: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 968, _TR),
-    KARItemName.GIVE_TR_ITEM_SMOKESCREEN: KARItemData(
-        KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 969, _TR
-    ),
-    KARItemName.GIVE_TR_ITEM_CHICKIE: KARItemData(KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 970, _TR),
-    KARItemName.GIVE_TR_ITEM_PARTY_BALL: KARItemData(
-        KARItemType.TOPRIDE_ITEM_GIVE, ItemClassification.filler, 971, _TR
-    ),
-    # Goal Events (no network code — internal AP events only)
+    KARItemName.GIVE_TR_ITEM_BUZZ_SAW: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 957, _TR),
+    KARItemName.GIVE_TR_ITEM_DRILL: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 958, _TR),
+    KARItemName.GIVE_TR_ITEM_FREEZE_FAN: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 959, _TR),
+    KARItemName.GIVE_TR_ITEM_MISSILE: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 960, _TR),
+    KARItemName.GIVE_TR_ITEM_FIRE: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 961, _TR),
+    KARItemName.GIVE_TR_ITEM_BOMB: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 963, _TR),
+    KARItemName.GIVE_TR_ITEM_STEP_BOOM: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 964, _TR),
+    KARItemName.GIVE_TR_ITEM_LANTERN: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 965, _TR),
+    KARItemName.GIVE_TR_ITEM_WALKY: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 966, _TR),
+    KARItemName.GIVE_TR_ITEM_KRACKO: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 967, _TR),
+    KARItemName.GIVE_TR_ITEM_WHO_PAINT: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 968, _TR),
+    KARItemName.GIVE_TR_ITEM_SMOKESCREEN: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 969, _TR),
+    KARItemName.GIVE_TR_ITEM_CHICKIE: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 970, _TR),
+    KARItemName.GIVE_TR_ITEM_PARTY_BALL: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 971, _TR),
+    # Goal Events (no network code, internal AP events only)
     KARItemName.CITY_TRIAL_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.AIR_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.TOP_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
 }
 
 
-# STADIUM UNLOCK ITEMS
-# Ordered tuple of all stadium unlock item names. Used to build mappings
-# and for iterating over stadium unlocks in __init__.py.
+# Ordered tuple of all stadium unlock item names, for mappings and iteration in __init__.py.
 STADIUM_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
-    KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.STADIUM_UNLOCK
+    KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.CT_STADIUM_UNLOCK
 )
 
 # Stadium unlock items that have equivalent checklist reward items.
@@ -1426,69 +1644,121 @@ STADIUM_UNLOCK_TO_CHECKLIST_REWARD: dict[KARItemName, KARItemName] = {
 }
 
 
-# Checklist rewards that overlap with gating unlock items.
-# When a gating option is ON, the corresponding UNLOCK items handle the functionality,
-# so these checklist rewards should be excluded from the pool to avoid duplication.
-# When gating is OFF, these rewards stay in the pool and handle unlocks via vanilla systems.
+# Single source of truth for the optional "gating" mechanic. Each player option that
+# gates a category of content maps to the unlock item type it controls, the enabled-mode
+# flags that make it relevant, and any vanilla checklist rewards it overlaps with.
+# __init__ pool-building, fuzz_hook, and the gating tests all derive their behavior from
+# this table, so adding a gated category only requires a new row here.
+#
+# required_modes holds KARWorld flag attribute names ("city_trial_enabled", ...); the
+# category is irrelevant (its unlock items excluded) when none of those modes is enabled.
+# An empty set means the category is never excluded for mode reasons.
+#
+# overlapping_rewards are checklist rewards excluded from the pool when the gate is ON
+# (the UNLOCK items handle that content instead); when the gate is OFF they stay in the
+# pool and unlock via the vanilla checklist system.
+#
+# CT_STADIUM_UNLOCK is intentionally absent: it gates via city_trial_progressive_stadiums and
+# interacts with progressive-stadium reward promotion, so it is handled separately.
+class GatingCategory(NamedTuple):
+    option: str
+    item_type: KARItemType
+    required_modes: frozenset[str]
+    overlapping_rewards: frozenset[KARItemName] = frozenset()
+
+
+GATING_CATEGORIES: tuple[GatingCategory, ...] = (
+    GatingCategory("city_trial_events_gated", KARItemType.CT_EVENT_UNLOCK, frozenset({"city_trial_enabled"})),
+    # TR is included because _ABILITY_TR_ITEM_RULES gates 3 TR locations (Fire/Bomb)
+    # behind ability unlocks whenever abilities_gated is on.
+    GatingCategory(
+        "abilities_gated",
+        KARItemType.ABILITY_UNLOCK,
+        frozenset({"city_trial_enabled", "air_ride_enabled", "top_ride_enabled"}),
+    ),
+    GatingCategory("city_trial_patches_gated", KARItemType.CT_PATCH_UNLOCK, frozenset({"city_trial_enabled"})),
+    GatingCategory("city_trial_items_gated", KARItemType.CT_ITEM_UNLOCK, frozenset({"city_trial_enabled"})),
+    GatingCategory(
+        "machines_gated",
+        KARItemType.MACHINE_UNLOCK,
+        frozenset({"city_trial_enabled", "air_ride_enabled"}),
+        frozenset(
+            {
+                KARItemName.AR_REWARD_WAGON_STAR,
+                KARItemName.AR_REWARD_REX_WHEELIE,
+                KARItemName.AR_REWARD_SLICK_STAR,
+                KARItemName.AR_REWARD_SWERVE_STAR,
+                KARItemName.AR_REWARD_SHADOW_STAR,
+                KARItemName.AR_REWARD_JET_STAR,
+                KARItemName.AR_REWARD_BULK_STAR,
+                KARItemName.AR_REWARD_FORMULA_STAR,
+                KARItemName.AR_REWARD_ROCKET_STAR,
+                KARItemName.AR_REWARD_WHEELIE_BIKE,
+                KARItemName.AR_REWARD_WHEELIE_SCOOTER,
+                KARItemName.AR_REWARD_WINGED_STAR,
+                KARItemName.AR_REWARD_TURBO_STAR,
+                KARItemName.AR_REWARD_META_KNIGHT,
+                KARItemName.AR_REWARD_KING_DEDEDE,
+                KARItemName.CT_REWARD_META_KNIGHT_FREE_RUN,
+                KARItemName.CT_REWARD_KING_DEDEDE_FREE_RUN,
+                KARItemName.CT_REWARD_DRAGOON_FREE_RUN,
+                KARItemName.CT_REWARD_HYDRA_FREE_RUN,
+            }
+        ),
+    ),
+    GatingCategory("city_trial_boxes_gated", KARItemType.CT_BOX_UNLOCK, frozenset({"city_trial_enabled"})),
+    GatingCategory(
+        "air_ride_courses_gated",
+        KARItemType.AR_COURSE_UNLOCK,
+        frozenset({"air_ride_enabled"}),
+        frozenset({KARItemName.AR_REWARD_NEBULA_BELT_COURSE}),
+    ),
+    GatingCategory(
+        "colors_gated",
+        KARItemType.COLOR_UNLOCK,
+        frozenset(),
+        frozenset(
+            {
+                KARItemName.AR_REWARD_GREEN_KIRBY,
+                KARItemName.AR_REWARD_PURPLE_KIRBY,
+                KARItemName.AR_REWARD_WHITE_KIRBY,
+                KARItemName.AR_REWARD_BROWN_KIRBY,
+                KARItemName.TR_REWARD_GREEN_KIRBY,
+                KARItemName.TR_REWARD_PURPLE_KIRBY,
+                KARItemName.TR_REWARD_BROWN_KIRBY,
+                KARItemName.TR_REWARD_WHITE_KIRBY,
+                KARItemName.CT_REWARD_PURPLE_KIRBY,
+                KARItemName.CT_REWARD_GREEN_KIRBY,
+                KARItemName.CT_REWARD_BROWN_KIRBY,
+                KARItemName.CT_REWARD_WHITE_KIRBY,
+            }
+        ),
+    ),
+    GatingCategory("top_ride_courses_gated", KARItemType.TR_COURSE_UNLOCK, frozenset({"top_ride_enabled"})),
+    GatingCategory(
+        "top_ride_items_gated",
+        KARItemType.TR_ITEM_UNLOCK,
+        frozenset({"top_ride_enabled"}),
+        frozenset(
+            {
+                KARItemName.TR_REWARD_LANTERN_ITEM,
+                KARItemName.TR_REWARD_WHO_PAINT_ITEM,
+                KARItemName.TR_REWARD_CHICKIE_ITEM,
+            }
+        ),
+    ),
+)
+
+
+# Checklist rewards that overlap with gating unlock items, keyed by gating option.
+# Derived from GATING_CATEGORIES.
 GATED_CHECKLIST_REWARDS: dict[str, frozenset[KARItemName]] = {
-    "machines_gated": frozenset(
-        {
-            KARItemName.AR_REWARD_WAGON_STAR,
-            KARItemName.AR_REWARD_REX_WHEELIE,
-            KARItemName.AR_REWARD_SLICK_STAR,
-            KARItemName.AR_REWARD_SWERVE_STAR,
-            KARItemName.AR_REWARD_SHADOW_STAR,
-            KARItemName.AR_REWARD_JET_STAR,
-            KARItemName.AR_REWARD_BULK_STAR,
-            KARItemName.AR_REWARD_FORMULA_STAR,
-            KARItemName.AR_REWARD_ROCKET_STAR,
-            KARItemName.AR_REWARD_WHEELIE_BIKE,
-            KARItemName.AR_REWARD_WHEELIE_SCOOTER,
-            KARItemName.AR_REWARD_WINGED_STAR,
-            KARItemName.AR_REWARD_TURBO_STAR,
-            KARItemName.AR_REWARD_META_KNIGHT,
-            KARItemName.AR_REWARD_KING_DEDEDE,
-            KARItemName.CT_REWARD_META_KNIGHT_FREE_RUN,
-            KARItemName.CT_REWARD_KING_DEDEDE_FREE_RUN,
-            KARItemName.CT_REWARD_DRAGOON_FREE_RUN,
-            KARItemName.CT_REWARD_HYDRA_FREE_RUN,
-        }
-    ),
-    "colors_gated": frozenset(
-        {
-            KARItemName.AR_REWARD_GREEN_KIRBY,
-            KARItemName.AR_REWARD_PURPLE_KIRBY,
-            KARItemName.AR_REWARD_WHITE_KIRBY,
-            KARItemName.AR_REWARD_BROWN_KIRBY,
-            KARItemName.TR_REWARD_GREEN_KIRBY,
-            KARItemName.TR_REWARD_PURPLE_KIRBY,
-            KARItemName.TR_REWARD_BROWN_KIRBY,
-            KARItemName.TR_REWARD_WHITE_KIRBY,
-            KARItemName.CT_REWARD_PURPLE_KIRBY,
-            KARItemName.CT_REWARD_GREEN_KIRBY,
-            KARItemName.CT_REWARD_BROWN_KIRBY,
-            KARItemName.CT_REWARD_WHITE_KIRBY,
-        }
-    ),
-    "air_ride_courses_gated": frozenset(
-        {
-            KARItemName.AR_REWARD_NEBULA_BELT_COURSE,
-        }
-    ),
-    "top_ride_items_gated": frozenset(
-        {
-            KARItemName.TR_REWARD_LANTERN_ITEM,
-            KARItemName.TR_REWARD_WHO_PAINT_ITEM,
-            KARItemName.TR_REWARD_CHICKIE_ITEM,
-        }
-    ),
+    cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES if cat.overlapping_rewards
 }
 
 
-# TRAP WEIGHT GROUPS
-# Maps a KAROptions attribute name to the set of trap item names whose weight
-# is controlled by that option. Used in __init__.py to look up per-item weights
-# when filling the junk/trap pool.
+# Maps a KAROptions attribute name to the trap item names whose weight that option
+# controls. __init__.py uses it for per-item weights when filling the junk/trap pool.
 TRAP_WEIGHT_GROUPS: list[tuple[str, frozenset[str]]] = [
     (
         "trap_weight_direct_damage",
@@ -1547,42 +1817,45 @@ TRAP_WEIGHT_GROUPS: list[tuple[str, frozenset[str]]] = [
 ]
 
 
-# ITEM NAME GROUPS
-# Auto-generated from ITEM_TABLE by type, plus mode-specific sub-groups.
-# Players can reference these in YAML configs (e.g., exclude_locations, priority_locations).
-_TYPE_TO_GROUP: dict[KARItemType, str] = {
-    KARItemType.CHECKBOX_FILLER: "Checkbox Fillers",
-    KARItemType.PATCH_CAP_INCREASE: "Patch Cap Increases",
-    KARItemType.PERMANENT_PATCH: "Permanent Patches",
-    KARItemType.TRAP: "Traps",
-    KARItemType.EFFECT: "Effects",
-    KARItemType.EVENT_TRIGGER: "Event Triggers",
-    KARItemType.GAME_ITEM: "Game Items",
-    KARItemType.STADIUM_UNLOCK: "Stadium Unlocks",
-    KARItemType.CHECKLIST_REWARD: "Checklist Rewards",
-    KARItemType.EVENT_UNLOCK: "Event Unlocks",
-    KARItemType.ABILITY_UNLOCK: "Copy Ability Unlocks",
-    KARItemType.PATCH_UNLOCK: "Patch Type Unlocks",
-    KARItemType.ITEM_UNLOCK: "Item Unlocks",
-    KARItemType.MACHINE_UNLOCK: "Machine Unlocks",
-    KARItemType.BOX_UNLOCK: "Box Unlocks",
-    KARItemType.STAGE_UNLOCK: "Stage Unlocks",
-    KARItemType.COLOR_UNLOCK: "Color Unlocks",
-    KARItemType.TOPRIDE_ITEM_UNLOCK: "Top Ride Item Unlocks",
-    KARItemType.TOPRIDE_ITEM_GIVE: "Top Ride Item Gives",
+# Maps each KARItemType to its player-facing KARItemGroup (1:1). Groups are exposed in
+# YAML configs (e.g. exclude_locations, priority_locations) via item_name_groups below.
+_TYPE_TO_GROUP: dict[KARItemType, KARItemGroup] = {
+    KARItemType.CHECKBOX_FILLER: KARItemGroup.CHECKBOX_FILLERS,
+    KARItemType.PATCH_CAP_INCREASE: KARItemGroup.PATCH_CAP_INCREASES,
+    KARItemType.PERMANENT_PATCH: KARItemGroup.PERMANENT_PATCHES,
+    KARItemType.SPAWN_RATE: KARItemGroup.SPAWN_RATES,
+    KARItemType.CT_ITEM_GIVE: KARItemGroup.CT_ITEM_GIVES,
+    KARItemType.CT_EVENT_GIVE: KARItemGroup.CT_EVENT_GIVES,
+    KARItemType.ABILITY_GIVE: KARItemGroup.ABILITY_GIVES,
+    KARItemType.CT_STADIUM_UNLOCK: KARItemGroup.CT_STADIUM_UNLOCKS,
+    KARItemType.CT_CHECKLIST_REWARD: KARItemGroup.CT_REWARDS,
+    KARItemType.AR_CHECKLIST_REWARD: KARItemGroup.AR_REWARDS,
+    KARItemType.TR_CHECKLIST_REWARD: KARItemGroup.TR_REWARDS,
+    KARItemType.CT_EVENT_UNLOCK: KARItemGroup.CT_EVENT_UNLOCKS,
+    KARItemType.ABILITY_UNLOCK: KARItemGroup.ABILITY_UNLOCKS,
+    KARItemType.CT_PATCH_UNLOCK: KARItemGroup.CT_PATCH_UNLOCKS,
+    KARItemType.CT_ITEM_UNLOCK: KARItemGroup.CT_ITEM_UNLOCKS,
+    KARItemType.MACHINE_UNLOCK: KARItemGroup.MACHINE_UNLOCKS,
+    KARItemType.CT_BOX_UNLOCK: KARItemGroup.CT_BOX_UNLOCKS,
+    KARItemType.AR_COURSE_UNLOCK: KARItemGroup.AR_COURSE_UNLOCKS,
+    KARItemType.TR_COURSE_UNLOCK: KARItemGroup.TR_COURSE_UNLOCKS,
+    KARItemType.COLOR_UNLOCK: KARItemGroup.COLOR_UNLOCKS,
+    KARItemType.TR_ITEM_UNLOCK: KARItemGroup.TR_ITEM_UNLOCKS,
+    KARItemType.TR_ITEM_GIVE: KARItemGroup.TR_ITEM_GIVES,
 }
 
-item_name_groups: dict[str, set[str]] = {}
+# All item names bucketed by their KARItemType. This is the type-keyed view used by
+# generation logic (pool building, starters); item_name_groups below is the player-facing
+# view derived from it. Keeping generation on items_by_type means it never depends on the
+# player-facing group strings.
+items_by_type: dict[KARItemType, set[str]] = {}
 for _name, _data in ITEM_TABLE.items():
-    _group = _TYPE_TO_GROUP.get(_data.type)
-    if _group:
-        item_name_groups.setdefault(_group, set()).add(_name)
+    items_by_type.setdefault(_data.type, set()).add(_name)
 
-# Mode-specific sub-groups for checklist rewards
-item_name_groups["Air Ride Rewards"] = {n for n in ITEM_TABLE if n.startswith("Air Ride Reward:")}
-item_name_groups["Top Ride Rewards"] = {n for n in ITEM_TABLE if n.startswith("Top Ride Reward:")}
-item_name_groups["City Trial Rewards"] = {n for n in ITEM_TABLE if n.startswith("City Trial Reward:")}
-
-# Mode-specific sub-groups for course unlocks
-item_name_groups["AR Course Unlocks"] = {n for n in ITEM_TABLE if n.startswith("Unlock AR Course:")}
-item_name_groups["TR Course Unlocks"] = {n for n in ITEM_TABLE if n.startswith("Unlock TR Course:")}
+# Player-facing groups, derived from items_by_type via the type->group map (1:1, copied so
+# the two views can't alias-mutate each other). "Traps" spans several types, so it's derived
+# from the trap classification rather than a single type.
+item_name_groups: dict[str, set[str]] = {
+    group: set(items_by_type.get(item_type, set())) for item_type, group in _TYPE_TO_GROUP.items()
+}
+item_name_groups[KARItemGroup.TRAPS] = {n for n, d in ITEM_TABLE.items() if d.classification & ItemClassification.trap}
