@@ -2,22 +2,30 @@
 
 - [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
   - [What is this?](#what-is-this)
-  - [Where do I get the apworld and yaml file?](#where-do-i-get-the-apworld-and-yaml-file)
   - [How do I set this up?](#how-do-i-set-this-up)
-  - [What is the goal of Kirby Air Ride in Archipelago?](#what-is-the-goal-of-kirby-air-ride-in-archipelago)
+  - [Game modes and goals](#game-modes-and-goals)
     - [City Trial](#city-trial)
     - [Air Ride](#air-ride)
     - [Top Ride](#top-ride)
-      - [Note:](#note)
-  - [What does randomization do to this game? Which locations get shuffled?](#what-does-randomization-do-to-this-game-which-locations-get-shuffled)
+    - [Mixing goals](#mixing-goals)
+  - [Access gating](#access-gating)
+  - [Cross-mode placement](#cross-mode-placement)
+  - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
-      - [Checkbox Filler Items](#checkbox-filler-items)
-      - [Patch Cap Increase Items](#patch-cap-increase-items)
-      - [Stadium Unlock Items](#stadium-unlock-items)
-    - [EnergyLink](#energylink)
-    - [Other features](#other-features)
-      - [Server sync](#server-sync)
+    - [Checkbox filler items](#checkbox-filler-items)
+    - [Patch cap increase items](#patch-cap-increase-items)
+    - [Permanent patch increase items](#permanent-patch-increase-items)
+    - [Stadium unlock items](#stadium-unlock-items)
+    - [Spawn Rate Up items](#spawn-rate-up-items)
+    - [Access-gating unlock items](#access-gating-unlock-items)
+    - [When items are applied](#when-items-are-applied)
+  - [Traps and TrapLink](#traps-and-traplink)
+  - [EnergyLink](#energylink)
+  - [DeathLink](#deathlink)
+  - [Other features](#other-features)
+    - [Reveal checklists](#reveal-checklists)
+    - [Server sync](#server-sync)
   - [I need help! What do I do?](#i-need-help-what-do-i-do)
   - [Known Issues](#known-issues)
   - [Planned Features](#planned-features)
@@ -28,146 +36,167 @@
 
 This is an APWorld for the Archipelago multi-world, multi-game randomizer: [archipelago.gg](https://archipelago.gg/)
 
-## Where do I get the apworld and yaml file?
-
-You can get the apworld file and an example player configuration yaml in the [releases page.](https://github.com/DeDeDeK/KARchipelago/releases)
+This APWorld allows you to play Kirby Air Ride in an Archipelago Multiworld, or solo.
 
 ## How do I set this up?
 
-Follow the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md).
+Setting up the game and instructions on where to get the apworld file, yaml file, and mod files are in the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md).
 
-## What is the goal of Kirby Air Ride in Archipelago?
+## Game modes and goals
 
-Besides having fun being a part of a multiworld with friends, there are also a few pre-selected archipelago goals for the game that will result in a "game complete":
+Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top Ride. You can enable any combination of them, each with its own goal, locations, and progression settings. Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist.
 
 ### City Trial
-- Fill in over 100 Checklist Boxes!
-  - in the base game, this allows you to unlock viewing the game's ending
-- Fill in N Checklist Boxes!
-  - fill in as many checklist boxes as you want, you can configure the number from 1-120.
-- In one match, complete both Dragoon and Hydra!
-  - this is the standard checkbox from the base game
-- Stadium: VS. KING DEDEDE KO King Dedede in less than a minute!
-- You can also specify the name of any checklist box to set that as your specific goal for City Trial.
-- None
-  - this disables City Trial from being a part of your world. No locations for City Trial will exist to be checked.
+
+- **Fill in over 100 Checklist Boxes** (default). In the base game this unlocks viewing the ending.
+- **Fill in N Checklist Boxes.** Choose the number from 1 to 120 with "Number of Checklist Boxes for City Trial".
+- **Complete both Dragoon and Hydra in one match.** The standard legendary-machine checkbox from the base game.
+- **Beat King Dedede.** KO King Dedede in under a minute in the VS. KING DEDEDE stadium.
+- **Complete a specific list of checklist boxes.** You choose the exact boxes (or location group names) with "City Trial Goal Locations".
+- **Max stats in one run.** Reach the per-stat patch cap target on every stat in a single City Trial round. Pairs well with Progressive Patch Caps, which makes the target reachable only after collecting Patch Cap Increase items.
+- **None.** Disables City Trial.
 
 ### Air Ride
-- Fill in over 100 Checklist Boxes!
-  - in the base game, this allows you to unlock viewing the game's ending
-- Fill in N Checklist Boxes!
-  - fill in as many checklist boxes as you want, you can configure the number from 1-120.
-- You can also specify the name of any checklist box to set that as your specific goal for Air Ride.
-- None
-  - this disables Air Ride from being a part of your world. No locations for Air Ride will exist to be checked.
+
+- **Fill in over 100 Checklist Boxes.**
+- **Fill in N Checklist Boxes** (1 to 120).
+- **Complete a specific list of checklist boxes** (via "Air Ride Goal Locations").
+- **None** Disables Air Ride (default).
 
 ### Top Ride
-- Fill in over 100 Checklist Boxes!
-  - in the base game, this allows you to unlock viewing the game's ending
-- Fill in N Checklist Boxes!
-  - fill in as many checklist boxes as you want, you can configure the number from 1-120.
-- You can also specify the name of any checklist box to set that as your specific goal for Top Ride.
-- None
-  - this disables Top Ride from being a part of your world. No locations for Top Ride will exist to be checked.
 
-#### Note:
-You can mix and match goals between all game modes. If there is a goal for multiple game modes, you can only complete your game by completing all goals.
+- **Fill in over 100 Checklist Boxes.**
+- **Fill in N Checklist Boxes** (1 to 120).
+- **Complete a specific list of checklist boxes** (via "Top Ride Goal Locations").
+- **None** Disables Top Ride (default).
 
-## What does randomization do to this game? Which locations get shuffled?
+### Mixing goals
 
-Randomization affects which AP items you receive or send for unlocking a checkbox. It will also affect which stadiums you have available if you have progressive stadiums enabled. 
+You can mix and match goals across modes. When more than one mode has a goal, you only complete your game by completing every enabled goal.
 
-No locations are currently shuffled, so every checkbox in the game unlocks what it usually unlocks (with the exception of stadiums, which are ignored in favor of the AP item unlocks if they are enabled).
+## Access gating
+
+Most categories of content can be locked behind AP items. When a category is gated, that content starts locked and you must find its unlock items to access it; the checkboxes and races that depend on it become logically reachable only once you have the unlock. When a category is not gated, that content is available from the start and no unlock items are placed for it.
+
+The gateable categories are:
+
+- **City Trial events** (Dyna Blade, Meteor, Tac, etc.)
+- **Copy abilities** (Fire, Sword, Bomb, etc.). Affects both City Trial and Air Ride.
+- **City Trial patch types** (Accel, Top Speed, Offense, etc.)
+- **City Trial game items** (All Up, Speed Max, Candy, food, hazards, legendary parts, etc.)
+- **Air ride machines.** Affects both City Trial and Air Ride.
+- **City Trial box types** (Blue, Green, Red)
+- **Air Ride courses**
+- **Top Ride courses**
+- **Top Ride items.** Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are gated by the copy ability unlock instead.
+- **Kirby colors** (every color other than Pink). Affects all three modes.
+
+Stadiums are gated separately via "City Trial Progressive Stadiums" (see [Stadium unlock items](#stadium-unlock-items)).
+
+## Cross-mode placement
+
+When you have more than one mode enabled, "Cross-Mode Placement" controls whether they share progression.
+
+- **On (default):** any of your items can land at any of your checklist locations across every enabled mode. An Air Ride unlock might be found on a City Trial checkbox, and vice versa.
+- **Off:** progression is kept separate per mode, so City Trial progress comes only from City Trial checks, Air Ride from Air Ride, and Top Ride from Top Ride. Two things still tie modes together: unlocks that genuinely apply to more than one mode (copy abilities and machines affect City Trial and Air Ride; colors affect all three) may appear in any mode they apply to, and only progression is locked. Non-progression items (checklist rewards, Spawn Rate Ups, traps, and filler) gate nothing, so they are still placed freely across enabled modes.
+
+Items placed in other players' worlds are never affected either way.
+
+## What does randomization do to this game?
+
+Randomization decides which AP item is attached to each checkbox you complete, and which unlock items you must find to reach gated content. No in-game locations are physically shuffled: every checkbox still triggers its normal in-game result, except where gating replaces that result with the corresponding AP unlock (for example stadiums, courses, abilities, machines, and so on, when those categories are gated).
 
 ## What does another world's item look like in Kirby Air Ride?
 
-There is no change in the graphical appearance of other's items. Completing checkboxes will earn whatever AP item is attached to that checkbox.
+There is no change in the graphical appearance of other worlds' items. Completing a checkbox sends whatever AP item is attached to that location.
 
 ## What happens when the player receives an item?
 
-Current items players are able to receive are:
-- Patches (Top Speed Up, Boost Up, etc.)
-- Trap Patches ("Top Speed Down, Boost Down, etc.)
-- Permanent +1 Patch Increases
-- "Effect" items
-  - 1 HP Trap
-  - Full Heal
-- Checkbox filler items for each checklist
-- Patch Cap Increase items
-- Stadium unlock items
+The items you can receive include:
 
-#### Checkbox Filler Items
+- Checkbox filler items (one per mode)
+- Patch cap increase items (City Trial)
+- Permanent patch increase items (City Trial)
+- Stadium unlock items (City Trial)
+- Spawn Rate Up items (City Trial / Top Ride)
+- Game item gives (boxes, food, copy abilities, legendary machine parts, All Up, etc.)
+- Access-gating unlock items (events, abilities, machines, patch types, items, boxes, courses, colors, Top Ride items)
+- Traps (1 HP Trap, stat-down patches, fake patches, hazards)
 
-Receiving a checkbox filler item for a given checklist will apply it immediately. Look to the side of the checklist
-for the purple boxes. The game limits the number of these you can see at once to 5, but rest assured if you unlocked more than that, you have access to that amount and can keep using them as normal until they run out.
+### Checkbox filler items
 
-#### Patch Cap Increase Items
+Receiving a checkbox filler item for a given checklist auto-completes a checklist block immediately. Look to the side of the checklist for the purple boxes. The game only shows up to 5 of them at once, but if you have unlocked more they are still yours and you can keep using them as they run out. There is a separate filler item for each mode (City Trial, Air Ride, Top Ride).
 
-Receiving a patch cap increase item will increase the maximum cap on the number of patches you can have in City Trial. For instance, if you specified a starting cap of 5 in your yaml, this will increase it by one, to 6 for the rest of your entire AP run. This is for each patch type separately. So for instance, if you have a patch cap of 6 and collect 7 Top Speeds, you will lose one of those Top Speeds and be back to 6. 
+### Patch cap increase items
 
-#### Stadium Unlock Items
+With "City Trial Progressive Patch Caps" enabled, the per-stat patch cap starts low and each Patch Cap Increase item raises it by one, up to your "Patch Cap Target". This is tracked per stat. For example, with a cap of 6, collecting a 7th Top Speed will drop you back to 6 until you raise the cap.
 
-If you have progressive stadiums enabled, receiving a stadium unlock item will unlock that stadium in-game. You will always start with one random stadium unlock item in your starting inventory. If your goal is to beat King DeDeDe, you will not be able to start with that stadium unlocked. 
+### Permanent patch increase items
 
+With "City Trial Permanent Patches" enabled (the default), these items give a permanent +1 to a stat that persists for the rest of your run.
 
-Any items will be applied immediately if the player is in City Trial when they are received, or they are applied at the beginning of the next City Trial run if they are not. Permanent patch increases are applied at the start of every City Trial run (after a few seconds have elapsed). 
+### Stadium unlock items
 
-NOTE: you must collect any patch in the city after receiving patch items for the stat increases/decreases to take effect. 
+With "City Trial Progressive Stadiums" enabled, stadiums must be found and unlocked, and receiving a stadium unlock item unlocks that stadium in-game. You always start with one random stadium already unlocked, chosen from stadiums that are not checklist rewards (and never VS. KING DEDEDE when that is your goal).
 
-NOTE: There are currently no items that apply to Air Ride or Top Ride mode (other than checkbox fillers), but you can earn items for City Trial by completing Air Ride or Top Ride checkboxes.
+### Spawn Rate Up items
 
-### EnergyLink
+With "Progressive Spawn Rate" enabled, the City Trial and Top Ride item spawn rate starts at your "Spawn Rate Min" and each Spawn Rate Up item raises it by 10% toward your "Spawn Rate Max". Air Ride has no spawn-rate scaling and is unaffected.
 
-If you have EnergyLink enabled in your yaml or if you enabled it in the client with `/energylink`, gathering patches (if you are below the max stat limit for that patch) in the City will add to the collective energy pool of the multiworld, as well as destroying objects (rocks, trees, coral, star pole, houses, etc.). You can spend this gathered energy to receive any (archipelago) item immediately! Use `/energylink_spend "Item Name" item_amount` in the Kirby Air Ride Client.
+### Access-gating unlock items
 
-Each patch collected gives 1 energy, and each object destroyed gives .1 energy. Items by default cost 10 energy, and other items have costs of:
+When a category is gated (see [Access gating](#access-gating)), receiving its unlock item makes that content available for the rest of your run.
 
-- All patches: 90,
-- Checkbox fillers: 1500
-- Patch Cap Increases: 1500
-- Permanent Patch Increases: 200
+### When items are applied
 
-For example, to buy 5 Top Speed Up patches (assuming you have 50 energy to spend):
+City Trial items are applied immediately if you are in City Trial when they arrive, otherwise at the start of your next City Trial run. Permanent patch increases are applied at the start of every City Trial run.
 
-`/energylink_spend "Top Speed Up" 5`
+NOTE: after receiving patch items, you must collect any patch in the city for the stat increases or decreases to take effect.
 
-Spending energy on Permanent Patch increases and Patch Cap increases will also be persistent for the rest of your game. 
+## Traps and TrapLink
 
-### Other features
+Set "Trap Chance" above 0 to turn a percentage of your non-progression item slots into traps. Traps are grouped into categories you can weight independently: Direct Damage (1 HP Trap), Stat Debuff (All Down, stat-down patches, etc.), Fake Patches (items that look like stat-ups but are harmful), and Hazards (Panic Spin, Sensor Bomb, Gordo).
 
-#### Server sync 
+With "Trap Link" enabled, traps you receive are broadcast to other players who have TrapLink on, and you receive the traps they broadcast in return. This is independent of "Trap Chance": you can take part in TrapLink even with no traps in your own pool. TrapLink can be toggled in your yaml or from the in-game menu; the yaml only seeds the initial state and the in-game menu is authoritative after that.
 
-The client will sync your completed AP checks to your in-game checklist every time you connect to the server. This means that if you: 
+## EnergyLink
 
-- lose your save file 
-- are starting fresh and doing a same-slot co-op
-- have had some of your checks collected by another player after finishing their game
+EnergyLink is a City Trial feature. While it is on, collecting patches and destroying objects (rocks, trees, coral, houses, etc.) in the City contributes energy to the multiworld's shared pool, and you can spend that pool from within the game to receive items.
 
-Your game will always be in sync with what the server has.
+EnergyLink can be enabled in your yaml or from the in-game menu. The yaml only seeds the initial state on first connect; after that the in-game menu is authoritative for the rest of the session.
 
-**IMPORTANT:** Any checks that are synced from the server are initially only *visible* in the checklist. They need to be unlocked by entering any stadium or city trial (or for Air Ride or Top Ride, a Race), and then quitting (or finishing them normally). This will trigger the checkbox unlocking process for those checks. 
+## DeathLink
 
-**NOTE:** Similarly, after game completion, if you have collect on, reconnecting to the server and then entering and exiting out of any City Trial, Air Ride, or Top Ride mode (depending on what modes you have enabled) will trigger a complete checklist unlock! Very satisfying!
+DeathLink is supported and can be enabled in your yaml. When on, dying links your deaths with other DeathLink players in the multiworld.
 
+## Other features
+
+### Reveal checklists
+
+With "Reveal Checklists" enabled, the checklists for each of your enabled modes start fully revealed instead of hidden.
+
+### Server sync
+
+The client syncs your completed AP checks to your in-game checklist every time you connect to the server. This keeps your game in sync with the server even if you lose your save file, start fresh for a same-slot co-op, or have had checks collected by another player.
 
 ## I need help! What do I do?
 
-Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md). 
+Try the troubleshooting steps in the [setup guide](https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/docs/setup_en.md).
 
 If you are still stuck, please ask us over in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server! [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554)
 
 ## Known Issues
 
-Known bugs and issues are tracked in the github issues [here.](https://github.com/DeDeDeK/KARchipelago/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug)
+Known bugs and issues are tracked in the GitHub issues [here.](https://github.com/DeDeDeK/KARchipelago/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug)
 
 Feel free to report any issues or suggest improvements either there or in the "Kirby Air Ride" discussion thread in the "future-game-design" channel in the Archipelago Discord server [(Link)](https://discord.com/channels/731205301247803413/1291501105389502554)
 
 ## Planned Features
 
-Much of the planned features are gated by progress on modding the game itself or finding proper memory addresses, function locations, etc. within the game's memory. Contributions are very welcome!
+Many planned features are gated by progress on modding the game itself. Contributions are very welcome!
 
 You can see a current list of planned features and other requests [here.](https://github.com/DeDeDeK/KARchipelago/issues?q=is%3Aissue%20state%3Aopen%20label%3Aenhancement)
 
 ## Contributing
 
-Feel free to [raise an issue](https://github.com/DeDeDeK/KARchipelago/issues) or [submit a PR](https://github.com/DeDeDeK/KARchipelago/pulls)! And you can always pop in the [discord channel](https://discord.com/channels/731205301247803413/1291501105389502554) to ask questions or collaborate! 
+Feel free to [raise an issue](https://github.com/DeDeDeK/KARchipelago/issues) or [submit a PR](https://github.com/DeDeDeK/KARchipelago/pulls)! And you can always pop into the [Discord channel](https://discord.com/channels/731205301247803413/1291501105389502554) to ask questions or collaborate!
