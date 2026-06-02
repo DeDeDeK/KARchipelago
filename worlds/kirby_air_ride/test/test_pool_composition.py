@@ -176,33 +176,33 @@ class TestPoolFillsAllLocations(KARTestBase):
         self.assertEqual(len(self.itempool_items()), len(placeable))
 
 
-class TestStadiumRewardsNotPromotedWhenProgressiveOff(KARTestBase):
-    """Counter-test for TestStadiumRewardsPromotedWhenProgressiveOn: when progressive_stadiums
-    is OFF, the 6 checklist-reward stadium overlaps keep their ITEM_TABLE classification and
-    are NOT promoted to progression. Pins the second branch of the conditional in
-    _build_item_pools / create_item."""
+class TestStadiumRewardsPromotedWhenProgressiveOff(KARTestBase):
+    """The six checklist-reward stadiums (DR4, DD3-5, KM2, SR9) are gated on their reward whether
+    progressive_stadiums is ON or OFF: when ON the reward replaces the excluded Unlock Stadium item,
+    and when OFF every Unlock Stadium item is excluded while these six stay gated behind their reward
+    (the other 18 open via the vanilla roulette). So the rewards are promoted to progression in BOTH
+    states. This pins the progressive-OFF branch."""
 
     options = {**CT_ONLY, "city_trial_progressive_stadiums": Toggle.option_false}
 
-    def test_stadium_rewards_as_progression_empty(self):
+    def test_stadium_rewards_in_progression_set(self):
         self.assertEqual(
-            self.world.stadium_rewards_as_progression,
-            set(),
-            "promotion set should be empty when progressive_stadiums is OFF",
+            self.world.rewards_as_progression,
+            {str(reward) for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values()},
+            "the six stadium rewards should be promoted to progression when progressive_stadiums is OFF",
         )
 
-    def test_overlapping_rewards_keep_table_classification(self):
-        # Reward items that would be promoted under progressive ON keep their
-        # ITEM_TABLE classification (filler / useful) under progressive OFF.
-        from ..KARItems import ITEM_TABLE
+    def test_overlapping_rewards_are_progression(self):
+        # The six reward-overlap stadiums are the sole unlock for their stadium when progressive is OFF,
+        # so they must carry progression (overriding their useful ITEM_TABLE classification).
+        from BaseClasses import ItemClassification
 
         for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values():
             with self.subTest(reward=reward):
                 item = self.world.create_item(reward)
-                self.assertEqual(
-                    item.classification,
-                    ITEM_TABLE[reward].classification,
-                    f"{reward} should keep its table classification when progressive_stadiums is OFF",
+                self.assertTrue(
+                    item.classification & ItemClassification.progression,
+                    f"{reward} should be progression when progressive_stadiums is OFF",
                 )
 
 

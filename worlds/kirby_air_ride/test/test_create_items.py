@@ -43,7 +43,7 @@ class TestCreateEveryItem(KARTestBase):
             with self.subTest(item=name):
                 # CT_ONLY has progressive_stadiums default (ON), which promotes 6
                 # specific checklist rewards to progression. Skip those here.
-                if name in self.world.stadium_rewards_as_progression:
+                if name in self.world.rewards_as_progression:
                     continue
                 item = self.world.create_item(name)
                 self.assertEqual(item.classification, data.classification)
@@ -60,7 +60,7 @@ class TestStadiumRewardsPromotedWhenProgressiveOn(KARTestBase):
     def test_overlapping_rewards_are_progression(self):
         from BaseClasses import ItemClassification
 
-        promoted = self.world.stadium_rewards_as_progression
+        promoted = self.world.rewards_as_progression
         self.assertTrue(promoted, "Expected at least one promoted checklist reward")
         for name in promoted:
             with self.subTest(item=name):

@@ -179,7 +179,8 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
 
 
 # A config tuned to fit by exactly 1 location:
-#   patch_cap_amount=85 -> 84 PATCH_CAP_INCREASE items
+#   patch_cap_amount=79 -> 78 PATCH_CAP_INCREASE items
+#   + 6 legendary part rewards (Hydra X/Y/Z, Dragoon A/B/C, now progression) -> 84 progression total
 #   + 5 default checkbox fillers
 #   = 89 guaranteed items
 #   = exactly 1 under the 90 CT default locations (with all gates off and progressive_stadiums off)
@@ -188,7 +189,10 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
 _TIGHT_POOL = {
     **CT_ONLY,
     "city_trial_progressive_patch_caps": Toggle.option_true,
-    "city_trial_patch_cap_amount": 85,
+    # 72 Patch Cap Increases (amount - 1) + 6 always-progression legendary part rewards + 6 stadium
+    # rewards (promoted because progressive_stadiums is OFF) = 84 progression, + 5 checkbox fillers = 89,
+    # which just fits the 90 default CT locations.
+    "city_trial_patch_cap_amount": 73,
     "city_trial_events_gated": Toggle.option_false,
     "abilities_gated": Toggle.option_false,
     "city_trial_patches_gated": Toggle.option_false,
