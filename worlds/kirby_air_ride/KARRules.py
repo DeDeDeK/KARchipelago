@@ -1,15 +1,32 @@
 import typing
 
-from rule_builder.rules import CanReachLocation, Has, HasAll, HasAny, Rule
+from rule_builder.rules import AtLeast, CanReachLocation, Has, HasAll, HasAny, Rule, True_
 
-from .KARItems import STADIUM_UNLOCK_TO_CHECKLIST_REWARD, KARItemName
-from .KARLocations import ARLocation, CTLocation, TRLocation
+from .KARItems import (
+    AR_COURSE_UNLOCK_TO_CHECKLIST_REWARD,
+    LEGENDARY_PIECE_UNLOCK_ITEMS,
+    MACHINE_UNLOCK_TO_CHECKLIST_REWARD,
+    STADIUM_UNLOCK_ITEMS,
+    STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
+    TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD,
+    KARItemName,
+    KARItemType,
+    items_by_type,
+)
+from .KARLocations import (
+    AIR_RIDE_LOCATION_TABLE,
+    TOP_RIDE_LOCATION_TABLE,
+    ARLocation,
+    CTLocation,
+    TRLocation,
+)
 from .KARRegions import (
     AR_COURSE_REGION_TO_UNLOCK,
     STADIUM_ALL_REGION_TO_UNLOCKS,
     STADIUM_REGION_TO_UNLOCK,
     TR_COURSE_REGION_TO_UNLOCK,
     KARRegion,
+    create_n_blocks_rule,
 )
 
 if typing.TYPE_CHECKING:
@@ -32,13 +49,21 @@ _ABILITY_LOCATION_RULES: dict[str, str] = {
     # City Trial
     CTLocation.COPY_CHANCE_WHEEL_BOMB: KARItemName.UNLOCK_ABILITY_BOMB,
     CTLocation.COPY_CHANCE_WHEEL_SLEEP: KARItemName.UNLOCK_ABILITY_SLEEP,
-    # Air Ride
+    # Air Ride: finish/challenge checkboxes that name a copy ability
     ARLocation.FIRST_WITH_WING_ABILITY: KARItemName.UNLOCK_ABILITY_WING,
     ARLocation.FIRST_WITH_SLEEP_ABILITY: KARItemName.UNLOCK_ABILITY_SLEEP,
     ARLocation.FIRST_WITH_FIRE_ABILITY: KARItemName.UNLOCK_ABILITY_FIRE,
     ARLocation.FIRST_WITH_NEEDLE_ABILITY: KARItemName.UNLOCK_ABILITY_NEEDLE,
     ARLocation.TORNADO_CHALLENGE_15_KO: KARItemName.UNLOCK_ABILITY_TORNADO,
     ARLocation.SWORD_CHALLENGE_10_SWINGS: KARItemName.UNLOCK_ABILITY_SWORD,
+    # Air Ride: swallowing a specific copy-ability enemy needs that ability unlocked. The named enemy
+    # only yields its copy ability (and so the checkbox only completes) once that ability can appear,
+    # which the gate locks behind the ability unlock. The generic "swallow N enemies" and the
+    # "garbage enemies (with no copy abilities)" checkboxes take any enemy and stay ungated.
+    ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_SWORD,
+    ARLocation.SWALL_WHEELIE_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_WHEEL,
+    ARLocation.SWALL_CHILLY_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_FREEZE,
+    ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_PLASMA,
 }
 
 # Machine-dependent locations requiring a SINGLE specific machine (when machines_gated is ON)
@@ -118,6 +143,26 @@ _ITEM_LOCATION_RULES: dict[str, str] = {
     CTLocation.USE_GOLD_SPIKES_TO_KO_RIVALS_3X: KARItemName.UNLOCK_ITEM_GORDO,
 }
 
+# Item-count CT locations. The in-game pickup counter that drives these cells counts every collected
+# itemkind EXCEPT the three boxes -- verified mod-side: CityTrial_CheckForNewUnlocks tallies these from
+# Sum(item_collect[ITKIND 3..0x43]), and Ply_IncrementItemCollectNum fires for every touched item, so
+# ITKIND_BOX{BLUE,GREEN,RED} (0/1/2) are excluded while patches, copy-ability panels, food, special
+# items, hazards and legendary parts all count. So reachability needs at least one of those counting
+# types able to spawn, which is gated by city_trial_items_gated (food/special/hazards/legendary),
+# city_trial_patches_gated (patches) and abilities_gated (copy panels) together. The apply block gates
+# these on HasAny over all three unlock sets, and only when all three gates are on (if any is off, that
+# gate's types always spawn so a counting item is always available). One unlock is enough since item
+# types respawn. Boxes are NOT a source here -- breaking a box does not advance the counter; only its
+# dropped contents (the gated types above) do. Box-break cells use _BOX_BREAK_LOCATIONS instead.
+_ITEM_PICKUP_LOCATIONS: tuple[str, ...] = (
+    CTLocation.GET_50_ITEMS,
+    CTLocation.GET_10_ITEMS_IN_20S,
+    CTLocation.PICKUP_100_ITEMS,
+    CTLocation.PICKUP_500_ITEMS,
+    CTLocation.PICKUP_1000_ITEMS,
+    CTLocation.PICKUP_3000_ITEMS,
+)
+
 # Patch-dependent CT locations (when city_trial_patches_gated is ON)
 _PATCH_LOCATION_RULES: dict[str, str] = {
     CTLocation.GET_10_BOOST_PATCHES: KARItemName.UNLOCK_PATCH_ACCEL,
@@ -130,6 +175,15 @@ _PATCH_LOCATION_RULES: dict[str, str] = {
     CTLocation.GET_10_DEFENSE_PATCHES: KARItemName.UNLOCK_PATCH_DEFENSE,
 }
 
+# Box-dependent CT locations (when city_trial_boxes_gated is ON). Breaking boxes needs at least one
+# box type to be spawning, which the gate locks behind the box unlock items, so these cells are gated
+# on HasAny(box unlocks). When the gate is off all box types spawn from the start, so no rule is
+# needed (a Has() on the then-absent unlock items would wrongly make these cells unreachable).
+_BOX_BREAK_LOCATIONS: tuple[str, ...] = (
+    CTLocation.BREAK_500_BOXES,
+    CTLocation.BREAK_1000_BOXES,
+)
+
 # TR item-dependent locations (when top_ride_items_gated is ON).
 # TR items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are gated
 # by the ability unlock in the mod, not by topride_item_unlocked_mask, so the
@@ -139,16 +193,85 @@ _TR_ITEM_LOCATION_RULES: dict[str, str] = {
     TRLocation.FIRST_WHILE_HOLDING_HAMMER: KARItemName.UNLOCK_TR_ITEM_HAMMER,
     TRLocation.GET_20_INVINCIBLE_CANDY_ITEMS: KARItemName.UNLOCK_TR_ITEM_INVINCIBLE_CANDY,
     TRLocation.BUZZ_SAW_SEND_3_RIVALS: KARItemName.UNLOCK_TR_ITEM_BUZZ_SAW,
+    TRLocation.GET_20_SPINNER_ITEMS: KARItemName.UNLOCK_TR_ITEM_SPINNER,
 }
 
-# TR locations that depend on ability-themed TR items (Fire, Bomb, etc.).
+# Generic item-count TR locations: completing them only needs SOME Top Ride item type able to spawn
+# (unlike _TR_ITEM_LOCATION_RULES, which name one specific item). Gated on HasAny over every item type
+# when both gates that lock item types are on (see the apply block for why).
+_TR_ANY_ITEM_LOCATIONS: tuple[str, ...] = (
+    TRLocation.COLLECT_500_ITEMS,
+    TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE,
+)
+
+# TR locations that depend on ability-themed TR items (Fire, Bomb, Walky).
 # Applied when abilities_gated is ON: the ability unlock is the gate for both
-# the Air-Ride ability and the corresponding Top-Ride item.
+# the Air-Ride ability and the corresponding Top-Ride item (Walky -> Mic, mirroring
+# _TR_ABILITY_ITEM_UNLOCKS / gate_topride_items.c `ability_items[]`).
 _ABILITY_TR_ITEM_RULES: dict[str, str] = {
     TRLocation.FIRE_FIRST_WHILE_HOLDING_FIRE_ITEM: KARItemName.UNLOCK_ABILITY_FIRE,
     TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM: KARItemName.UNLOCK_ABILITY_FIRE,
     TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS: KARItemName.UNLOCK_ABILITY_BOMB,
+    TRLocation.GET_20_WALKY_ITEMS: KARItemName.UNLOCK_ABILITY_MIC,
 }
+
+# Course-aggregate checkboxes complete in-game only once every course they cover is unlocked: the
+# player cannot race a course that is still locked, so an "all courses" checkbox can't fill until all
+# of them are available. These are gated on HasAll(<the course unlocks>) when that mode's course
+# gating is on. When it is off the mod pre-fills the unlock mask and ships no course unlock items, so
+# no rule is needed (and a Has() on a non-existent item would wrongly make the cell unreachable).
+
+# The eight standard Air Ride courses. Nebula Belt (StageKind 8) is deliberately excluded: the cell is
+# worded "standard" courses, and Nebula Belt is the secret course (gated separately behind Race 100
+# laps), so requiring its unlock here would be too strict.
+_AR_STANDARD_COURSE_UNLOCKS: tuple[str, ...] = (
+    KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+    KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+)
+
+# All seven Top Ride courses (Top Ride has no secret course; "all courses" means every one).
+_TR_COURSE_UNLOCKS: tuple[str, ...] = (
+    KARItemName.UNLOCK_TR_COURSE_GRASS,
+    KARItemName.UNLOCK_TR_COURSE_SAND,
+    KARItemName.UNLOCK_TR_COURSE_SKY,
+    KARItemName.UNLOCK_TR_COURSE_FIRE,
+    KARItemName.UNLOCK_TR_COURSE_WATER,
+    KARItemName.UNLOCK_TR_COURSE_LIGHT,
+    KARItemName.UNLOCK_TR_COURSE_METAL,
+)
+
+# Top Ride checkboxes that require finishing/placing on every course.
+_TR_ALL_COURSES_LOCATIONS: tuple[str, ...] = (
+    TRLocation.FIRST_ON_ALL_COURSES,
+    TRLocation.ALL_COURSES_NO_BOOST,
+    TRLocation.FIRST_ON_ALL_COURSES_WITHOUT_BOOST,
+    TRLocation.NOITEMS_ALL_COURSES,
+    TRLocation.NOITEMS_FIRST_ALL_COURSES,
+)
+
+# The four ability-themed Top Ride items (Freeze Fan, Fire, Bomb, Walky) are gated by their copy
+# ability unlock rather than the TR item mask (mirrors gate_topride_items.c `ability_items[]`). Used
+# alongside the 17 TR_ITEM_UNLOCK items to count available item types for "get N different types".
+_TR_ABILITY_ITEM_UNLOCKS: tuple[str, ...] = (
+    KARItemName.UNLOCK_ABILITY_FREEZE,
+    KARItemName.UNLOCK_ABILITY_FIRE,
+    KARItemName.UNLOCK_ABILITY_BOMB,
+    KARItemName.UNLOCK_ABILITY_MIC,
+)
+
+# Effective unlock item for each of the 24 City Trial stadium modes under progressive stadiums: the
+# six stadiums that double as checklist rewards are unlocked by their reward item, the rest by their
+# own Unlock Stadium item. Mirrors the per-stadium entrance rules so the "play in over N stadium
+# modes!" count uses the same items the region gates do.
+_EFFECTIVE_STADIUM_UNLOCKS: tuple[str, ...] = tuple(
+    STADIUM_UNLOCK_TO_CHECKLIST_REWARD.get(unlock, unlock) for unlock in STADIUM_UNLOCK_ITEMS
+)
 
 
 def set_rules(world: "KARWorld"):
@@ -202,12 +325,16 @@ def set_rules(world: "KARWorld"):
             CanReachLocation(CTLocation.STADIUM_KM1_KO_75_ENEMIES_BY_YOURSELF),
         )
 
-    # Entrance rules: Nebula Belt (gated by location prerequisite)
-    if world.air_ride_enabled:
-        nebula_belt_rule = CanReachLocation(ARLocation.RACE_100_LAPS)
-        add_entrance_rule(f"{KARRegion.AIR_RIDE} -> {KARRegion.AR_NEBULA_BELT}", nebula_belt_rule)
-        add_entrance_rule(f"{KARRegion.AR_TIME_ATTACK} -> {KARRegion.AR_TA_NEBULA_BELT}", nebula_belt_rule)
-        add_entrance_rule(f"{KARRegion.AR_FREE_RUN} -> {KARRegion.AR_FR_NEBULA_BELT}", nebula_belt_rule)
+    # Entrance rules: Nebula Belt (the secret Air Ride course). Its checklist reward IS the unlock;
+    # reaching the Race-100-laps checkbox does not unlock it, since rewards are shuffled. When AR course
+    # gating is ON the course unlock item gates it (applied via AR_COURSE_REGION_TO_UNLOCK below). When
+    # OFF the eight standard courses open from the start and only Nebula Belt stays gated, behind its
+    # reward.
+    if world.air_ride_enabled and not world.options.air_ride_courses_gated:
+        for region in world.get_regions():
+            unlock = AR_COURSE_REGION_TO_UNLOCK.get(region.name)
+            if unlock in AR_COURSE_UNLOCK_TO_CHECKLIST_REWARD and region.entrances:
+                add_entrance_rule(region.entrances[0].name, Has(AR_COURSE_UNLOCK_TO_CHECKLIST_REWARD[unlock]))
 
     # Entrance rules: progressive stadiums (when enabled)
     if world.city_trial_enabled and world.options.city_trial_progressive_stadiums:
@@ -220,6 +347,15 @@ def set_rules(world: "KARWorld"):
                 unlocks = STADIUM_ALL_REGION_TO_UNLOCKS[region.name]
                 items = [STADIUM_UNLOCK_TO_CHECKLIST_REWARD.get(u, u) for u in unlocks]
                 add_entrance_rule(region.entrances[0].name, HasAny(*items))
+    elif world.city_trial_enabled:
+        # Progressive stadiums OFF: the 18 ordinary stadiums open via the vanilla post-trial roulette
+        # (treated as freely reachable), but the six that double as checklist rewards stay gated behind
+        # their (shuffled) reward item, exactly as in vanilla. Only those six region entrances get a
+        # rule; the DD/KM/DR chain prerequisites set above still compose in via &.
+        for region in world.get_regions():
+            unlock = STADIUM_REGION_TO_UNLOCK.get(region.name)
+            if unlock in STADIUM_UNLOCK_TO_CHECKLIST_REWARD and region.entrances:
+                add_entrance_rule(region.entrances[0].name, Has(STADIUM_UNLOCK_TO_CHECKLIST_REWARD[unlock]))
 
     # Entrance rules: AR course unlocks (when enabled)
     if world.air_ride_enabled and world.options.air_ride_courses_gated:
@@ -233,19 +369,29 @@ def set_rules(world: "KARWorld"):
             if region.name in TR_COURSE_REGION_TO_UNLOCK and region.entrances:
                 add_entrance_rule(region.entrances[0].name, Has(TR_COURSE_REGION_TO_UNLOCK[region.name]))
 
-    # Location rules: CT prerequisite chains (always applied when CT enabled)
+    # Location rules: legendary part checklist checkboxes (always applied when CT enabled).
+    # "Unlock Hydra/Dragoon Parts ... on the Checklist!" completes in-game only once the player
+    # has received the three corresponding part reward items: each CT_REWARD_*_PART_* item performs
+    # the vanilla "unlock this part on the Checklist" when delivered (KARItems.py:827). The reward is
+    # decoupled from the source checkbox in AP, so gating on those items (not on reaching arbitrary
+    # task checkboxes) is what actually reflects the in-game requirement. The six part rewards are
+    # classified progression in KARItems so fill honors this gate.
     add_location_rule(
         CTLocation.UNLOCK_HYDRA_CHECKLIST,
-        CanReachLocation(CTLocation.DESTROY_ALL_HOUSES)
-        & CanReachLocation(CTLocation.STADIUM_DD_ALL_KO_ENEMIES_150X)
-        & CanReachLocation(CTLocation.STADIUM_KM_ALL_KO_1500_ENEMIES),
+        HasAll(
+            KARItemName.CT_REWARD_HYDRA_PART_X,
+            KARItemName.CT_REWARD_HYDRA_PART_Y,
+            KARItemName.CT_REWARD_HYDRA_PART_Z,
+        ),
     )
 
     add_location_rule(
         CTLocation.UNLOCK_DRAGOON_CHECKLIST,
-        CanReachLocation(CTLocation.STADIUM_HJ_JUMP_HIGHER_THAN_1000_FEET)
-        & CanReachLocation(CTLocation.FLY_THROUGH_RINGS_IN_SKY_5X)
-        & CanReachLocation(CTLocation.STADIUM_AG_FLY_1300_FEET),
+        HasAll(
+            KARItemName.CT_REWARD_DRAGOON_PART_A,
+            KARItemName.CT_REWARD_DRAGOON_PART_B,
+            KARItemName.CT_REWARD_DRAGOON_PART_C,
+        ),
     )
 
     # Location rules: AR prerequisite chains (always applied when AR enabled)
@@ -322,21 +468,192 @@ def set_rules(world: "KARWorld"):
             add_location_rule(loc, Has(item))
         for loc, (item_a, item_b) in _MACHINE_PAIR_RULES.items():
             add_location_rule(loc, HasAll(item_a, item_b))
+    elif world.air_ride_enabled:
+        # machines_gated OFF: machines that vanilla unlocks via an Air Ride checklist reward stay gated
+        # behind that (shuffled) reward; vanilla start machines (Warp Star, Compact Star) are always
+        # available and need no rule. The reward items are Air-Ride-mode, so this only fires when Air
+        # Ride is enabled.
+        # TODO(confirm mod behavior): in a City-Trial-only seed with machines_gated off these reward
+        # items are not in the pool, so the CT machine cells (e.g. "Finish DR1 on Formula Star") get no
+        # gate and stay reachable. Revisit once the mod's CT-only machine availability is confirmed.
+        for loc, item in _MACHINE_SINGLE_RULES.items():
+            reward = MACHINE_UNLOCK_TO_CHECKLIST_REWARD.get(item)
+            if reward is not None:
+                add_location_rule(loc, Has(reward))
+        for loc, (item_a, item_b) in _MACHINE_PAIR_RULES.items():
+            rewards = [
+                MACHINE_UNLOCK_TO_CHECKLIST_REWARD[m]
+                for m in (item_a, item_b)
+                if m in MACHINE_UNLOCK_TO_CHECKLIST_REWARD
+            ]
+            if len(rewards) == 2:
+                add_location_rule(loc, HasAll(*rewards))
+            elif rewards:
+                add_location_rule(loc, Has(rewards[0]))
 
     if world.options.city_trial_items_gated:
         for loc, item in _ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
+        # "In one match, complete both Dragoon and Hydra!" needs every Hydra/Dragoon piece to spawn
+        # in the city, which item gating locks behind the six piece-spawn unlocks. (When this cell is
+        # the hydra_and_dragoon goal it is excluded here and the victory event is gated instead, in
+        # KARRegions._create_goal_events.)
+        add_location_rule(CTLocation.COMPLETE_DRAGOON_AND_HYDRA, HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS))
 
     if world.options.city_trial_patches_gated:
         for loc, item in _PATCH_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
+    if world.options.city_trial_boxes_gated:
+        box_unlocks = sorted(items_by_type[KARItemType.CT_BOX_UNLOCK])
+        for loc in _BOX_BREAK_LOCATIONS:
+            add_location_rule(loc, HasAny(*box_unlocks))
+
+    if (
+        world.options.city_trial_items_gated
+        and world.options.city_trial_patches_gated
+        and world.options.abilities_gated
+    ):
+        # "Get / pick up N items" only needs ONE counting item type able to spawn (see
+        # _ITEM_PICKUP_LOCATIONS). The counting types are locked across three independent gates --
+        # city_trial_items_gated (food/special/hazards/legendary), city_trial_patches_gated (patches)
+        # and abilities_gated (copy panels) -- so when ALL THREE are on, nothing that counts spawns
+        # until one of those unlocks is held and these cells need any one of them. If any of the three
+        # gates is off, that gate's types always spawn (a counting item is always available) and no
+        # rule is needed. Boxes are intentionally excluded: breaking a box does not advance the counter.
+        # Mirrors the Top Ride _TR_ANY_ITEM_LOCATIONS block, which gates the same way over two gates.
+        any_ct_counting_item = HasAny(
+            *sorted(items_by_type[KARItemType.CT_ITEM_UNLOCK]),
+            *sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK]),
+            *sorted(items_by_type[KARItemType.ABILITY_UNLOCK]),
+        )
+        for loc in _ITEM_PICKUP_LOCATIONS:
+            add_location_rule(loc, any_ct_counting_item)
+
     if world.options.top_ride_items_gated:
         for loc, item in _TR_ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
+
+    if world.air_ride_enabled and world.options.air_ride_courses_gated:
+        # Every non-course-specific Air Ride checkbox still needs SOME course to race on. Course-
+        # specific cells already gate on their course's entrance (AR_COURSE_REGION_TO_UNLOCK), so only
+        # the mode-root cells (those in the AIR_RIDE region) need a blanket "at least one course
+        # unlocked" rule. Any of the nine course unlocks works, Nebula Belt included: holding any course
+        # unlock makes that course raceable. FILL_100 is skipped (its count rule, applied later, already
+        # reflects this and would overwrite a rule set here); RACE_ALL needs all eight standard courses,
+        # a strictly stronger requirement set just below.
+        any_ar_course = HasAny(*sorted(items_by_type[KARItemType.AR_COURSE_UNLOCK]))
+        for name, data in AIR_RIDE_LOCATION_TABLE.items():
+            if data.region in AR_COURSE_REGION_TO_UNLOCK:
+                continue
+            if name in (
+                ARLocation.FILL_IN_100_CHECKLIST_BLOCKS,
+                ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,
+            ):
+                continue
+            add_location_rule(name, any_ar_course)
+        add_location_rule(
+            ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,
+            HasAll(*_AR_STANDARD_COURSE_UNLOCKS),
+        )
+
+    if world.top_ride_enabled and world.options.top_ride_courses_gated:
+        # As with Air Ride: every non-course-specific Top Ride cell needs at least one course to race
+        # on. Course-specific cells already gate on their course entrance (TR_COURSE_REGION_TO_UNLOCK),
+        # so only the mode-root cells (TOP_RIDE region plus the mode-level Free Run / Time Attack cells)
+        # get the blanket rule. FILL_100 is skipped (count rule, set later); the all-courses cells need
+        # all seven, a stronger requirement set just below.
+        any_tr_course = HasAny(*sorted(items_by_type[KARItemType.TR_COURSE_UNLOCK]))
+        tr_course_skip = (TRLocation.FILL_IN_100_CHECKLIST_BLOCKS, *_TR_ALL_COURSES_LOCATIONS)
+        for name, data in TOP_RIDE_LOCATION_TABLE.items():
+            if data.region in TR_COURSE_REGION_TO_UNLOCK:
+                continue
+            if name in tr_course_skip:
+                continue
+            add_location_rule(name, any_tr_course)
+        for loc in _TR_ALL_COURSES_LOCATIONS:
+            add_location_rule(loc, HasAll(*_TR_COURSE_UNLOCKS))
+
+    if world.city_trial_enabled:
+        # "Play in over N stadium modes!" can only be completed once more than N distinct stadium modes
+        # are unlocked, since a locked stadium can't be entered. "Over 10" / "over 20" mean strictly more
+        # than that many, so the player needs 11 / 21 of the 24 modes unlocked. With progressive stadiums
+        # ON every mode is gated by its effective unlock (reward for the six overlaps, Unlock Stadium for
+        # the rest). With it OFF the 18 ordinary stadiums open via the roulette (always available) and
+        # only the six reward-overlap stadiums gate, on their reward.
+        if world.options.city_trial_progressive_stadiums:
+            stadium_has = [Has(item) for item in _EFFECTIVE_STADIUM_UNLOCKS]
+        else:
+            stadium_has = [
+                Has(STADIUM_UNLOCK_TO_CHECKLIST_REWARD[unlock])
+                if unlock in STADIUM_UNLOCK_TO_CHECKLIST_REWARD
+                else True_()
+                for unlock in STADIUM_UNLOCK_ITEMS
+            ]
+        add_location_rule(CTLocation.STADIUM_PLAY_10_STADIUM_MODES, AtLeast(11, *stadium_has))
+        add_location_rule(CTLocation.STADIUM_PLAY_20_STADIUM_MODES, AtLeast(21, *stadium_has))
+
+    if world.top_ride_enabled:
+        # "Get over 18 different types of items!" needs 19 of the 21 distinct Top Ride item types to be
+        # able to spawn. 17 types are mask-gated (top_ride_items_gated); the 4 ability-themed types
+        # (Freeze Fan/Fire/Bomb/Walky) by their copy-ability unlock (abilities_gated). For each mask
+        # type: gated -> needs its TR item unlock; ungated -> the three that vanilla unlocks via a
+        # checklist reward (Lantern/Who?Paint/Chickie) still need that (shuffled) reward, the other 14
+        # are vanilla defaults. Only 18 types can ever spawn without one of those three rewards, so this
+        # cell always carries a real constraint, hence no gate-condition guard.
+        type_available: list[Rule] = []
+        for item in sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK]):
+            if world.options.top_ride_items_gated:
+                type_available.append(Has(item))
+            elif item in TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD:
+                type_available.append(Has(TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD[item]))
+            else:
+                type_available.append(True_())
+        type_available += [
+            Has(ability) if world.options.abilities_gated else True_() for ability in _TR_ABILITY_ITEM_UNLOCKS
+        ]
+        add_location_rule(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS, AtLeast(19, *type_available))
+
+    if world.top_ride_enabled and world.options.top_ride_items_gated and world.options.abilities_gated:
+        # "Collect N items" / "get the same item 3 times" only need ONE item type able to spawn. The
+        # 17 mask-gated types and the 4 ability-themed types (Freeze Fan/Fire/Bomb/Walky) are locked by
+        # top_ride_items_gated and abilities_gated respectively, so when BOTH are on these cells need
+        # any one of those 21 unlocks. If either gate is off, that gate's item types always spawn, so
+        # at least one item is always available and no rule is needed.
+        any_tr_item = HasAny(
+            *sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK]),
+            *_TR_ABILITY_ITEM_UNLOCKS,
+        )
+        for loc in _TR_ANY_ITEM_LOCATIONS:
+            add_location_rule(loc, any_tr_item)
 
     # Single apply pass: write the composed rules out to the multiworld.
     for entrance_name, rule in entrance_rules.items():
         world.set_rule(world.get_entrance(entrance_name), rule)
     for location_name, rule in location_rules.items():
         world.set_rule(world.get_location(location_name), rule)
+
+    # "Fill in over 100 Checklist blocks!" is a real per-mode meta checkbox the game auto-completes
+    # only once the player has filled in over 100 of that mode's other boxes. When it is NOT this
+    # mode's goal it stays a normal location, so it must carry that same access requirement, or fill
+    # could strand an early-progression item on a cell the player cannot reach until ~100 other
+    # checks are done. The count rule excludes the cell itself (the threshold is 100 OTHER boxes, and
+    # a rule asking the cell to reach itself would recurse). When this cell IS the 100-checklist goal
+    # it is excluded from the pool and its victory event carries the equivalent rule (see
+    # KARRegions._create_goal_events). This rule is a raw callable, so it is applied directly rather
+    # than through the Rule-composing pass above.
+    for enabled, mode_prefix, fill_100_location in (
+        (world.city_trial_enabled, KARRegion.CITY_TRIAL, CTLocation.FILL_IN_100_CHECKLIST_BLOCKS),
+        (world.air_ride_enabled, KARRegion.AIR_RIDE, ARLocation.FILL_IN_100_CHECKLIST_BLOCKS),
+        (world.top_ride_enabled, KARRegion.TOP_RIDE, TRLocation.FILL_IN_100_CHECKLIST_BLOCKS),
+    ):
+        if not enabled:
+            continue
+        try:
+            fill_100 = world.get_location(fill_100_location)
+        except KeyError:
+            continue  # excluded because it is this mode's goal, or otherwise absent
+        world.set_rule(
+            fill_100,
+            create_n_blocks_rule(world, mode_prefix, 100, exclude_location_name=fill_100_location),
+        )
