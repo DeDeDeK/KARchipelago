@@ -22,7 +22,7 @@ Kirby Air Ride:
   colors_gated: true
   top_ride_items_gated: true
   city_trial_items_gated: true
-  city_trial_progressive_stadiums: true
+  city_trial_stadiums_gated: true
   trap_chance: 25
   spawn_rate_progressive: true
   spawn_rate_min: 100

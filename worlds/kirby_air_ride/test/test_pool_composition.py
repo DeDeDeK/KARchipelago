@@ -1,7 +1,7 @@
 from BaseClasses import ItemClassification
 from Options import Toggle
 
-from ..KARItems import STADIUM_UNLOCK_TO_CHECKLIST_REWARD, KARItemName, KARItemType
+from ..KARItems import STADIUM_CHECKLIST_REWARDS, KARItemName, KARItemType
 from ..KAROptions import CityTrialGoal
 from ..KARRegions import KARRegion
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
@@ -99,7 +99,7 @@ class TestPatchCapAmountMax(KARTestBase):
         **ALL_MODES,
         "city_trial_progressive_patch_caps": Toggle.option_true,
         "city_trial_patch_cap_amount": 127,
-        "city_trial_progressive_stadiums": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
         "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,
         "city_trial_patches_gated": Toggle.option_false,
@@ -176,34 +176,42 @@ class TestPoolFillsAllLocations(KARTestBase):
         self.assertEqual(len(self.itempool_items()), len(placeable))
 
 
-class TestStadiumRewardsPromotedWhenProgressiveOff(KARTestBase):
-    """The six checklist-reward stadiums (DR4, DD3-5, KM2, SR9) are gated on their reward whether
-    progressive_stadiums is ON or OFF: when ON the reward replaces the excluded Unlock Stadium item,
-    and when OFF every Unlock Stadium item is excluded while these six stay gated behind their reward
-    (the other 18 open via the vanilla roulette). So the rewards are promoted to progression in BOTH
-    states. This pins the progressive-OFF branch."""
+class TestStadiumRewardsExcludedWhenUngated(KARTestBase):
+    """Stadiums ungated: the mod unlocks all 24 at connect, so every Unlock Stadium item is excluded AND
+    the six overlapping stadium checklist rewards are excluded (they gate nothing). Stadiums are a normal
+    gated category now — no reward is ever promoted to progression."""
 
-    options = {**CT_ONLY, "city_trial_progressive_stadiums": Toggle.option_false}
+    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_false}
 
-    def test_stadium_rewards_in_progression_set(self):
-        self.assertEqual(
-            self.world.rewards_as_progression,
-            {str(reward) for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values()},
-            "the six stadium rewards should be promoted to progression when progressive_stadiums is OFF",
-        )
-
-    def test_overlapping_rewards_are_progression(self):
-        # The six reward-overlap stadiums are the sole unlock for their stadium when progressive is OFF,
-        # so they must carry progression (overriding their useful ITEM_TABLE classification).
-        from BaseClasses import ItemClassification
-
-        for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values():
+    def test_stadium_rewards_excluded_from_pool(self):
+        names = self.world_item_names()
+        for reward in STADIUM_CHECKLIST_REWARDS:
             with self.subTest(reward=reward):
-                item = self.world.create_item(reward)
-                self.assertTrue(
-                    item.classification & ItemClassification.progression,
-                    f"{reward} should be progression when progressive_stadiums is OFF",
-                )
+                self.assertNotIn(reward, names, f"{reward} should be excluded when stadiums are ungated")
+
+    def test_stadium_unlocks_excluded_when_ungated(self):
+        names = self.world_item_names()
+        for unlock in items_of_type(KARItemType.CT_STADIUM_UNLOCK):
+            self.assertNotIn(unlock, names, f"{unlock} should be excluded when stadiums are ungated")
+
+
+class TestStadiumUnlocksPlacedWhenGated(KARTestBase):
+    """Stadiums gated: every Unlock Stadium item is obtainable (23 in the pool + 1 precollected starter),
+    and the six overlapping stadium checklist rewards are still excluded (gated by their unlock instead)."""
+
+    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true}
+
+    def test_all_stadium_unlocks_obtainable(self):
+        names = self.world_item_names()
+        for unlock in items_of_type(KARItemType.CT_STADIUM_UNLOCK):
+            with self.subTest(unlock=unlock):
+                self.assertIn(unlock, names, f"{unlock} should be placed or precollected when stadiums gated")
+
+    def test_stadium_rewards_excluded(self):
+        names = self.world_item_names()
+        for reward in STADIUM_CHECKLIST_REWARDS:
+            with self.subTest(reward=reward):
+                self.assertNotIn(reward, names)
 
 
 class TestPatchCapExcludedWhenCTDisabled(KARTestBase):

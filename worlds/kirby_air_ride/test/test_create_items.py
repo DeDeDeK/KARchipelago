@@ -3,8 +3,8 @@ Item creation and classification tests.
 
 For every entry in ITEM_TABLE, KARWorld.create_item must produce a KARItem with:
 - the correct name, code, and player slot
-- a classification matching the ITEM_TABLE entry (modulo the progressive_stadiums
-  override that promotes 6 checklist rewards to progression)
+- a classification matching the ITEM_TABLE entry verbatim (create_item no longer overrides
+  any classification — every gated category, stadiums included, is handled by exclusion)
 
 Also pins the invariant that every UNLOCK-type item is progression: players cannot
 soft-lock through misclassified UNLOCK items getting placed at non-progression slots.
@@ -37,38 +37,13 @@ class TestCreateEveryItem(KARTestBase):
                 self.assertEqual(item.type, data.type)
 
     def test_classification_matches_table(self):
-        """create_item should preserve the ITEM_TABLE classification for normal items.
-        The progressive_stadiums override is tested separately."""
+        """create_item preserves the ITEM_TABLE classification for every item verbatim — there is no
+        longer any create-time promotion (stadiums and every other gated category are handled purely by
+        pool exclusion, so the six stadium rewards keep their table classification)."""
         for name, data in ITEM_TABLE.items():
             with self.subTest(item=name):
-                # CT_ONLY has progressive_stadiums default (ON), which promotes 6
-                # specific checklist rewards to progression. Skip those here.
-                if name in self.world.rewards_as_progression:
-                    continue
                 item = self.world.create_item(name)
                 self.assertEqual(item.classification, data.classification)
-
-
-class TestStadiumRewardsPromotedWhenProgressiveOn(KARTestBase):
-    """When progressive_stadiums is ON, the 6 checklist rewards that overlap with
-    stadium unlocks (DR4, DD3-5, KM2, SR9) get their classification promoted to
-    progression at create_item time."""
-
-    # progressive_stadiums is ON by default in CT_ONLY.
-    options = CT_ONLY
-
-    def test_overlapping_rewards_are_progression(self):
-        from BaseClasses import ItemClassification
-
-        promoted = self.world.rewards_as_progression
-        self.assertTrue(promoted, "Expected at least one promoted checklist reward")
-        for name in promoted:
-            with self.subTest(item=name):
-                item = self.world.create_item(name)
-                self.assertTrue(
-                    item.classification & ItemClassification.progression,
-                    f"{name} should be progression when progressive_stadiums is ON",
-                )
 
 
 class TestAllUnlocksAreProgression(KARTestBase):

@@ -26,5 +26,5 @@ Kirby Air Ride:
   colors_gated: false
   top_ride_courses_gated: false
   top_ride_items_gated: false
-  city_trial_progressive_stadiums: false
+  city_trial_stadiums_gated: false
   city_trial_permanent_patches: false
