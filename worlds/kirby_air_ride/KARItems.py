@@ -1636,95 +1636,23 @@ STADIUM_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
     KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.CT_STADIUM_UNLOCK
 )
 
-# Stadium unlock items that have equivalent checklist reward items. These six stadiums double as
-# checklist rewards, so their reward item is the unlock either way: when progressive stadiums is ON the
-# overlapping Unlock Stadium items are excluded and the rewards gate those stadiums; when it is OFF all
-# Unlock Stadium items are excluded and the other 18 stadiums open via the vanilla roulette while these
-# six stay gated behind their (shuffled) reward. So the reward is promoted to progression whenever City
-# Trial is enabled (see progression_reward_items) and KARRules gates the stadium on it in both states.
-STADIUM_UNLOCK_TO_CHECKLIST_REWARD: dict[KARItemName, KARItemName] = {
-    KARItemName.UNLOCK_STADIUM_DRAG_RACE_4: KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM,
-    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3: KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM,
-    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4: KARItemName.CT_REWARD_DESTRUCTION_DERBY_4_STADIUM,
-    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5: KARItemName.CT_REWARD_DESTRUCTION_DERBY_5_STADIUM,
-    KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2: KARItemName.CT_REWARD_KIRBY_MELEE_2_STADIUM,
-    KARItemName.UNLOCK_STADIUM_SINGLE_RACE_9: KARItemName.CT_REWARD_SINGLE_RACE_NEBULA_STADIUM,
-}
-
-# Machine unlock items that vanilla unlocks via an Air Ride checklist reward. When machines_gated is
-# OFF the Unlock Machine items are absent and these machines stay gated behind their (shuffled) reward,
-# which is then the sole unlock for the machine-specific finish/bust checkboxes that name them (see
-# _MACHINE_SINGLE_RULES / _MACHINE_PAIR_RULES). Limited to the machines those rules reference; Warp Star
-# and Compact Star are vanilla start machines (no reward) and the character/free-run machine rewards
-# gate no checkbox, so none of those appear here.
-MACHINE_UNLOCK_TO_CHECKLIST_REWARD: dict[str, str] = {
-    KARItemName.UNLOCK_MACHINE_WAGON_STAR: KARItemName.AR_REWARD_WAGON_STAR,
-    KARItemName.UNLOCK_MACHINE_REX_WHEELIE: KARItemName.AR_REWARD_REX_WHEELIE,
-    KARItemName.UNLOCK_MACHINE_SLICK_STAR: KARItemName.AR_REWARD_SLICK_STAR,
-    KARItemName.UNLOCK_MACHINE_SWERVE_STAR: KARItemName.AR_REWARD_SWERVE_STAR,
-    KARItemName.UNLOCK_MACHINE_SHADOW_STAR: KARItemName.AR_REWARD_SHADOW_STAR,
-    KARItemName.UNLOCK_MACHINE_JET_STAR: KARItemName.AR_REWARD_JET_STAR,
-    KARItemName.UNLOCK_MACHINE_BULK_STAR: KARItemName.AR_REWARD_BULK_STAR,
-    KARItemName.UNLOCK_MACHINE_FORMULA_STAR: KARItemName.AR_REWARD_FORMULA_STAR,
-    KARItemName.UNLOCK_MACHINE_ROCKET_STAR: KARItemName.AR_REWARD_ROCKET_STAR,
-    KARItemName.UNLOCK_MACHINE_TURBO_STAR: KARItemName.AR_REWARD_TURBO_STAR,
-    KARItemName.UNLOCK_MACHINE_WINGED_STAR: KARItemName.AR_REWARD_WINGED_STAR,
-    KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: KARItemName.AR_REWARD_WHEELIE_BIKE,
-    KARItemName.UNLOCK_MACHINE_WHEELIE_SCOOTER: KARItemName.AR_REWARD_WHEELIE_SCOOTER,
-}
-
-# Top Ride item unlocks that vanilla unlocks via a Top Ride checklist reward. When top_ride_items_gated
-# is OFF the Unlock TR Item items are absent and these item types stay gated behind their (shuffled)
-# reward, which then feeds the "get over 18 different types of items" count (see KARRules). The other 14
-# TR item types are vanilla defaults.
-TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD: dict[str, str] = {
-    KARItemName.UNLOCK_TR_ITEM_LANTERN: KARItemName.TR_REWARD_LANTERN_ITEM,
-    KARItemName.UNLOCK_TR_ITEM_WHO_PAINT: KARItemName.TR_REWARD_WHO_PAINT_ITEM,
-    KARItemName.UNLOCK_TR_ITEM_CHICKIE: KARItemName.TR_REWARD_CHICKIE_ITEM,
-}
-
-# Air Ride course unlock that vanilla unlocks via a checklist reward. Nebula Belt (the secret course) is
-# the only one; receiving its reward IS the unlock (reaching the Race-100-laps checkbox does not unlock
-# it, since rewards are shuffled). When air_ride_courses_gated is OFF the Unlock AR Course item is absent
-# and the course stays gated behind its reward (see KARRules); the eight standard courses open from the
-# start.
-AR_COURSE_UNLOCK_TO_CHECKLIST_REWARD: dict[str, str] = {
-    KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT: KARItemName.AR_REWARD_NEBULA_BELT_COURSE,
-}
-
-
-def progression_reward_items(
-    *,
-    machines_gated: bool,
-    top_ride_items_gated: bool,
-    air_ride_courses_gated: bool,
-    city_trial_enabled: bool,
-    air_ride_enabled: bool,
-    top_ride_enabled: bool,
-) -> set[str]:
-    """Checklist-reward items that must be classified progression because they are the sole unlock for
-    content that gates locations.
-
-    Most checklist rewards gate nothing (music, sound test, colors, characters), so they stay
-    useful/filler. The ones returned here do gate, and they are not always in the pool, so the
-    promotion is conditional:
-      - Stadium rewards always gate their stadium (the reward is the unlock under progressive stadiums
-        ON, and the only unlock for those six under OFF), so they are promoted whenever City Trial is
-        enabled.
-      - Machine / Top Ride item / Nebula Belt rewards only gate when their category's gate is OFF; when
-        ON the UNLOCK items gate instead and these rewards are excluded from the pool entirely. They are
-        promoted only when the gate is off and a mode that can obtain them is enabled.
-    """
-    promoted: set[str] = set()
-    if city_trial_enabled:
-        promoted |= {str(reward) for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values()}
-    if air_ride_enabled and not machines_gated:
-        promoted |= set(MACHINE_UNLOCK_TO_CHECKLIST_REWARD.values())
-    if top_ride_enabled and not top_ride_items_gated:
-        promoted |= set(TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD.values())
-    if air_ride_enabled and not air_ride_courses_gated:
-        promoted |= set(AR_COURSE_UNLOCK_TO_CHECKLIST_REWARD.values())
-    return promoted
+# The six City Trial stadiums that vanilla unlocks via a checklist reward square (Drag Race 4, Kirby
+# Melee 2, Destruction Derby 3/4/5, Single Race 9 / Nebula Belt). The mod unlocks every stadium purely by
+# the stadium unlock mask — each Unlock Stadium item when progressive stadiums is ON, or all 24 at connect
+# when OFF (gate_stadiums.c replaces the vanilla unlock checks with a mask read, so the checklist
+# has_reward flag is never consulted). So these reward squares gate nothing and are always excluded from
+# the pool, exactly like every other gated category's overlapping rewards. They are the
+# overlapping_rewards of the stadium GatingCategory below.
+STADIUM_CHECKLIST_REWARDS: frozenset[KARItemName] = frozenset(
+    {
+        KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM,
+        KARItemName.CT_REWARD_KIRBY_MELEE_2_STADIUM,
+        KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM,
+        KARItemName.CT_REWARD_DESTRUCTION_DERBY_4_STADIUM,
+        KARItemName.CT_REWARD_DESTRUCTION_DERBY_5_STADIUM,
+        KARItemName.CT_REWARD_SINGLE_RACE_NEBULA_STADIUM,
+    }
+)
 
 
 # The six City Trial legendary piece-spawn unlocks (CT_ITEM_UNLOCK, gated by city_trial_items_gated).
@@ -1752,12 +1680,15 @@ LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
 # category is irrelevant (its unlock items excluded) when none of those modes is enabled.
 # An empty set means the category is never excluded for mode reasons.
 #
-# overlapping_rewards are checklist rewards excluded from the pool when the gate is ON
-# (the UNLOCK items handle that content instead); when the gate is OFF they stay in the
-# pool and unlock via the vanilla checklist system.
+# overlapping_rewards are checklist rewards always excluded from the pool because the mod handles
+# their category directly: the UNLOCK items deliver that content when the gate is ON, and the mod
+# pre-unlocks the whole category at connect when it is OFF (APOptions_ApplyUngatedCategories sets
+# the mask all-1s). Either way the reward gates nothing, so it is excluded regardless of the gate.
 #
-# CT_STADIUM_UNLOCK is intentionally absent: it gates via city_trial_progressive_stadiums and
-# interacts with progressive-stadium reward promotion, so it is handled separately.
+# Stadiums are a normal entry here, gated on city_trial_stadiums_gated (its truthiness is the
+# gate: ON = each Unlock Stadium item gates its stadium; OFF = the mod unlocks all 24 at connect). The
+# mod gates every stadium purely by the unlock mask (gate_stadiums.c), so the six reward-overlap
+# stadiums need no special handling — their reward squares are plain overlapping_rewards.
 class GatingCategory(NamedTuple):
     option: str
     item_type: KARItemType
@@ -1845,14 +1776,18 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
             }
         ),
     ),
+    # Stadiums: progressive ON = each Unlock Stadium item gates its stadium; OFF = mod unlocks all 24 at
+    # connect. The six reward-overlap stadiums are gated by their own Unlock Stadium item like the other
+    # 18 (the mod's stadium gating is mask-only), and their checklist rewards are plain overlapping_rewards
+    # excluded from the pool. A starter stadium is precollected separately (_determine_starter_items); the
+    # per-stadium and "play N modes" access rules live in KARRules.
+    GatingCategory(
+        "city_trial_stadiums_gated",
+        KARItemType.CT_STADIUM_UNLOCK,
+        frozenset({"city_trial_enabled"}),
+        STADIUM_CHECKLIST_REWARDS,
+    ),
 )
-
-
-# Checklist rewards that overlap with gating unlock items, keyed by gating option.
-# Derived from GATING_CATEGORIES.
-GATED_CHECKLIST_REWARDS: dict[str, frozenset[KARItemName]] = {
-    cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES if cat.overlapping_rewards
-}
 
 
 # Maps a KAROptions attribute name to the trap item names whose weight that option

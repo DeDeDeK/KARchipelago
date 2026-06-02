@@ -102,7 +102,7 @@ class TestCTGoalMaxStats(KARTestBase):
         "city_trial_patches_gated": Toggle.option_false,
         "city_trial_boxes_gated": Toggle.option_false,
         "colors_gated": Toggle.option_false,
-        "city_trial_progressive_stadiums": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
     }
 
     def test_synthetic_victory_event_exists(self):
