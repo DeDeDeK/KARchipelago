@@ -167,7 +167,7 @@ class KARItemName(StrEnum):
     # Direct Game Items: Copy Abilities (328-338)
     COPY_ABILITY_BOMB = "Copy Ability: Bomb"
     COPY_ABILITY_FIRE = "Copy Ability: Fire"
-    COPY_ABILITY_ICE = "Copy Ability: Ice"
+    COPY_ABILITY_FREEZE = "Copy Ability: Freeze"
     COPY_ABILITY_SLEEP = "Copy Ability: Sleep"
     COPY_ABILITY_WHEEL = "Copy Ability: Wheel"
     COPY_ABILITY_WING = "Copy Ability: Wing"
@@ -198,12 +198,12 @@ class KARItemName(StrEnum):
     GORDO = "Gordo"
 
     # Direct Game Items: Legendary Machine Parts (355-360)
-    HYDRA_PART_1 = "Hydra Part 1"
-    HYDRA_PART_2 = "Hydra Part 2"
-    HYDRA_PART_3 = "Hydra Part 3"
-    DRAGOON_PART_1 = "Dragoon Part 1"
-    DRAGOON_PART_2 = "Dragoon Part 2"
-    DRAGOON_PART_3 = "Dragoon Part 3"
+    HYDRA_PART_X = "Hydra Part X"
+    HYDRA_PART_Y = "Hydra Part Y"
+    HYDRA_PART_Z = "Hydra Part Z"
+    DRAGOON_PART_A = "Dragoon Part A"
+    DRAGOON_PART_B = "Dragoon Part B"
+    DRAGOON_PART_C = "Dragoon Part C"
 
     # Direct Game Items: Fake Patches (361-368)
     FAKE_ACCEL_PATCH = "Fake Accel Patch"
@@ -397,7 +397,7 @@ class KARItemName(StrEnum):
     UNLOCK_ABILITY_PLASMA = "Unlock Ability: Plasma"
     UNLOCK_ABILITY_NEEDLE = "Unlock Ability: Needle"
     UNLOCK_ABILITY_MIC = "Unlock Ability: Mic"
-    UNLOCK_ABILITY_ICE = "Unlock Ability: Ice"
+    UNLOCK_ABILITY_FREEZE = "Unlock Ability: Freeze"
     UNLOCK_ABILITY_TORNADO = "Unlock Ability: Tornado"
     UNLOCK_ABILITY_WING = "Unlock Ability: Wing"
 
@@ -437,12 +437,12 @@ class KARItemName(StrEnum):
     UNLOCK_ITEM_PANIC_SPIN = "Unlock Item: Panic Spin"
     UNLOCK_ITEM_SENSOR_BOMB = "Unlock Item: Sensor Bomb"
     UNLOCK_ITEM_GORDO = "Unlock Item: Gordo"
-    UNLOCK_ITEM_HYDRA_PART_1 = "Unlock Item: Hydra Part 1"
-    UNLOCK_ITEM_HYDRA_PART_2 = "Unlock Item: Hydra Part 2"
-    UNLOCK_ITEM_HYDRA_PART_3 = "Unlock Item: Hydra Part 3"
-    UNLOCK_ITEM_DRAGOON_PART_1 = "Unlock Item: Dragoon Part 1"
-    UNLOCK_ITEM_DRAGOON_PART_2 = "Unlock Item: Dragoon Part 2"
-    UNLOCK_ITEM_DRAGOON_PART_3 = "Unlock Item: Dragoon Part 3"
+    UNLOCK_ITEM_HYDRA_PART_X = "Unlock Item: Hydra Part X"
+    UNLOCK_ITEM_HYDRA_PART_Y = "Unlock Item: Hydra Part Y"
+    UNLOCK_ITEM_HYDRA_PART_Z = "Unlock Item: Hydra Part Z"
+    UNLOCK_ITEM_DRAGOON_PART_A = "Unlock Item: Dragoon Part A"
+    UNLOCK_ITEM_DRAGOON_PART_B = "Unlock Item: Dragoon Part B"
+    UNLOCK_ITEM_DRAGOON_PART_C = "Unlock Item: Dragoon Part C"
 
     # Machine Unlocks (830-854)
     # VCKIND_WHEELVSDEDEDE (would be 855) is intentionally excluded: it is the
@@ -707,7 +707,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # Copy abilities (in-game item form)
     KARItemName.COPY_ABILITY_BOMB: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 328, _ALL_MODES),
     KARItemName.COPY_ABILITY_FIRE: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 329, _ALL_MODES),
-    KARItemName.COPY_ABILITY_ICE: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 330, _ALL_MODES),
+    KARItemName.COPY_ABILITY_FREEZE: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 330, _ALL_MODES),
     KARItemName.COPY_ABILITY_SLEEP: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.trap, 331, _AR_CT),
     KARItemName.COPY_ABILITY_WHEEL: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 332, _AR_CT),
     KARItemName.COPY_ABILITY_WING: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 333, _AR_CT),
@@ -735,12 +735,12 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.SENSOR_BOMB: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 353, _CT),
     KARItemName.GORDO: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 354, _CT),
     # Legendary machine parts
-    KARItemName.HYDRA_PART_1: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 355, _CT),
-    KARItemName.HYDRA_PART_2: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 356, _CT),
-    KARItemName.HYDRA_PART_3: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 357, _CT),
-    KARItemName.DRAGOON_PART_1: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 358, _CT),
-    KARItemName.DRAGOON_PART_2: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 359, _CT),
-    KARItemName.DRAGOON_PART_3: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 360, _CT),
+    KARItemName.HYDRA_PART_X: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 355, _CT),
+    KARItemName.HYDRA_PART_Y: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 356, _CT),
+    KARItemName.HYDRA_PART_Z: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 357, _CT),
+    KARItemName.DRAGOON_PART_A: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 358, _CT),
+    KARItemName.DRAGOON_PART_B: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 359, _CT),
+    KARItemName.DRAGOON_PART_C: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 360, _CT),
     # Fake patches (look like stat ups but are traps)
     KARItemName.FAKE_ACCEL_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 361, _CT),
     KARItemName.FAKE_TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 362, _CT),
@@ -1044,6 +1044,11 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     KARItemName.TR_REWARD_ENDING: KARItemData(KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 582, _TR),
     # Checklist Rewards: City Trial (600-643)
+    # Note: the six legendary part rewards (Hydra X/Y/Z, Dragoon A/B/C) below are classified
+    # progression, not useful like their sibling rewards. Receiving one performs the vanilla
+    # "unlock this part on the Checklist", and the UNLOCK_HYDRA_CHECKLIST / UNLOCK_DRAGOON_CHECKLIST
+    # checkboxes only complete once all three of their parts are unlocked (see KARRules). They must
+    # be progression so fill respects that gate and never strands a part behind its own checkbox.
     KARItemName.CT_REWARD_FILLER_BOX_1: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 600, _CT
     ),
@@ -1082,13 +1087,13 @@ ITEM_TABLE: dict[str, KARItemData] = {
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 612, _CT
     ),
     KARItemName.CT_REWARD_DRAGOON_PART_A: KARItemData(
-        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 613, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.progression, 613, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_TARGET_FLIGHT: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 614, _CT
     ),
     KARItemName.CT_REWARD_DRAGOON_PART_C: KARItemData(
-        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 615, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.progression, 615, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_AIR_GLIDER: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 616, _CT
@@ -1100,13 +1105,13 @@ ITEM_TABLE: dict[str, KARItemData] = {
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 618, _CT
     ),
     KARItemName.CT_REWARD_HYDRA_PART_Y: KARItemData(
-        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 619, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.progression, 619, _CT
     ),
     KARItemName.CT_REWARD_SOUND_TEST_WHATS_IN_THE_BOX: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 620, _CT
     ),
     KARItemName.CT_REWARD_HYDRA_PART_Z: KARItemData(
-        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 621, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.progression, 621, _CT
     ),
     KARItemName.CT_REWARD_KING_DEDEDE_FREE_RUN: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 622, _CT
@@ -1128,13 +1133,13 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     KARItemName.CT_REWARD_ENDING: KARItemData(KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 628, _CT),
     KARItemName.CT_REWARD_DRAGOON_PART_B: KARItemData(
-        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 629, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.progression, 629, _CT
     ),
     KARItemName.CT_REWARD_FILLER_BOX_5: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 630, _CT
     ),
     KARItemName.CT_REWARD_HYDRA_PART_X: KARItemData(
-        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 631, _CT
+        KARItemType.CT_CHECKLIST_REWARD, ItemClassification.progression, 631, _CT
     ),
     KARItemName.CT_REWARD_PURPLE_KIRBY: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 632, _CT
@@ -1248,7 +1253,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ABILITY_MIC: KARItemData(
         KARItemType.ABILITY_UNLOCK, ItemClassification.progression, 767, _ALL_MODES
     ),
-    KARItemName.UNLOCK_ABILITY_ICE: KARItemData(
+    KARItemName.UNLOCK_ABILITY_FREEZE: KARItemData(
         KARItemType.ABILITY_UNLOCK, ItemClassification.progression, 768, _ALL_MODES
     ),
     KARItemName.UNLOCK_ABILITY_TORNADO: KARItemData(
@@ -1360,22 +1365,22 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ITEM_GORDO: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 813, _CT
     ),
-    KARItemName.UNLOCK_ITEM_HYDRA_PART_1: KARItemData(
+    KARItemName.UNLOCK_ITEM_HYDRA_PART_X: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 814, _CT
     ),
-    KARItemName.UNLOCK_ITEM_HYDRA_PART_2: KARItemData(
+    KARItemName.UNLOCK_ITEM_HYDRA_PART_Y: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 815, _CT
     ),
-    KARItemName.UNLOCK_ITEM_HYDRA_PART_3: KARItemData(
+    KARItemName.UNLOCK_ITEM_HYDRA_PART_Z: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 816, _CT
     ),
-    KARItemName.UNLOCK_ITEM_DRAGOON_PART_1: KARItemData(
+    KARItemName.UNLOCK_ITEM_DRAGOON_PART_A: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 817, _CT
     ),
-    KARItemName.UNLOCK_ITEM_DRAGOON_PART_2: KARItemData(
+    KARItemName.UNLOCK_ITEM_DRAGOON_PART_B: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 818, _CT
     ),
-    KARItemName.UNLOCK_ITEM_DRAGOON_PART_3: KARItemData(
+    KARItemName.UNLOCK_ITEM_DRAGOON_PART_C: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 819, _CT
     ),
     # Machine Unlocks (830-854)
@@ -1631,9 +1636,12 @@ STADIUM_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
     KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.CT_STADIUM_UNLOCK
 )
 
-# Stadium unlock items that have equivalent checklist reward items.
-# When progressive stadiums is ON, these unlock items are excluded and the
-# checklist rewards serve as the progression items for those stadiums instead.
+# Stadium unlock items that have equivalent checklist reward items. These six stadiums double as
+# checklist rewards, so their reward item is the unlock either way: when progressive stadiums is ON the
+# overlapping Unlock Stadium items are excluded and the rewards gate those stadiums; when it is OFF all
+# Unlock Stadium items are excluded and the other 18 stadiums open via the vanilla roulette while these
+# six stay gated behind their (shuffled) reward. So the reward is promoted to progression whenever City
+# Trial is enabled (see progression_reward_items) and KARRules gates the stadium on it in both states.
 STADIUM_UNLOCK_TO_CHECKLIST_REWARD: dict[KARItemName, KARItemName] = {
     KARItemName.UNLOCK_STADIUM_DRAG_RACE_4: KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM,
     KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3: KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM,
@@ -1642,6 +1650,96 @@ STADIUM_UNLOCK_TO_CHECKLIST_REWARD: dict[KARItemName, KARItemName] = {
     KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2: KARItemName.CT_REWARD_KIRBY_MELEE_2_STADIUM,
     KARItemName.UNLOCK_STADIUM_SINGLE_RACE_9: KARItemName.CT_REWARD_SINGLE_RACE_NEBULA_STADIUM,
 }
+
+# Machine unlock items that vanilla unlocks via an Air Ride checklist reward. When machines_gated is
+# OFF the Unlock Machine items are absent and these machines stay gated behind their (shuffled) reward,
+# which is then the sole unlock for the machine-specific finish/bust checkboxes that name them (see
+# _MACHINE_SINGLE_RULES / _MACHINE_PAIR_RULES). Limited to the machines those rules reference; Warp Star
+# and Compact Star are vanilla start machines (no reward) and the character/free-run machine rewards
+# gate no checkbox, so none of those appear here.
+MACHINE_UNLOCK_TO_CHECKLIST_REWARD: dict[str, str] = {
+    KARItemName.UNLOCK_MACHINE_WAGON_STAR: KARItemName.AR_REWARD_WAGON_STAR,
+    KARItemName.UNLOCK_MACHINE_REX_WHEELIE: KARItemName.AR_REWARD_REX_WHEELIE,
+    KARItemName.UNLOCK_MACHINE_SLICK_STAR: KARItemName.AR_REWARD_SLICK_STAR,
+    KARItemName.UNLOCK_MACHINE_SWERVE_STAR: KARItemName.AR_REWARD_SWERVE_STAR,
+    KARItemName.UNLOCK_MACHINE_SHADOW_STAR: KARItemName.AR_REWARD_SHADOW_STAR,
+    KARItemName.UNLOCK_MACHINE_JET_STAR: KARItemName.AR_REWARD_JET_STAR,
+    KARItemName.UNLOCK_MACHINE_BULK_STAR: KARItemName.AR_REWARD_BULK_STAR,
+    KARItemName.UNLOCK_MACHINE_FORMULA_STAR: KARItemName.AR_REWARD_FORMULA_STAR,
+    KARItemName.UNLOCK_MACHINE_ROCKET_STAR: KARItemName.AR_REWARD_ROCKET_STAR,
+    KARItemName.UNLOCK_MACHINE_TURBO_STAR: KARItemName.AR_REWARD_TURBO_STAR,
+    KARItemName.UNLOCK_MACHINE_WINGED_STAR: KARItemName.AR_REWARD_WINGED_STAR,
+    KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: KARItemName.AR_REWARD_WHEELIE_BIKE,
+    KARItemName.UNLOCK_MACHINE_WHEELIE_SCOOTER: KARItemName.AR_REWARD_WHEELIE_SCOOTER,
+}
+
+# Top Ride item unlocks that vanilla unlocks via a Top Ride checklist reward. When top_ride_items_gated
+# is OFF the Unlock TR Item items are absent and these item types stay gated behind their (shuffled)
+# reward, which then feeds the "get over 18 different types of items" count (see KARRules). The other 14
+# TR item types are vanilla defaults.
+TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD: dict[str, str] = {
+    KARItemName.UNLOCK_TR_ITEM_LANTERN: KARItemName.TR_REWARD_LANTERN_ITEM,
+    KARItemName.UNLOCK_TR_ITEM_WHO_PAINT: KARItemName.TR_REWARD_WHO_PAINT_ITEM,
+    KARItemName.UNLOCK_TR_ITEM_CHICKIE: KARItemName.TR_REWARD_CHICKIE_ITEM,
+}
+
+# Air Ride course unlock that vanilla unlocks via a checklist reward. Nebula Belt (the secret course) is
+# the only one; receiving its reward IS the unlock (reaching the Race-100-laps checkbox does not unlock
+# it, since rewards are shuffled). When air_ride_courses_gated is OFF the Unlock AR Course item is absent
+# and the course stays gated behind its reward (see KARRules); the eight standard courses open from the
+# start.
+AR_COURSE_UNLOCK_TO_CHECKLIST_REWARD: dict[str, str] = {
+    KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT: KARItemName.AR_REWARD_NEBULA_BELT_COURSE,
+}
+
+
+def progression_reward_items(
+    *,
+    machines_gated: bool,
+    top_ride_items_gated: bool,
+    air_ride_courses_gated: bool,
+    city_trial_enabled: bool,
+    air_ride_enabled: bool,
+    top_ride_enabled: bool,
+) -> set[str]:
+    """Checklist-reward items that must be classified progression because they are the sole unlock for
+    content that gates locations.
+
+    Most checklist rewards gate nothing (music, sound test, colors, characters), so they stay
+    useful/filler. The ones returned here do gate, and they are not always in the pool, so the
+    promotion is conditional:
+      - Stadium rewards always gate their stadium (the reward is the unlock under progressive stadiums
+        ON, and the only unlock for those six under OFF), so they are promoted whenever City Trial is
+        enabled.
+      - Machine / Top Ride item / Nebula Belt rewards only gate when their category's gate is OFF; when
+        ON the UNLOCK items gate instead and these rewards are excluded from the pool entirely. They are
+        promoted only when the gate is off and a mode that can obtain them is enabled.
+    """
+    promoted: set[str] = set()
+    if city_trial_enabled:
+        promoted |= {str(reward) for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values()}
+    if air_ride_enabled and not machines_gated:
+        promoted |= set(MACHINE_UNLOCK_TO_CHECKLIST_REWARD.values())
+    if top_ride_enabled and not top_ride_items_gated:
+        promoted |= set(TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD.values())
+    if air_ride_enabled and not air_ride_courses_gated:
+        promoted |= set(AR_COURSE_UNLOCK_TO_CHECKLIST_REWARD.values())
+    return promoted
+
+
+# The six City Trial legendary piece-spawn unlocks (CT_ITEM_UNLOCK, gated by city_trial_items_gated).
+# Under item gating the Hydra/Dragoon pieces only spawn in the city once these are received, so
+# assembling both machines in a single match — the COMPLETE_DRAGOON_AND_HYDRA checkbox, which is also
+# the hydra_and_dragoon goal — requires all six. These are distinct from the CT_REWARD_*_PART_*
+# checklist markers that drive the "Unlock Parts on the Checklist!" cells.
+LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
+    KARItemName.UNLOCK_ITEM_HYDRA_PART_X,
+    KARItemName.UNLOCK_ITEM_HYDRA_PART_Y,
+    KARItemName.UNLOCK_ITEM_HYDRA_PART_Z,
+    KARItemName.UNLOCK_ITEM_DRAGOON_PART_A,
+    KARItemName.UNLOCK_ITEM_DRAGOON_PART_B,
+    KARItemName.UNLOCK_ITEM_DRAGOON_PART_C,
+)
 
 
 # Single source of truth for the optional "gating" mechanic. Each player option that
@@ -1669,7 +1767,7 @@ class GatingCategory(NamedTuple):
 
 GATING_CATEGORIES: tuple[GatingCategory, ...] = (
     GatingCategory("city_trial_events_gated", KARItemType.CT_EVENT_UNLOCK, frozenset({"city_trial_enabled"})),
-    # TR is included because _ABILITY_TR_ITEM_RULES gates 3 TR locations (Fire/Bomb)
+    # TR is included because _ABILITY_TR_ITEM_RULES gates 4 TR locations (Fire/Bomb/Walky)
     # behind ability unlocks whenever abilities_gated is on.
     GatingCategory(
         "abilities_gated",

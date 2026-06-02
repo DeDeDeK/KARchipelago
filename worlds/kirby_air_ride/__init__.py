@@ -28,6 +28,7 @@ from .KARItems import (
     KARItemType,
     item_name_groups,
     items_by_type,
+    progression_reward_items,
 )
 from .KARLocations import (
     AIR_RIDE_GOAL_TO_LOCATION,
@@ -169,7 +170,10 @@ class KARWorld(World):
         self.counted_useful_pool: list[str] = []
         self.stadium_starter_choice: KARItemName | None = None
         self.goal_locations_to_exclude: set[str] = set()
-        self.stadium_rewards_as_progression: set[str] = set()
+        # Checklist rewards promoted to progression because they are the sole unlock for gated content
+        # (stadiums always; machines / TR items / Nebula Belt when their gate is off). Populated in
+        # _build_item_pools via progression_reward_items and applied in create_item.
+        self.rewards_as_progression: set[str] = set()
         self.machine_starter_choice: str | None = None
         self.patch_starter_choice: str | None = None
         self.ar_course_starter_choice: str | None = None
@@ -480,15 +484,15 @@ class KARWorld(World):
         if not self.city_trial_enabled:
             excluded |= items_by_type[KARItemType.CT_CHECKLIST_REWARD]
 
-        # Stadium unlocks: excluded unless CT enabled AND progressive stadiums ON.
-        # When progressive stadiums IS on, the 6 unlock items that overlap with
-        # checklist rewards are still excluded; those stadiums are gated by their
-        # checklist reward items instead (promoted to progression).
+        # Stadium unlocks. With progressive stadiums OFF, every Unlock Stadium item is excluded (the 18
+        # ordinary stadiums open via the vanilla roulette, the 6 reward-overlap stadiums via their
+        # reward). With it ON, only the 6 reward-overlap unlocks are excluded; the rest gate their
+        # stadium directly. Either way the 6 rewards gate those stadiums and are promoted to progression
+        # below via progression_reward_items.
         if not self.city_trial_enabled or not self.options.city_trial_progressive_stadiums:
             excluded |= items_by_type[KARItemType.CT_STADIUM_UNLOCK]
         else:
             excluded |= set(STADIUM_UNLOCK_TO_CHECKLIST_REWARD.keys())
-            self.stadium_rewards_as_progression = set(STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values())
 
         # Permanent patches: excluded unless CT enabled AND option ON
         if not self.city_trial_enabled or not self.options.city_trial_permanent_patches:
@@ -555,6 +559,18 @@ class KARWorld(World):
                     return getattr(self.options, option_attr).value
             return 0
 
+        # Checklist rewards that are the sole unlock for gated content must carry progression so fill
+        # respects the gate (see progression_reward_items). Computed after exclusions so it can never
+        # promote an item that won't be placed.
+        self.rewards_as_progression = progression_reward_items(
+            machines_gated=bool(self.options.machines_gated),
+            top_ride_items_gated=bool(self.options.top_ride_items_gated),
+            air_ride_courses_gated=bool(self.options.air_ride_courses_gated),
+            city_trial_enabled=self.city_trial_enabled,
+            air_ride_enabled=self.air_ride_enabled,
+            top_ride_enabled=self.top_ride_enabled,
+        )
+
         # Sort non-excluded items into pools
         for item_name, item_data in ITEM_TABLE.items():
             if item_data.code is None:
@@ -563,7 +579,7 @@ class KARWorld(World):
                 continue
 
             classification = item_data.classification
-            if item_name in self.stadium_rewards_as_progression:
+            if item_name in self.rewards_as_progression:
                 classification = ItemClassification.progression
 
             if classification & ItemClassification.progression:
@@ -771,7 +787,7 @@ class KARWorld(World):
         """
         if name in self.item_names or name in ITEM_TABLE:
             data = ITEM_TABLE[name]
-            if name in self.stadium_rewards_as_progression:
+            if name in self.rewards_as_progression:
                 data = data._replace(classification=ItemClassification.progression)
             return KARItem.from_data(str(name), self.player, data)
         raise KeyError(f"Invalid item name: {name}")
