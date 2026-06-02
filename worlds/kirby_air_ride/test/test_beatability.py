@@ -69,7 +69,7 @@ class TestCTBeatKingDededeRequiresStadiumUnlock(KARTestBase):
     options = {
         **CT_ONLY,
         "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
     }
 
     def test_unlock_required(self):
@@ -92,7 +92,7 @@ class TestCTBeatKingDededeNoGateWithoutProgressiveStadiums(KARTestBase):
     options = {
         **CT_ONLY,
         "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_progressive_stadiums": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
     }
 
     def test_beatable_from_precollected(self):
