@@ -308,16 +308,15 @@ class CityTrialPatchCapAmount(Range):
     display_name = "Patch Cap Target"
 
 
-class CityTrialProgressiveStadiums(Toggle):
+class CityTrialStadiumsGated(DefaultOnToggle):
     """
-    Toggles whether stadiums need to be found and unlocked. If on, the game starts with one random
-    stadium unlocked (chosen from stadiums that aren't checklist rewards, and not VS King Dedede when
-    that is the goal). To unlock more, you will need to find the corresponding stadium unlock item
-    for that stadium. If off, stadiums are unlocked via random chance and checkboxes as usual.
+    When enabled (the default), City Trial stadiums are locked and must be unlocked by finding their
+    corresponding Unlock Stadium items. The game starts with one random stadium already unlocked (any of
+    the 24, except VS King Dedede when that is the goal). When disabled, every stadium is available from
+    the start.
     """
 
-    default = 1
-    display_name = "City Trial Progressive Stadiums"
+    display_name = "City Trial Stadiums Gated"
 
 
 class AirRideGoal(Choice):
@@ -606,7 +605,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_checkbox_fillers: CityTrialCheckboxFillers
     city_trial_progressive_patch_caps: CityTrialProgressivePatchCaps
     city_trial_patch_cap_amount: CityTrialPatchCapAmount
-    city_trial_progressive_stadiums: CityTrialProgressiveStadiums
+    city_trial_stadiums_gated: CityTrialStadiumsGated
 
     # Air Ride
     air_ride_goal: AirRideGoal
@@ -670,7 +669,7 @@ kar_option_groups = [
             CityTrialCheckboxFillers,
             CityTrialProgressivePatchCaps,
             CityTrialPatchCapAmount,
-            CityTrialProgressiveStadiums,
+            CityTrialStadiumsGated,
             CityTrialEventsGated,
             CityTrialPatchesGated,
             CityTrialItemsGated,

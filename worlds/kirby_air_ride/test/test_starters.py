@@ -2,7 +2,6 @@ from Options import Toggle
 
 from ..KARItems import (
     STADIUM_UNLOCK_ITEMS,
-    STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
     KARItemGroup,
     KARItemName,
     item_name_groups,
@@ -12,20 +11,12 @@ from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
 
 
 class TestStadiumStarter(KARTestBase):
-    options = {**CT_ONLY, "city_trial_progressive_stadiums": Toggle.option_true}
+    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true}
 
     def test_exactly_one_stadium_precollected(self):
         precollected = self.precollected_names()
         stadium_starters = [n for n in precollected if n in STADIUM_UNLOCK_ITEMS]
         self.assertEqual(len(stadium_starters), 1)
-
-    def test_starter_not_a_checklist_overlap(self):
-        for name in self.precollected_names():
-            self.assertNotIn(
-                name,
-                STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
-                "Stadium starter should not double as a checklist reward unlock",
-            )
 
     def test_starter_not_in_pool(self):
         pool = self.itempool_names()
@@ -38,7 +29,7 @@ class TestStadiumStarterExcludesKingDedede(KARTestBase):
     options = {
         **CT_ONLY,
         "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
     }
 
     def test_starter_not_vs_king_dedede(self):
@@ -48,7 +39,7 @@ class TestStadiumStarterExcludesKingDedede(KARTestBase):
 class TestStadiumStarterRespectsStartInventory(KARTestBase):
     options = {
         **CT_ONLY,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
         "start_inventory": {KARItemName.UNLOCK_STADIUM_AIR_GLIDER: 1},
     }
 

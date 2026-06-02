@@ -1,6 +1,6 @@
 from Options import Toggle
 
-from ..KARItems import GATED_CHECKLIST_REWARDS, GATING_CATEGORIES
+from ..KARItems import GATING_CATEGORIES
 from . import ALL_MODES, KARTestBase, items_of_type
 
 
@@ -11,6 +11,11 @@ def _all_modes_with(**overrides):
 # Group expectations per gate: the unlock items that should appear when the gate is ON.
 # Derived from GATING_CATEGORIES so this stays in sync with the gating source of truth.
 _GATE_GROUPS: dict[str, set[str]] = {cat.option: items_of_type(cat.item_type) for cat in GATING_CATEGORIES}
+
+# Overlapping checklist rewards per gate (always excluded from the pool). Same source of truth.
+_GATED_CHECKLIST_REWARDS: dict[str, frozenset] = {
+    cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES if cat.overlapping_rewards
+}
 
 
 _ALL_ON = dict.fromkeys(_GATE_GROUPS, Toggle.option_true)
@@ -30,9 +35,10 @@ class TestAllGatesOn(KARTestBase):
                 self.assertFalse(missing, f"{option_name} ON but missing unlocks: {sorted(missing)}")
 
     def test_gated_checklist_rewards_excluded(self):
-        """When a gate is on, its overlapping checklist rewards are excluded from the pool."""
+        """A gate's overlapping checklist rewards are excluded from the pool (here with the gate ON; they
+        are also excluded when OFF, since the mod handles the category either way)."""
         world_items = self.world_item_names()
-        for option_name, overlap in GATED_CHECKLIST_REWARDS.items():
+        for option_name, overlap in _GATED_CHECKLIST_REWARDS.items():
             with self.subTest(gate=option_name):
                 leaked = world_items & overlap
                 self.assertFalse(leaked, f"{option_name} ON should exclude overlap rewards, found: {sorted(leaked)}")

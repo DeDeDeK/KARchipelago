@@ -37,7 +37,7 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         # City Trial specifics
         "city_trial_progressive_patch_caps",
         "city_trial_patch_cap_amount",
-        "city_trial_progressive_stadiums",
+        "city_trial_stadiums_gated",
         # Item generation
         "spawn_rate_progressive",
         "spawn_rate_min",

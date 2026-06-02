@@ -484,8 +484,8 @@ class KARContext(CommonContext):
 
         # Per-category access gating. 1 = gated (default, AP unlock items required).
         # 0 = ungated (mod pre-fills the unlock mask at connect; AP world ships no
-        # unlock items for that category). Stadium gating reuses the existing
-        # `city_trial_progressive_stadiums` slot option for back-compat.
+        # unlock items for that category). Stadiums gate on `city_trial_stadiums_gated`
+        # like every other category.
         d.write_u32(a(MemoryAddress.OPTION_MACHINE_GATING_ENABLED), int(bool(sd.get("machines_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_ABILITY_GATING_ENABLED), int(bool(sd.get("abilities_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_EVENT_GATING_ENABLED), int(bool(sd.get("city_trial_events_gated", 1))))
@@ -500,9 +500,7 @@ class KARContext(CommonContext):
         )
         d.write_u32(a(MemoryAddress.OPTION_TOPRIDE_ITEM_GATING_ENABLED), int(bool(sd.get("top_ride_items_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_COLOR_GATING_ENABLED), int(bool(sd.get("colors_gated", 1))))
-        d.write_u32(
-            a(MemoryAddress.OPTION_STADIUM_GATING_ENABLED), int(bool(sd.get("city_trial_progressive_stadiums", 1)))
-        )
+        d.write_u32(a(MemoryAddress.OPTION_STADIUM_GATING_ENABLED), int(bool(sd.get("city_trial_stadiums_gated", 1))))
 
         d.write_u32(a(MemoryAddress.OPTIONS_VALID), 1)
 

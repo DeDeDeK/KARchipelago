@@ -13,10 +13,10 @@ from BaseClasses import CollectionState, ItemClassification
 from Options import Toggle
 
 from ..KARItems import (
+    GATING_CATEGORIES,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
+    STADIUM_CHECKLIST_REWARDS,
     STADIUM_UNLOCK_ITEMS,
-    STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
-    TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD,
     KARItemName,
     KARItemType,
 )
@@ -24,6 +24,9 @@ from ..KARLocations import ARLocation, CTLocation, TRLocation
 from ..KAROptions import CityTrialGoal, TopRideGoal
 from ..KARRegions import KARRegion
 from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
+
+# Overlapping checklist rewards per gating option (always excluded from the pool).
+_OVERLAP = {cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES}
 
 # Pin the random starter picks so they don't shadow items under test.
 _PIN_MACHINE_STARTER = {"start_inventory": {KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR: 1}}
@@ -327,43 +330,68 @@ class TestMachinesPairGatingApplied(KARTestBase):
 
 
 class TestMachinesGatingNotApplied(KARTestBase):
-    """machines_gated OFF (Air Ride enabled): machines that vanilla unlocks via an Air Ride checklist
-    reward stay gated behind that (shuffled) reward, so the machine-specific cells require the reward
-    instead of an Unlock Machine item. Vanilla start machines (Warp Star, Compact Star) have no reward
-    and drop out of the requirement. Mirrors TestMachinesSingleGatingApplied / TestMachinesPairGatingApplied."""
+    """machines_gated OFF: the mod unlocks every machine at connect (machine_unlocked_mask all-1s,
+    regardless of which modes are enabled), so the machine-specific finish/bust cells carry no rule and
+    the Air Ride machine reward items are excluded from the pool. (Previously these cells were gated
+    behind the shuffled reward; the mod confirms full unlock-at-connect, so that was over-gating.)
+    Progressive stadiums OFF so the named stadiums are open and the machine question is isolated."""
 
-    options = {**ALL_MODES, "machines_gated": Toggle.option_false}
+    options = {
+        **ALL_MODES,
+        "machines_gated": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
+    }
 
-    def test_formula_ct_location_needs_reward(self):
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DR1_17_00_FORMULA],
-            [[KARItemName.AR_REWARD_FORMULA_STAR]],
-            only_check_listed=True,
-        )
+    def test_machine_reward_items_excluded(self):
+        names = self.world_item_names()
+        for reward in (
+            KARItemName.AR_REWARD_FORMULA_STAR,
+            KARItemName.AR_REWARD_SHADOW_STAR,
+            KARItemName.AR_REWARD_WHEELIE_BIKE,
+            KARItemName.AR_REWARD_SLICK_STAR,
+        ):
+            self.assertNotIn(reward, names, f"{reward} should be excluded when machines_gated is off")
 
-    def test_shadow_ar_location_needs_reward(self):
-        self.assertAccessDependency(
-            [ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR],
-            [[KARItemName.AR_REWARD_SHADOW_STAR]],
-            only_check_listed=True,
-        )
+    def test_machine_cells_reachable_without_reward(self):
+        # CT stadium + bust cells that name a machine now carry no machine rule, so they are reachable
+        # with nothing collected (the named machines are unlocked at connect).
+        for loc in (
+            CTLocation.STADIUM_DR1_17_00_FORMULA,
+            CTLocation.STADIUM_DR2_27_00_WAGON,
+            CTLocation.BUST_SLICK_STAR_ON_FORMULA_STAR,
+            CTLocation.BUST_WHEELIE_BIKE_ON_WARPSTAR,
+        ):
+            with self.subTest(location=loc):
+                self.assertTrue(self.can_reach_location(loc))
 
-    def test_bust_wheelie_bike_on_warpstar_needs_only_wheelie_reward(self):
-        # Wheelie Bike has a reward; Warp Star is a vanilla start machine (no reward), so it drops out
-        # and the reward is the sole requirement.
-        self.assertAccessDependency(
-            [CTLocation.BUST_WHEELIE_BIKE_ON_WARPSTAR],
-            [[KARItemName.AR_REWARD_WHEELIE_BIKE]],
-            only_check_listed=True,
-        )
 
-    def test_bust_slick_on_formula_needs_both_rewards(self):
-        # Both machines have rewards, so both rewards are required (HasAll).
-        self.assertAccessDependency(
-            [CTLocation.BUST_SLICK_STAR_ON_FORMULA_STAR],
-            [[KARItemName.AR_REWARD_SLICK_STAR, KARItemName.AR_REWARD_FORMULA_STAR]],
-            only_check_listed=True,
-        )
+class TestCTOnlyMachinesGatingNotApplied(KARTestBase):
+    """City-Trial-only + machines_gated OFF (the original edge case): the Air Ride machine reward items
+    don't exist (AR disabled) and there are no Unlock Machine items, yet the mod unlocks every machine
+    at connect regardless of which modes are enabled (gate_machines.c reads only the mask), so the CT
+    machine cells carry no rule and nothing is stranded. Progressive stadiums OFF so the named stadiums
+    are open and the machine question is isolated."""
+
+    options = {
+        **CT_ONLY,
+        "machines_gated": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
+    }
+
+    def test_no_machine_unlock_or_reward_items(self):
+        names = self.world_item_names()
+        self.assertEqual(sorted(n for n in names if n in items_of_type(KARItemType.MACHINE_UNLOCK)), [])
+        for reward in _OVERLAP["machines_gated"]:
+            self.assertNotIn(reward, names, f"{reward} (machine overlap reward) must be absent")
+
+    def test_machine_cells_reachable_without_gate(self):
+        for loc in (
+            CTLocation.STADIUM_DR1_17_00_FORMULA,
+            CTLocation.STADIUM_DR2_27_00_WAGON,
+            CTLocation.BUST_SLICK_STAR_ON_FORMULA_STAR,
+        ):
+            with self.subTest(location=loc):
+                self.assertTrue(self.can_reach_location(loc))
 
 
 class TestTopRideItemsGatingApplied(KARTestBase):
@@ -401,7 +429,7 @@ class TestProgressiveStadiumGating(KARTestBase):
 
     options = {
         **CT_ONLY,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
         **_PIN_STADIUM_STARTER,
     }
 
@@ -413,13 +441,13 @@ class TestProgressiveStadiumGating(KARTestBase):
             only_check_listed=True,
         )
 
-    def test_dr4_stadium_location_needs_reward_item(self):
-        # DRAG_RACE_4 IS a checklist-reward overlap: its unlock item is excluded from the
-        # pool and CT_REWARD_DRAG_RACE_4_STADIUM carries progression instead. DR4 also has a
-        # CanReachLocation(DR3_FINISH) prereq, but collect_all_but leaves DR3 reachable here.
+    def test_dr4_stadium_location_needs_dr4_unlock(self):
+        # DRAG_RACE_4 used to be a reward-substitution overlap; now it gates on its own Unlock Stadium
+        # item like every other stadium. DR4 also has a CanReachLocation(DR3_FINISH) prereq, but
+        # collect_all_but leaves DR3 reachable here.
         self.assertAccessDependency(
             [CTLocation.STADIUM_DR4_FINISH_00_24_00],
-            [[KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM]],
+            [[KARItemName.UNLOCK_STADIUM_DRAG_RACE_4]],
             only_check_listed=True,
         )
 
@@ -430,35 +458,33 @@ class TestProgressiveStadiumAllGroupGating(KARTestBase):
 
     options = {
         **CT_ONLY,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
         **_PIN_STADIUM_STARTER,
     }
 
     def test_dd_all_reachable_via_any_dd_unlock(self):
-        # DD3/4/5 are checklist-reward overlaps, so their CT_REWARD_* items carry
-        # progression in place of the excluded unlocks. The HasAny rule accepts any of
-        # these five, so all five must be listed for the unreachable-without assertion.
+        # Every DD stadium (including the former reward-overlaps DD3/4/5) gates on its own Unlock Stadium
+        # item now. The HasAny rule accepts any of these five, so all five must be listed.
         self.assertAccessDependency(
             [CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X],
             [
                 [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1],
                 [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2],
-                [KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM],
-                [KARItemName.CT_REWARD_DESTRUCTION_DERBY_4_STADIUM],
-                [KARItemName.CT_REWARD_DESTRUCTION_DERBY_5_STADIUM],
+                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3],
+                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4],
+                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5],
             ],
             only_check_listed=True,
         )
 
     def test_km_all_reachable_via_any_km_unlock(self):
-        # KM2 is a checklist-reward overlap (uses CT_REWARD_KIRBY_MELEE_2_STADIUM
-        # instead of UNLOCK_STADIUM_KIRBY_MELEE_2). Both alternatives must be
-        # listed for the unreachable-without assertion to hold.
+        # KM2 used to be a reward-substitution overlap; it now gates on UNLOCK_STADIUM_KIRBY_MELEE_2 like
+        # KM1. Either Kirby Melee unlock opens the KM (All) cell, so both must be listed.
         self.assertAccessDependency(
             [CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES],
             [
                 [KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1],
-                [KARItemName.CT_REWARD_KIRBY_MELEE_2_STADIUM],
+                [KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2],
             ],
             only_check_listed=True,
         )
@@ -474,7 +500,7 @@ class TestProgressiveStadiumPreservesChain(KARTestBase):
 
     options = {
         **CT_ONLY,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
         **_PIN_STADIUM_STARTER,
     }
 
@@ -500,60 +526,55 @@ class TestProgressiveStadiumPreservesChain(KARTestBase):
         )
 
 
-class TestProgressiveStadiumRewardPromotion(KARTestBase):
-    """progressive_stadiums ON: the six stadiums that double as checklist rewards are gated on their
-    CT_REWARD_*_STADIUM item, so each such reward must be promoted to progression and placed in the
-    pool, and the overlapping Unlock Stadium item must be excluded. Locks the implicit contract that
-    the Has/HasAny/AtLeast stadium rules rely on (the substitution would otherwise be unsatisfiable)."""
+class TestStadiumGatingUsesUnlockItems(KARTestBase):
+    """Stadiums gated: every stadium — including the six that vanilla unlocks via a checklist reward — is
+    gated by its own Unlock Stadium item (the mod gates stadiums purely by the unlock mask). So all 24
+    Unlock Stadium items are obtainable and progression-classified, while the overlapping stadium
+    checklist rewards are excluded from the pool (they gate nothing)."""
 
     options = {
         **CT_ONLY,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
         **_PIN_STADIUM_STARTER,
     }
 
-    def test_overlap_rewards_present_and_progression(self):
-        pool = {it.name: it for it in self.itempool_items()}
-        for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values():
-            self.assertIn(reward, pool, f"{reward} must be in the pool when progressive stadiums is on")
-            self.assertTrue(
-                pool[reward].classification & ItemClassification.progression,
-                f"{reward} must be progression-classified to gate its stadium",
-            )
-
-    def test_overlap_unlocks_excluded(self):
+    def test_stadium_unlocks_obtainable_and_progression(self):
         names = self.world_item_names()
-        for unlock in STADIUM_UNLOCK_TO_CHECKLIST_REWARD:
-            self.assertNotIn(unlock, names, f"{unlock} should be excluded in favor of its reward item")
+        pool = {it.name: it for it in self.itempool_items()}
+        for unlock in items_of_type(KARItemType.CT_STADIUM_UNLOCK):
+            self.assertIn(unlock, names, f"{unlock} must be obtainable when stadiums are gated")
+            if unlock in pool:
+                self.assertTrue(
+                    pool[unlock].classification & ItemClassification.progression,
+                    f"{unlock} must be progression-classified to gate its stadium",
+                )
+
+    def test_overlap_rewards_excluded(self):
+        names = self.world_item_names()
+        for reward in STADIUM_CHECKLIST_REWARDS:
+            self.assertNotIn(reward, names, f"{reward} should be excluded (stadium gated by its unlock item)")
 
 
-class TestStadiumRewardGatingProgressiveOff(KARTestBase):
-    """progressive stadiums OFF: the 18 ordinary stadiums open via the vanilla roulette (no rule), but
-    the six that double as checklist rewards stay gated behind their CT_REWARD_*_STADIUM item (promoted
-    to progression). No Unlock Stadium items exist in this configuration."""
+class TestStadiumUngatedReachable(KARTestBase):
+    """Stadiums ungated: the mod unlocks all 24 stadiums at connect, so every stadium cell — including the
+    six that double as checklist rewards — is reachable from the start, no Unlock Stadium items exist, and
+    the six stadium reward items are excluded from the pool."""
 
-    options = {**CT_ONLY, "city_trial_progressive_stadiums": Toggle.option_false}
+    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_false}
 
     def test_ordinary_stadium_reachable_empty(self):
-        # Drag Race 1 is an ordinary (non-reward) stadium: it opens via the roulette, so its cell has
-        # no gate and is reachable with nothing collected.
         self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DR1_FINISH_00_24_00))
 
-    def test_dr4_location_needs_reward(self):
-        # DR4's chain prereq (DR3 finish) stays reachable since DR3 opens via the roulette, so the
-        # reward is the binding constraint.
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DR4_FINISH_00_24_00],
-            [[KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM]],
-            only_check_listed=True,
-        )
+    def test_reward_overlap_stadium_cells_reachable_empty(self):
+        # DR4 / DD3 are reward-overlap stadiums; they open from the start now (their chain prereqs DR3 /
+        # DD2 are likewise open). Previously these cells gated behind their CT_REWARD_*_STADIUM item.
+        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DR4_FINISH_00_24_00))
+        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5))
 
-    def test_dd3_location_needs_reward(self):
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5],
-            [[KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM]],
-            only_check_listed=True,
-        )
+    def test_stadium_rewards_excluded(self):
+        names = self.world_item_names()
+        for reward in STADIUM_CHECKLIST_REWARDS:
+            self.assertNotIn(reward, names, f"{reward} should be excluded when stadiums are ungated")
 
 
 class TestBoxesGatingApplied(KARTestBase):
@@ -630,24 +651,22 @@ _NEBULA_REGIONS = (
 )
 
 
-class TestARNebulaBeltRewardGate(KARTestBase):
-    """AR course gating OFF: Nebula Belt (the secret course) is unlocked by its checklist reward, not
-    by reaching the Race-100-laps checkbox (rewards are shuffled). The eight standard courses open from
-    the start, but the three Nebula Belt regions stay gated behind AR_REWARD_NEBULA_BELT_COURSE. Nebula
-    regions hold no AP locations, so this is pinned via region reachability."""
+class TestARNebulaBeltGatingNotApplied(KARTestBase):
+    """AR course gating OFF: the mod unlocks all nine courses at connect, so the three Nebula Belt
+    regions are reachable from the start and the Nebula reward is excluded from the pool. (Previously
+    they were gated behind AR_REWARD_NEBULA_BELT_COURSE; that was over-gating.) Nebula regions hold no
+    AP locations, so this is pinned via region reachability."""
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_false}
 
-    def test_nebula_regions_need_reward(self):
-        for region_name in _NEBULA_REGIONS:
-            with self.subTest(region=region_name):
-                region = self.multiworld.get_region(region_name, self.player)
-                self.assertFalse(region.can_reach(self.multiworld.state))
-        self.collect_by_name(KARItemName.AR_REWARD_NEBULA_BELT_COURSE)
+    def test_nebula_regions_reachable_empty(self):
         for region_name in _NEBULA_REGIONS:
             with self.subTest(region=region_name):
                 region = self.multiworld.get_region(region_name, self.player)
                 self.assertTrue(region.can_reach(self.multiworld.state))
+
+    def test_nebula_reward_excluded(self):
+        self.assertNotIn(KARItemName.AR_REWARD_NEBULA_BELT_COURSE, self.world_item_names())
 
 
 class TestARNebulaBeltUnlockGate(KARTestBase):
@@ -1000,9 +1019,8 @@ class TestRootCourseGatingNotApplied(KARTestBase):
                 self.assertTrue(self.can_reach_location(loc))
 
 
-# Every stadium mode's effective unlock item (reward item for the six that double as checklist
-# rewards, own unlock item otherwise). Mirrors KARRules._EFFECTIVE_STADIUM_UNLOCKS.
-_EFFECTIVE_STADIUMS: list[str] = [str(STADIUM_UNLOCK_TO_CHECKLIST_REWARD.get(u, u)) for u in STADIUM_UNLOCK_ITEMS]
+# Every stadium mode is gated by its own Unlock Stadium item (no reward substitution anymore).
+_STADIUM_UNLOCKS: list[str] = [str(u) for u in STADIUM_UNLOCK_ITEMS]
 
 
 class TestStadiumPlayCountGating(KARTestBase):
@@ -1010,10 +1028,10 @@ class TestStadiumPlayCountGating(KARTestBase):
     24 stadium modes unlocked (11 / 21), since a locked stadium can't be entered. The Air Glider
     starter is pinned so the precollected mode is known when counting."""
 
-    options = {**CT_ONLY, "city_trial_progressive_stadiums": Toggle.option_true, **_PIN_STADIUM_STARTER}
+    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true, **_PIN_STADIUM_STARTER}
 
     def _missing_other_than_starter(self, n: int) -> list[str]:
-        return [s for s in _EFFECTIVE_STADIUMS if s != KARItemName.UNLOCK_STADIUM_AIR_GLIDER][:n]
+        return [s for s in _STADIUM_UNLOCKS if s != KARItemName.UNLOCK_STADIUM_AIR_GLIDER][:n]
 
     def test_unreachable_with_only_starter(self):
         # Only the pinned Air Glider starter is held — far short of either threshold.
@@ -1038,27 +1056,14 @@ class TestStadiumPlayCountGating(KARTestBase):
 
 
 class TestStadiumPlayCountProgressiveOff(KARTestBase):
-    """progressive stadiums OFF: the 18 ordinary stadiums open via the vanilla roulette (always
-    available), but the six that double as checklist rewards stay gated behind their reward. So 'play
-    in over 10 modes!' (needs 11) is reachable from the start, while 'play in over 20 modes!' (needs 21)
-    requires three of the six reward-overlap stadiums."""
+    """progressive stadiums OFF: the mod unlocks all 24 stadiums at connect, so both 'play in over
+    10/20 stadium modes!' cells are reachable from the start (24 >= 21). (Previously the six
+    reward-overlap stadiums gated, so 'play 20' needed three of their rewards.)"""
 
-    options = {**CT_ONLY, "city_trial_progressive_stadiums": Toggle.option_false}
+    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_false}
 
-    def test_play_10_reachable_empty(self):
-        # 18 ordinary modes are always available, comfortably over the threshold of 11.
+    def test_play_counts_reachable_empty(self):
         self.assertTrue(self.can_reach_location(CTLocation.STADIUM_PLAY_10_STADIUM_MODES))
-
-    def test_play_20_needs_three_reward_stadiums(self):
-        rewards = [str(reward) for reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values()]
-        # 18 ordinary modes < 21 -> unreachable with nothing collected.
-        self.assertFalse(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
-        # Two rewards -> 20 modes -> still short.
-        self.collect_by_name(rewards[0])
-        self.collect_by_name(rewards[1])
-        self.assertFalse(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
-        # Third reward -> 21 modes -> reachable.
-        self.collect_by_name(rewards[2])
         self.assertTrue(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
 
 
@@ -1122,10 +1127,10 @@ class TestTRItemTypeCountBothGates(KARTestBase):
 
 
 class TestTRItemTypeCountNoGates(KARTestBase):
-    """Both TR-item and ability gating OFF: 18 of the 21 types are vanilla defaults, but the three that
-    vanilla unlocks via a checklist reward (Lantern/Who?Paint/Chickie) still need that (shuffled)
-    reward. So 'get over 18 different types!' (needs 19) is unreachable until one of those three rewards
-    is collected."""
+    """Both TR-item and ability gating OFF: the mod unlocks every TR item type at connect — the three
+    New-Item types (Lantern/Who?Paint/Chickie) via the has_reward nudge in APOptions_ApplyUngatedCategories,
+    the rest as vanilla defaults — so all 21 types can spawn and 'get over 18 different types!' is
+    reachable with nothing collected."""
 
     options = {
         **TR_ONLY,
@@ -1133,12 +1138,7 @@ class TestTRItemTypeCountNoGates(KARTestBase):
         "abilities_gated": Toggle.option_false,
     }
 
-    def test_needs_one_reward_type(self):
-        rewards = [str(reward) for reward in TR_ITEM_UNLOCK_TO_CHECKLIST_REWARD.values()]
-        # 18 default types < 19 -> unreachable with nothing collected.
-        self.assertFalse(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
-        # Any one of the three reward-gated types -> 19 -> reachable.
-        self.collect_by_name(rewards[0])
+    def test_reachable_from_empty(self):
         self.assertTrue(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
 
 
