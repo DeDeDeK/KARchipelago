@@ -7,4 +7,4 @@ Kirby Air Ride:
   city_trial_goal: beat_king_dedede
   air_ride_goal: 100_checklist_blocks
   top_ride_goal: none
-  city_trial_progressive_stadiums: true
+  city_trial_stadiums_gated: true

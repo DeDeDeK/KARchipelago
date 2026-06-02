@@ -110,7 +110,7 @@ class MemoryAddress(IntEnum):
     OPTION_TOPRIDE_STAGE_GATING_ENABLED = 0x0B4  # u32, 0 or 1
     OPTION_TOPRIDE_ITEM_GATING_ENABLED = 0x0B8  # u32, 0 or 1
     OPTION_COLOR_GATING_ENABLED = 0x0BC  # u32, 0 or 1
-    # Mirrors the KAROptions `city_trial_progressive_stadiums` toggle.
+    # Mirrors the KAROptions `city_trial_stadiums_gated` toggle.
     OPTION_STADIUM_GATING_ENABLED = 0x0C0  # u32, 0 or 1
     # 4 bytes of trailing struct padding (APSlotOptions is u64-aligned).
 
