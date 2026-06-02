@@ -5,7 +5,7 @@ from enum import StrEnum
 from BaseClasses import CollectionState, LocationProgressType, Region
 from rule_builder.rules import CanReachLocation, Has, HasAll, Rule
 
-from .KARItems import KARItem, KARItemName
+from .KARItems import LEGENDARY_PIECE_UNLOCK_ITEMS, KARItem, KARItemName
 from .KAROptions import CityTrialGoal
 
 
@@ -476,11 +476,16 @@ def connect_top_ride_region(world: "KARWorld", top_ride_region: Region) -> None:
 
 
 def create_n_blocks_rule(
-    world: "KARWorld", mode_prefix: str, required_blocks: int
+    world: "KARWorld", mode_prefix: str, required_blocks: int, exclude_location_name: str | None = None
 ) -> Callable[[CollectionState], bool]:
     """
     Create a rule that checks if the player can access enough locations to complete N blocks
     in a given mode, by counting reachable locations whose region belongs to that mode.
+
+    `exclude_location_name` drops one location from the count. Pass the gated location's own name
+    when this rule is the access rule of a real checkbox (e.g. the "Fill in over 100" cell): the
+    count then means "100 OTHER boxes" and, crucially, the location is not asked to reach itself,
+    which would recurse infinitely.
     """
     player = world.player
     is_city_trial = mode_prefix == KARRegion.CITY_TRIAL
@@ -491,6 +496,8 @@ def create_n_blocks_rule(
         # access rule is this very function; iterating it would recurse infinitely.
         for loc in state.multiworld.get_locations(player):
             if loc.address is None or loc.parent_region is None:
+                continue
+            if exclude_location_name is not None and loc.name == exclude_location_name:
                 continue
             name = loc.parent_region.name
             if not (name.startswith(mode_prefix) or (is_city_trial and name.startswith("Stadium:"))):
@@ -610,6 +617,11 @@ def _create_goal_events(
         blocks_rule = None
         if goal_option.value == goal_option.option_100_checklist_blocks:
             blocks_rule = create_n_blocks_rule(world, mode_prefix, 100)
+        elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon and world.options.city_trial_items_gated:
+            # Assembling both legendary machines needs every piece to spawn; item gating locks that
+            # behind the six piece-spawn unlocks (mirrors the COMPLETE_DRAGOON_AND_HYDRA location rule
+            # in KARRules for when this is not the goal).
+            blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS)
 
         goal_region.add_event(
             f"{goal_location_name} (Victory)",
