@@ -20,7 +20,6 @@ from .KARItems import (
     GATING_CATEGORIES,
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
-    STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
     TRAP_WEIGHT_GROUPS,
     KARItem,
     KARItemData,
@@ -28,7 +27,6 @@ from .KARItems import (
     KARItemType,
     item_name_groups,
     items_by_type,
-    progression_reward_items,
 )
 from .KARLocations import (
     AIR_RIDE_GOAL_TO_LOCATION,
@@ -115,7 +113,7 @@ class KARWeb(WebWorld):
             "colors_gated": False,
             "top_ride_courses_gated": False,
             "top_ride_items_gated": False,
-            "city_trial_progressive_stadiums": False,
+            "city_trial_stadiums_gated": False,
             "city_trial_permanent_patches": False,
         },
     }
@@ -170,10 +168,6 @@ class KARWorld(World):
         self.counted_useful_pool: list[str] = []
         self.stadium_starter_choice: KARItemName | None = None
         self.goal_locations_to_exclude: set[str] = set()
-        # Checklist rewards promoted to progression because they are the sole unlock for gated content
-        # (stadiums always; machines / TR items / Nebula Belt when their gate is off). Populated in
-        # _build_item_pools via progression_reward_items and applied in create_item.
-        self.rewards_as_progression: set[str] = set()
         self.machine_starter_choice: str | None = None
         self.patch_starter_choice: str | None = None
         self.ar_course_starter_choice: str | None = None
@@ -286,8 +280,8 @@ class KARWorld(World):
         """
         Pre-determine one random starter item per gated category the player should not boot
         into without. Each is push_precollected in generate_early. Categories:
-          - Stadiums (when city_trial_progressive_stadiums + CT): excludes the 6 stadium
-            unlocks that double as checklist rewards, plus VS King Dedede when it's the goal.
+          - Stadiums (when city_trial_stadiums_gated + CT): any of the 24 stadium unlocks,
+            excluding VS King Dedede when it's the goal.
           - Machines (when machines_gated + CT or AR): excludes Hydra/Dragoon (legendary).
           - Patch types (when city_trial_patches_gated + CT).
           - Air Ride courses (when air_ride_courses_gated + AR).
@@ -296,7 +290,7 @@ class KARWorld(World):
         Deliberately skipped (playable without): events, abilities, boxes, CT items, TR items,
         colors (Pink is the implicit default starter).
         """
-        if self.city_trial_enabled and self.options.city_trial_progressive_stadiums:
+        if self.city_trial_enabled and self.options.city_trial_stadiums_gated:
             beat_dedede = self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
             player_stadium_unlocks = [
                 item_name for item_name in self.options.start_inventory if item_name in STADIUM_UNLOCK_ITEMS
@@ -308,9 +302,7 @@ class KARWorld(World):
                         f"in starting inventory if the goal is Beat King Dedede"
                     )
             else:
-                stadiums: list[KARItemName] = [
-                    s for s in STADIUM_UNLOCK_ITEMS if s not in STADIUM_UNLOCK_TO_CHECKLIST_REWARD
-                ]
+                stadiums: list[KARItemName] = list(STADIUM_UNLOCK_ITEMS)
                 if beat_dedede:
                     stadiums.remove(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
                 self.stadium_starter_choice = self.random.choice(stadiums)
@@ -463,16 +455,18 @@ class KARWorld(World):
         """
 
         # Gating categories (GATING_CATEGORIES, the single source of truth in KARItems):
-        # exclude a category's unlock items when its gate is OFF or no relevant mode is
-        # enabled. When the gate is ON, exclude the overlapping checklist rewards instead
-        # so only the UNLOCK items handle that content.
+        # exclude a category's unlock items when its gate is OFF or no relevant mode is enabled.
+        # Overlapping checklist rewards are redundant with the mod's own unlock handling, so they are
+        # always excluded: when the gate is ON the UNLOCK items deliver that content, and when it is OFF
+        # the mod pre-unlocks the whole category at connect (APOptions_ApplyUngatedCategories). Either
+        # way the reward gates nothing.
         excluded: set[str] = set()
         for cat in GATING_CATEGORIES:
             gated_off = not getattr(self.options, cat.option)
             no_mode = cat.required_modes and not any(getattr(self, mode) for mode in cat.required_modes)
             if gated_off or no_mode:
                 excluded |= items_by_type[cat.item_type]
-            elif cat.overlapping_rewards:
+            if cat.overlapping_rewards:
                 excluded |= set(cat.overlapping_rewards)
 
         # Mode-specific checklist rewards - excluded when their mode is disabled.
@@ -484,15 +478,10 @@ class KARWorld(World):
         if not self.city_trial_enabled:
             excluded |= items_by_type[KARItemType.CT_CHECKLIST_REWARD]
 
-        # Stadium unlocks. With progressive stadiums OFF, every Unlock Stadium item is excluded (the 18
-        # ordinary stadiums open via the vanilla roulette, the 6 reward-overlap stadiums via their
-        # reward). With it ON, only the 6 reward-overlap unlocks are excluded; the rest gate their
-        # stadium directly. Either way the 6 rewards gate those stadiums and are promoted to progression
-        # below via progression_reward_items.
-        if not self.city_trial_enabled or not self.options.city_trial_progressive_stadiums:
-            excluded |= items_by_type[KARItemType.CT_STADIUM_UNLOCK]
-        else:
-            excluded |= set(STADIUM_UNLOCK_TO_CHECKLIST_REWARD.keys())
+        # Stadiums are handled by the GATING_CATEGORIES loop above (gated on
+        # city_trial_stadiums_gated): progressive ON places every Unlock Stadium item; OFF excludes
+        # them all (the mod unlocks all 24 at connect). The six stadium checklist rewards are excluded
+        # either way as the category's overlapping_rewards.
 
         # Permanent patches: excluded unless CT enabled AND option ON
         if not self.city_trial_enabled or not self.options.city_trial_permanent_patches:
@@ -559,18 +548,6 @@ class KARWorld(World):
                     return getattr(self.options, option_attr).value
             return 0
 
-        # Checklist rewards that are the sole unlock for gated content must carry progression so fill
-        # respects the gate (see progression_reward_items). Computed after exclusions so it can never
-        # promote an item that won't be placed.
-        self.rewards_as_progression = progression_reward_items(
-            machines_gated=bool(self.options.machines_gated),
-            top_ride_items_gated=bool(self.options.top_ride_items_gated),
-            air_ride_courses_gated=bool(self.options.air_ride_courses_gated),
-            city_trial_enabled=self.city_trial_enabled,
-            air_ride_enabled=self.air_ride_enabled,
-            top_ride_enabled=self.top_ride_enabled,
-        )
-
         # Sort non-excluded items into pools
         for item_name, item_data in ITEM_TABLE.items():
             if item_data.code is None:
@@ -579,9 +556,6 @@ class KARWorld(World):
                 continue
 
             classification = item_data.classification
-            if item_name in self.rewards_as_progression:
-                classification = ItemClassification.progression
-
             if classification & ItemClassification.progression:
                 quantity = self._get_item_quantity(item_name, item_data)
                 self.progression_pool.extend([item_name] * quantity)
@@ -787,8 +761,6 @@ class KARWorld(World):
         """
         if name in self.item_names or name in ITEM_TABLE:
             data = ITEM_TABLE[name]
-            if name in self.rewards_as_progression:
-                data = data._replace(classification=ItemClassification.progression)
             return KARItem.from_data(str(name), self.player, data)
         raise KeyError(f"Invalid item name: {name}")
 
@@ -895,7 +867,7 @@ class KARWorld(World):
                 "top_ride_goal_locations",
                 "city_trial_progressive_patch_caps",
                 "city_trial_patch_cap_amount",
-                "city_trial_progressive_stadiums",
+                "city_trial_stadiums_gated",
                 "spawn_rate_progressive",
                 "spawn_rate_min",
                 "spawn_rate_max",
