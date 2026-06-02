@@ -90,8 +90,9 @@ The gateable categories are:
 - **Top Ride courses**
 - **Top Ride items.** Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are gated by the copy ability unlock instead.
 - **Kirby colors** (every color other than Pink). Affects all three modes.
+- **City Trial stadiums.** When gated, you start with one random stadium unlocked and find the rest (see [Stadium unlock items](#stadium-unlock-items)).
 
-Stadiums are gated separately via "City Trial Progressive Stadiums" (see [Stadium unlock items](#stadium-unlock-items)).
+When a category is ungated, the mod unlocks all of its content the instant you connect, so it is available from the very start of your run no matter which modes you have enabled. A few categories are normally unlocked in vanilla by completing specific in-game checklist squares — air ride machines, Kirby colors, the Nebula Belt course, the reward stadiums, and the Top Ride "New Item" types (Lantern, Who? Paint, Chickie). When one of those categories is ungated, the mod has already unlocked it at connect, so those checklist reward squares are not placed as items and are skipped. The only effect is cosmetic: you won't see those particular checkbox rewards (their description text or icon) appear in your own checklist. Nothing is lost for progression — the content is already available.
 
 ## Cross-mode placement
 
@@ -137,7 +138,7 @@ With "City Trial Permanent Patches" enabled (the default), these items give a pe
 
 ### Stadium unlock items
 
-With "City Trial Progressive Stadiums" enabled, stadiums must be found and unlocked, and receiving a stadium unlock item unlocks that stadium in-game. You always start with one random stadium already unlocked, chosen from stadiums that are not checklist rewards (and never VS. KING DEDEDE when that is your goal).
+With "City Trial Stadiums Gated" enabled, stadiums must be found and unlocked, and receiving a stadium unlock item unlocks that stadium in-game. You always start with one random stadium already unlocked, chosen from any of the 24 stadiums (but never VS. KING DEDEDE when that is your goal).
 
 ### Spawn Rate Up items
 

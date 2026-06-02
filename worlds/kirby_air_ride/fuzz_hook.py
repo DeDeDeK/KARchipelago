@@ -22,16 +22,13 @@ from BaseClasses import ItemClassification
 
 from worlds.kirby_air_ride.KARData import location_code_to_mode
 from worlds.kirby_air_ride.KARItems import (
-    GATED_CHECKLIST_REWARDS,
     GATING_CATEGORIES,
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
-    STADIUM_UNLOCK_TO_CHECKLIST_REWARD,
     KARItemGroup,
     KARItemName,
     KARItemType,
     item_name_groups,
-    progression_reward_items,
 )
 from worlds.kirby_air_ride.KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -117,8 +114,6 @@ class KARHook:
         self._check_item_counts(tag, opts, pool_counts, ct_on, ar_on, tr_on)
         self._check_unlock_classifications(tag, pool_items)
         self._check_excluded_items_absent(tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on)
-        self._check_stadium_reward_promotion(tag, opts, pool_items, precollected_counts, ct_on)
-        self._check_gateoff_reward_promotion(tag, opts, pool_items, precollected_counts, ct_on, ar_on, tr_on)
         self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
         self._check_start_inventory(tag, opts, pool_counts, precollected_counts)
         self._check_cross_mode_placement(tag, opts, player, items_we_own_with_loc)
@@ -171,9 +166,9 @@ class KARHook:
 
     def _check_unlock_classifications(self, tag, pool_items):
         # All UNLOCK-type items in the pool must be progression-classified.
-        # Every gated unlock type (from GATING_CATEGORIES) plus stadium unlocks, which
-        # gate separately via city_trial_progressive_stadiums.
-        unlock_types = {cat.item_type for cat in GATING_CATEGORIES} | {KARItemType.CT_STADIUM_UNLOCK}
+        # Every gated unlock type comes from GATING_CATEGORIES (stadiums included, gated on
+        # city_trial_stadiums_gated).
+        unlock_types = {cat.item_type for cat in GATING_CATEGORIES}
         for it in pool_items:
             data = ITEM_TABLE.get(it.name)
             if data is None or data.type not in unlock_types:
@@ -207,22 +202,21 @@ class KARHook:
                         f"(pool={in_pool}, precollected_non_start={in_precollected})"
                     )
 
-        # When gating is OFF for a category that has GATED_CHECKLIST_REWARDS, the overlapping
-        # checklist rewards SHOULD be in the pool. When gating is ON, they should be excluded.
-        for option_attr, overlapping_rewards in GATED_CHECKLIST_REWARDS.items():
-            gated = bool(getattr(opts, option_attr))
-            for reward in overlapping_rewards:
+        # Overlapping checklist rewards are excluded whenever the mod handles their category directly:
+        # the UNLOCK items deliver the content when the gate is ON, and the mod pre-unlocks the whole
+        # category at connect when it is OFF. Either way the reward gates nothing, so it is never in the
+        # pool.
+        for cat in GATING_CATEGORIES:
+            if not cat.overlapping_rewards:
+                continue
+            gated = bool(getattr(opts, cat.option))
+            for reward in cat.overlapping_rewards:
                 in_pool = pool_counts.get(str(reward), 0)
-                # If gating is on, the reward should be excluded UNLESS its mode is disabled (already excluded)
-                # or it's a stadium-overlapped reward that's been promoted to progression.
-                if gated and in_pool:
-                    # Stadium-overlap rewards may still appear in pool when progressive_stadiums is on.
-                    # Skip those specific cases.
-                    if reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.values():
-                        continue
+                if in_pool:
                     raise HookError(
-                        f"{tag} {option_attr}=on but its overlapping checklist reward "
-                        f"{str(reward)!r} is in the pool (count={in_pool})"
+                        f"{tag} overlapping checklist reward {str(reward)!r} for {cat.option} is in the "
+                        f"pool (count={in_pool}); the mod handles its category directly "
+                        f"({cat.option}={gated}), so the reward should be excluded"
                     )
 
         # Permanent patches: excluded unless CT enabled AND option on.
@@ -237,70 +231,6 @@ class KARHook:
                         f"permanent_patches={bool(opts.city_trial_permanent_patches)})"
                     )
 
-    def _check_stadium_reward_promotion(self, tag, opts, pool_items, precollected_counts, ct_on):
-        # When progressive stadiums is on, the six stadiums that double as checklist rewards are gated
-        # on their CT_REWARD_*_STADIUM item instead of an Unlock Stadium item (KARRules substitutes via
-        # STADIUM_UNLOCK_TO_CHECKLIST_REWARD). For those gates to be satisfiable the reward must be
-        # obtainable AND progression-classified, and the overlapping Unlock Stadium item must be
-        # excluded. No other check asserts this, so a future change that drops or demotes a stadium
-        # reward would otherwise silently strand that stadium behind an unsatisfiable Has().
-        if not (ct_on and opts.city_trial_progressive_stadiums):
-            return
-        pool_by_name: dict[str, list] = {}
-        for it in pool_items:
-            pool_by_name.setdefault(it.name, []).append(it)
-        for unlock, reward in STADIUM_UNLOCK_TO_CHECKLIST_REWARD.items():
-            reward_name, unlock_name = str(reward), str(unlock)
-            in_pool = pool_by_name.get(reward_name, [])
-            if not in_pool and not precollected_counts.get(reward_name, 0):
-                raise HookError(
-                    f"{tag} progressive stadiums on but reward gate {reward_name!r} (for {unlock_name!r}) "
-                    f"is neither in the pool nor precollected, so that stadium is unreachable"
-                )
-            for it in in_pool:
-                if not (it.classification & ItemClassification.progression):
-                    raise HookError(
-                        f"{tag} progressive stadiums on but reward gate {reward_name!r} is "
-                        f"{it.classification!r}, not progression; fill won't guarantee its reachability"
-                    )
-            if pool_by_name.get(unlock_name):
-                raise HookError(
-                    f"{tag} progressive stadiums on but overlapping {unlock_name!r} is still in the pool "
-                    f"(it should be excluded in favor of {reward_name!r})"
-                )
-
-    def _check_gateoff_reward_promotion(self, tag, opts, pool_items, precollected_counts, ct_on, ar_on, tr_on):
-        # Checklist rewards that are the sole unlock for gated content (stadium rewards always; machine /
-        # Top Ride item / Nebula Belt rewards when their gate is off) must be progression-classified and
-        # obtainable, or fill won't guarantee that content is reachable. Mirrors progression_reward_items,
-        # the world's own promotion source of truth, so a future change that demotes or drops one of these
-        # rewards is caught here instead of silently stranding the gated content behind an empty gate.
-        expected = progression_reward_items(
-            machines_gated=bool(opts.machines_gated),
-            top_ride_items_gated=bool(opts.top_ride_items_gated),
-            air_ride_courses_gated=bool(opts.air_ride_courses_gated),
-            city_trial_enabled=ct_on,
-            air_ride_enabled=ar_on,
-            top_ride_enabled=tr_on,
-        )
-        pool_by_name: dict[str, list] = {}
-        for it in pool_items:
-            pool_by_name.setdefault(it.name, []).append(it)
-        for reward in expected:
-            reward_name = str(reward)
-            in_pool = pool_by_name.get(reward_name, [])
-            if not in_pool and not precollected_counts.get(reward_name, 0):
-                raise HookError(
-                    f"{tag} reward {reward_name!r} should be promoted to progression and obtainable "
-                    f"(it is the sole unlock for gated content), but it is neither in the pool nor precollected"
-                )
-            for it in in_pool:
-                if not (it.classification & ItemClassification.progression):
-                    raise HookError(
-                        f"{tag} reward {reward_name!r} is {it.classification!r}, not progression; "
-                        f"fill won't guarantee its gated content is reachable"
-                    )
-
     def _check_starter_precollected(self, tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on):
         # For each gated category whose mode is enabled, expect either:
         #   (a) at least one item from the start_inventory belonging to that category
@@ -311,7 +241,7 @@ class KARHook:
             return {str(n) for n in item_name_groups[group]}
 
         # Stadium starter: CT enabled + progressive_stadiums on
-        if ct_on and opts.city_trial_progressive_stadiums:
+        if ct_on and opts.city_trial_stadiums_gated:
             stadium_pool = {str(s) for s in STADIUM_UNLOCK_ITEMS}
             self._check_one_starter(
                 tag,

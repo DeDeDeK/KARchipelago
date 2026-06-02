@@ -189,10 +189,10 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
 _TIGHT_POOL = {
     **CT_ONLY,
     "city_trial_progressive_patch_caps": Toggle.option_true,
-    # 72 Patch Cap Increases (amount - 1) + 6 always-progression legendary part rewards + 6 stadium
-    # rewards (promoted because progressive_stadiums is OFF) = 84 progression, + 5 checkbox fillers = 89,
-    # which just fits the 90 default CT locations.
-    "city_trial_patch_cap_amount": 73,
+    # 78 Patch Cap Increases (amount - 1) + 6 always-progression legendary part rewards = 84 progression,
+    # + 5 checkbox fillers = 89, which just fits the 90 default CT locations. (With progressive_stadiums
+    # OFF the mod unlocks all stadiums at connect, so the 6 stadium rewards are excluded, not promoted.)
+    "city_trial_patch_cap_amount": 79,
     "city_trial_events_gated": Toggle.option_false,
     "abilities_gated": Toggle.option_false,
     "city_trial_patches_gated": Toggle.option_false,
@@ -200,7 +200,7 @@ _TIGHT_POOL = {
     "machines_gated": Toggle.option_false,
     "city_trial_boxes_gated": Toggle.option_false,
     "colors_gated": Toggle.option_false,
-    "city_trial_progressive_stadiums": Toggle.option_false,
+    "city_trial_stadiums_gated": Toggle.option_false,
 }
 
 
@@ -238,7 +238,7 @@ class TestStadiumStarterDededeInInventoryRaises(KARTestBase):
     options = {
         **CT_ONLY,
         "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_progressive_stadiums": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_true,
         "start_inventory": {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: 1},
     }
     auto_construct = False
