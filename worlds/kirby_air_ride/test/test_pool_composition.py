@@ -1,15 +1,24 @@
+from collections import Counter
+
 from BaseClasses import ItemClassification
 from Options import Toggle
 
-from ..KARItems import STADIUM_CHECKLIST_REWARDS, KARItemName, KARItemType
+from ..KARItems import ITEM_TABLE, STADIUM_CHECKLIST_REWARDS, KARItemName, KARItemType
 from ..KAROptions import CityTrialGoal
 from ..KARRegions import KARRegion
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
 
+_CHECKLIST_REWARD_TYPES = frozenset(
+    {KARItemType.CT_CHECKLIST_REWARD, KARItemType.AR_CHECKLIST_REWARD, KARItemType.TR_CHECKLIST_REWARD}
+)
+
 
 class TestPatchCapIncreaseCount(KARTestBase):
+    # ALL_MODES (not CT_ONLY): with checklist rewards now guaranteed once each, CT-only no longer has
+    # room for 9 Patch Cap Increases on top of full default gating + the unique CT rewards. The extra
+    # modes give the pool room; patch caps stay City-Trial items, so the count is still 9.
     options = {
-        **CT_ONLY,
+        **ALL_MODES,
         "city_trial_progressive_patch_caps": Toggle.option_true,
         "city_trial_patch_cap_amount": 10,
     }
@@ -92,13 +101,13 @@ class TestPatchCapAmountOne(KARTestBase):
 
 
 class TestPatchCapAmountMax(KARTestBase):
-    """Boundary: patch_cap_amount=127 (the PowerPC hardware ceiling) with most gating
-    off so the 126-item pool fits. Pins that the max value is reachable in a real config."""
+    """Boundary: patch_cap_amount=30 (the option maximum) with most gating off so the
+    29-item pool fits. Pins that the max value is reachable in a real config."""
 
     options = {
         **ALL_MODES,
         "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 127,
+        "city_trial_patch_cap_amount": 30,
         "city_trial_stadiums_gated": Toggle.option_false,
         "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,
@@ -113,7 +122,7 @@ class TestPatchCapAmountMax(KARTestBase):
     }
 
     def test_count_equals_target_minus_one(self):
-        self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 126)
+        self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 29)
 
 
 class TestChecklistAmountMin(KARTestBase):
@@ -221,7 +230,7 @@ class TestPatchCapExcludedWhenCTDisabled(KARTestBase):
     options = {
         **AR_ONLY,
         "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 50,
+        "city_trial_patch_cap_amount": 30,
     }
 
     def test_no_patch_cap_items_in_pool(self):
@@ -251,6 +260,67 @@ class TestDropPatchesTrapExcludedWhenCTDisabled(KARTestBase):
 
     def test_no_drop_patches_trap_in_pool(self):
         self.assertEqual(self.count_in_pool(KARItemName.DROP_PATCHES_TRAP), 0)
+
+
+class TestChecklistRewardsUnique(KARTestBase):
+    """Checklist rewards are unique one-time unlocks, not draw-with-replacement filler. Regression pin
+    for the old 'reward soup' bug, where rewards were drawn from sets with random.choice and ~half were
+    absent while others appeared many times. Now: useful rewards appear exactly once (they consume scarce
+    default locations); filler rewards appear at least once (so the unlock is obtainable) and may repeat
+    as junk-box filler, since filler-classified rewards also stay in the repeatable filler pool."""
+
+    options = ALL_MODES
+
+    def test_in_scope_rewards_present_useful_exactly_once(self):
+        counts = Counter(self.itempool_names())
+        self.assertTrue(self.world.reward_pool, "reward_pool should be populated for ALL_MODES")
+        for name in self.world.reward_pool:
+            data = ITEM_TABLE[name]
+            with self.subTest(reward=name):
+                if data.classification & ItemClassification.useful:
+                    self.assertEqual(counts[name], 1, f"{name} (useful reward) should appear exactly once")
+                else:
+                    self.assertGreaterEqual(counts[name], 1, f"{name} (filler reward) should appear at least once")
+
+    def test_no_useful_reward_duplicated(self):
+        # Useful checklist rewards must never duplicate - the core of the soup bug.
+        counts = Counter(self.itempool_names())
+        for name, data in ITEM_TABLE.items():
+            if data.type in _CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.useful):
+                with self.subTest(reward=name):
+                    self.assertLessEqual(counts[name], 1, f"useful reward {name} duplicated (soup-bug regression)")
+
+    def test_reward_pool_has_no_duplicates(self):
+        # The world's reward_pool itself lists each in-scope reward exactly once.
+        self.assertEqual(
+            len(self.world.reward_pool),
+            len(set(self.world.reward_pool)),
+            "reward_pool contains duplicate entries",
+        )
+
+
+class TestChecklistRewardsUniqueSingleModes(KARTestBase):
+    """Same uniqueness contract holds in single-mode configs, including Air Ride (whose only repeatable
+    filler is the reclassified CT+AR patch-gives - rewards must still each appear, not be crowded out)."""
+
+    options = AR_ONLY
+
+    def test_ar_rewards_present_useful_exactly_once(self):
+        counts = Counter(self.itempool_names())
+        for name in self.world.reward_pool:
+            data = ITEM_TABLE[name]
+            with self.subTest(reward=name):
+                if data.classification & ItemClassification.useful:
+                    self.assertEqual(counts[name], 1)
+                else:
+                    self.assertGreaterEqual(counts[name], 1)
+
+    def test_no_off_mode_or_duplicated_useful_rewards(self):
+        counts = Counter(self.itempool_names())
+        for name, data in ITEM_TABLE.items():
+            if data.type in _CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.useful):
+                with self.subTest(reward=name):
+                    self.assertLessEqual(counts[name], 1)
 
 
 class TestAllTrapWeightsZeroWithTrapChance(KARTestBase):
