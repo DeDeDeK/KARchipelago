@@ -151,19 +151,77 @@ class CrossModePlacement(DefaultOnToggle):
     If on (default), all of your items can be placed at any of your checklist locations across every
     enabled mode: an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
 
-    If off, your modes are kept separate for progression: an item needed to progress a single mode is
-    restricted to that mode's locations, so City Trial progress comes only from City Trial checks, Air
-    Ride from Air Ride, and Top Ride from Top Ride. Two caveats:
+    If off, your modes are kept separate: an item needed to progress a single mode, and that mode's
+    own checklist reward items, are restricted to that mode's locations. So City Trial content comes
+    only from City Trial checks, Air Ride from Air Ride, and Top Ride from Top Ride. Two caveats:
       - Unlocks that genuinely apply to more than one mode (copy abilities and machines affect both
         City Trial and Air Ride; colors affect all three) may be placed in any mode they apply to, so
         those few items can still tie modes together.
-      - Only progression is locked. Non-progression items (checklist rewards, spawn-rate-ups, traps,
-        and filler) gate nothing, so they are still placed freely across all enabled modes.
+      - Progression and checklist rewards are locked to their mode; everything else that gates nothing
+        (spawn-rate-ups, traps, and filler) is still placed freely across all enabled modes.
+
+    This works whether or not Shuffle Checklist Rewards is on: with it off the reward is pinned to its
+    native box (already in its mode); with it on the reward is shuffled, but only within its own mode.
 
     Items placed remotely (in other players' worlds) are never affected either way.
     """
 
     display_name = "Cross-Mode Placement"
+
+
+class ShuffleChecklistRewards(DefaultOnToggle):
+    """
+    Controls whether the game's native checklist reward items are shuffled, or placed back on the
+    checklist boxes that award them in the base game.
+
+    Many checklist boxes award a specific reward when ticked: a machine, a Kirby color, a music track,
+    a sound test, and so on. This option governs only those reward items.
+
+    If on (default), each reward item is shuffled into the multiworld like any other item, so it can be
+    found anywhere your other items can. Cross-Mode Placement still applies: with it on, a reward may
+    be found in any of your enabled modes; with it off, a reward is still shuffled but kept within its
+    own mode.
+
+    If off, every reward item is placed back on its original box, so ticking that box gives what it gave
+    in the base game. This includes the Dragoon and Hydra parts. Cross-Mode Placement does not affect
+    pinned rewards (they are already fixed to a specific box).
+
+    Caveats:
+      - Only reward items are affected. Boxes that award nothing in the base game, and content that is
+        delivered by other unlock items (extra machines, hidden stadiums, the spare Kirby colors, and
+        so on) instead of by these rewards, still randomize.
+      - A reward whose native box is excluded from receiving good items (for example a box behind a
+        progression flag you left off) is pinned only when it is a filler reward; a more valuable reward
+        on such a box is shuffled instead. In a tight single-mode seed, some filler rewards may likewise
+        shuffle rather than pin when their native box is needed to keep progression placeable.
+    """
+
+    display_name = "Shuffle Checklist Rewards"
+
+
+class ChecklistRewardsGated(DefaultOnToggle):
+    """
+    Controls whether the game's non-progression checklist reward items are gated behind the
+    multiworld, or simply available from the start.
+
+    Many checklist boxes award a minor extra when ticked: a music track, a sound test entry, an
+    ending, a Top Ride rule, and so on. This option governs only those non-progression rewards.
+
+    When enabled (the default), each such reward is an item in the multiworld and must be found like
+    anything else. Shuffle Checklist Rewards and Cross-Mode Placement then decide where it can land.
+
+    When disabled, none of these rewards are added to the pool; the mod unlocks them all from the
+    start, and the checklist boxes that would have awarded them hold ordinary multiworld items
+    instead. Because the rewards are no longer in the pool, Shuffle Checklist Rewards and Cross-Mode
+    Placement have nothing to act on for them.
+
+    The Dragoon and Hydra parts are unaffected: they are progression (they build the legendary
+    machines), so they always stay in the pool regardless of this option. Content delivered by unlock
+    items rather than by these rewards (extra machines, Kirby colors, hidden stadiums, and so on) is
+    governed by its own gating option, not this one.
+    """
+
+    display_name = "Checklist Rewards Gated"
 
 
 class CityTrialGoal(Choice):
@@ -299,12 +357,11 @@ class CityTrialPatchCapAmount(Range):
 
     The "max_stats_in_one_run" City Trial goal uses this value as the per-stat threshold all 9 stats
     must reach in a single trial round to win. Default 18 matches the vanilla per-stat cap.
-    The PowerPC hardware ceiling is 127.
     """
 
     default = 18
     range_start = 1
-    range_end = 127
+    range_end = 30
     display_name = "Patch Cap Target"
 
 
@@ -313,7 +370,7 @@ class CityTrialStadiumsGated(DefaultOnToggle):
     When enabled (the default), City Trial stadiums are locked and must be unlocked by finding their
     corresponding Unlock Stadium items. The game starts with one random stadium already unlocked (any of
     the 24, except VS King Dedede when that is the goal). When disabled, every stadium is available from
-    the start.
+    the start and no Unlock Stadium items are added to the pool.
     """
 
     display_name = "City Trial Stadiums Gated"
@@ -485,6 +542,9 @@ class CityTrialEventsGated(DefaultOnToggle):
     """
     When enabled, City Trial events (Dyna Blade, Meteor, Tac, etc.) are locked and must be
     unlocked by finding their corresponding items.
+
+    When disabled, all events are available from the start and no event unlock items are added to
+    the pool.
     """
 
     display_name = "City Trial Events Gated"
@@ -494,6 +554,9 @@ class AbilitiesGated(DefaultOnToggle):
     """
     When enabled, copy abilities (Fire, Sword, Bomb, etc.) are locked and must be unlocked
     by finding their corresponding items.
+
+    When disabled, all copy abilities are available from the start and no ability unlock items are
+    added to the pool.
     """
 
     display_name = "Copy Abilities Gated"
@@ -503,6 +566,9 @@ class CityTrialPatchesGated(DefaultOnToggle):
     """
     When enabled, patch stat types (Accel, Top Speed, Offense, etc.) are locked and must be
     unlocked by finding their corresponding items.
+
+    When disabled, all patch stat types are available from the start and no patch type unlock items
+    are added to the pool.
     """
 
     display_name = "City Trial Patch Types Gated"
@@ -513,6 +579,9 @@ class CityTrialItemsGated(Toggle):
     When enabled, game items (All Up, Speed Max, Candy, food, hazards, legendary parts, etc.)
     are locked and must be unlocked by finding their corresponding items.
     Adds 30 unlock items to the progression pool; enable more game modes for more locations.
+
+    When disabled, all game items are available from the start and no item unlock items are added to
+    the pool.
     """
 
     display_name = "City Trial Items Gated"
@@ -523,6 +592,9 @@ class MachinesGated(Toggle):
     When enabled, air ride machines are locked and must be unlocked by finding their
     corresponding items. Applies to both City Trial and Air Ride.
     Adds 25 unlock items to the progression pool; enable more game modes for more locations.
+
+    When disabled, all machines are available from the start and no machine unlock items are added
+    to the pool.
     """
 
     display_name = "Machines Gated"
@@ -532,6 +604,9 @@ class CityTrialBoxesGated(DefaultOnToggle):
     """
     When enabled, box types (Blue, Green, Red) are locked and must be unlocked by finding
     their corresponding items.
+
+    When disabled, all box types are available from the start and no box unlock items are added to
+    the pool.
     """
 
     display_name = "City Trial Boxes Gated"
@@ -541,6 +616,9 @@ class AirRideCoursesGated(DefaultOnToggle):
     """
     When enabled, Air Ride courses are locked and must be unlocked by finding their
     corresponding items.
+
+    When disabled, all Air Ride courses are available from the start and no course unlock items are
+    added to the pool.
     """
 
     display_name = "Air Ride Courses Gated"
@@ -550,6 +628,9 @@ class ColorsGated(DefaultOnToggle):
     """
     When enabled, Kirby colors (other than Pink) are locked and must be unlocked by finding
     their corresponding items.
+
+    When disabled, all Kirby colors are available from the start and no color unlock items are added
+    to the pool.
     """
 
     display_name = "Kirby Colors Gated"
@@ -559,6 +640,9 @@ class TopRideCoursesGated(DefaultOnToggle):
     """
     When enabled, Top Ride courses are locked and must be unlocked by finding their
     corresponding items.
+
+    When disabled, all Top Ride courses are available from the start and no course unlock items are
+    added to the pool.
     """
 
     display_name = "Top Ride Courses Gated"
@@ -569,6 +653,9 @@ class TopRideItemsGated(DefaultOnToggle):
     When enabled, Top Ride items are locked and must be unlocked by finding their
     corresponding items. Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky)
     are gated by the copy ability unlock instead.
+
+    When disabled, all Top Ride items are available from the start and no item unlock items are added
+    to the pool.
     """
 
     display_name = "Top Ride Items Gated"
@@ -591,6 +678,8 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     energy_link: EnergyLink
     reveal_checklists: RevealChecklists
     cross_mode_placement: CrossModePlacement
+    shuffle_checklist_rewards: ShuffleChecklistRewards
+    checklist_rewards_gated: ChecklistRewardsGated
 
     # City Trial
     city_trial_goal: CityTrialGoal
@@ -640,7 +729,10 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 
 
 kar_option_groups = [
-    OptionGroup("General Options", [EnergyLink, TrapLink, RevealChecklists, CrossModePlacement]),
+    OptionGroup(
+        "General Options",
+        [EnergyLink, TrapLink, RevealChecklists, CrossModePlacement, ShuffleChecklistRewards, ChecklistRewardsGated],
+    ),
     OptionGroup(
         "Item Options",
         [

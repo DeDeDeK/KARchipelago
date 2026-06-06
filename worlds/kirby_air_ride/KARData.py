@@ -83,7 +83,7 @@ class MemoryAddress(IntEnum):
     OPTION_CHECKLIST_AMOUNT_TOPRIDE = 0x050  # u32, 1-120
     OPTION_CHECKLIST_AMOUNT_CITYTRIAL = 0x054  # u32, 1-120
     OPTION_CT_PROGRESSIVE_PATCH_CAPS = 0x058  # u32, 0 or 1
-    OPTION_CT_PATCH_CAP_AMOUNT = 0x05C  # u32, 1-127
+    OPTION_CT_PATCH_CAP_AMOUNT = 0x05C  # u32, 1-30
     # Spawn rate floor (percent). Applies to CT + TR items; AR has no spawn rate to scale.
     # 100 = vanilla baseline, 500 = 5x (the mod's hard cap). 0 is treated as 100.
     # Each Spawn Rate Up item received adds +10% on top of this floor.
@@ -112,7 +112,10 @@ class MemoryAddress(IntEnum):
     OPTION_COLOR_GATING_ENABLED = 0x0BC  # u32, 0 or 1
     # Mirrors the KAROptions `city_trial_stadiums_gated` toggle.
     OPTION_STADIUM_GATING_ENABLED = 0x0C0  # u32, 0 or 1
-    # 4 bytes of trailing struct padding (APSlotOptions is u64-aligned).
+    # Mirrors the KAROptions `checklist_rewards_gated` toggle. Off => the mod unlocks every
+    # non-progression checklist reward at connect. Occupies what was the APSlotOptions trailing
+    # padding slot, so the struct stays 8-aligned at 152 bytes and no later offset shifts.
+    OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0C4  # u32, 0 or 1
 
     # Location data fields
 
