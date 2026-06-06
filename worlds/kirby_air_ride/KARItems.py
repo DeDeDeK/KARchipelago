@@ -675,16 +675,19 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.BLUE_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 300, _CT),
     KARItemName.GREEN_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 301, _CT),
     KARItemName.RED_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 302, _CT),
-    # Stat patches (up)
-    KARItemName.ACCEL_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 303, _CT),
-    KARItemName.TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 305, _CT),
-    KARItemName.OFFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 307, _CT),
-    KARItemName.DEFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 309, _CT),
-    KARItemName.TURN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 311, _CT),
-    KARItemName.GLIDE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 313, _CT),
-    KARItemName.CHARGE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 315, _CT),
-    KARItemName.WEIGHT_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 317, _CT),
-    KARItemName.HP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 319, _CT),
+    # Stat patches (up). A single +1 stat patch is minor, so these are filler. Patches apply in both
+    # City Trial and Air Ride (the mod's give-patch handler is not City-Trial-gated), so they carry
+    # _AR_CT - this also gives Air Ride a repeatable filler source, since AR has no give-item filler
+    # of its own (food is CT, give-items are TR).
+    KARItemName.ACCEL_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 303, _AR_CT),
+    KARItemName.TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 305, _AR_CT),
+    KARItemName.OFFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 307, _AR_CT),
+    KARItemName.DEFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 309, _AR_CT),
+    KARItemName.TURN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 311, _AR_CT),
+    KARItemName.GLIDE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 313, _AR_CT),
+    KARItemName.CHARGE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 315, _AR_CT),
+    KARItemName.WEIGHT_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 317, _AR_CT),
+    KARItemName.HP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 319, _AR_CT),
     KARItemName.ALL_UP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 320, _CT),
     # Stat patches (down)
     KARItemName.ACCEL_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 304, _CT),
@@ -1651,6 +1654,18 @@ STADIUM_CHECKLIST_REWARDS: frozenset[KARItemName] = frozenset(
         KARItemName.CT_REWARD_DESTRUCTION_DERBY_4_STADIUM,
         KARItemName.CT_REWARD_DESTRUCTION_DERBY_5_STADIUM,
         KARItemName.CT_REWARD_SINGLE_RACE_NEBULA_STADIUM,
+    }
+)
+
+# The three per-mode checklist reward item types. Every native checklist reward (the unique one-time
+# unlocks tied to a specific box, plus the six progression Dragoon/Hydra part markers) is one of these.
+# shuffle_checklist_rewards pins these to their native boxes; _build_item_pools routes the non-progression
+# ones into reward_pool.
+CHECKLIST_REWARD_TYPES: frozenset[KARItemType] = frozenset(
+    {
+        KARItemType.CT_CHECKLIST_REWARD,
+        KARItemType.AR_CHECKLIST_REWARD,
+        KARItemType.TR_CHECKLIST_REWARD,
     }
 )
 
