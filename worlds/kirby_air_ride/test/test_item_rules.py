@@ -7,9 +7,9 @@ Two helpers in KARWorld.set_rules attach item_rule callables to specific locatio
   local items (item.player == self.player). Prevents other players' /collect
   from auto-completing the goal.
 - `_set_cross_mode_placement_rules`: under cross_mode_placement=false, restricts
-  our own mode-tagged PROGRESSION items so each only lands at a location whose mode
-  is in the item's source_modes. Non-progression items (rewards, traps, filler) and
-  items with empty source_modes are unrestricted.
+  our own mode-tagged PROGRESSION and CHECKLIST REWARD items so each only lands at a
+  location whose mode is in the item's source_modes. Other non-progression items
+  (traps, filler, counted-useful) and items with empty source_modes are unrestricted.
 
 Both are tested by constructing stub items and invoking the location's
 item_rule callable directly: the rule is a property of the Location object,
@@ -79,9 +79,9 @@ class TestGoalLocationsLocalOnly(KARTestBase):
 
 
 class TestCrossModePlacementRulesOff(KARTestBase):
-    """cross_mode_placement OFF: own AR-tagged PROGRESSION items rejected on CT locations,
-    own non-progression AR items accepted anywhere, neutral items accepted anywhere,
-    foreign items unaffected."""
+    """cross_mode_placement OFF: own AR-tagged PROGRESSION and CHECKLIST REWARD items rejected on CT
+    locations, other own non-progression AR items (give-items/filler) accepted anywhere, neutral items
+    accepted anywhere, foreign items unaffected."""
 
     options = {**ALL_MODES, "cross_mode_placement": Toggle.option_false}
 
@@ -111,15 +111,15 @@ class TestCrossModePlacementRulesOff(KARTestBase):
             "AR-tagged progression item should be accepted on an AR location",
         )
 
-    def test_own_ar_reward_crosses_to_ct_location(self):
-        # AR_REWARD_FILLER_BOX_1 is tagged {AIRRIDE} but is non-progression, so cross-mode
-        # locking does NOT apply: it may land on a CT location.
+    def test_own_ar_reward_rejected_on_ct_location(self):
+        # AR_REWARD_FILLER_BOX_1 is tagged {AIRRIDE} and is a checklist reward, so under cross-mode-off
+        # it is confined to Air Ride (alongside progression) and must NOT land on a CT location.
         ar_reward = _make_kar_item(self.world, KARItemName.AR_REWARD_FILLER_BOX_1)
         self.assertIn(GameMode.AIRRIDE, ar_reward.source_modes)
         self.assertFalse(ar_reward.classification & ItemClassification.progression)
-        self.assertTrue(
+        self.assertFalse(
             self._ct_location().item_rule(ar_reward),
-            "AR non-progression reward should be allowed on a CT location (only progression is locked)",
+            "AR checklist reward should be rejected on a CT location (rewards are mode-locked under cross-off)",
         )
 
     def test_neutral_own_progression_accepted_on_ct_and_ar(self):

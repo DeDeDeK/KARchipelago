@@ -164,12 +164,13 @@ class TestSpawnRateMaxLessThanMin(KARTestBase):
 
 
 class TestGuaranteedPoolExceedsLocations(KARTestBase):
-    # CT-only with a huge patch_cap_amount inflates the pool past the available default
-    # locations, tripping _validate_pool_fits_locations.
+    # CT-only with progressive patch caps at the max (30) on top of the default gated unlocks inflates
+    # the guaranteed pool to 116 items needing default locations (104 progression + 5 counted-useful +
+    # 7 useful rewards) against only 90 CT default locations, tripping _validate_pool_fits_locations.
     options = {
         **CT_ONLY,
         "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 127,
+        "city_trial_patch_cap_amount": 30,
     }
     auto_construct = False
 
@@ -178,41 +179,39 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
             self.world_setup()
 
 
-# A config tuned to fit by exactly 1 location:
-#   patch_cap_amount=79 -> 78 PATCH_CAP_INCREASE items
-#   + 6 legendary part rewards (Hydra X/Y/Z, Dragoon A/B/C, now progression) -> 84 progression total
+# A config tuned to fit by exactly 1 location, now that checklist rewards are guaranteed once each
+# and so count against the default-location budget. With the gating categories at their defaults (ON),
+# City Trial's confined progression is dominated by the gated unlock items rather than patch caps (now
+# capped at 30), so the patch cap target is kept small to land the budget right at the edge:
+#   75 CT progression with all gates on (gated unlocks + 6 legendary part markers + the CT/AR-tagged
+#       items that fall to City Trial when Air Ride is disabled + multi-mode unlocks)
+#   + 2 PATCH_CAP_INCREASE items (patch_cap_amount 3 -> amount - 1) -> 77 progression total
 #   + 5 default checkbox fillers
-#   = 89 guaranteed items
-#   = exactly 1 under the 90 CT default locations (with all gates off and progressive_stadiums off)
-# Without exclude_locations: fits. With even 2 excludes: doesn't fit. Used by the pair below
-# to pin that _validate_pool_fits_locations subtracts exclude_locations from the default count.
+#   + 7 useful checklist rewards (the non-overlapping CT rewards that must sit on default locations)
+#   = 89 items needing default locations
+#   = exactly 1 under the 90 CT default locations
+# Without exclude_locations: fits. With excludes: doesn't fit. Used by the pair below to pin that
+# _validate_pool_fits_locations subtracts exclude_locations from the default count.
 _TIGHT_POOL = {
     **CT_ONLY,
     "city_trial_progressive_patch_caps": Toggle.option_true,
-    # 78 Patch Cap Increases (amount - 1) + 6 always-progression legendary part rewards = 84 progression,
-    # + 5 checkbox fillers = 89, which just fits the 90 default CT locations. (With progressive_stadiums
-    # OFF the mod unlocks all stadiums at connect, so the 6 stadium rewards are excluded, not promoted.)
-    "city_trial_patch_cap_amount": 79,
-    "city_trial_events_gated": Toggle.option_false,
-    "abilities_gated": Toggle.option_false,
-    "city_trial_patches_gated": Toggle.option_false,
-    "city_trial_items_gated": Toggle.option_false,
-    "machines_gated": Toggle.option_false,
-    "city_trial_boxes_gated": Toggle.option_false,
-    "colors_gated": Toggle.option_false,
-    "city_trial_stadiums_gated": Toggle.option_false,
+    # 2 Patch Cap Increases (amount - 1) on top of the 75 gates-on confined progression = 77 progression,
+    # + 5 checkbox fillers + 7 useful checklist rewards = 89 needing default, which just fits the 90 default
+    # CT locations. Filler-classified rewards are not counted here - they may sit on excluded boxes - so
+    # only the 7 useful rewards add to the needs-default budget.
+    "city_trial_patch_cap_amount": 3,
 }
 
 
 class TestTightPoolFitsWithoutExcludeLocations(KARTestBase):
-    """Baseline for the exclude_locations pair: 89-item pool fits 90 default CT locations."""
+    """Baseline for the exclude_locations pair: 89-items-needing-default just fit 90 default CT locations."""
 
     options = _TIGHT_POOL
 
     def test_setup_succeeds(self):
-        # If this stops fitting (e.g. due to a default-locations rebalance), the paired
-        # exclude_locations test below will need its excludes count tuned.
-        self.assertEqual(len(self.world.progression_pool), 84)
+        # If this stops fitting (e.g. due to a default-locations rebalance or a reward-classification
+        # change), the paired exclude_locations test below will need its excludes count tuned.
+        self.assertEqual(len(self.world.progression_pool), 77)
         self.assertEqual(len(self.world.counted_useful_pool), 5)
 
 
