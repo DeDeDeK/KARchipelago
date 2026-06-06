@@ -118,8 +118,7 @@ class KARContext(CommonContext):
         self.energy_link_enabled = False
         # Withdrawals send `{tag: expected_subtraction_joules}` and reconcile
         # against SetReply.original_value - value to detect server-clamped
-        # under-withdraws (pool didn't have enough). Logged for now; if we
-        # ever need refunds, the mapping is here to support it.
+        # under-withdraws (pool didn't have enough).
         self.pending_energy_withdrawals: dict[str, int] = {}
 
     def _reset_dolphin_state(self) -> None:
@@ -501,6 +500,10 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_TOPRIDE_ITEM_GATING_ENABLED), int(bool(sd.get("top_ride_items_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_COLOR_GATING_ENABLED), int(bool(sd.get("colors_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_STADIUM_GATING_ENABLED), int(bool(sd.get("city_trial_stadiums_gated", 1))))
+        d.write_u32(
+            a(MemoryAddress.OPTION_CHECKLIST_REWARDS_GATING_ENABLED),
+            int(bool(sd.get("checklist_rewards_gated", 1))),
+        )
 
         d.write_u32(a(MemoryAddress.OPTIONS_VALID), 1)
 

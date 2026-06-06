@@ -22,6 +22,7 @@ from BaseClasses import ItemClassification
 
 from worlds.kirby_air_ride.KARData import location_code_to_mode
 from worlds.kirby_air_ride.KARItems import (
+    CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
@@ -33,6 +34,7 @@ from worlds.kirby_air_ride.KARItems import (
 from worlds.kirby_air_ride.KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
+    NATIVE_REWARD_TO_LOCATION,
     TOP_RIDE_LOCATION_TABLE,
 )
 from worlds.kirby_air_ride.KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
@@ -111,9 +113,22 @@ class KARHook:
         ]
         items_we_own = [it for _, it in items_we_own_with_loc]
 
+        # Every distinct item this player owns, counted once, whether it is still loose in the itempool
+        # or has been placed on a location. pre_fill (cross-off reward confinement) place_locked_item's
+        # rewards and removes them from the itempool, so they live only at locations from then on; a
+        # pool-only Counter would miss them. Union by object identity so an item that is both in the pool
+        # and placed (the normal post-distribute case) is not double counted.
+        owned_by_id = {id(it): it for it in pool_items}
+        for it in items_we_own:
+            owned_by_id[id(it)] = it
+        owned_counts = Counter(it.name for it in owned_by_id.values())
+
         self._check_item_counts(tag, opts, pool_counts, ct_on, ar_on, tr_on)
         self._check_unlock_classifications(tag, pool_items)
         self._check_excluded_items_absent(tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on)
+        self._check_reward_uniqueness(tag, world, owned_counts)
+        self._check_checklist_rewards_gated(tag, opts, pool_counts, precollected_counts)
+        self._check_pinned_native_rewards(tag, mw, player, world, pool_counts)
         self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
         self._check_start_inventory(tag, opts, pool_counts, precollected_counts)
         self._check_cross_mode_placement(tag, opts, player, items_we_own_with_loc)
@@ -163,6 +178,75 @@ class KARHook:
             actual = pool_counts.get(str(name), 0)
             if actual != expected:
                 raise HookError(f"{tag} {name} count={actual}, expected {expected} (enabled={enabled}, opt={amount})")
+
+    def _check_reward_uniqueness(self, tag, world, owned_counts):
+        # Checklist rewards are unique one-time unlocks, not draw-with-replacement filler: each reward the
+        # world routes to reward_pool is minted exactly once and never re-enters the filler pool, so every
+        # one (useful or filler) must appear exactly once among the player's owned items. owned_counts spans
+        # both the itempool and placed locations, so it catches rewards that pre_fill locked in-mode (those
+        # are removed from the itempool). Pinned rewards are removed from reward_pool by _pin_native_rewards,
+        # so they are not seen here - see _check_pinned_native_rewards.
+        for name in world.reward_pool:
+            data = ITEM_TABLE.get(name)
+            if data is None:
+                continue
+            count = owned_counts.get(str(name), 0)
+            if count != 1:
+                kind = "useful" if data.classification & ItemClassification.useful else "filler"
+                raise HookError(
+                    f"{tag} {kind} checklist reward {str(name)!r} count={count}, expected exactly 1 "
+                    f"(rewards must be unique one-time items)"
+                )
+
+    def _check_checklist_rewards_gated(self, tag, opts, pool_counts, precollected_counts):
+        # checklist_rewards_gated off: the world removes every non-progression checklist reward from
+        # the pool (the mod unlocks them all at connect). The 6 progression Dragoon/Hydra part markers
+        # are unaffected and stay in the pool. So neither the itempool nor precollected may contain a
+        # non-progression reward.
+        if opts.checklist_rewards_gated:
+            return
+        offenders = []
+        for name, data in ITEM_TABLE.items():
+            if data.type not in CHECKLIST_REWARD_TYPES:
+                continue
+            if data.classification & ItemClassification.progression:
+                continue
+            n = pool_counts.get(str(name), 0) + precollected_counts.get(str(name), 0)
+            if n:
+                offenders.append((str(name), n))
+        if offenders:
+            raise HookError(
+                f"{tag} checklist_rewards_gated off but {len(offenders)} non-progression checklist "
+                f"reward(s) still present (e.g. {offenders[:5]})"
+            )
+
+    def _check_pinned_native_rewards(self, tag, mw, player, world, pool_counts):
+        # shuffle_checklist_rewards off pins each in-scope reward onto the box that awards it in the base
+        # game (place_locked_item) and drops it from the pool. With shuffle on, nothing is pinned.
+        pins = getattr(world, "pinned_native_rewards", {})
+        shuffle_off = not world.options.shuffle_checklist_rewards
+        if not shuffle_off:
+            if pins:
+                raise HookError(f"{tag} shuffle_checklist_rewards on but {len(pins)} rewards were pinned")
+            return
+
+        for loc_name, reward in pins.items():
+            if NATIVE_REWARD_TO_LOCATION.get(str(reward)) != loc_name:
+                raise HookError(f"{tag} pin {str(reward)!r} on {loc_name!r} is not that reward's native box")
+            loc = mw.get_location(loc_name, player)
+            if not loc.locked:
+                raise HookError(f"{tag} pinned reward location {loc_name!r} is not locked")
+            if loc.item is None or loc.item.player != player or loc.item.name != str(reward):
+                placed = None if loc.item is None else (loc.item.player, loc.item.name)
+                raise HookError(f"{tag} pinned box {loc_name!r} should hold local {str(reward)!r}, holds {placed}")
+            # A pinned reward is the unique copy: _pin_native_rewards removed it from reward_pool and
+            # rewards never enter the filler pool, so it must not also be minted into the itempool.
+            extra = pool_counts.get(str(reward), 0)
+            if extra:
+                raise HookError(
+                    f"{tag} pinned reward {str(reward)!r} also appears {extra}x in the pool "
+                    f"(pinned rewards must be unique)"
+                )
 
     def _check_unlock_classifications(self, tag, pool_items):
         # All UNLOCK-type items in the pool must be progression-classified.
@@ -324,20 +408,23 @@ class KARHook:
             # excludes remote placements.
             if loc.player != player:
                 continue
-            # Only PROGRESSION items are mode-locked under cross_mode_placement=off. Non-progression
-            # items (checklist rewards, traps, filler, counted-useful) gate nothing, so the world
-            # deliberately leaves them unrestricted and they may land in any mode. Mirror that here.
-            if not (item.classification & ItemClassification.progression):
-                continue
             data = ITEM_TABLE.get(item.name)
             if data is None or not data.source_modes:
+                continue
+            # Under cross_mode_placement=off, PROGRESSION and CHECKLIST REWARDS are mode-locked to their
+            # source mode(s). Everything else that gates nothing (traps, filler, counted-useful) is left
+            # unrestricted and may land in any mode. Mirror that here.
+            is_progression = bool(item.classification & ItemClassification.progression)
+            is_reward = data.type in CHECKLIST_REWARD_TYPES
+            if not (is_progression or is_reward):
                 continue
             lm = location_code_to_mode(loc.address)
             if lm is None:
                 continue
             if lm not in data.source_modes:
+                kind = "progression" if is_progression else "checklist reward"
                 raise HookError(
-                    f"{tag} cross_mode_placement=off but our item {item.name!r} "
+                    f"{tag} cross_mode_placement=off but our {kind} item {item.name!r} "
                     f"(source modes {sorted(m.name for m in data.source_modes)}) "
                     f"landed at location {loc.name!r} (mode {lm.name})"
                 )

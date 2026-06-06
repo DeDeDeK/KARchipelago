@@ -53,6 +53,7 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "colors_gated",
         "top_ride_courses_gated",
         "top_ride_items_gated",
+        "checklist_rewards_gated",
     }
 )
 

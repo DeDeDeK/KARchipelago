@@ -1182,7 +1182,15 @@ class TestCTCompleteDragoonHydraItemGating(KARTestBase):
     every Hydra/Dragoon piece to spawn, gated behind the six piece-spawn unlocks. (Default CT goal is
     100_checklist, so this cell exists as a normal location here rather than the victory event.)"""
 
-    options = {**CT_ONLY, **_CT_ALL_PROGRESSION_LOCATIONS, "city_trial_items_gated": Toggle.option_true}
+    # stadiums ungated to free ~23 progression slots: with checklist rewards now guaranteed once each,
+    # CT-only with items_gated ON + full default gating would otherwise over-subscribe the 120 CT
+    # locations. Ungating stadiums is orthogonal to the item-gating logic under test here.
+    options = {
+        **CT_ONLY,
+        **_CT_ALL_PROGRESSION_LOCATIONS,
+        "city_trial_items_gated": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_false,
+    }
 
     def test_needs_all_six_piece_unlocks(self):
         self.assertAccessDependency(
@@ -1218,6 +1226,9 @@ class TestCTHydraAndDragoonGoalItemGating(KARTestBase):
         **_CT_ALL_PROGRESSION_LOCATIONS,
         "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon,
         "city_trial_items_gated": Toggle.option_true,
+        # stadiums ungated for headroom (see TestCTCompleteDragoonHydraItemGating); orthogonal to the
+        # victory-event item-gating under test.
+        "city_trial_stadiums_gated": Toggle.option_false,
     }
 
     def test_victory_event_needs_six_piece_unlocks(self):
