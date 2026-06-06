@@ -11,6 +11,8 @@
     - [Mixing goals](#mixing-goals)
   - [Access gating](#access-gating)
   - [Cross-mode placement](#cross-mode-placement)
+  - [Shuffle checklist rewards](#shuffle-checklist-rewards)
+  - [Checklist rewards gated](#checklist-rewards-gated)
   - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
@@ -23,6 +25,7 @@
     - [When items are applied](#when-items-are-applied)
   - [Traps and TrapLink](#traps-and-traplink)
   - [EnergyLink](#energylink)
+    - [Auto-Charge](#auto-charge)
   - [DeathLink](#deathlink)
   - [Other features](#other-features)
     - [Reveal checklists](#reveal-checklists)
@@ -96,12 +99,30 @@ When a category is ungated, the mod unlocks all of its content the instant you c
 
 ## Cross-mode placement
 
-When you have more than one mode enabled, "Cross-Mode Placement" controls whether they share progression.
+When you have more than one mode enabled, "Cross-Mode Placement" controls whether they share items.
 
 - **On (default):** any of your items can land at any of your checklist locations across every enabled mode. An Air Ride unlock might be found on a City Trial checkbox, and vice versa.
-- **Off:** progression is kept separate per mode, so City Trial progress comes only from City Trial checks, Air Ride from Air Ride, and Top Ride from Top Ride. Two things still tie modes together: unlocks that genuinely apply to more than one mode (copy abilities and machines affect City Trial and Air Ride; colors affect all three) may appear in any mode they apply to, and only progression is locked. Non-progression items (checklist rewards, Spawn Rate Ups, traps, and filler) gate nothing, so they are still placed freely across enabled modes.
+- **Off:** each mode is kept separate, so City Trial content comes only from City Trial checks, Air Ride from Air Ride, and Top Ride from Top Ride. Both the items needed to progress a mode and that mode's own checklist reward items are kept in it. Two things still tie modes together: unlocks that genuinely apply to more than one mode (copy abilities and machines affect City Trial and Air Ride; colors affect all three) may appear in any mode they apply to. Everything else that gates nothing (Spawn Rate Ups, traps, and filler) is still placed freely across enabled modes.
 
 Items placed in other players' worlds are never affected either way.
+
+## Shuffle checklist rewards
+
+Many checklist boxes award a specific reward when ticked in the base game: a machine, a Kirby color, a music track, a sound test, a Dragoon or Hydra part, and so on. "Shuffle Checklist Rewards" controls only those reward items.
+
+- **On (default):** each reward is shuffled into the multiworld like any other item, so it can turn up anywhere your items can. Cross-Mode Placement still applies: with it on a reward may appear in any of your enabled modes; with it off the reward is still shuffled but stays within its own mode.
+- **Off:** every reward is placed back on the box that awards it in the base game, including the Dragoon and Hydra parts, so ticking that box gives what it gave in the original game. Pinned rewards are fixed to a box, so Cross-Mode Placement no longer affects them.
+
+A couple of edge cases when this is off: a reward whose native box is excluded from receiving good items (for example a box behind a progression flag you left off) is pinned only when it is a filler reward — a more valuable reward there is shuffled instead. And in a very tight single-mode seed, some filler rewards may shuffle rather than pin if their native box is needed to keep progression placeable. Content delivered by other unlock items (extra machines, hidden stadiums, the spare Kirby colors, and so on) still randomizes either way.
+
+## Checklist rewards gated
+
+Some checklist boxes award a minor extra when ticked: a music track, a sound test entry, an ending, a Top Ride rule, and so on. "Checklist Rewards Gated" controls whether those non-progression rewards are part of the multiworld at all.
+
+- **On (default):** each such reward is an item you find in the multiworld, and "Shuffle Checklist Rewards" and "Cross-Mode Placement" decide where it can land.
+- **Off:** none of these rewards are placed; the mod unlocks them all the instant you connect (the same way an ungated category works), and the checklist boxes that would have awarded them carry ordinary multiworld items instead. Because the rewards are no longer in the pool, "Shuffle Checklist Rewards" and "Cross-Mode Placement" have nothing to act on for them.
+
+The Dragoon and Hydra parts are never affected — they are progression (they build the legendary machines), so they always stay in the multiworld regardless of this option. Turning this off is a good way to thin out low-value cosmetic items, at the cost of those checklist boxes no longer feeling like they "give" anything in-game.
 
 ## What does randomization do to this game?
 
@@ -165,6 +186,12 @@ With "Trap Link" enabled, traps you receive are broadcast to other players who h
 EnergyLink is a City Trial feature. While it is on, collecting patches and destroying objects (rocks, trees, coral, houses, etc.) in the City contributes energy to the multiworld's shared pool, and you can spend that pool from within the game to receive items.
 
 EnergyLink can be enabled in your yaml or from the in-game menu. The yaml only seeds the initial state on first connect; after that the in-game menu is authoritative for the rest of the session.
+
+### Auto-Charge
+
+Auto-Charge (Settings → Energy Link → Auto-Charge in the in-game menu) spends pooled energy to keep your machine's charge meter topped up. Instead of instantly snapping it to full, it adds a steady amount each frame, so it gently assists your own charging — holding A, or coasting and gliding — and your energy drains gradually rather than all at once.
+
+The **Auto-Charge Rate** setting (Slow / Medium / Fast) controls how quickly the meter fills; a slower rate makes a given amount of energy last longer. The total energy spent to fill the meter is the same at every rate — only the pacing changes.
 
 ## DeathLink
 

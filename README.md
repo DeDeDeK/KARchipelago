@@ -22,6 +22,7 @@
     - [When items are applied](#when-items-are-applied)
   - [Traps and TrapLink](#traps-and-traplink)
   - [EnergyLink](#energylink)
+    - [Auto-Charge](#auto-charge)
   - [DeathLink](#deathlink)
   - [Other features](#other-features)
     - [Reveal checklists](#reveal-checklists)
@@ -165,6 +166,12 @@ With "Trap Link" enabled, traps you receive are broadcast to other players who h
 EnergyLink is a City Trial feature. While it is on, collecting patches and destroying objects (rocks, trees, coral, houses, etc.) in the City contributes energy to the multiworld's shared pool, and you can spend that pool from within the game to receive items.
 
 EnergyLink can be enabled in your yaml or from the in-game menu. The yaml only seeds the initial state on first connect; after that the in-game menu is authoritative for the rest of the session.
+
+### Auto-Charge
+
+Auto-Charge (Settings → Energy Link → Auto-Charge in the in-game menu) spends pooled energy to keep your machine's charge meter topped up. Instead of instantly snapping it to full, it adds a steady amount each frame, so it gently assists your own charging — holding A, or coasting and gliding — and your energy drains gradually rather than all at once.
+
+The **Auto-Charge Rate** setting (Slow / Medium / Fast) controls how quickly the meter fills; a slower rate makes a given amount of energy last longer. The total energy spent to fill the meter is the same at every rate — only the pacing changes.
 
 ## DeathLink
 
