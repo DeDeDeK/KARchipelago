@@ -516,7 +516,7 @@ def create_n_blocks_rule(
 # stat type, required when city_trial_patches_gated is on.
 _MAX_STATS_PATCH_UNLOCKS: tuple[str, ...] = (
     KARItemName.UNLOCK_PATCH_WEIGHT,
-    KARItemName.UNLOCK_PATCH_ACCEL,
+    KARItemName.UNLOCK_PATCH_BOOST,
     KARItemName.UNLOCK_PATCH_TOP_SPEED,
     KARItemName.UNLOCK_PATCH_TURN,
     KARItemName.UNLOCK_PATCH_CHARGE,
