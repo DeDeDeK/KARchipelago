@@ -27,4 +27,8 @@ Kirby Air Ride:
   top_ride_courses_gated: false
   top_ride_items_gated: false
   city_trial_stadiums_gated: false
-  city_trial_permanent_patches: false
+  allowed_items:
+    - City Trial Item Gives
+    - City Trial Event Gives
+    - Copy Ability Gives
+    - Top Ride Item Gives

@@ -175,10 +175,10 @@ class TestPatchesGatingApplied(KARTestBase):
     # (which all require non-HP patch unlocks) aren't accidentally pre-unlocked.
     options = {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true, **_PIN_PATCH_STARTER}
 
-    def test_boost_patches_need_accel_unlock(self):
+    def test_boost_patches_need_boost_unlock(self):
         self.assertAccessDependency(
             [CTLocation.GET_10_BOOST_PATCHES],
-            [[KARItemName.UNLOCK_PATCH_ACCEL]],
+            [[KARItemName.UNLOCK_PATCH_BOOST]],
             only_check_listed=True,
         )
 
