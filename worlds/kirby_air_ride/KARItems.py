@@ -99,7 +99,7 @@ class KARItemName(StrEnum):
 
     # Permanent +1 Patches (100-108)
     PERMANENT_WEIGHT_UP = "Permanent Weight Up"
-    PERMANENT_ACCEL_UP = "Permanent Accel Up"
+    PERMANENT_BOOST_UP = "Permanent Boost Up"
     PERMANENT_TOP_SPEED_UP = "Permanent Top Speed Up"
     PERMANENT_TURN_UP = "Permanent Turn Up"
     PERMANENT_CHARGE_UP = "Permanent Charge Up"
@@ -132,7 +132,7 @@ class KARItemName(StrEnum):
     RED_BOX = "Red Box"
 
     # Direct Game Items: Stat Patches Up (303-320)
-    ACCEL_PATCH = "Accel Patch"
+    BOOST_PATCH = "Boost Patch"
     TOP_SPEED_PATCH = "Top Speed Patch"
     OFFENSE_PATCH = "Offense Patch"
     DEFENSE_PATCH = "Defense Patch"
@@ -144,7 +144,7 @@ class KARItemName(StrEnum):
     ALL_UP_PATCH = "All Up Patch"
 
     # Direct Game Items: Stat Patches Down (304-318)
-    ACCEL_DOWN_PATCH = "Accel Down Patch"
+    BOOST_DOWN_PATCH = "Boost Down Patch"
     TOP_SPEED_DOWN_PATCH = "Top Speed Down Patch"
     OFFENSE_DOWN_PATCH = "Offense Down Patch"
     DEFENSE_DOWN_PATCH = "Defense Down Patch"
@@ -206,7 +206,7 @@ class KARItemName(StrEnum):
     DRAGOON_PART_C = "Dragoon Part C"
 
     # Direct Game Items: Fake Patches (361-368)
-    FAKE_ACCEL_PATCH = "Fake Accel Patch"
+    FAKE_BOOST_PATCH = "Fake Boost Patch"
     FAKE_TOP_SPEED_PATCH = "Fake Top Speed Patch"
     FAKE_OFFENSE_PATCH = "Fake Offense Patch"
     FAKE_DEFENSE_PATCH = "Fake Defense Patch"
@@ -389,21 +389,21 @@ class KARItemName(StrEnum):
     UNLOCK_EVENT_FAKE_POWERUPS = "Unlock Event: Fake Powerups"
 
     # Copy Ability Unlocks (760-770)
-    UNLOCK_ABILITY_FIRE = "Unlock Ability: Fire"
-    UNLOCK_ABILITY_WHEEL = "Unlock Ability: Wheel"
-    UNLOCK_ABILITY_SLEEP = "Unlock Ability: Sleep"
-    UNLOCK_ABILITY_SWORD = "Unlock Ability: Sword"
-    UNLOCK_ABILITY_BOMB = "Unlock Ability: Bomb"
-    UNLOCK_ABILITY_PLASMA = "Unlock Ability: Plasma"
-    UNLOCK_ABILITY_NEEDLE = "Unlock Ability: Needle"
-    UNLOCK_ABILITY_MIC = "Unlock Ability: Mic"
-    UNLOCK_ABILITY_FREEZE = "Unlock Ability: Freeze"
-    UNLOCK_ABILITY_TORNADO = "Unlock Ability: Tornado"
-    UNLOCK_ABILITY_WING = "Unlock Ability: Wing"
+    UNLOCK_ABILITY_FIRE = "Unlock Copy Ability: Fire"
+    UNLOCK_ABILITY_WHEEL = "Unlock Copy Ability: Wheel"
+    UNLOCK_ABILITY_SLEEP = "Unlock Copy Ability: Sleep"
+    UNLOCK_ABILITY_SWORD = "Unlock Copy Ability: Sword"
+    UNLOCK_ABILITY_BOMB = "Unlock Copy Ability: Bomb"
+    UNLOCK_ABILITY_PLASMA = "Unlock Copy Ability: Plasma"
+    UNLOCK_ABILITY_NEEDLE = "Unlock Copy Ability: Needle"
+    UNLOCK_ABILITY_MIC = "Unlock Copy Ability: Mic"
+    UNLOCK_ABILITY_FREEZE = "Unlock Copy Ability: Freeze"
+    UNLOCK_ABILITY_TORNADO = "Unlock Copy Ability: Tornado"
+    UNLOCK_ABILITY_WING = "Unlock Copy Ability: Wing"
 
     # Patch Type Unlocks (780-788)
     UNLOCK_PATCH_WEIGHT = "Unlock Patch: Weight"
-    UNLOCK_PATCH_ACCEL = "Unlock Patch: Accel"
+    UNLOCK_PATCH_BOOST = "Unlock Patch: Boost"
     UNLOCK_PATCH_TOP_SPEED = "Unlock Patch: Top Speed"
     UNLOCK_PATCH_TURN = "Unlock Patch: Turn"
     UNLOCK_PATCH_CHARGE = "Unlock Patch: Charge"
@@ -464,14 +464,11 @@ class KARItemName(StrEnum):
     UNLOCK_MACHINE_FLIGHT_WARP_STAR = "Unlock Machine: Flight Warp Star"
     UNLOCK_MACHINE_FREE_STAR = "Unlock Machine: Free Star"
     UNLOCK_MACHINE_STEER_STAR = "Unlock Machine: Steer Star"
-    UNLOCK_MACHINE_WING_KIRBY = "Unlock Machine: Wing Kirby"
-    UNLOCK_MACHINE_WING_META_KNIGHT = "Unlock Machine: Wing Meta Knight"
-    UNLOCK_MACHINE_WHEELIE = "Unlock Machine: Wheelie"
-    UNLOCK_MACHINE_WHEELIE_KIRBY = "Unlock Machine: Wheelie Kirby"
+    UNLOCK_MACHINE_WING_META_KNIGHT = "Unlock Machine: Meta Knight"
     UNLOCK_MACHINE_WHEELIE_BIKE = "Unlock Machine: Wheelie Bike"
     UNLOCK_MACHINE_REX_WHEELIE = "Unlock Machine: Rex Wheelie"
     UNLOCK_MACHINE_WHEELIE_SCOOTER = "Unlock Machine: Wheelie Scooter"
-    UNLOCK_MACHINE_WHEELIE_DEDEDE = "Unlock Machine: Wheelie Dedede"
+    UNLOCK_MACHINE_WHEELIE_DEDEDE = "Unlock Machine: King Dedede"
 
     # Box Unlocks (860-862)
     UNLOCK_BOX_BLUE = "Unlock Box: Blue"
@@ -571,10 +568,10 @@ class KARItemData(NamedTuple):
     type: The item's functional category.
     classification: Default AP classification (progression, useful, filler, trap).
     code: AP item code matching the mod's APItemId enum. None for event-only items.
-    source_modes: Modes the item is meaningful for. Under cross_mode_placement=false,
-        a *progression* item can only land in a location of one of these modes; non-progression
-        items are unrestricted (see _set_cross_mode_placement_rules). Empty frozenset means
-        mode-neutral (no restriction).
+    source_modes: Modes the item is meaningful for. Used by the disabled-mode pool backstop in
+        _build_item_pools: an item whose source_modes is non-empty but doesn't intersect the enabled
+        modes is dropped from the pool (it has no in-game effect). Empty frozenset means mode-neutral.
+        Placement itself is unrestricted - items float freely across the player's enabled modes.
     """
 
     type: KARItemType
@@ -634,7 +631,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.DROP_PATCHES_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 12, _CT),
     # Permanent +1 Patches (100-108)
     KARItemName.PERMANENT_WEIGHT_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 100, _CT),
-    KARItemName.PERMANENT_ACCEL_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 101, _CT),
+    KARItemName.PERMANENT_BOOST_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 101, _CT),
     KARItemName.PERMANENT_TOP_SPEED_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 102, _CT),
     KARItemName.PERMANENT_TURN_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 103, _CT),
     KARItemName.PERMANENT_CHARGE_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 104, _CT),
@@ -679,7 +676,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # City Trial and Air Ride (the mod's give-patch handler is not City-Trial-gated), so they carry
     # _AR_CT - this also gives Air Ride a repeatable filler source, since AR has no give-item filler
     # of its own (food is CT, give-items are TR).
-    KARItemName.ACCEL_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 303, _AR_CT),
+    KARItemName.BOOST_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 303, _AR_CT),
     KARItemName.TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 305, _AR_CT),
     KARItemName.OFFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 307, _AR_CT),
     KARItemName.DEFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 309, _AR_CT),
@@ -690,7 +687,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.HP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 319, _AR_CT),
     KARItemName.ALL_UP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 320, _CT),
     # Stat patches (down)
-    KARItemName.ACCEL_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 304, _CT),
+    KARItemName.BOOST_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 304, _CT),
     KARItemName.TOP_SPEED_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 306, _CT),
     KARItemName.OFFENSE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 308, _CT),
     KARItemName.DEFENSE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 310, _CT),
@@ -735,7 +732,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # Hazards / miscellaneous
     KARItemName.FIREWORKS: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 351, _CT),
     KARItemName.PANIC_SPIN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 352, _CT),
-    KARItemName.SENSOR_BOMB: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 353, _CT),
+    KARItemName.SENSOR_BOMB: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 353, _CT),
     KARItemName.GORDO: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 354, _CT),
     # Legendary machine parts
     KARItemName.HYDRA_PART_X: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 355, _CT),
@@ -745,7 +742,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.DRAGOON_PART_B: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 359, _CT),
     KARItemName.DRAGOON_PART_C: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 360, _CT),
     # Fake patches (look like stat ups but are traps)
-    KARItemName.FAKE_ACCEL_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 361, _CT),
+    KARItemName.FAKE_BOOST_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 361, _CT),
     KARItemName.FAKE_TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 362, _CT),
     KARItemName.FAKE_OFFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 363, _CT),
     KARItemName.FAKE_DEFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 364, _CT),
@@ -1270,7 +1267,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_PATCH_WEIGHT: KARItemData(
         KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 780, _CT
     ),
-    KARItemName.UNLOCK_PATCH_ACCEL: KARItemData(
+    KARItemName.UNLOCK_PATCH_BOOST: KARItemData(
         KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 781, _CT
     ),
     KARItemName.UNLOCK_PATCH_TOP_SPEED: KARItemData(
@@ -1387,8 +1384,15 @@ ITEM_TABLE: dict[str, KARItemData] = {
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 819, _CT
     ),
     # Machine Unlocks (830-854)
-    # Gate whether specific air ride machines can be ridden. VCKIND_WHEELVSDEDEDE
-    # (would be 855) is intentionally excluded: CPU-only stadium machine.
+    # Gate whether specific air ride machines can be ridden. Several VCKINDs are
+    # intentionally excluded because they are not selectable player machines:
+    #   - VCKIND_WINGKIRBY (would be 847): Kirby's Wing copy-ability state, not a
+    #     ridable machine.
+    #   - VCKIND_WHEELIE (would be 849): the Wheelie enemy form, not an Air Ride
+    #     machine. The actual ridable machine is the Wheelie Bike (851).
+    #   - VCKIND_WHEELIEKIRBY (would be 850): Kirby's Wheel copy-ability state, not a
+    #     ridable machine. It's already covered by the Wheel ability unlock.
+    #   - VCKIND_WHEELVSDEDEDE (would be 855): CPU-only stadium machine.
     KARItemName.UNLOCK_MACHINE_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 830, _AR_CT
     ),
@@ -1434,24 +1438,22 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 844, _AR_CT
     ),
+    # Free Star and Steer Star are Top Ride control machines, not Air Ride / City Trial
+    # machines: they don't spawn in the City Trial city (mod CT_SPAWN_EXCLUDED_MASK) and
+    # gate the Top Ride lobby instead (mod GateMachines_TRLobbyCanStart). Tag them _TR so
+    # they only land in Top Ride locations; a guaranteed Top Ride machine starter
+    # (_determine_starter_items) keeps those locations reachable.
     KARItemName.UNLOCK_MACHINE_FREE_STAR: KARItemData(
-        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 845, _AR_CT
+        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 845, _TR
     ),
     KARItemName.UNLOCK_MACHINE_STEER_STAR: KARItemData(
-        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 846, _AR_CT
+        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 846, _TR
     ),
-    KARItemName.UNLOCK_MACHINE_WING_KIRBY: KARItemData(
-        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 847, _AR_CT
-    ),
+    # 847 (VCKIND_WINGKIRBY) intentionally omitted: see exclusion note above.
     KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 848, _AR_CT
     ),
-    KARItemName.UNLOCK_MACHINE_WHEELIE: KARItemData(
-        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 849, _AR_CT
-    ),
-    KARItemName.UNLOCK_MACHINE_WHEELIE_KIRBY: KARItemData(
-        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 850, _AR_CT
-    ),
+    # 849 (VCKIND_WHEELIE) and 850 (VCKIND_WHEELIEKIRBY) intentionally omitted: see note above.
     KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 851, _AR_CT
     ),
@@ -1805,64 +1807,46 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
 )
 
 
-# Maps a KAROptions attribute name to the trap item names whose weight that option
-# controls. __init__.py uses it for per-item weights when filling the junk/trap pool.
-TRAP_WEIGHT_GROUPS: list[tuple[str, frozenset[str]]] = [
-    (
-        "trap_weight_direct_damage",
-        frozenset(
-            {
-                KARItemName.ONE_HP_TRAP,
-            }
-        ),
+# Maps a trap category name (the keys of the `traps` OptionSet) to the trap item names in that
+# category. __init__.py uses it to build the active trap pool from the player's category selection.
+# Every trap-classified item must appear in exactly one category, or it could never be selected.
+TRAP_CATEGORIES: dict[str, frozenset[str]] = {
+    "Direct Damage": frozenset(
+        {
+            KARItemName.ONE_HP_TRAP,
+        }
     ),
-    (
-        "trap_weight_stat_debuff",
-        frozenset(
-            {
-                KARItemName.ALL_DOWN,
-                KARItemName.ACCEL_DOWN_PATCH,
-                KARItemName.TOP_SPEED_DOWN_PATCH,
-                KARItemName.OFFENSE_DOWN_PATCH,
-                KARItemName.DEFENSE_DOWN_PATCH,
-                KARItemName.TURN_DOWN_PATCH,
-                KARItemName.GLIDE_DOWN_PATCH,
-                KARItemName.CHARGE_DOWN_PATCH,
-                KARItemName.WEIGHT_DOWN_PATCH,
-                KARItemName.SPEED_MIN_PATCH,
-                KARItemName.CHARGE_NONE_PATCH,
-                KARItemName.DROP_PATCHES_TRAP,
-                KARItemName.COPY_ABILITY_SLEEP,
-                KARItemName.GIVE_TR_ITEM_SPEED_DOWN,
-            }
-        ),
+    "Stat Debuff": frozenset(
+        {
+            KARItemName.ALL_DOWN,
+            KARItemName.BOOST_DOWN_PATCH,
+            KARItemName.TOP_SPEED_DOWN_PATCH,
+            KARItemName.OFFENSE_DOWN_PATCH,
+            KARItemName.DEFENSE_DOWN_PATCH,
+            KARItemName.TURN_DOWN_PATCH,
+            KARItemName.GLIDE_DOWN_PATCH,
+            KARItemName.CHARGE_DOWN_PATCH,
+            KARItemName.WEIGHT_DOWN_PATCH,
+            KARItemName.SPEED_MIN_PATCH,
+            KARItemName.CHARGE_NONE_PATCH,
+            KARItemName.DROP_PATCHES_TRAP,
+            KARItemName.COPY_ABILITY_SLEEP,
+            KARItemName.GIVE_TR_ITEM_SPEED_DOWN,
+        }
     ),
-    (
-        "trap_weight_fake_patches",
-        frozenset(
-            {
-                KARItemName.FAKE_ACCEL_PATCH,
-                KARItemName.FAKE_TOP_SPEED_PATCH,
-                KARItemName.FAKE_OFFENSE_PATCH,
-                KARItemName.FAKE_DEFENSE_PATCH,
-                KARItemName.FAKE_TURN_PATCH,
-                KARItemName.FAKE_GLIDE_PATCH,
-                KARItemName.FAKE_CHARGE_PATCH,
-                KARItemName.FAKE_WEIGHT_PATCH,
-            }
-        ),
+    "Fake Patches": frozenset(
+        {
+            KARItemName.FAKE_BOOST_PATCH,
+            KARItemName.FAKE_TOP_SPEED_PATCH,
+            KARItemName.FAKE_OFFENSE_PATCH,
+            KARItemName.FAKE_DEFENSE_PATCH,
+            KARItemName.FAKE_TURN_PATCH,
+            KARItemName.FAKE_GLIDE_PATCH,
+            KARItemName.FAKE_CHARGE_PATCH,
+            KARItemName.FAKE_WEIGHT_PATCH,
+        }
     ),
-    (
-        "trap_weight_hazards",
-        frozenset(
-            {
-                KARItemName.PANIC_SPIN,
-                KARItemName.SENSOR_BOMB,
-                KARItemName.GORDO,
-            }
-        ),
-    ),
-]
+}
 
 
 # Maps each KARItemType to its player-facing KARItemGroup (1:1). Groups are exposed in
@@ -1907,3 +1891,31 @@ item_name_groups: dict[str, set[str]] = {
     group: set(items_by_type.get(item_type, set())) for item_type, group in _TYPE_TO_GROUP.items()
 }
 item_name_groups[KARItemGroup.TRAPS] = {n for n, d in ITEM_TABLE.items() if d.classification & ItemClassification.trap}
+
+
+# Maps an "allowed items" category name (the keys of the `allowed_items` OptionSet) to the
+# KARItemType whose optional give items that category governs. A category absent from the
+# player's set removes all of that type's NON-TRAP items from the pool; trap items of these
+# types stay governed solely by `traps` (see ALLOWED_ITEM_CATEGORY_ITEMS). Keys reuse the
+# KARItemGroup display strings so the option keys match the existing player-facing groups.
+# Adjusting the buckets only requires editing this table.
+ALLOWED_ITEM_CATEGORIES: dict[str, KARItemType] = {
+    KARItemGroup.PERMANENT_PATCHES: KARItemType.PERMANENT_PATCH,
+    KARItemGroup.CT_ITEM_GIVES: KARItemType.CT_ITEM_GIVE,
+    KARItemGroup.CT_EVENT_GIVES: KARItemType.CT_EVENT_GIVE,
+    KARItemGroup.ABILITY_GIVES: KARItemType.ABILITY_GIVE,
+    KARItemGroup.TR_ITEM_GIVES: KARItemType.TR_ITEM_GIVE,
+}
+
+# The non-trap item names each allowed-items category governs. Trap-classified items are
+# excluded here because `traps` is the sole governor of trap membership, so toggling a
+# category never adds or removes a trap. __init__ pool-building and fuzz_hook derive their
+# behavior from this map.
+ALLOWED_ITEM_CATEGORY_ITEMS: dict[str, frozenset[str]] = {
+    category: frozenset(
+        name
+        for name in items_by_type.get(item_type, set())
+        if not (ITEM_TABLE[name].classification & ItemClassification.trap)
+    )
+    for category, item_type in ALLOWED_ITEM_CATEGORIES.items()
+}

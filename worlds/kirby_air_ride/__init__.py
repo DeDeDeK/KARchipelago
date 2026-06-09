@@ -1,8 +1,7 @@
 from collections.abc import Mapping
-from itertools import combinations
 from typing import Any, ClassVar, NamedTuple
 
-from BaseClasses import Item, ItemClassification, Location, Tutorial
+from BaseClasses import ItemClassification, Location, Tutorial
 from Options import OptionError
 
 from worlds.AutoWorld import WebWorld, World
@@ -15,13 +14,14 @@ from worlds.LauncherComponents import (
     launch_subprocess,
 )
 
-from .KARData import GameMode, location_code_to_mode
+from .KARData import GameMode
 from .KARItems import (
+    ALLOWED_ITEM_CATEGORY_ITEMS,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
-    TRAP_WEIGHT_GROUPS,
+    TRAP_CATEGORIES,
     KARItem,
     KARItemData,
     KARItemName,
@@ -116,31 +116,33 @@ class KARWeb(WebWorld):
             "top_ride_courses_gated": False,
             "top_ride_items_gated": False,
             "city_trial_stadiums_gated": False,
-            "city_trial_permanent_patches": False,
+            # Keep the preset's "no permanent patches" intent; all other give categories stay on.
+            "allowed_items": [
+                "City Trial Item Gives",
+                "City Trial Event Gives",
+                "Copy Ability Gives",
+                "Top Ride Item Gives",
+            ],
         },
     }
 
 
-class _ModeCapacity(NamedTuple):
-    """Per-mode location budget and progression/reward demand, computed once and shared by the
-    capacity validators (_validate_pool_fits_locations, _validate_local_fits_modes) and the
-    reward-pin budgeter (_reward_pin_capacity). All counts derive from the location name-sets and the
-    built item pools, so the model is pre-pin and stays valid through create_items' pin step.
+class _CapacityModel(NamedTuple):
+    """Location budget and reward demand, computed once and shared by the capacity validators
+    (_validate_pool_fits_locations, _validate_allowed_items_filler) and the reward-pin budgeter
+    (_reward_pin_filler_headroom). Items float freely across the player's enabled modes, so only
+    global totals matter. All counts derive from the location name-sets and the built item pools, so
+    the model is pre-pin and stays valid through create_items' pin step.
 
-    default_by_mode: real, non-goal, non-user-excluded default boxes of each enabled mode.
-    excluded_by_mode: real, non-goal excluded (filler-only) boxes of each enabled mode.
-    prog_demand_by_subset: progression items whose effective source modes fall within subset S, i.e.
-        the progression that must land in S under cross_mode_placement off. Keyed by every non-empty
-        subset of the enabled modes.
-    useful_rewards_by_mode / filler_rewards_by_mode: checklist rewards (single-source-mode) bucketed
-        into their mode by classification.
+    total_default: real, non-goal, non-user-excluded default boxes across all enabled modes.
+    total_excluded: real, non-goal excluded (filler-only) boxes across all enabled modes.
+    useful_rewards / filler_rewards: in-pool checklist rewards split by classification.
     """
 
-    default_by_mode: dict[GameMode, int]
-    excluded_by_mode: dict[GameMode, int]
-    prog_demand_by_subset: dict[frozenset[GameMode], int]
-    useful_rewards_by_mode: dict[GameMode, int]
-    filler_rewards_by_mode: dict[GameMode, int]
+    total_default: int
+    total_excluded: int
+    useful_rewards: int
+    filler_rewards: int
 
 
 class KARWorld(World):
@@ -188,21 +190,23 @@ class KARWorld(World):
         self.useful_pool: set[str] = set()
         self.filler_pool: set[str] = set()
         self.reward_pool: list[str] = []
-        # Shared per-mode capacity/demand model, built once in generate_early after the pools are
-        # built (see _compute_mode_capacity); read by the capacity validators and the pin budgeter.
-        self._mode_capacity: _ModeCapacity | None = None
+        # Shared location capacity/demand model, built once in generate_early after the pools are
+        # built (see _compute_capacity); read by the capacity validators and the pin budgeter.
+        self._capacity_model: _CapacityModel | None = None
         # Native checklist rewards pinned back onto their vanilla boxes (shuffle_checklist_rewards off).
         # Maps location name -> reward item name; populated in create_items via _pin_native_rewards.
         self.pinned_native_rewards: dict[str, str] = {}
-        self.trap_weights: dict[str, int] = {}
+        self.trap_pool: set[str] = set()
+        self.item_pools_built: bool = False
         self.progression_pool: list[str] = []
         self.counted_useful_pool: list[str] = []
         self.stadium_starter_choice: KARItemName | None = None
         self.goal_locations_to_exclude: set[str] = set()
         self.machine_starter_choice: str | None = None
-        self.patch_starter_choice: str | None = None
+        self.tr_machine_starter_choice: str | None = None
         self.ar_course_starter_choice: str | None = None
         self.tr_course_starter_choice: str | None = None
+        self.color_starter_choice: str | None = None
 
     @staticmethod
     def _categorize_locations(
@@ -314,12 +318,15 @@ class KARWorld(World):
           - Stadiums (when city_trial_stadiums_gated + CT): any of the 24 stadium unlocks,
             excluding VS King Dedede when it's the goal.
           - Machines (when machines_gated + CT or AR): excludes Hydra/Dragoon (legendary).
-          - Patch types (when city_trial_patches_gated + CT).
           - Air Ride courses (when air_ride_courses_gated + AR).
           - Top Ride courses (when top_ride_courses_gated + TR).
+          - Colors (when colors_gated): any of the 8 Kirby colors, Pink included — the mod
+            falls back to Pink only when no color is unlocked, so Pink is a valid starter.
+            Colors are a deliberate cosmetic-variety exception to the "needed to play" rule
+            below; every other starter opens a mode's core loop.
 
         Deliberately skipped (playable without): events, abilities, boxes, CT items, TR items,
-        colors (Pink is the implicit default starter).
+        patch types.
         """
         if self.city_trial_enabled and self.options.city_trial_stadiums_gated:
             beat_dedede = self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
@@ -342,17 +349,31 @@ class KARWorld(World):
             machines = items_by_type[KARItemType.MACHINE_UNLOCK] - {
                 KARItemName.UNLOCK_MACHINE_HYDRA,
                 KARItemName.UNLOCK_MACHINE_DRAGOON,
+                # Exclude TR-only machines
+                KARItemName.UNLOCK_MACHINE_FREE_STAR,
+                KARItemName.UNLOCK_MACHINE_STEER_STAR,
             }
             self.machine_starter_choice = self._pick_random_starter(machines)
 
-        if self.city_trial_enabled and self.options.city_trial_patches_gated:
-            self.patch_starter_choice = self._pick_random_starter(items_by_type[KARItemType.CT_PATCH_UNLOCK])
+        # Top Ride needs Free or Steer to start at all — the mod hard-gates the Top Ride lobby
+        # on one of them (GateMachines_TRLobbyCanStart). Mirror the AR/CT machine starter so a
+        # machine-gated Top Ride mode is always playable from the start (and so the _TR-tagged
+        # Free/Steer unlocks have a reachable home).
+        if self.top_ride_enabled and self.options.machines_gated:
+            self.tr_machine_starter_choice = self._pick_random_starter(
+                {KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR}
+            )
 
         if self.air_ride_enabled and self.options.air_ride_courses_gated:
             self.ar_course_starter_choice = self._pick_random_starter(items_by_type[KARItemType.AR_COURSE_UNLOCK])
 
         if self.top_ride_enabled and self.options.top_ride_courses_gated:
             self.tr_course_starter_choice = self._pick_random_starter(items_by_type[KARItemType.TR_COURSE_UNLOCK])
+
+        # Colors apply across all modes (no required_modes), and at least one mode is always
+        # enabled, so the gate alone decides.
+        if self.options.colors_gated:
+            self.color_starter_choice = self._pick_random_starter(items_by_type[KARItemType.COLOR_UNLOCK])
 
     def _validate_options(self) -> None:
         """
@@ -449,6 +470,15 @@ class KARWorld(World):
                 )
 
         if self.options.spawn_rate_progressive:
+            # The spawn-rate mechanic only moves in fixed +10% steps: the mod starts at
+            # spawn_rate_min and adds 10% for each "Spawn Rate Up" item received. Snap both
+            # bounds to the nearest multiple of 10 so the option values actually match what the
+            # game can reach - otherwise a typed value like 255 silently behaves as 250, and an
+            # off-grid min like 137 produces an odd 137/147/157 progression. Done here so every
+            # downstream read (pool size, slot data, the min written to the mod) sees the snapped
+            # values.
+            self.options.spawn_rate_min.value = ((self.options.spawn_rate_min.value + 5) // 10) * 10
+            self.options.spawn_rate_max.value = ((self.options.spawn_rate_max.value + 5) // 10) * 10
             sr_min = self.options.spawn_rate_min.value
             sr_max = self.options.spawn_rate_max.value
             if sr_max < sr_min:
@@ -500,8 +530,8 @@ class KARWorld(World):
             if cat.overlapping_rewards:
                 excluded |= set(cat.overlapping_rewards)
 
-        # Mode-specific checklist rewards - excluded when their mode is disabled.
-        # Without this, with cross_mode_placement off, rewards have no valid landing spots.
+        # Mode-specific checklist rewards - excluded when their mode is disabled, since the box that
+        # would award the reward doesn't exist as a location.
         if not self.air_ride_enabled:
             excluded |= items_by_type[KARItemType.AR_CHECKLIST_REWARD]
         if not self.top_ride_enabled:
@@ -518,9 +548,15 @@ class KARWorld(World):
                 if data.type in CHECKLIST_REWARD_TYPES and not (data.classification & ItemClassification.progression):
                     excluded.add(name)
 
-        # Permanent patches: excluded unless CT enabled AND option ON
-        if not self.city_trial_enabled or not self.options.city_trial_permanent_patches:
-            excluded |= items_by_type[KARItemType.PERMANENT_PATCH]
+        # Allowed item categories: a category absent from `allowed_items` removes all of that
+        # category's optional NON-TRAP items from the pool. (Trap items of these types stay governed
+        # solely by `traps`, so ALLOWED_ITEM_CATEGORY_ITEMS omits them.) The mode/source-modes backstop
+        # below still applies on top, so e.g. Permanent Patches (all _CT) are also dropped when City
+        # Trial is disabled without a separate guard here.
+        allowed = self.options.allowed_items.value
+        for category, names in ALLOWED_ITEM_CATEGORY_ITEMS.items():
+            if category not in allowed:
+                excluded |= names
 
         # Patch cap increase: excluded unless CT enabled AND progressive caps ON
         if not self.city_trial_enabled or not self.options.city_trial_progressive_patch_caps:
@@ -547,8 +583,7 @@ class KARWorld(World):
             excluded.add(KARItemName.CHECKBOX_FILLER_TOP_RIDE)
 
         # Backstop: any item whose source_modes is non-empty but doesn't intersect with the
-        # enabled modes can't be placed under cross_mode_placement=false and has no in-game
-        # effect in the modes that ARE enabled. Drop it regardless of the cross-mode setting.
+        # enabled modes has no in-game effect in the modes that ARE enabled. Drop it from the pool.
         enabled_modes: set[GameMode] = set()
         if self.city_trial_enabled:
             enabled_modes.add(GameMode.CITYTRIAL)
@@ -560,28 +595,42 @@ class KARWorld(World):
             if data.source_modes and not (data.source_modes & enabled_modes):
                 excluded.add(name)
 
-        # Precollected starter items (one per gated category, see _determine_starter_items).
-        # Exclude start_inventory items of each category plus the random pick so they don't
-        # show up in the multiworld pool a second time.
-        starter_groups: list[tuple[str | None, set[str]]] = [
-            (self.stadium_starter_choice, set(STADIUM_UNLOCK_ITEMS)),
-            (self.machine_starter_choice, items_by_type[KARItemType.MACHINE_UNLOCK]),
-            (self.patch_starter_choice, items_by_type[KARItemType.CT_PATCH_UNLOCK]),
-            (self.ar_course_starter_choice, items_by_type[KARItemType.AR_COURSE_UNLOCK]),
-            (self.tr_course_starter_choice, items_by_type[KARItemType.TR_COURSE_UNLOCK]),
-        ]
-        for choice, group in starter_groups:
-            for item_name in self.options.start_inventory:
-                if item_name in group:
-                    excluded.add(item_name)
+        # One-time items the player preset in start_inventory: drop the pool copy. Plain start_inventory
+        # only precollects an item (Main.py); AP does NOT remove it from the pool, so without this a
+        # second findable copy gets minted. Every gating-category unlock and every checklist reward is
+        # placed exactly once, so dedup them all - whether or not the category grants a random starter,
+        # and including the six progression part markers (they live in progression_pool but are still
+        # one-time). An excluded reward is simply never pinned/placed (like overlapping/mode-disabled
+        # rewards), so no special pin handling is needed. Stackable items (patch caps, spawn-rate ups,
+        # checkbox fillers) and filler/give-items are intentionally left in the pool: extra preset copies
+        # are harmless there.
+        one_time_items: set[str] = set()
+        for cat in GATING_CATEGORIES:
+            one_time_items |= items_by_type[cat.item_type]
+        for reward_type in CHECKLIST_REWARD_TYPES:
+            one_time_items |= items_by_type[reward_type]
+        for item_name in self.options.start_inventory:
+            if item_name in one_time_items:
+                excluded.add(item_name)
+
+        # Precollected random starter picks (one per eligible gated category, see
+        # _determine_starter_items): exclude each chosen unlock so it isn't also placed in the pool.
+        for choice in (
+            self.stadium_starter_choice,
+            self.machine_starter_choice,
+            self.tr_machine_starter_choice,
+            self.ar_course_starter_choice,
+            self.tr_course_starter_choice,
+            self.color_starter_choice,
+        ):
             if choice is not None:
                 excluded.add(choice)
 
-        def trap_weight(name: str) -> int:
-            for option_attr, names in TRAP_WEIGHT_GROUPS:
-                if name in names:
-                    return getattr(self.options, option_attr).value
-            return 0
+        # Active trap items: every trap-classified item whose category the player kept in `traps`.
+        # Unselected categories contribute nothing, so their traps never reach the pool.
+        active_traps = {
+            name for category in self.options.traps.value for name in TRAP_CATEGORIES.get(category, frozenset())
+        }
 
         # Sort non-excluded items into pools
         for item_name, item_data in ITEM_TABLE.items():
@@ -610,11 +659,15 @@ class KARWorld(World):
             elif classification & ItemClassification.useful:
                 self.useful_pool.add(item_name)
             elif classification & ItemClassification.trap:
-                weight = trap_weight(item_name)
-                if weight > 0:
-                    self.trap_weights[item_name] = weight
+                if item_name in active_traps:
+                    self.trap_pool.add(item_name)
             else:
                 self.filler_pool.add(item_name)
+
+        # Pools are now authoritative. _random_filler keys off this to avoid resurrecting items the
+        # player disabled via allowed_items (an empty filler_pool after a real build is intentional,
+        # not a "pools never built" ItemLink bypass).
+        self.item_pools_built = True
 
     def generate_early(self) -> None:
         """
@@ -635,113 +688,133 @@ class KARWorld(World):
         for choice in (
             self.stadium_starter_choice,
             self.machine_starter_choice,
-            self.patch_starter_choice,
+            self.tr_machine_starter_choice,
             self.ar_course_starter_choice,
             self.tr_course_starter_choice,
+            self.color_starter_choice,
         ):
             if choice is not None:
                 self.push_precollected(self.create_item(choice))
 
         self._build_item_pools()
-        self._mode_capacity = self._compute_mode_capacity()
+        self._capacity_model = self._compute_capacity()
+        self._validate_allowed_items_filler()
         self._validate_pool_fits_locations()
-        if not self.options.cross_mode_placement:
-            self._validate_local_fits_modes()
 
     @property
-    def _capacity(self) -> _ModeCapacity:
-        """The shared per-mode capacity model built in generate_early (see _compute_mode_capacity)."""
-        assert self._mode_capacity is not None, "capacity model accessed before generate_early built it"
-        return self._mode_capacity
+    def _capacity(self) -> _CapacityModel:
+        """The shared capacity model built in generate_early (see _compute_capacity)."""
+        assert self._capacity_model is not None, "capacity model accessed before generate_early built it"
+        return self._capacity_model
 
-    def _compute_mode_capacity(self) -> _ModeCapacity:
+    def _compute_capacity(self) -> _CapacityModel:
         """
-        Build the per-mode capacity/demand model shared by the capacity validators and the reward-pin
-        budgeter (see _ModeCapacity). Computed once from the location name-sets and the built item
+        Build the location capacity/demand model shared by the capacity validators and the reward-pin
+        budgeter (see _CapacityModel). Computed once from the location name-sets and the built item
         pools, so it stays valid from the end of generate_early through create_items' pin step (which
-        reads it before mutating the pools). The counting and effective-mode logic match the inline
-        computations these consumers each carried before.
+        reads it before mutating the pools). Items float across all enabled modes, so only global
+        totals are tracked.
         """
-        default_by_mode: dict[GameMode, int] = {}
-        excluded_by_mode: dict[GameMode, int] = {}
-        for mode_enum, enabled, default_locs, excluded_locs in [
-            (
-                GameMode.CITYTRIAL,
-                self.city_trial_enabled,
-                self.city_trial_default_locations,
-                self.city_trial_excluded_locations,
-            ),
-            (
-                GameMode.AIRRIDE,
-                self.air_ride_enabled,
-                self.air_ride_default_locations,
-                self.air_ride_excluded_locations,
-            ),
-            (
-                GameMode.TOPRIDE,
-                self.top_ride_enabled,
-                self.top_ride_default_locations,
-                self.top_ride_excluded_locations,
-            ),
+        total_default = 0
+        total_excluded = 0
+        for enabled, default_locs, excluded_locs in [
+            (self.city_trial_enabled, self.city_trial_default_locations, self.city_trial_excluded_locations),
+            (self.air_ride_enabled, self.air_ride_default_locations, self.air_ride_excluded_locations),
+            (self.top_ride_enabled, self.top_ride_default_locations, self.top_ride_excluded_locations),
         ]:
             if not enabled:
                 continue
-            default_by_mode[mode_enum] = sum(
+            mode_default = sum(
                 1
                 for loc in default_locs
                 if loc not in self.goal_locations_to_exclude and loc not in self.options.exclude_locations
             )
             # Total placeable: every real non-goal location of the mode. User-excluded locations still
             # exist (they receive filler) so they count toward the excluded budget, not the default one.
-            total = sum(1 for loc in (default_locs | excluded_locs) if loc not in self.goal_locations_to_exclude)
-            excluded_by_mode[mode_enum] = total - default_by_mode[mode_enum]
-        enabled_set = frozenset(default_by_mode)
+            mode_total = sum(1 for loc in (default_locs | excluded_locs) if loc not in self.goal_locations_to_exclude)
+            total_default += mode_default
+            total_excluded += mode_total - mode_default
 
-        # Effective placement modes of each progression item, intersected with the enabled set. Empty
-        # source_modes means mode-neutral progression, placeable in any enabled mode. Items whose
-        # source_modes don't intersect the enabled set are already excluded from the pool, but skip them
-        # defensively so they can never inflate a subset's demand.
-        prog_effective: list[frozenset[GameMode]] = []
-        for name in self.progression_pool:
-            data = ITEM_TABLE.get(name)
-            if data is None:
-                continue
-            if data.source_modes:
-                eff = data.source_modes & enabled_set
-                if not eff:
-                    continue
-            else:
-                eff = enabled_set
-            prog_effective.append(eff)
-
-        prog_demand_by_subset: dict[frozenset[GameMode], int] = {}
-        modes = sorted(enabled_set, key=lambda m: m.value)
-        for r in range(1, len(modes) + 1):
-            for combo in combinations(modes, r):
-                subset = frozenset(combo)
-                prog_demand_by_subset[subset] = sum(1 for eff in prog_effective if eff <= subset)
-
-        # Checklist rewards are single-source-mode; bucket each into its (enabled) mode by class.
-        useful_rewards_by_mode: dict[GameMode, int] = dict.fromkeys(default_by_mode, 0)
-        filler_rewards_by_mode: dict[GameMode, int] = dict.fromkeys(default_by_mode, 0)
-        for name in self.reward_pool:
-            data = ITEM_TABLE[name]
-            eff = data.source_modes & enabled_set
-            if not eff:
-                continue
-            mode = next(iter(eff))
-            if data.classification & ItemClassification.useful:
-                useful_rewards_by_mode[mode] += 1
-            else:
-                filler_rewards_by_mode[mode] += 1
-
-        return _ModeCapacity(
-            default_by_mode=default_by_mode,
-            excluded_by_mode=excluded_by_mode,
-            prog_demand_by_subset=prog_demand_by_subset,
-            useful_rewards_by_mode=useful_rewards_by_mode,
-            filler_rewards_by_mode=filler_rewards_by_mode,
+        # In-pool checklist rewards split by classification. Progression part-markers live in
+        # progression_pool, not reward_pool, so reward_pool is purely useful/filler.
+        useful_rewards = sum(
+            1 for name in self.reward_pool if ITEM_TABLE[name].classification & ItemClassification.useful
         )
+        filler_rewards = len(self.reward_pool) - useful_rewards
+
+        return _CapacityModel(
+            total_default=total_default,
+            total_excluded=total_excluded,
+            useful_rewards=useful_rewards,
+            filler_rewards=filler_rewards,
+        )
+
+    def _validate_allowed_items_filler(self) -> None:
+        """
+        Guard the failure modes the `allowed_items` OptionSet can create by emptying the draw pools.
+        Excluded boxes accept only filler, and create_items fills leftover (non-guaranteed, non-excluded)
+        slots from useful_pool/filler_pool/traps - so disabling enough categories can leave a slot with
+        nothing to draw, which would otherwise surface as a downstream FillError or an empty random.choice.
+        Two global checks suffice: the per-mode case (e.g. Air-Ride-only losing its only filler) collapses
+        into them because generic filler is mode-neutral in create_items, so a globally non-empty
+        filler_pool can fill any mode's excluded boxes. Raises a clean OptionError in generate_early, never
+        letting an impossible config reach the fill step.
+        """
+        cap = self._capacity
+        total_default = cap.total_default
+        total_excluded = cap.total_excluded
+        # Generic filler create_items mints for excluded boxes that filler-classified rewards don't cover.
+        # A filler reward only covers an excluded box if it actually lands on one: with shuffle on every
+        # filler reward floats and can, so all count; with shuffle off they are pinned to their native box,
+        # so only those whose native box is excluded cover an excluded box (the rest pin to / float onto
+        # default boxes and leave the excluded boxes for generic filler). Mirrors create_items' post-pin
+        # count so this never under-estimates generic_filler and miss an empty-filler_pool starvation.
+        if self.options.shuffle_checklist_rewards:
+            reward_filler_covering_excluded = cap.filler_rewards
+        else:
+            excluded_names: set[str] = set()
+            if self.city_trial_enabled:
+                excluded_names |= self.city_trial_excluded_locations
+            if self.air_ride_enabled:
+                excluded_names |= self.air_ride_excluded_locations
+            if self.top_ride_enabled:
+                excluded_names |= self.top_ride_excluded_locations
+            excluded_names |= set(self.options.exclude_locations)
+            excluded_names -= self.goal_locations_to_exclude
+            reward_filler_covering_excluded = sum(
+                1
+                for name in self.reward_pool
+                if not (ITEM_TABLE[name].classification & ItemClassification.useful)
+                and NATIVE_REWARD_TO_LOCATION.get(name) in excluded_names
+            )
+        generic_filler = max(0, total_excluded - reward_filler_covering_excluded)
+
+        # Traps can only stand in for minted filler when every roll is a trap (trap_chance == 100);
+        # below 100, get_filler_item_name falls through to _random_filler, which needs filler_pool.
+        traps_always = bool(self.trap_pool) and self.options.trap_chance.value >= 100
+
+        # (a) Leftover-slot starvation: slots beyond the guaranteed pool and the filler minted for
+        # excluded boxes draw from useful_pool, then filler_pool, then traps. If any such slot exists
+        # and all three are empty (traps only count at 100%), the draw has nothing.
+        guaranteed = len(self.progression_pool) + len(self.counted_useful_pool) + len(self.reward_pool)
+        leftover_slots = total_default + total_excluded - guaranteed - generic_filler
+        if leftover_slots > 0 and not (self.useful_pool or self.filler_pool or traps_always):
+            raise OptionError(
+                "allowed_items disables every category that could supply non-guaranteed item slots "
+                "(no useful items, no filler items, and no always-on traps remain), but the seed still "
+                "has open locations to fill. Re-enable at least one item category, set trap_chance to "
+                "100 with traps selected, or reduce gating so guaranteed items cover the locations."
+            )
+
+        # (b) Excluded-box starvation: excluded boxes take only filler. The generic filler minted for
+        # the excluded boxes that filler rewards don't cover needs filler_pool (or always-on traps).
+        if generic_filler > 0 and not (self.filler_pool or traps_always):
+            raise OptionError(
+                "allowed_items leaves no filler items in the pool, but the seed has excluded checklist "
+                "boxes that can only receive filler. Re-enable a filler-providing item category (City "
+                "Trial Item Gives or Top Ride Item Gives), set trap_chance to 100 with traps selected, "
+                "exclude fewer locations, or lower the affected mode's checkbox filler count."
+            )
 
     def _validate_pool_fits_locations(self) -> None:
         """
@@ -756,9 +829,9 @@ class KARWorld(World):
         likely culprit options.
         """
         cap = self._capacity
-        default_count = sum(cap.default_by_mode.values())
-        total_count = default_count + sum(cap.excluded_by_mode.values())
-        reward_useful = sum(cap.useful_rewards_by_mode.values())
+        default_count = cap.total_default
+        total_count = default_count + cap.total_excluded
+        reward_useful = cap.useful_rewards
         base_guaranteed = len(self.progression_pool) + len(self.counted_useful_pool)
         needs_default = base_guaranteed + reward_useful
         total_guaranteed = base_guaranteed + len(self.reward_pool)
@@ -795,79 +868,12 @@ class KARWorld(World):
             f"progression flags to make room.{hint_str}"
         )
 
-    def _validate_local_fits_modes(self) -> None:
-        """
-        Under cross_mode_placement=false, KAR item-rule-locks both progression and checklist rewards to
-        their source mode(s), so each enabled mode's locations must hold the items confined to it.
-        Multi-mode progression (abilities/machines/colors) may go in any of its modes, making this a
-        Hall's-condition check over subsets S of enabled modes (exact for the <=3 modes here); rewards are
-        single-source-mode. Two budgets per subset, which together imply the per-subset total-boxes budget:
-          - needs-default: progression + useful rewards + filler-reward spill (filler rewards beyond a
-            mode's excluded boxes spill onto its own default boxes) must fit the subset's default boxes.
-          - excluded-filler: excluded boxes take only filler, so each subset's excluded boxes must be
-            coverable by its confined filler rewards plus the shared generic filler create_items mints.
-        Mode-neutral demand (counted-useful, generic filler/useful) floats and is covered by
-        _validate_pool_fits_locations' global budgets. Shuffle-independent. Raises OptionError naming the
-        overcommitted modes.
-        """
-        cap = self._capacity
-        default_by_mode = cap.default_by_mode
-        excluded_by_mode = cap.excluded_by_mode
-        useful_rewards_by_mode = cap.useful_rewards_by_mode
-        filler_rewards_by_mode = cap.filler_rewards_by_mode
-        enabled_set = frozenset(default_by_mode)
-
-        # generic_filler is the mode-neutral filler create_items mints for excluded boxes the confined
-        # filler rewards don't cover (= max(0, excluded - reward_filler)). The full enabled set always
-        # holds, so only proper subsets can fail the excluded(S) <= filler_rewards(S) + generic_filler
-        # check below.
-        num_excluded = sum(excluded_by_mode.values())
-        num_reward_filler = sum(filler_rewards_by_mode.values())
-        generic_filler = max(0, num_excluded - num_reward_filler)
-
-        modes = sorted(enabled_set, key=lambda m: m.value)
-        for r in range(1, len(modes) + 1):
-            for subset in combinations(modes, r):
-                subset_set = frozenset(subset)
-                mode_names = ", ".join(m.name for m in subset)
-                prog_demand = cap.prog_demand_by_subset[subset_set]
-                useful_demand = sum(useful_rewards_by_mode[m] for m in subset)
-                filler_demand = sum(filler_rewards_by_mode[m] for m in subset)
-                default_cap = sum(default_by_mode[m] for m in subset)
-                # Filler rewards prefer excluded boxes, but a mode whose filler rewards outnumber its
-                # excluded boxes must spill the surplus onto its own default boxes (they are mode-locked,
-                # so they cannot escape to another mode's excluded boxes). That surplus competes with
-                # progression and useful rewards for default boxes, so it is part of the needs-default
-                # demand. (Generic filler is mode-neutral and never spills here; only confined rewards do.)
-                filler_spill = sum(max(0, filler_rewards_by_mode[m] - excluded_by_mode[m]) for m in subset)
-                if prog_demand + useful_demand + filler_spill > default_cap:
-                    raise OptionError(
-                        f"Cross-mode placement is off, but mode(s) [{mode_names}] must hold {prog_demand} "
-                        f"progression, {useful_demand} useful checklist reward, and {filler_spill} surplus "
-                        f"filler checklist reward items (filler rewards with no excluded box left in their "
-                        f"mode) on only {default_cap} default locations between them. Enable "
-                        f"cross_mode_placement, enable more modes, reduce gating / progressive options, turn "
-                        f"on more progression location flags, or turn off checklist_rewards_gated to make room."
-                    )
-                excluded_demand = sum(excluded_by_mode[m] for m in subset)
-                if excluded_demand > filler_demand + generic_filler:
-                    raise OptionError(
-                        f"Cross-mode placement is off, but mode(s) [{mode_names}] have {excluded_demand} "
-                        f"excluded (filler-only) locations and can supply only {filler_demand} confined "
-                        f"filler checklist reward(s) plus {generic_filler} shared generic filler item(s) "
-                        f"to fill them. Excluded boxes accept only filler, and filler rewards are locked to "
-                        f"their mode while cross-mode placement is off. Enable cross_mode_placement, lower "
-                        f"this mode's checkbox_fillers, exclude fewer of its locations, or turn off "
-                        f"checklist_rewards_gated to make room."
-                    )
-
     def create_regions(self) -> None:
         create_regions(self)
 
     def set_rules(self) -> None:
         set_rules(self)
         self._set_goal_location_item_rules()
-        self._set_cross_mode_placement_rules()
 
     def _set_goal_location_item_rules(self) -> None:
         """
@@ -887,36 +893,6 @@ class KARWorld(World):
                 location = self.get_location(location_name)
                 add_item_rule(location, lambda item, player=self.player: item.player == player)
 
-    def _set_cross_mode_placement_rules(self) -> None:
-        """
-        When cross_mode_placement is off, lock our own mode-tagged progression and checklist-reward items
-        to their source mode(s): each may only land at a location of one of its source modes. Everything
-        non-confined (traps, filler, counted-useful) and mode-neutral items (empty source_modes) float
-        freely; remote items (other players') are unaffected - confinement is intra-KAR only.
-
-        Composes with shuffle_checklist_rewards: shuffle-off pins the reward onto its native box (already
-        in-mode); shuffle-on lets it float but this rule keeps fill from carrying it out of its mode.
-        _validate_local_fits_modes guarantees each mode can hold its own confined items.
-        """
-        if self.options.cross_mode_placement:
-            return
-
-        player = self.player
-        reward_names = {str(name) for name, data in ITEM_TABLE.items() if data.type in CHECKLIST_REWARD_TYPES}
-        for location in self.get_locations():
-            loc_mode = location_code_to_mode(location.address)
-            if loc_mode is None:
-                continue
-            add_item_rule(
-                location,
-                lambda item, lm=loc_mode, p=player, rewards=reward_names: (
-                    item.player != p
-                    or not ((item.classification & ItemClassification.progression) or item.name in rewards)
-                    or not (sm := getattr(item, "source_modes", frozenset()))
-                    or lm in sm
-                ),
-            )
-
     def create_item(self, name: str) -> KARItem:
         """
         Create a KARItem from the given item_name.
@@ -926,25 +902,15 @@ class KARWorld(World):
             return KARItem.from_data(str(name), self.player, data)
         raise KeyError(f"Invalid item name: {name}")
 
-    def _reward_pin_capacity(self) -> tuple[dict[GameMode, int], dict[frozenset[GameMode], int], int]:
+    def _reward_pin_filler_headroom(self) -> int:
         """
-        Capacity data used to budget which checklist rewards may pin onto a *default* box without
-        starving progression of the default locations it needs.
-
-        Returns (default_by_mode, demand_by_subset, global_spare):
-          - default_by_mode[m] = real, non-goal, non-user-excluded default boxes of enabled mode m.
-          - demand_by_subset[S] = progression items (the full pool, part markers included) whose
-            effective source modes fall entirely within S, i.e. the progression that *must* land in S
-            under cross_mode_placement off. Mirrors _validate_local_fits_modes' Hall accounting.
-          - global_spare = (all default boxes) - (all needs-default items: progression + counted-useful
-            + useful rewards). The headroom for pinning *filler* onto default boxes. >= 0 by
-            _validate_pool_fits_locations.
+        Headroom for pinning *filler* checklist rewards onto default boxes without starving progression
+        of the default locations it needs: (all default boxes) - (all needs-default items: progression +
+        counted-useful + useful rewards). Guaranteed >= 0 by _validate_pool_fits_locations.
         """
         cap = self._capacity
-        useful_reward_total = sum(cap.useful_rewards_by_mode.values())
-        needs_default = len(self.progression_pool) + len(self.counted_useful_pool) + useful_reward_total
-        global_spare = sum(cap.default_by_mode.values()) - needs_default
-        return cap.default_by_mode, cap.prog_demand_by_subset, global_spare
+        needs_default = len(self.progression_pool) + len(self.counted_useful_pool) + cap.useful_rewards
+        return cap.total_default - needs_default
 
     def _pin_native_rewards(self, excluded_locations: set[str]) -> None:
         """
@@ -958,25 +924,22 @@ class KARWorld(World):
           - Always pin (capacity-neutral): a part marker on a default box (already in progression demand;
             parts gate the Hydra/Dragoon cells, not their own boxes, so this never self-locks), or a filler
             reward on an excluded box (its proper home).
-          - Budgeted (useful rewards, plus filler-on-default under cross-on), useful first: cross-on bounds
-            on global filler headroom; cross-off requires each pin to keep every progression subset within
-            Hall's condition (_pin_keeps_progression_feasible). Non-fitting rewards float. Filler-on-default
-            under cross-off is deferred to pre_fill (excluded-first) so realized spill matches the validated
-            optimum max(0, filler_rewards(m) - excluded(m)).
+          - Budgeted: a useful reward pins onto its native default box (it needs a default box regardless,
+            so this is capacity-neutral), and a filler reward pins onto its native default box only while
+            global filler headroom remains. Non-fitting filler rewards float back into the pool.
         """
         if self.options.shuffle_checklist_rewards:
             return
 
-        cross = bool(self.options.cross_mode_placement)
         in_scope = list(self.reward_pool) + [
             name for name in self.progression_pool if ITEM_TABLE[name].type in CHECKLIST_REWARD_TYPES
         ]
         # Resolve each in-scope reward to a pinnable native box and bucket it. always_pin: capacity-neutral
         # (part on default box, filler on excluded box). budgeted: default-box pins competing for capacity
-        # (useful rewards, plus filler-on-default only under cross-on), with useful first so it wins the
-        # scarce slots. Sorted for determinism.
+        # (useful rewards, plus filler-on-default), with useful first so it wins the scarce slots. Sorted
+        # for determinism.
         always_pin: list[tuple[str, Location]] = []
-        budgeted: list[tuple[str, Location, GameMode, bool]] = []
+        budgeted: list[tuple[str, Location, bool]] = []
         for reward in sorted(in_scope):
             location_name = NATIVE_REWARD_TO_LOCATION.get(reward)
             if location_name is None or location_name in self.goal_locations_to_exclude:
@@ -986,9 +949,6 @@ class KARWorld(World):
             except KeyError:
                 continue  # box belongs to a disabled mode, so no real location exists
             if location.locked or location.address is None:
-                continue
-            mode = location_code_to_mode(location.address)
-            if mode is None:
                 continue
             classification = ITEM_TABLE[reward].classification
             is_progression = bool(classification & ItemClassification.progression)
@@ -1001,23 +961,15 @@ class KARWorld(World):
                 always_pin.append((reward, location))  # filler on its proper home (excluded box)
             elif not is_filler and is_excluded_box:
                 continue  # useful reward can't sit on a filler-only excluded box; float
-            elif is_filler and not cross:
-                continue  # cross-off: float filler-on-default so pre_fill places it excluded-first (optimal)
             else:
-                budgeted.append((reward, location, mode, is_filler))
+                budgeted.append((reward, location, is_filler))
 
         pinned: list[tuple[str, Location]] = list(always_pin)
-        default_by_mode, demand_by_subset, global_spare = self._reward_pin_capacity()
-        pins_by_mode: dict[GameMode, int] = dict.fromkeys(default_by_mode, 0)
+        global_spare = self._reward_pin_filler_headroom()
         # Useful rewards before filler so they claim scarce default slots first.
-        for reward, location, mode, is_filler in sorted(budgeted, key=lambda b: (b[3], b[0])):
+        for reward, location, is_filler in sorted(budgeted, key=lambda b: (b[2], b[0])):
             if is_filler and global_spare <= 0:
                 continue
-            if not cross and not self._pin_keeps_progression_feasible(
-                mode, pins_by_mode, demand_by_subset, default_by_mode
-            ):
-                continue
-            pins_by_mode[mode] += 1
             if is_filler:
                 global_spare -= 1
             pinned.append((reward, location))
@@ -1037,32 +989,10 @@ class KARWorld(World):
         for part in pinned_parts:
             self.progression_pool.remove(part)
 
-    @staticmethod
-    def _pin_keeps_progression_feasible(
-        mode: GameMode,
-        pins_by_mode: dict[GameMode, int],
-        demand_by_subset: dict[frozenset[GameMode], int],
-        default_by_mode: dict[GameMode, int],
-    ) -> bool:
-        """
-        Would adding one non-progression default-box pin in `mode` keep every progression mode-subset
-        within Hall's condition? For each subset S containing `mode`, the progression forced into S plus
-        the non-progression rewards pinned across S must not exceed S's default boxes:
-        demand(S) + pins(S) + 1 <= default(S). Only meaningful under cross_mode_placement off.
-        """
-        for subset, demand in demand_by_subset.items():
-            if mode not in subset:
-                continue
-            pins_in_subset = sum(pins_by_mode[m] for m in subset) + 1
-            capacity = sum(default_by_mode[m] for m in subset)
-            if demand + pins_in_subset > capacity:
-                return False
-        return True
-
     def create_items(self) -> None:
-        # Cross-mode placement is enforced entirely by item-rules (see _set_cross_mode_placement_rules):
-        # progression and checklist rewards are mode-locked there, so create_items mints everything with
-        # no mode awareness and AP's fill enforces the item rules.
+        # Progression, checklist rewards, and filler all float freely across the player's enabled modes,
+        # so create_items mints everything with no mode awareness. (source_modes only governs which items
+        # exist in the pool at all, via the disabled-mode backstop in _build_item_pools.)
         pool: list[str] = []
 
         # Determine excluded locations. Add in excluded locations only if the respective game modes are
@@ -1104,13 +1034,11 @@ class KARWorld(World):
         generic_filler = max(0, num_excluded - num_reward_filler)
         pool.extend(self.get_filler_item_name() for _ in range(generic_filler))
 
-        # Progression items. Under cross_mode_placement=false these are item-rule-locked to their
-        # source mode(s); multi-mode unlocks (ability/machine/color) may land in any applicable
-        # mode. _validate_local_fits_modes guarantees they fit per mode.
+        # Progression items. These float freely across the player's enabled modes;
+        # _validate_pool_fits_locations guarantees they fit the available default locations.
         pool.extend(self.progression_pool)
 
-        # Counted-useful items (checkbox fillers, spawn rate up): guaranteed quantities, but
-        # non-progression so never mode-locked.
+        # Counted-useful items (checkbox fillers, spawn rate up): guaranteed quantities.
         pool.extend(self.counted_useful_pool)
 
         pool.extend(self.reward_pool)
@@ -1124,7 +1052,7 @@ class KARWorld(World):
             - len(self.counted_useful_pool)
             - len(self.reward_pool)
         )
-        has_traps = self.trap_weights and self.options.trap_chance.value > 0
+        has_traps = self.trap_pool and self.options.trap_chance.value > 0
         for _ in range(num_items_left_to_place):
             name: str | None = None
             if has_traps and self.random.random() * 100 < self.options.trap_chance.value:
@@ -1138,105 +1066,32 @@ class KARWorld(World):
         self.multiworld.itempool += [self.create_item(name) for name in pool]
 
     def _random_trap(self) -> str | None:
-        """Pick a random trap weighted by per-type trap weight options, or None if none are enabled."""
-        if not self.trap_weights:
+        """Pick a random active trap (uniform over the categories the player selected in `traps`),
+        or None if no trap categories are active."""
+        if not self.trap_pool:
             return None
-        return self.random.choices(list(self.trap_weights), weights=list(self.trap_weights.values()), k=1)[0]
+        return self.random.choice(sorted(self.trap_pool))
 
     def _random_filler(self) -> str:
-        """Pick a random filler item. Falls back to the broadest filler set in ITEM_TABLE if
-        filler_pool hasn't been built (e.g. the ItemLink path that bypasses _build_item_pools)."""
+        """Pick a random filler item from the built filler_pool. Falls back to the broadest ITEM_TABLE
+        filler set ONLY when the pools were never built (e.g. an ItemLink path that bypasses
+        _build_item_pools). Once pools are built, an empty filler_pool is authoritative (the player
+        disabled every filler category via allowed_items), so we must not resurrect disabled items here;
+        _validate_allowed_items_filler guarantees _random_filler is never called in that state."""
         eligible = set(self.filler_pool)
-        if not eligible:
+        if not eligible and not self.item_pools_built:
             eligible = {n for n, d in ITEM_TABLE.items() if d.classification == ItemClassification.filler}
         return self.random.choice(sorted(eligible))
 
     def get_filler_item_name(self) -> str:
         """Called by the AP framework when the item pool needs additional filler. Rolls a trap when
         traps are enabled (by trap_chance), otherwise returns a plain filler item."""
-        if self.trap_weights and self.options.trap_chance.value > 0:
+        if self.trap_pool and self.options.trap_chance.value > 0:
             if self.random.random() * 100 < self.options.trap_chance.value:
                 trap = self._random_trap()
                 if trap is not None:
                     return trap
         return self._random_filler()
-
-    def pre_fill(self) -> None:
-        """
-        Under cross_mode_placement off, place the confined non-progression checklist rewards into in-mode
-        locations before AP's generic fill.
-
-        AP's greedy remaining_fill is not matching-aware: mode-neutral / multi-mode items can squat a
-        constrained mode's scarce default boxes and strand a confined reward even when a valid assignment
-        exists (Hall's condition can hold with slack while greedy mis-allocates). Pre-placing the confined
-        rewards guarantees each an in-mode home; _validate_local_fits_modes pre-validates capacity so it
-        always fits, and progression is left to AP's backtracking fill_restrictive. With shuffle off,
-        _pin_native_rewards has already taken what it could, so only leftovers reach here. Side effect:
-        rewards become KAR-local under cross-off (no export to other worlds).
-        """
-        if self.options.cross_mode_placement:
-            return
-        self._prefill_confined_rewards()
-
-    def _prefill_confined_rewards(self) -> None:
-        reward_names = {
-            str(name)
-            for name, data in ITEM_TABLE.items()
-            if data.type in CHECKLIST_REWARD_TYPES and not (data.classification & ItemClassification.progression)
-        }
-        floating = [
-            item for item in self.multiworld.itempool if item.player == self.player and item.name in reward_names
-        ]
-        if not floating:
-            return
-
-        default_sets = {
-            GameMode.CITYTRIAL: self.city_trial_default_locations,
-            GameMode.AIRRIDE: self.air_ride_default_locations,
-            GameMode.TOPRIDE: self.top_ride_default_locations,
-        }
-        empty_default: dict[GameMode, list[Location]] = {m: [] for m in default_sets}
-        empty_excluded: dict[GameMode, list[Location]] = {m: [] for m in default_sets}
-        for loc in self.multiworld.get_locations(self.player):
-            if loc.address is None or loc.locked or loc.item is not None:
-                continue
-            if loc.name in self.goal_locations_to_exclude:
-                continue
-            mode = location_code_to_mode(loc.address)
-            if mode is None:
-                continue
-            (empty_default if loc.name in default_sets[mode] else empty_excluded)[mode].append(loc)
-        for bucket in (empty_default, empty_excluded):
-            for locs in bucket.values():
-                self.random.shuffle(locs)
-
-        # Useful rewards first so they claim default boxes (their only legal home) before filler does.
-        def sort_key(item: Item) -> tuple[int, str]:
-            return (0 if ITEM_TABLE[item.name].classification & ItemClassification.useful else 1, item.name)
-
-        placed: list[Item] = []
-        for item in sorted(floating, key=sort_key):
-            data = ITEM_TABLE[item.name]
-            modes = data.source_modes & set(default_sets)
-            if not modes:
-                continue
-            mode = next(iter(modes))
-            is_useful = bool(data.classification & ItemClassification.useful)
-            location = None
-            if is_useful:
-                if empty_default[mode]:
-                    location = empty_default[mode].pop()
-            elif empty_excluded[mode]:
-                location = empty_excluded[mode].pop()  # filler's proper home
-            elif empty_default[mode]:
-                location = empty_default[mode].pop()
-            if location is None:
-                continue  # capacity is pre-validated, so this is unreachable; fall back to greedy fill
-            location.place_locked_item(item)
-            placed.append(item)
-
-        for item in placed:
-            self.multiworld.itempool.remove(item)
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         """

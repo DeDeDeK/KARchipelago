@@ -3,7 +3,13 @@ from collections import Counter
 from BaseClasses import ItemClassification
 from Options import Toggle
 
-from ..KARItems import ITEM_TABLE, STADIUM_CHECKLIST_REWARDS, KARItemName, KARItemType
+from ..KARItems import (
+    ALLOWED_ITEM_CATEGORY_ITEMS,
+    ITEM_TABLE,
+    STADIUM_CHECKLIST_REWARDS,
+    KARItemName,
+    KARItemType,
+)
 from ..KAROptions import CityTrialGoal
 from ..KARRegions import KARRegion
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
@@ -48,6 +54,21 @@ class TestSpawnRateUpCount(KARTestBase):
         self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 20)
 
 
+class TestSpawnRateUpCountOffGrid(KARTestBase):
+    # Spawn rate moves in 10% steps, so off-grid bounds are snapped to the nearest multiple of 10
+    # before the pool size is computed: min 134 -> 130, max 287 -> 290, giving (290 - 130) // 10 = 16.
+    # Under the old (unsnapped) behavior this was (287 - 134) // 10 = 15.
+    options = {
+        **ALL_MODES,
+        "spawn_rate_progressive": Toggle.option_true,
+        "spawn_rate_min": 134,
+        "spawn_rate_max": 287,
+    }
+
+    def test_count_uses_snapped_bounds(self):
+        self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 16)
+
+
 class TestSpawnRateProgressiveDisabled(KARTestBase):
     options = {**CT_ONLY, "spawn_rate_progressive": Toggle.option_false}
 
@@ -70,13 +91,91 @@ class TestCheckboxFillerCounts(KARTestBase):
 
 
 class TestPermanentPatchesDisabled(KARTestBase):
-    options = {**CT_ONLY, "city_trial_permanent_patches": Toggle.option_false}
+    # Permanent Patches dropped from allowed_items (the other categories stay on).
+    options = {
+        **CT_ONLY,
+        "allowed_items": [
+            "City Trial Item Gives",
+            "City Trial Event Gives",
+            "Copy Ability Gives",
+            "Top Ride Item Gives",
+        ],
+    }
 
     def test_no_permanent_patches_in_pool(self):
         perm_names = items_of_type(KARItemType.PERMANENT_PATCH)
         pool_names = set(self.itempool_names())
         leaked = pool_names & perm_names
         self.assertFalse(leaked, f"Permanent patches leaked when disabled: {sorted(leaked)}")
+
+
+class TestAllowedItemsDefaultAllOn(KARTestBase):
+    """Default allowed_items = all five categories on, so every category's non-trap items are
+    eligible (in the useful/filler draw pools). None of these types contain progression/reward/
+    counted items, so eligibility is exactly useful_pool | filler_pool."""
+
+    options = ALL_MODES
+
+    def test_all_categories_eligible(self):
+        eligible = self.world.useful_pool | self.world.filler_pool
+        for category, names in ALLOWED_ITEM_CATEGORY_ITEMS.items():
+            with self.subTest(category=category):
+                missing = set(names) - eligible
+                self.assertFalse(missing, f"{category} items not eligible when allowed: {sorted(missing)}")
+
+
+class TestAllowedItemsCategoryDisabled(KARTestBase):
+    """Removing categories from allowed_items keeps all of their non-trap items out of the pool and
+    the draw pools, while kept categories stay eligible. Keeps the filler-providing categories on so
+    the config is naturally fillable (the all-off case is covered in test_validation)."""
+
+    _KEPT = ["Permanent Patches", "City Trial Item Gives", "Top Ride Item Gives"]
+    options = {**ALL_MODES, "allowed_items": _KEPT}
+
+    def test_disabled_categories_absent(self):
+        eligible = self.world.useful_pool | self.world.filler_pool
+        pool_names = set(self.itempool_names())
+        for category, names in ALLOWED_ITEM_CATEGORY_ITEMS.items():
+            if category in self._KEPT:
+                continue
+            with self.subTest(category=category):
+                self.assertFalse(set(names) & eligible, f"{category} still eligible when disabled")
+                self.assertFalse(set(names) & pool_names, f"{category} item in pool when disabled")
+
+    def test_kept_categories_eligible(self):
+        eligible = self.world.useful_pool | self.world.filler_pool
+        for category in self._KEPT:
+            with self.subTest(category=category):
+                self.assertTrue(set(ALLOWED_ITEM_CATEGORY_ITEMS[category]) <= eligible)
+
+
+class TestAllowedItemsTrapsOrthogonal(KARTestBase):
+    """allowed_items governs only NON-trap items. With every give category disabled, the trap-class
+    items of those same types (fake patches, down patches, Copy Ability: Sleep, TR Speed Down) must
+    still be trap-eligible, since `traps` is the sole governor of traps. (trap_chance 100 + traps on
+    so the all-categories-off config is still fillable.)"""
+
+    options = {
+        **ALL_MODES,
+        "allowed_items": [],
+        "trap_chance": 100,
+        "traps": ["Direct Damage", "Stat Debuff", "Fake Patches"],
+    }
+
+    def test_non_trap_gives_absent_but_traps_eligible(self):
+        eligible = self.world.useful_pool | self.world.filler_pool
+        for category, names in ALLOWED_ITEM_CATEGORY_ITEMS.items():
+            with self.subTest(category=category):
+                self.assertFalse(set(names) & eligible, f"{category} non-trap items eligible when disabled")
+        # Trap-class items of these give-types remain governed by `traps`, not allowed_items.
+        for trap_name in (
+            KARItemName.FAKE_BOOST_PATCH,
+            KARItemName.BOOST_DOWN_PATCH,
+            KARItemName.COPY_ABILITY_SLEEP,
+            KARItemName.GIVE_TR_ITEM_SPEED_DOWN,
+        ):
+            with self.subTest(trap=trap_name):
+                self.assertIn(trap_name, self.world.trap_pool)
 
 
 class TestNoTrapsWhenChanceZero(KARTestBase):
@@ -238,10 +337,10 @@ class TestPatchCapExcludedWhenCTDisabled(KARTestBase):
 
 
 class TestPermanentPatchesExcludedWhenCTDisabled(KARTestBase):
-    """Permanent patches are CT-only. Even with the toggle ON, with CT disabled they
-    should not appear in the pool."""
+    """Permanent patches are CT-only. Even with their allowed_items category ON (the default),
+    with CT disabled they should not appear in the pool (source-modes backstop)."""
 
-    options = {**AR_ONLY, "city_trial_permanent_patches": Toggle.option_true}
+    options = AR_ONLY
 
     def test_no_permanent_patches_in_pool(self):
         perm_names = items_of_type(KARItemType.PERMANENT_PATCH)
@@ -267,9 +366,11 @@ class TestChecklistRewardsUnique(KARTestBase):
     for the old 'reward soup' bug, where rewards were drawn from sets with random.choice and ~half were
     absent while others appeared many times. Now: useful rewards appear exactly once (they consume scarce
     default locations); filler rewards appear at least once (so the unlock is obtainable) and may repeat
-    as junk-box filler, since filler-classified rewards also stay in the repeatable filler pool."""
+    as junk-box filler, since filler-classified rewards also stay in the repeatable filler pool.
 
-    options = ALL_MODES
+    Rewards are off by default now, so this gates them on to exercise the uniqueness path."""
+
+    options = {**ALL_MODES, "checklist_rewards_gated": Toggle.option_true}
 
     def test_in_scope_rewards_present_useful_exactly_once(self):
         counts = Counter(self.itempool_names())
@@ -323,23 +424,20 @@ class TestChecklistRewardsUniqueSingleModes(KARTestBase):
                     self.assertLessEqual(counts[name], 1)
 
 
-class TestAllTrapWeightsZeroWithTrapChance(KARTestBase):
-    """trap_chance > 0 but every per-category trap weight = 0: trap_weights dict ends up
-    empty, _random_trap is never called, and no trap items land in the pool. Regression pin
-    that the weight=0 short-circuit in _build_item_pools is honoured."""
+class TestNoTrapCategoriesWithTrapChance(KARTestBase):
+    """trap_chance > 0 but `traps` selects no categories: trap_pool ends up empty,
+    _random_trap is never called, and no trap items land in the pool. Regression pin
+    that an empty category selection short-circuits in _build_item_pools."""
 
     options = {
         **ALL_MODES,
         "trap_chance": 50,
-        "trap_weight_direct_damage": 0,
-        "trap_weight_stat_debuff": 0,
-        "trap_weight_fake_patches": 0,
-        "trap_weight_hazards": 0,
+        "traps": [],
     }
 
-    def test_trap_weights_empty(self):
-        self.assertEqual(self.world.trap_weights, {})
+    def test_trap_pool_empty(self):
+        self.assertEqual(self.world.trap_pool, set())
 
     def test_no_traps_in_pool(self):
         traps = [item for item in self.itempool_items() if item.classification & ItemClassification.trap]
-        self.assertEqual(traps, [], f"Traps in pool despite all weights zero: {[t.name for t in traps]}")
+        self.assertEqual(traps, [], f"Traps in pool despite no trap categories selected: {[t.name for t in traps]}")

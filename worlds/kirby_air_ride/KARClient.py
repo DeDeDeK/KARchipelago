@@ -120,6 +120,12 @@ class KARContext(CommonContext):
         # against SetReply.original_value - value to detect server-clamped
         # under-withdraws (pool didn't have enough).
         self.pending_energy_withdrawals: dict[str, int] = {}
+        # Watermark for the game-owned energy_sent_total cumulative counter. None
+        # means "needs (re)seeding" — set on connect and after any game restart
+        # (via _reset_dolphin_state) so we diff forward from the current value
+        # rather than replaying history or misreading the boot reset as a giant
+        # withdrawal. Mirrors the last_sent_checks pattern.
+        self.energy_last_seen: int | None = None
 
     def _reset_dolphin_state(self) -> None:
         """Reset state tied to the Dolphin connection/mod memory.
@@ -133,6 +139,7 @@ class KARContext(CommonContext):
         self.locations_written = False
         self.item_send_index = 0
         self.last_sent_checks = {m: [0, 0] for m in GameMode}
+        self.energy_last_seen = None
 
     def _reset_server_state(self) -> None:
         """Reset state tied to the AP server session (scouts, bounces).
@@ -272,16 +279,18 @@ class KARContext(CommonContext):
 
         # Log goals for the player.
         goals = []
-        for mode_name, goal_key, amount_key in [
-            ("City Trial", "city_trial_goal", "city_trial_checklist_amount"),
-            ("Air Ride", "air_ride_goal", "air_ride_checklist_amount"),
-            ("Top Ride", "top_ride_goal", "top_ride_checklist_amount"),
+        for mode_name, goal_key, amount_key, goal_loc_key in [
+            ("City Trial", "city_trial_goal", "city_trial_checklist_amount", "city_trial_goal_locations"),
+            ("Air Ride", "air_ride_goal", "air_ride_checklist_amount", "air_ride_goal_locations"),
+            ("Top Ride", "top_ride_goal", "top_ride_checklist_amount", "top_ride_goal_locations"),
         ]:
             goal_val = GoalKind(int(sd.get(goal_key, GoalKind.NONE)))
             if goal_val != GoalKind.NONE:
                 goal_str = GOAL_NAMES.get(goal_val, str(int(goal_val)))
                 if goal_val == GoalKind.N_CHECKLIST:
                     goal_str += f" ({int(sd.get(amount_key, 60))})"
+                elif goal_val == GoalKind.CHECKLIST_LIST:
+                    goal_str += f" ({len(sd.get(goal_loc_key, []))} locations)"
                 goals.append(f"{mode_name}: {goal_str}")
         if goals:
             logger.info(f"Goal(s): {', '.join(goals)}")
@@ -358,15 +367,15 @@ class KARContext(CommonContext):
     async def run_dolphin_sync(self) -> None:
         logger.info("Starting Dolphin connector. Use /dolphin for status information.")
         while not self.exit_event.is_set():
-            has_pending_work = (
-                not self.locations_written
-                or self.item_send_index < len(self.items_received)
-                or self.pending_trap_receives > 0
-            )
-            timeout = 0.1 if has_pending_work else 1.0
-
+            # Poll game memory at a fixed 0.1s cadence. Game-initiated events
+            # (checks, energy sends, deathlink/traplink, goal) are discovered
+            # only by polling - nothing server-side wakes the loop for them - so
+            # the poll interval is their latency floor. A 1.0s idle backoff added
+            # up to a full second before a check (or energy/death/trap) was even
+            # read. watcher_event still provides an instant early-wake when items
+            # arrive from the server, so delivery isn't gated on the 0.1s tick.
             try:
-                async with asyncio.timeout(timeout):
+                async with asyncio.timeout(0.1):
                     await self.watcher_event.wait()
             except TimeoutError:
                 pass
@@ -419,12 +428,21 @@ class KARContext(CommonContext):
             self.ap_data_base = ptr
             logger.info(f"APData struct at {ptr:#010x}")
 
-        # Wait for game_ready
+        # Wait for game_ready, and detect restarts. The mod sets game_ready once
+        # in OnBoot and never clears it during play, so reading 0 after we've seen
+        # 1 means the game rebooted (APData re-zeroed, possibly at the same
+        # pointer). Re-run the handshake: re-seeds energy_last_seen and re-writes
+        # options/locations against the freshly-initialized struct.
+        game_ready_mem = self.dolphin.read_u32(self._addr(MemoryAddress.GAME_READY))
         if not self.game_ready:
-            if self.dolphin.read_u32(self._addr(MemoryAddress.GAME_READY)) != 1:
+            if game_ready_mem != 1:
                 return
             self.game_ready = True
             logger.info("Game initialized and save loaded.")
+        elif game_ready_mem != 1:
+            logger.info("game_ready cleared - game restarted. Re-handshaking.")
+            self._reset_dolphin_state()
+            return
 
         # Write slot options (requires AP server connection)
         if not self.options_written:
@@ -442,6 +460,18 @@ class KARContext(CommonContext):
             self._write_location_data()
             self.locations_written = True
             logger.info("Location data written. Client fully operational.")
+
+            # Re-arm backfill on every completed handshake, not just on an AP
+            # "Connected" packet. When the mod restarts with a fresh save while
+            # the AP server session stays alive (e.g. Dolphin reboot, no new
+            # Connected), the server may know about checks the freshly-loaded
+            # save no longer has. _handle_backfill diffs the server's
+            # checked_locations against the game's sent_checks and writes the
+            # missing bits; last_sent_checks was reset to 0 by
+            # _reset_dolphin_state so the diff reflects the new save. Without
+            # this, only re-delivered reward items mark their cells and the
+            # genuinely-checked non-reward locations are never restored.
+            self.backfill_pending = True
 
         # Normal operation
         await self._poll_game()
@@ -661,68 +691,104 @@ class KARContext(CommonContext):
         if not self.energy_link_enabled:
             return
 
-        # Write current AP EnergyLink pool balance to the game. Pool is stored
-        # in Joules on the server; mod expects raw MJ units. Integer floor
-        # division - sub-MJ remainders aren't representable mod-side.
+        # Process energy sends FIRST, then write the balance LAST (below). Order
+        # matters: the balance write seeds from current_energy_link_value (the
+        # last server-pushed pool), so if it ran before the diff it would bounce
+        # the mod's immediate local decrement back up to the stale pool, letting
+        # the affordability gate briefly overdraw across the ~1-2 poll server
+        # round-trip. We fold our own delta into the cached value first.
+        #
+        # energy_sent_total is a game-owned CUMULATIVE counter (s64 signed raw
+        # MJ): the game only ever adds (deposits) / subtracts (withdrawals); we
+        # only read-and-diff, never write it. Any number of game-side writes
+        # between polls collapse into one net delta. Mirrors last_sent_checks.
+        raw = self.dolphin.read_u64(self._addr(MemoryAddress.ENERGY_SENT_TOTAL))
+        cur = raw - (1 << 64) if raw >= (1 << 63) else raw
+
+        if self.energy_last_seen is None:
+            # Seed on connect / after a game restart (energy_last_seen is reset
+            # to None by _reset_dolphin_state): record the current total without
+            # applying it, so we diff forward from here rather than replaying the
+            # session. Fall through to refresh the balance below.
+            self.energy_last_seen = cur
+        else:
+            delta_mj = cur - self.energy_last_seen
+            if delta_mj != 0:
+                # Advance the watermark now. A dropped send self-heals on the
+                # next diff (the counter is the source of truth), so we never
+                # replay this delta. Restart detection lives upstream: the
+                # game_ready 1->0 re-check in _dolphin_tick catches a reboot
+                # (game_ready is set once in OnBoot, zeroed by the reboot memset)
+                # and re-seeds via _reset_dolphin_state, so we don't second-guess
+                # a backward delta with a magnitude heuristic here.
+                self.energy_last_seen = cur
+
+                joules = delta_mj * ENERGY_LINK_EXCHANGE_RATE
+                ops: list[dict[str, Any]] = [{"operation": "add", "value": joules}]
+                if joules < 0:
+                    # Withdraw: tag + want_reply so we can match the SetReply and
+                    # detect server-side clamping at 0 (pool was emptier than the
+                    # mod thought).
+                    ops.append({"operation": "max", "value": 0})
+                    tag = uuid.uuid4().hex
+                    # Record the pending tag only after the send is dispatched.
+                    # send_msgs silently no-ops on a closed socket, so a pre-send
+                    # insert would leak the entry indefinitely when the connection
+                    # drops mid-flight.
+                    await self.send_msgs(
+                        [
+                            {
+                                "cmd": "Set",
+                                "key": f"EnergyLink{self.team}",
+                                "default": 0,
+                                "tag": tag,
+                                "want_reply": True,
+                                "operations": ops,
+                            }
+                        ]
+                    )
+                    self.pending_energy_withdrawals[tag] = -joules  # store as positive expected subtraction
+                else:
+                    # Deposit: no tag needed, the set_notify subscription delivers
+                    # the updated balance to all clients.
+                    await self.send_msgs(
+                        [
+                            {
+                                "cmd": "Set",
+                                "key": f"EnergyLink{self.team}",
+                                "default": 0,
+                                "operations": ops,
+                            }
+                        ]
+                    )
+
+                # Optimistically fold our own delta into the cached pool value so
+                # the balance written below reflects this spend/deposit *now*,
+                # before the server's SetReply round-trips back. This closes the
+                # self-induced overdraw window described above. The set_notify
+                # subscription later overwrites current_energy_link_value with the
+                # server's ABSOLUTE pool value on every EnergyLink SetReply
+                # (CommonClient assigns it directly), so a concurrent shared-pool
+                # change from another player self-corrects within one poll and we
+                # never double-count our own delta. max(0, ...) mirrors the
+                # server's max:0 clamp on withdrawals. (Applied after the await:
+                # our own SetReply can't round-trip back before send_msgs returns,
+                # so this folds onto the freshest server-known absolute.)
+                if self.current_energy_link_value is not None:
+                    self.current_energy_link_value = max(0, self.current_energy_link_value + joules)
+
+        # Write the (possibly optimistically-updated) AP EnergyLink pool balance
+        # to the game LAST, unconditionally each poll, so seed polls, no-delta
+        # polls, and other players' deposits all keep the mod's pool view fresh.
+        # Pool is stored in Joules on the server; the mod expects raw MJ. Integer
+        # floor division - sub-MJ remainders aren't representable mod-side.
         if self.current_energy_link_value is not None:
             raw_mj = self.current_energy_link_value // ENERGY_LINK_EXCHANGE_RATE
-            # The mod's field is s64; raw_mj is always non-negative because
-            # the pool is clamped at 0 by the server's max:0 op. Use write_u64
-            # since dolphin-memory-engine has no signed variant; identical
-            # bytes either way for non-negative values.
+            # The mod's field is s64; raw_mj is always non-negative (pool clamped
+            # at 0 server-side and by the optimistic max(0, ...) above). write_u64
+            # is fine: dolphin-memory-engine has no signed variant and the bytes
+            # are identical for non-negative values.
             self.dolphin.write_u64(self._addr(MemoryAddress.ENERGY_BALANCE), raw_mj)
-
-        # Process energy sends from the game. s64 signed raw MJ delta.
-        # Positive = deposit, negative = withdrawal.
-        raw = self.dolphin.read_u64(self._addr(MemoryAddress.ENERGY_SEND))
-        if raw == 0:
-            return
-        # Reinterpret as signed.
-        energy_mj = raw - (1 << 64) if raw >= (1 << 63) else raw
-        # Clear the mailbox immediately so the mod can write the next batch
-        # without blocking on us.
-        self.dolphin.write_u64(self._addr(MemoryAddress.ENERGY_SEND), 0)
-
-        joules = energy_mj * ENERGY_LINK_EXCHANGE_RATE
-        if joules == 0:
-            return
-
-        ops: list[dict[str, Any]] = [{"operation": "add", "value": joules}]
-        if joules < 0:
-            # Withdraw: tag + want_reply so we can match the SetReply and
-            # detect server-side clamping at 0 (pool was emptier than the
-            # mod thought).
-            ops.append({"operation": "max", "value": 0})
-            tag = uuid.uuid4().hex
-            # Record the pending tag only after the send is dispatched. send_msgs
-            # silently no-ops on a closed socket, so a pre-send insert would leak
-            # the entry indefinitely when the connection drops mid-flight.
-            await self.send_msgs(
-                [
-                    {
-                        "cmd": "Set",
-                        "key": f"EnergyLink{self.team}",
-                        "default": 0,
-                        "tag": tag,
-                        "want_reply": True,
-                        "operations": ops,
-                    }
-                ]
-            )
-            self.pending_energy_withdrawals[tag] = -joules  # store as positive expected subtraction
-        else:
-            # Deposit: no tag needed, the set_notify subscription delivers
-            # the updated balance to all clients.
-            await self.send_msgs(
-                [
-                    {
-                        "cmd": "Set",
-                        "key": f"EnergyLink{self.team}",
-                        "default": 0,
-                        "operations": ops,
-                    }
-                ]
-            )
 
     def _handle_backfill(self) -> None:
         """Write bits to client_backfill for checks the AP server knows about but the game doesn't.

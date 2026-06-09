@@ -1,5 +1,5 @@
 """
-shuffle_checklist_rewards tests (Part 2).
+shuffle_checklist_rewards tests.
 
 The option governs whether the game's native checklist reward items are shuffled into the
 multiworld (on, default) or pinned back onto the boxes that award them in the base game (off).
@@ -11,10 +11,9 @@ part markers. Guard: a reward whose native box is excluded under the current fla
 when it is filler (an excluded box accepts only filler during fill); a useful/progression reward
 on an excluded box is left to float and is placed by normal fill.
 
-cross_mode_placement is independent: it locks only progression to its source mode(s). With shuffle
-on, rewards stay in the pool and float per that setting as before; with shuffle off they are pinned
-regardless of cross_mode_placement. Each class here also runs the inherited test_fill, which does a
-full distribute_items_restrictive and a beatability sweep.
+These tests set checklist_rewards_gated ON (it is off by default), since the shuffle option only
+has the non-progression rewards to act on when they are gated into the pool. Each class here also
+runs the inherited test_fill, which does a full distribute_items_restrictive and a beatability sweep.
 """
 
 from typing import TYPE_CHECKING
@@ -33,6 +32,8 @@ _MixinBase = KARTestBase if TYPE_CHECKING else object
 
 _SHUFFLE_OFF = {"shuffle_checklist_rewards": Toggle.option_false}
 _SHUFFLE_ON = {"shuffle_checklist_rewards": Toggle.option_true}
+# Rewards are off by default; gate them into the pool so the shuffle option has something to act on.
+_GATED_ON = {"checklist_rewards_gated": Toggle.option_true}
 
 
 def _legendary_parts() -> set[str]:
@@ -133,7 +134,7 @@ class _ShuffleOffInvariantMixin(_MixinBase):
 
 
 class TestShuffleOffAllModes(_ShuffleOffInvariantMixin, KARTestBase):
-    options = {**ALL_MODES, **_SHUFFLE_OFF}
+    options = {**ALL_MODES, **_GATED_ON, **_SHUFFLE_OFF}
 
     def test_all_legendary_parts_accounted_for(self):
         """Each of the six progression part markers is either pinned to its native box or floating
@@ -145,29 +146,22 @@ class TestShuffleOffAllModes(_ShuffleOffInvariantMixin, KARTestBase):
             self.assertTrue(part in pinned or part in floating, f"{part} must be pinned or floating")
 
 
-class TestShuffleOffAllModesCrossOff(_ShuffleOffInvariantMixin, KARTestBase):
-    """Shuffle off composes with cross-mode off: parts (CT progression) pin on CT boxes, and the full
-    fill (inherited test_fill) still produces a beatable seed."""
-
-    options = {**ALL_MODES, **_SHUFFLE_OFF, "cross_mode_placement": Toggle.option_false}
-
-
 class TestShuffleOffCTOnly(_ShuffleOffInvariantMixin, KARTestBase):
-    options = {**CT_ONLY, **_SHUFFLE_OFF}
+    options = {**CT_ONLY, **_GATED_ON, **_SHUFFLE_OFF}
 
 
 class TestShuffleOffAROnly(_ShuffleOffInvariantMixin, KARTestBase):
-    options = {**AR_ONLY, **_SHUFFLE_OFF}
+    options = {**AR_ONLY, **_GATED_ON, **_SHUFFLE_OFF}
 
 
 class TestShuffleOffTROnly(_ShuffleOffInvariantMixin, KARTestBase):
-    options = {**TR_ONLY, **_SHUFFLE_OFF}
+    options = {**TR_ONLY, **_GATED_ON, **_SHUFFLE_OFF}
 
 
 class TestShuffleOnDoesNotPin(KARTestBase):
     """Shuffle on (default): nothing is pinned and the rewards live in the itempool to be shuffled."""
 
-    options = {**ALL_MODES, **_SHUFFLE_ON}
+    options = {**ALL_MODES, **_GATED_ON, **_SHUFFLE_ON}
 
     def test_nothing_pinned(self):
         self.assertEqual(self.world.pinned_native_rewards, {})
@@ -183,7 +177,7 @@ class TestShuffleOnDoesNotPin(KARTestBase):
 class TestShuffleOffKnownPin(KARTestBase):
     """A spot-check on a known vanilla mapping: 'race over 60 miles!' awards Filler Box 1."""
 
-    options = {**CT_ONLY, **_SHUFFLE_OFF}
+    options = {**CT_ONLY, **_GATED_ON, **_SHUFFLE_OFF}
 
     def test_race_60_miles_holds_filler_box_1(self):
         from ..KARItems import KARItemName
@@ -194,39 +188,3 @@ class TestShuffleOffKnownPin(KARTestBase):
         item = loc.item
         assert item is not None
         self.assertEqual(item.name, str(KARItemName.CT_REWARD_FILLER_BOX_1))
-
-
-class TestShuffleOnCrossOffConfinesRewards(KARTestBase):
-    """shuffle on + cross off: rewards are NOT pinned (still shuffled by fill), but the cross-mode
-    item-rule keeps each local reward within its native mode. After a full distribute_items_restrictive
-    every local reward sits on a box of its source mode. (Solo seed, so no reward can export to another
-    world; all stay in KAR and must therefore be in-mode.)"""
-
-    options = {**ALL_MODES, **_SHUFFLE_ON, "cross_mode_placement": Toggle.option_false}
-
-    def test_nothing_pinned(self):
-        self.assertEqual(self.world.pinned_native_rewards, {})
-
-    def test_rewards_land_in_native_mode(self):
-        from Fill import distribute_items_restrictive
-
-        from ..KARData import location_code_to_mode
-
-        distribute_items_restrictive(self.multiworld)
-        checked = 0
-        for loc in self.multiworld.get_locations():
-            item = loc.item
-            if item is None or item.player != self.player or loc.address is None:
-                continue
-            data = ITEM_TABLE.get(item.name)
-            if data is None or data.type not in CHECKLIST_REWARD_TYPES:
-                continue
-            lm = location_code_to_mode(loc.address)
-            self.assertIn(
-                lm,
-                data.source_modes,
-                f"{item.name} (modes {sorted(m.name for m in data.source_modes)}) landed on "
-                f"{loc.name} (mode {lm.name if lm else None}) under cross-off",
-            )
-            checked += 1
-        self.assertGreater(checked, 0, "expected at least one shuffled reward to verify")
