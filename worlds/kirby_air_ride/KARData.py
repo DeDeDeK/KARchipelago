@@ -29,6 +29,13 @@ class TrapLinkKind(IntEnum):
     SPEED_DOWN = 3
 
 
+# GameCube MEM1 cached address range (24 MB). The APData struct is heap-allocated
+# by the mod and always lands here; any pointer outside this window is stale or
+# uninitialized memory read before the mod's OnBoot has written the real pointer.
+MEM1_START = 0x80000000
+MEM1_END = 0x81800000
+
+
 class MemoryAddress(IntEnum):
     BASE_MEMORY_ADDRESS = 0x80000000
 
@@ -42,9 +49,12 @@ class MemoryAddress(IntEnum):
     # unit = 1 MJ in the AP pool). Widened to s64 so multiworld pools that
     # exceed u64 joules still fit at MJ scale.
     ENERGY_BALANCE = 0x000  # s64
-    # EnergyLink send. Game writes amount, client reads and clears to 0.
-    # Positive = deposit, negative = withdrawal. s64 signed raw units.
-    ENERGY_SEND = 0x008  # s64
+    # EnergyLink cumulative send counter. Game-owned: the game only ever adds
+    # (deposits) / subtracts (withdrawals); the client only reads-and-diffs it
+    # (delta since its last poll) and NEVER writes it. s64 signed raw MJ. Resets
+    # to 0 on each mod boot; persists across scene loads. See KARClient
+    # _handle_energylink for the diff / seed / restart-guard logic.
+    ENERGY_SENT_TOTAL = 0x008  # s64
     # DeathLink receive flag. Client writes 1, game reads and clears to 0.
     DEATHLINK_RECEIVE = 0x010  # u32
     # DeathLink send flag. Game writes 1, client reads and clears to 0.

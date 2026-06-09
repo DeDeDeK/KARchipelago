@@ -53,27 +53,33 @@ class TestStadiumStarterRespectsStartInventory(KARTestBase):
 # Dedede-as-stadium-starter rejection lives in test_validation.py.
 
 
+_TR_MACHINES = frozenset({KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR})
+
+
 class TestMachineStarter(KARTestBase):
     options = {**ALL_MODES, "machines_gated": Toggle.option_true}
 
-    def test_exactly_one_machine_precollected(self):
+    def test_one_arct_and_one_tr_machine_precollected(self):
+        # With all modes + machines_gated there are two machine starters: one Air Ride /
+        # City Trial machine, and one Top Ride control machine (Free/Steer), since the mod
+        # hard-gates the Top Ride lobby on Free/Steer.
         precollected = self.precollected_names()
         machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
-        self.assertEqual(len(machine_starters), 1)
+        self.assertEqual(len(machine_starters), 2)
+        tr_starters = [n for n in machine_starters if n in _TR_MACHINES]
+        arct_starters = [n for n in machine_starters if n not in _TR_MACHINES]
+        self.assertEqual(len(tr_starters), 1)
+        self.assertEqual(len(arct_starters), 1)
+
+    def test_arct_starter_not_free_or_steer(self):
+        # The AR/CT machine starter must never be a Top Ride control machine (they don't
+        # spawn in City Trial and can't be ridden in Air Ride).
+        self.assertNotIn(self.world.machine_starter_choice, _TR_MACHINES)
 
     def test_starter_not_hydra_or_dragoon(self):
         precollected = self.precollected_names()
         self.assertNotIn(KARItemName.UNLOCK_MACHINE_HYDRA, precollected)
         self.assertNotIn(KARItemName.UNLOCK_MACHINE_DRAGOON, precollected)
-
-
-class TestPatchStarter(KARTestBase):
-    options = {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true}
-
-    def test_exactly_one_patch_precollected(self):
-        precollected = self.precollected_names()
-        patch_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.CT_PATCH_UNLOCKS]]
-        self.assertEqual(len(patch_starters), 1)
 
 
 class TestARCourseStarter(KARTestBase):
@@ -94,31 +100,84 @@ class TestTRCourseStarter(KARTestBase):
         self.assertEqual(len(tr_starters), 1)
 
 
-class TestAROnlyMachineAndPatchGating(KARTestBase):
-    # AR on, CT off. Machines apply to CT or AR (AR on, so picked); patches apply
-    # to CT only (CT off, so skipped). Covers both halves of "starter only when its
-    # owning mode is enabled".
-    options = {**AR_ONLY, "machines_gated": Toggle.option_true, "city_trial_patches_gated": Toggle.option_true}
+class TestColorStarter(KARTestBase):
+    # Colors are cross-mode: a random color starter is granted whenever colors_gated is on,
+    # regardless of which mode is enabled. Pink is eligible like any other color.
+    options = {**CT_ONLY, "colors_gated": Toggle.option_true}
+
+    def test_exactly_one_color_precollected(self):
+        precollected = self.precollected_names()
+        color_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.COLOR_UNLOCKS]]
+        self.assertEqual(len(color_starters), 1)
+
+    def test_starter_not_in_pool(self):
+        pool = self.itempool_names()
+        for name in self.precollected_names():
+            if name in item_name_groups[KARItemGroup.COLOR_UNLOCKS]:
+                self.assertNotIn(name, pool, f"{name} precollected but also in pool")
+
+
+class TestAROnlyMachineStarter(KARTestBase):
+    # AR on, CT off. Machines apply to CT or AR (AR on, so a machine starter is picked); stadiums
+    # are CT-only (CT off, so none). Covers both halves of "starter only when its owning mode is
+    # enabled".
+    options = {**AR_ONLY, "machines_gated": Toggle.option_true, "city_trial_stadiums_gated": Toggle.option_true}
 
     def test_machine_starter_picked(self):
         precollected = self.precollected_names()
         machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
         self.assertEqual(len(machine_starters), 1)
 
-    def test_no_patch_starter_when_ct_disabled(self):
+    def test_no_stadium_starter_when_ct_disabled(self):
         precollected = self.precollected_names()
-        patch_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.CT_PATCH_UNLOCKS]]
-        self.assertEqual(patch_starters, [])
+        stadium_starters = [n for n in precollected if n in STADIUM_UNLOCK_ITEMS]
+        self.assertEqual(stadium_starters, [])
 
 
-class TestNoMachineStarterWhenOnlyTREnabled(KARTestBase):
-    # TR on, CT+AR off. Machines apply only to CT or AR, so no machine starter is picked.
-    options = {**TR_ONLY, "machines_gated": Toggle.option_true, "city_trial_patches_gated": Toggle.option_true}
+class TestTRMachineStarterWhenOnlyTREnabled(KARTestBase):
+    # TR on, CT+AR off. The mod hard-gates the Top Ride lobby on Free/Steer, so a Top Ride
+    # machine starter (one of Free/Steer) must be precollected even though no AR/CT machine
+    # is — otherwise a gated Top-Ride-only seed could never start a race (softlock).
+    options = {**TR_ONLY, "machines_gated": Toggle.option_true}
 
-    def test_no_machine_starter(self):
+    def test_exactly_one_tr_machine_starter(self):
         precollected = self.precollected_names()
         machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
-        self.assertEqual(machine_starters, [])
+        self.assertEqual(len(machine_starters), 1)
+        self.assertIn(machine_starters[0], _TR_MACHINES)
+
+    def test_no_arct_machine_starter(self):
+        # No Air Ride / City Trial machine starter in a Top-Ride-only seed.
+        self.assertIsNone(self.world.machine_starter_choice)
+
+
+class TestPresetUnlockNotDuplicatedInPool(KARTestBase):
+    # Unlock items are one-time, so presetting one in start_inventory must drop its pool copy -
+    # not only for the categories that grant a random starter. Copy abilities are gated by default
+    # and grant no starter, so they exercise the general (non-starter) dedup path.
+    options = {
+        **CT_ONLY,
+        "abilities_gated": Toggle.option_true,
+        "start_inventory": {KARItemName.UNLOCK_ABILITY_FIRE: 1},
+    }
+
+    def test_preset_ability_precollected_and_absent_from_pool(self):
+        self.assertIn(KARItemName.UNLOCK_ABILITY_FIRE, self.precollected_names())
+        self.assertNotIn(KARItemName.UNLOCK_ABILITY_FIRE, self.itempool_names())
+
+
+class TestPresetRewardNotDuplicatedInPool(KARTestBase):
+    # Checklist rewards are one-time too. A reward preset in start_inventory must be deduped out of the
+    # pool, just like unlocks. CT_REWARD_MUSIC_CITY is a plain in-scope CT reward (shuffled into the pool
+    # under the default shuffle_checklist_rewards), so presetting it exercises the reward_pool dedup.
+    options = {
+        **CT_ONLY,
+        "start_inventory": {KARItemName.CT_REWARD_MUSIC_CITY: 1},
+    }
+
+    def test_preset_reward_precollected_and_absent_from_pool(self):
+        self.assertIn(KARItemName.CT_REWARD_MUSIC_CITY, self.precollected_names())
+        self.assertNotIn(KARItemName.CT_REWARD_MUSIC_CITY, self.itempool_names())
 
 
 # Per starter category: presetting an item in start_inventory makes the world skip its
@@ -133,10 +192,10 @@ _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
         KARItemName.UNLOCK_MACHINE_WAGON_STAR,
     ),
     (
-        "patch",
-        {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true},
-        "patch_starter_choice",
-        KARItemName.UNLOCK_PATCH_HP,
+        "tr_machine",
+        {**TR_ONLY, "machines_gated": Toggle.option_true},
+        "tr_machine_starter_choice",
+        KARItemName.UNLOCK_MACHINE_FREE_STAR,
     ),
     (
         "ar_course",
@@ -149,6 +208,12 @@ _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
         {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true},
         "tr_course_starter_choice",
         KARItemName.UNLOCK_TR_COURSE_GRASS,
+    ),
+    (
+        "color",
+        {**CT_ONLY, "colors_gated": Toggle.option_true},
+        "color_starter_choice",
+        KARItemName.UNLOCK_COLOR_BLUE,
     ),
 ]
 
