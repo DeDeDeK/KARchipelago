@@ -11,7 +11,7 @@ from Options import OptionError, Toggle
 from ..KARItems import KARItemName
 from ..KARLocations import ARLocation, CTLocation
 from ..KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
-from . import AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
+from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
 
 
 class TestNoModesEnabled(KARTestBase):
@@ -167,8 +167,10 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
     # CT-only with progressive patch caps at the max (30) on top of the default gated unlocks inflates
     # the guaranteed pool to 116 items needing default locations (104 progression + 5 counted-useful +
     # 7 useful rewards) against only 90 CT default locations, tripping _validate_pool_fits_locations.
+    # Rewards are gated on so the 7 useful rewards count toward the budget (they are off by default).
     options = {
         **CT_ONLY,
+        "checklist_rewards_gated": Toggle.option_true,
         "city_trial_progressive_patch_caps": Toggle.option_true,
         "city_trial_patch_cap_amount": 30,
     }
@@ -180,25 +182,28 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
 
 
 # A config tuned to fit by exactly 1 location, now that checklist rewards are guaranteed once each
-# and so count against the default-location budget. With the gating categories at their defaults (ON),
-# City Trial's confined progression is dominated by the gated unlock items rather than patch caps (now
+# and so count against the default-location budget. Rewards are off by default, so this gates them on
+# to keep the 7 useful rewards in the budget. With the gating categories at their defaults (ON),
+# City Trial's progression is dominated by the gated unlock items rather than patch caps (now
 # capped at 30), so the patch cap target is kept small to land the budget right at the edge:
 #   75 CT progression with all gates on (gated unlocks + 6 legendary part markers + the CT/AR-tagged
-#       items that fall to City Trial when Air Ride is disabled + multi-mode unlocks)
+#       items that fall to City Trial when Air Ride is disabled + multi-mode unlocks; the stadium and
+#       color starters are precollected and removed, while patch types get no starter)
 #   + 2 PATCH_CAP_INCREASE items (patch_cap_amount 3 -> amount - 1) -> 77 progression total
 #   + 5 default checkbox fillers
 #   + 7 useful checklist rewards (the non-overlapping CT rewards that must sit on default locations)
 #   = 89 items needing default locations
 #   = exactly 1 under the 90 CT default locations
-# Without exclude_locations: fits. With excludes: doesn't fit. Used by the pair below to pin that
-# _validate_pool_fits_locations subtracts exclude_locations from the default count.
+# Without exclude_locations: fits. With the pair's 3 excludes: doesn't fit. Used by the pair below to
+# pin that _validate_pool_fits_locations subtracts exclude_locations from the default count.
 _TIGHT_POOL = {
     **CT_ONLY,
+    "checklist_rewards_gated": Toggle.option_true,
     "city_trial_progressive_patch_caps": Toggle.option_true,
-    # 2 Patch Cap Increases (amount - 1) on top of the 75 gates-on confined progression = 77 progression,
-    # + 5 checkbox fillers + 7 useful checklist rewards = 89 needing default, which just fits the 90 default
-    # CT locations. Filler-classified rewards are not counted here - they may sit on excluded boxes - so
-    # only the 7 useful rewards add to the needs-default budget.
+    # 2 Patch Cap Increases (amount - 1) on top of the 75 gates-on progression (stadium and
+    # color starters precollected; no patch starter) = 77 progression, + 5 checkbox fillers + 7 useful
+    # checklist rewards = 89 needing default, which just fits the 90 default CT locations. Filler-classified
+    # rewards are not counted here - they may sit on excluded boxes - so only the 7 useful rewards add.
     "city_trial_patch_cap_amount": 3,
 }
 
@@ -245,3 +250,67 @@ class TestStadiumStarterDededeInInventoryRaises(KARTestBase):
     def test_raises_option_error(self):
         with self.assertRaises(OptionError):
             self.world_setup()
+
+
+# allowed_items can empty the draw pools (_validate_allowed_items_filler).
+
+
+class TestAllowedItemsAllOffNoTrapsUnfillable(KARTestBase):
+    """Every give category off and traps off leaves no useful/filler/trap items for the open
+    (non-guaranteed) slots and excluded boxes -> clean OptionError, not a downstream FillError."""
+
+    options = {**ALL_MODES, "allowed_items": [], "trap_chance": 0}
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaises(OptionError):
+            self.world_setup()
+
+
+class TestAllowedItemsTopRideOnlyNoTRGivesUnfillable(KARTestBase):
+    """Top Ride Item Gives is Top Ride's only filler source. With it off (and traps off), a TR-only
+    seed with excluded boxes can't fill them -> OptionError. Low n_checklist amount forces many
+    excluded boxes."""
+
+    options = {
+        **TR_ONLY,
+        "top_ride_goal": TopRideGoal.option_n_checklist_blocks,
+        "top_ride_checklist_amount": 5,
+        "allowed_items": ["Permanent Patches", "City Trial Item Gives", "City Trial Event Gives", "Copy Ability Gives"],
+        "trap_chance": 0,
+    }
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaises(OptionError):
+            self.world_setup()
+
+
+class TestAllowedItemsAirRideOnlyNoCTGivesUnfillable(KARTestBase):
+    """City Trial Item Gives doubles as Air Ride's filler source (the _AR_CT single-stat patches).
+    With it off (and traps off), an AR-only seed with excluded boxes can't fill them -> OptionError."""
+
+    options = {
+        **AR_ONLY,
+        "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
+        "air_ride_checklist_amount": 5,
+        "allowed_items": ["Permanent Patches", "City Trial Event Gives", "Copy Ability Gives", "Top Ride Item Gives"],
+        "trap_chance": 0,
+    }
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaises(OptionError):
+            self.world_setup()
+
+
+class TestAllowedItemsAllOffWithFullTrapsFills(KARTestBase):
+    """The escape hatch: with every give category off but trap_chance 100 (traps default on), traps
+    fill both leftover slots and excluded boxes (traps are allowed on excluded locations), so the
+    config generates cleanly. Confirms we don't over-reject."""
+
+    options = {**ALL_MODES, "allowed_items": [], "trap_chance": 100}
+
+    def test_generates_with_traps_only(self):
+        self.assertTrue(self.world.item_pools_built)
+        self.assertTrue(self.itempool_items(), "expected a populated item pool")

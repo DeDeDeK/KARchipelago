@@ -14,7 +14,6 @@ Kirby Air Ride:
   city_trial_boxes_gated: true
   air_ride_courses_gated: true
   colors_gated: true
-  cross_mode_placement: true
   exclude_locations:
     - "City Trial: Bust the star pole!"
     - "City Trial: Steal over 8 items from Tac by yourself!"

@@ -11,7 +11,6 @@ Kirby Air Ride:
   top_ride_goal: n_checklist_blocks
   top_ride_checklist_amount: 40
   top_ride_checkbox_fillers: 3
-  cross_mode_placement: false
   city_trial_events_gated: true
   abilities_gated: true
   city_trial_patches_gated: true

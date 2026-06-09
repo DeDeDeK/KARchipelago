@@ -1,28 +1,27 @@
 """
 Tests for the checklist_rewards_gated option.
 
-When checklist_rewards_gated is off, the generator removes every NON-progression checklist reward
-from the pool; the mod unlocks them all at connect (mirroring the other gated-off categories). The 6
-progression Dragoon/Hydra part markers are unaffected and stay in the pool, so Shuffle Checklist
-Rewards / Cross-Mode Placement still govern them but have nothing to act on for the removed rewards.
+checklist_rewards_gated is off by default: the generator removes every NON-progression checklist
+reward from the pool, and the mod unlocks them all at connect (mirroring the other gated-off
+categories). The 6 progression Dragoon/Hydra part markers are unaffected and stay in the pool, so
+Shuffle Checklist Rewards still governs them but has nothing to act on for the removed rewards.
 
 These tests pin:
-  - on (default) => rewards present (baseline);
-  - off => zero non-progression rewards in pool or precollected, world.reward_pool empty, the only
-    reward-typed items left are progression part markers, and the pool still exactly fills the
+  - on => non-progression rewards present (the opt-in behavior);
+  - off (default) => zero non-progression rewards in pool or precollected, world.reward_pool empty,
+    the only reward-typed items left are progression part markers, and the pool still exactly fills the
     placeable locations (the generic backfill absorbs the freed boxes);
-  - off works per-mode and under shuffle-off + cross-off (only the part markers are pinned);
-  - off relaxes per-mode capacity (a config that OptionErrors with rewards on generates with them off);
+  - off works per-mode and under shuffle-off (only the part markers are pinned);
+  - off relaxes capacity (a tight config that OptionErrors with rewards on generates with them off);
   - a full distribute_items_restrictive places no non-progression reward anywhere and stays beatable.
 """
 
 from typing import TYPE_CHECKING
 
-from Options import Toggle
+from Options import OptionError, Toggle
 
 from ..KARItems import CHECKLIST_REWARD_TYPES, ITEM_TABLE, ItemClassification
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
-from .test_cross_mode_fill import _REWARD_OVERFLOW_OPTIONS
 
 # At type-check time the mixin inherits KARTestBase so its self.* references resolve; at runtime it is
 # `object`, so concrete `class X(Mixin, KARTestBase)` keeps the correct MRO.
@@ -40,12 +39,13 @@ PROG_REWARD_MARKERS = {
 }
 
 _GATED_OFF = {"checklist_rewards_gated": Toggle.option_false}
+_GATED_ON = {"checklist_rewards_gated": Toggle.option_true}
 
 
 class TestRewardsGatedOnBaseline(KARTestBase):
-    """Default (on): non-progression rewards are in the pool, exactly as before this option existed."""
+    """Opt-in (on): non-progression rewards are in the pool, the way the default behaved historically."""
 
-    options = ALL_MODES
+    options = {**ALL_MODES, **_GATED_ON}
 
     def test_rewards_present(self):
         self.assertTrue(self.world.reward_pool, "reward_pool should be non-empty with rewards gated on")
@@ -100,15 +100,14 @@ class TestGatedOffTROnly(_GatedOffInvariantMixin, KARTestBase):
     options = {**TR_ONLY, **_GATED_OFF}
 
 
-class TestGatedOffShuffleOffCrossOff(_GatedOffInvariantMixin, KARTestBase):
-    """Composition: with rewards gated off there is nothing for shuffle-off to pin or cross-off to
-    confine among the non-progression rewards. Only the 6 progression part markers are pinned."""
+class TestGatedOffShuffleOff(_GatedOffInvariantMixin, KARTestBase):
+    """Composition: with rewards gated off there is nothing for shuffle-off to pin among the
+    non-progression rewards. Only the 6 progression part markers are pinned."""
 
     options = {
         **ALL_MODES,
         **_GATED_OFF,
         "shuffle_checklist_rewards": Toggle.option_false,
-        "cross_mode_placement": Toggle.option_false,
     }
 
     def test_only_progression_markers_pinned(self):
@@ -139,12 +138,36 @@ class TestGatedOffFullFill(KARTestBase):
         self.assertBeatable(True)
 
 
-class TestGatedOffRelaxesCapacity(KARTestBase):
-    """The reward-overflow fixture OptionErrors under cross-off with rewards in the pool
-    (TestCrossModeOffRewardOverflowRaises). Removing the rewards relaxes the per-mode budget, so the
-    same config generates with checklist_rewards_gated off."""
+# A CT-only config tuned so the 7 useful City Trial checklist rewards are the deciding factor in the
+# needs-default budget: with rewards gated on they push progression + counted-useful + useful rewards
+# past City Trial's 90 default locations (raises in _validate_pool_fits_locations); with rewards gated
+# off they leave the pool entirely, so the same config fits. 75 base CT progression (gates-on) + 6
+# Patch Cap Increases (patch_cap_amount 7 -> amount - 1) = 81 progression, + 5 checkbox fillers gives
+# 86 needs-default with rewards off (fits) vs 93 with the 7 useful rewards on (overflows). City Trial is
+# the only mode here, so this isolates the reward-removal capacity relaxation from anything else.
+_REWARD_RELAX_OPTIONS = {
+    **CT_ONLY,
+    "city_trial_progressive_patch_caps": Toggle.option_true,
+    "city_trial_patch_cap_amount": 7,
+}
 
-    options = {**_REWARD_OVERFLOW_OPTIONS, "cross_mode_placement": Toggle.option_false, **_GATED_OFF}
+
+class TestGatedOnTightPoolRaises(KARTestBase):
+    """With rewards gated on, the tight fixture's useful rewards tip the needs-default budget over."""
+
+    options = {**_REWARD_RELAX_OPTIONS, **_GATED_ON}
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaises(OptionError):
+            self.world_setup()
+
+
+class TestGatedOffRelaxesCapacity(KARTestBase):
+    """Removing the non-progression rewards relaxes the needs-default budget, so the same tight config
+    that OptionErrors with rewards on (TestGatedOnTightPoolRaises) generates with rewards off."""
+
+    options = {**_REWARD_RELAX_OPTIONS, **_GATED_OFF}
 
     def test_generates(self):
         placeable = [

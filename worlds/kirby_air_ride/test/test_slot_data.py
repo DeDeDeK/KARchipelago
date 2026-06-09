@@ -137,6 +137,23 @@ class TestSlotDataSpawnRateProgressiveOn(KARTestBase):
         self.assertEqual(data["spawn_rate_max"], 500)
 
 
+class TestSlotDataSpawnRateSnapped(KARTestBase):
+    """Spawn rate moves in 10% steps, so off-grid bounds are snapped to the nearest multiple of
+    10 during generation. The snapped values - not the raw ones - are what ship to the mod."""
+
+    options = {
+        **ALL_MODES,
+        "spawn_rate_progressive": Toggle.option_true,
+        "spawn_rate_min": 134,
+        "spawn_rate_max": 287,
+    }
+
+    def test_bounds_snapped_to_nearest_ten(self):
+        data = self.world.fill_slot_data()
+        self.assertEqual(data["spawn_rate_min"], 130)
+        self.assertEqual(data["spawn_rate_max"], 290)
+
+
 class TestSlotDataAllModes(KARTestBase):
     """The same key set is produced for any enabled-modes combination."""
 

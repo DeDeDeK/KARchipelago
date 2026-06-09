@@ -9,7 +9,6 @@
     - [Top Ride](#top-ride)
     - [Mixing goals](#mixing-goals)
   - [Access gating](#access-gating)
-  - [Cross-mode placement](#cross-mode-placement)
   - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
@@ -73,7 +72,7 @@ Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top R
 
 ### Mixing goals
 
-You can mix and match goals across modes. When more than one mode has a goal, you only complete your game by completing every enabled goal.
+You can mix and match goals across modes. When more than one mode has a goal, you only complete your game by completing every enabled goal. Your items all share a single pool across your enabled modes: any of your items can land at any of your checklist locations, so an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
 
 ## Access gating
 
@@ -94,15 +93,6 @@ The gateable categories are:
 - **City Trial stadiums.** When gated, you start with one random stadium unlocked and find the rest (see [Stadium unlock items](#stadium-unlock-items)).
 
 When a category is ungated, the mod unlocks all of its content the instant you connect, so it is available from the very start of your run no matter which modes you have enabled. A few categories are normally unlocked in vanilla by completing specific in-game checklist squares — air ride machines, Kirby colors, the Nebula Belt course, the reward stadiums, and the Top Ride "New Item" types (Lantern, Who? Paint, Chickie). When one of those categories is ungated, the mod has already unlocked it at connect, so those checklist reward squares are not placed as items and are skipped. The only effect is cosmetic: you won't see those particular checkbox rewards (their description text or icon) appear in your own checklist. Nothing is lost for progression — the content is already available.
-
-## Cross-mode placement
-
-When you have more than one mode enabled, "Cross-Mode Placement" controls whether they share progression.
-
-- **On (default):** any of your items can land at any of your checklist locations across every enabled mode. An Air Ride unlock might be found on a City Trial checkbox, and vice versa.
-- **Off:** progression is kept separate per mode, so City Trial progress comes only from City Trial checks, Air Ride from Air Ride, and Top Ride from Top Ride. Two things still tie modes together: unlocks that genuinely apply to more than one mode (copy abilities and machines affect City Trial and Air Ride; colors affect all three) may appear in any mode they apply to, and only progression is locked. Non-progression items (checklist rewards, Spawn Rate Ups, traps, and filler) gate nothing, so they are still placed freely across enabled modes.
-
-Items placed in other players' worlds are never affected either way.
 
 ## What does randomization do to this game?
 
