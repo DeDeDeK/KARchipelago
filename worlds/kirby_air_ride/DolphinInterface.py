@@ -1,7 +1,7 @@
 import dolphin_memory_engine
 from CommonClient import logger
 
-from .KARData import MemoryAddress
+from .KARData import MEM1_END, MEM1_START, MemoryAddress
 
 
 class DolphinInterface:
@@ -45,10 +45,15 @@ class DolphinInterface:
     # Resolve APData pointer
 
     def resolve_ap_data(self) -> int | None:
-        """Read the APData struct pointer. Returns the base address, or None if not yet allocated."""
+        """Read the APData struct pointer. Returns the base address, or None if not yet allocated.
+
+        Before the mod's OnBoot writes the real pointer, AP_DATA_POINTER holds zero or
+        stale/uninitialized memory. Reject anything outside MEM1 so the caller keeps
+        waiting instead of latching a garbage address and spamming failed struct reads.
+        """
         try:
             ptr = dolphin_memory_engine.read_word(MemoryAddress.AP_DATA_POINTER)
-            return ptr if ptr != 0 else None
+            return ptr if MEM1_START <= ptr < MEM1_END else None
         except Exception as e:
             logger.warning(f"Failed to read APData pointer: {e}")
             return None

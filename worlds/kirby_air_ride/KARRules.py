@@ -161,7 +161,7 @@ _ITEM_PICKUP_LOCATIONS: tuple[str, ...] = (
 
 # Patch-dependent CT locations (when city_trial_patches_gated is ON)
 _PATCH_LOCATION_RULES: dict[str, str] = {
-    CTLocation.GET_10_BOOST_PATCHES: KARItemName.UNLOCK_PATCH_ACCEL,
+    CTLocation.GET_10_BOOST_PATCHES: KARItemName.UNLOCK_PATCH_BOOST,
     CTLocation.GET_10_TURN_PATCHES: KARItemName.UNLOCK_PATCH_TURN,
     CTLocation.GET_10_WEIGHT_PATCHES: KARItemName.UNLOCK_PATCH_WEIGHT,
     CTLocation.GET_10_GLIDE_PATCHES: KARItemName.UNLOCK_PATCH_GLIDE,

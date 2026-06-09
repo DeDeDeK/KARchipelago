@@ -14,7 +14,6 @@ Kirby Air Ride:
   city_trial_boxes_gated: true
   air_ride_courses_gated: true
   colors_gated: true
-  cross_mode_placement: true
   trap_chance: 10
   plando_items:
     - item: "Unlock Event: Tac"

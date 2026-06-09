@@ -20,16 +20,16 @@ from collections import Counter
 
 from BaseClasses import ItemClassification
 
-from worlds.kirby_air_ride.KARData import location_code_to_mode
 from worlds.kirby_air_ride.KARItems import (
+    ALLOWED_ITEM_CATEGORY_ITEMS,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
     KARItemGroup,
     KARItemName,
-    KARItemType,
     item_name_groups,
+    items_by_type,
 )
 from worlds.kirby_air_ride.KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -114,10 +114,11 @@ class KARHook:
         items_we_own = [it for _, it in items_we_own_with_loc]
 
         # Every distinct item this player owns, counted once, whether it is still loose in the itempool
-        # or has been placed on a location. pre_fill (cross-off reward confinement) place_locked_item's
-        # rewards and removes them from the itempool, so they live only at locations from then on; a
-        # pool-only Counter would miss them. Union by object identity so an item that is both in the pool
-        # and placed (the normal post-distribute case) is not double counted.
+        # or has been placed on a location. _pin_native_rewards (shuffle off) place_locked_item's rewards
+        # onto their native boxes and removes them from the itempool, so they live only at locations; the
+        # ordinary fill likewise moves items from the pool onto locations. A pool-only Counter would miss
+        # them. Union by object identity so an item that is both in the pool and placed (the normal
+        # post-distribute case) is not double counted.
         owned_by_id = {id(it): it for it in pool_items}
         for it in items_we_own:
             owned_by_id[id(it)] = it
@@ -131,7 +132,6 @@ class KARHook:
         self._check_pinned_native_rewards(tag, mw, player, world, pool_counts)
         self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
         self._check_start_inventory(tag, opts, pool_counts, precollected_counts)
-        self._check_cross_mode_placement(tag, opts, player, items_we_own_with_loc)
         self._check_checklist_list_goal_locations(tag, mw, player, opts, ct_on, ar_on, tr_on)
         self._check_non_local_items(tag, opts, player, items_at_our_locations)
         self._check_local_items(tag, opts, player, items_we_own)
@@ -183,9 +183,9 @@ class KARHook:
         # Checklist rewards are unique one-time unlocks, not draw-with-replacement filler: each reward the
         # world routes to reward_pool is minted exactly once and never re-enters the filler pool, so every
         # one (useful or filler) must appear exactly once among the player's owned items. owned_counts spans
-        # both the itempool and placed locations, so it catches rewards that pre_fill locked in-mode (those
-        # are removed from the itempool). Pinned rewards are removed from reward_pool by _pin_native_rewards,
-        # so they are not seen here - see _check_pinned_native_rewards.
+        # both the itempool and placed locations, so it still catches each reward once the fill has moved it
+        # from the pool onto a location. Pinned rewards (shuffle off) are removed from reward_pool by
+        # _pin_native_rewards, so they are not seen here - see _check_pinned_native_rewards.
         for name in world.reward_pool:
             data = ITEM_TABLE.get(name)
             if data is None:
@@ -303,16 +303,18 @@ class KARHook:
                         f"({cat.option}={gated}), so the reward should be excluded"
                     )
 
-        # Permanent patches: excluded unless CT enabled AND option on.
-        if not (ct_on and opts.city_trial_permanent_patches):
-            for n, d in ITEM_TABLE.items():
-                if d.type != KARItemType.PERMANENT_PATCH:
-                    continue
+        # allowed_items: a category absent from the set removes all of its non-trap items from the pool.
+        # (Trap items of these types stay governed by `traps`, so ALLOWED_ITEM_CATEGORY_ITEMS omits them.)
+        allowed = opts.allowed_items.value
+        for category, names in ALLOWED_ITEM_CATEGORY_ITEMS.items():
+            if category in allowed:
+                continue
+            for n in names:
                 c = pool_counts.get(n, 0)
                 if c > 0:
                     raise HookError(
-                        f"{tag} permanent patch {n!r} in pool (ct_on={ct_on}, "
-                        f"permanent_patches={bool(opts.city_trial_permanent_patches)})"
+                        f"{tag} {category} item {n!r} in pool (count={c}) but that category is disabled "
+                        f"via allowed_items"
                     )
 
     def _check_starter_precollected(self, tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on):
@@ -339,17 +341,18 @@ class KARHook:
             machines = category_members(KARItemGroup.MACHINE_UNLOCKS) - {
                 str(KARItemName.UNLOCK_MACHINE_HYDRA),
                 str(KARItemName.UNLOCK_MACHINE_DRAGOON),
+                # Free/Steer are Top Ride machines, never an AR/CT starter (see _determine_starter_items).
+                str(KARItemName.UNLOCK_MACHINE_FREE_STAR),
+                str(KARItemName.UNLOCK_MACHINE_STEER_STAR),
             }
             self._check_one_starter(tag, "machine", machines, opts.start_inventory.value, precollected_counts)
 
-        if ct_on and opts.city_trial_patches_gated:
-            self._check_one_starter(
-                tag,
-                "patch",
-                category_members(KARItemGroup.CT_PATCH_UNLOCKS),
-                opts.start_inventory.value,
-                precollected_counts,
-            )
+        if tr_on and opts.machines_gated:
+            tr_machines = {
+                str(KARItemName.UNLOCK_MACHINE_FREE_STAR),
+                str(KARItemName.UNLOCK_MACHINE_STEER_STAR),
+            }
+            self._check_one_starter(tag, "TR machine", tr_machines, opts.start_inventory.value, precollected_counts)
 
         if ar_on and opts.air_ride_courses_gated:
             self._check_one_starter(
@@ -365,6 +368,16 @@ class KARHook:
                 tag,
                 "TR course",
                 category_members(KARItemGroup.TR_COURSE_UNLOCKS),
+                opts.start_inventory.value,
+                precollected_counts,
+            )
+
+        # Colors are cross-mode: the gate alone decides, no mode condition.
+        if opts.colors_gated:
+            self._check_one_starter(
+                tag,
+                "color",
+                category_members(KARItemGroup.COLOR_UNLOCKS),
                 opts.start_inventory.value,
                 precollected_counts,
             )
@@ -388,45 +401,22 @@ class KARHook:
             )
 
     def _check_start_inventory(self, tag, opts, pool_counts, precollected_counts):
-        # Every item in start_inventory should appear in precollected with at least that count,
-        # and should NOT appear in the itempool (start_inventory items are removed from the pool
-        # when start_inventory_from_pool is the mechanism, but for plain start_inventory they're
-        # given to the player AND remain absent from the pool; KAR excludes them in _build_item_pools).
+        # Every item in start_inventory should appear in precollected with at least that count.
+        # Unlock items and checklist rewards are additionally one-time: KAR drops their pool copy in
+        # _build_item_pools when preset, so a preset one-time item must NOT remain loose in the itempool
+        # (a second findable copy would be redundant). Other items (filler, stackable counts) stay.
+        one_time_items = {str(n) for cat in GATING_CATEGORIES for n in items_by_type[cat.item_type]}
+        one_time_items |= {str(n) for t in CHECKLIST_REWARD_TYPES for n in items_by_type[t]}
         for name, count in opts.start_inventory.value.items():
             if count <= 0:
                 continue
             in_pc = precollected_counts.get(name, 0)
             if in_pc < count:
                 raise HookError(f"{tag} start_inventory {count}x {name!r} but only {in_pc} in precollected")
-
-    def _check_cross_mode_placement(self, tag, opts, player, items_we_own_with_loc):
-        if opts.cross_mode_placement:
-            return
-
-        for loc, item in items_we_own_with_loc:
-            # Only check items that landed at one of OUR locations; the rule explicitly
-            # excludes remote placements.
-            if loc.player != player:
-                continue
-            data = ITEM_TABLE.get(item.name)
-            if data is None or not data.source_modes:
-                continue
-            # Under cross_mode_placement=off, PROGRESSION and CHECKLIST REWARDS are mode-locked to their
-            # source mode(s). Everything else that gates nothing (traps, filler, counted-useful) is left
-            # unrestricted and may land in any mode. Mirror that here.
-            is_progression = bool(item.classification & ItemClassification.progression)
-            is_reward = data.type in CHECKLIST_REWARD_TYPES
-            if not (is_progression or is_reward):
-                continue
-            lm = location_code_to_mode(loc.address)
-            if lm is None:
-                continue
-            if lm not in data.source_modes:
-                kind = "progression" if is_progression else "checklist reward"
+            if name in one_time_items and pool_counts.get(name, 0) > 0:
                 raise HookError(
-                    f"{tag} cross_mode_placement=off but our {kind} item {item.name!r} "
-                    f"(source modes {sorted(m.name for m in data.source_modes)}) "
-                    f"landed at location {loc.name!r} (mode {lm.name})"
+                    f"{tag} preset one-time item {name!r} but {pool_counts[name]} copies remain in the "
+                    f"itempool; it should be deduped out in _build_item_pools"
                 )
 
     def _check_checklist_list_goal_locations(self, tag, mw, player, opts, ct_on, ar_on, tr_on):

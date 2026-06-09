@@ -7,10 +7,13 @@ from Options import (
     LocationSet,
     NamedRange,
     OptionGroup,
+    OptionSet,
     PerGameCommonOptions,
     Range,
     Toggle,
 )
+
+from .KARItems import ALLOWED_ITEM_CATEGORIES, TRAP_CATEGORIES
 
 
 class TrapChance(Range):
@@ -25,47 +28,44 @@ class TrapChance(Range):
     range_end = 100
 
 
-class TrapWeight(Choice):
-    """Base class for trap weight options."""
-
-    option_disabled = 0
-    option_low = 1
-    option_medium = 2
-    option_high = 4
-    default = 2
-
-
-class TrapWeightDirectDamage(TrapWeight):
+class Traps(OptionSet):
     """
-    Weight for direct damage traps: 1 HP Trap.
+    Which categories of trap may appear in your item pool. Has no effect unless "Trap Chance" is
+    above 0. The selected categories are drawn with equal weight; removing a category keeps its
+    traps out of your pool entirely.
+
+    - Direct Damage: 1 HP Trap.
+    - Stat Debuff: All Down, stat-down patches, Speed Min, Charge None, Copy Ability: Sleep,
+      Drop Patches Trap, and the Top Ride Speed Down item.
+    - Fake Patches: items that look like stat-ups but are harmful.
     """
 
-    display_name = "Direct Damage Trap Weight"
+    display_name = "Trap Types"
+    valid_keys = frozenset(TRAP_CATEGORIES)
+    default = frozenset(TRAP_CATEGORIES)
 
 
-class TrapWeightStatDebuff(TrapWeight):
+class AllowedItems(OptionSet):
     """
-    Weight for stat debuff traps: All Down, stat-down patches, Speed Min, Charge None,
-    Drop Patches Trap.
-    """
+    Which categories of optional (non-progression) give items may appear in your item pool. Default is
+    all categories on. Removing a category keeps all of that category's optional items out of your pool.
+    This is independent of "Trap Types": trap items are governed only by that option, so toggling a
+    category here never adds or removes traps.
 
-    display_name = "Stat Debuff Trap Weight"
-
-
-class TrapWeightFakePatches(TrapWeight):
-    """
-    Weight for fake patch traps: items that look like stat-ups but are harmful.
-    """
-
-    display_name = "Fake Patch Trap Weight"
-
-
-class TrapWeightHazards(TrapWeight):
-    """
-    Weight for hazard item traps: Panic Spin, Sensor Bomb, Gordo.
+    - Permanent Patches: City Trial permanent +1 stat items (and Permanent All Up).
+    - City Trial Item Gives: City Trial give-items (boxes, single-stat patches, food, candy, All Up,
+      hazards, the legendary-part spawns, etc.). NOTE: in an Air-Ride-only seed this is also the filler
+      source for Air Ride's excluded checklist boxes; removing it there may make the config unfillable
+      and raise an OptionError.
+    - City Trial Event Gives: items that trigger a City Trial event on receipt.
+    - Copy Ability Gives: items that grant a copy ability on receipt.
+    - Top Ride Item Gives: Top Ride give-items. NOTE: this is Top Ride's only filler source; removing it
+      in a Top-Ride-only seed with excluded boxes may raise an OptionError.
     """
 
-    display_name = "Hazard Trap Weight"
+    display_name = "Allowed Item Types"
+    valid_keys = frozenset(str(category) for category in ALLOWED_ITEM_CATEGORIES)
+    default = frozenset(str(category) for category in ALLOWED_ITEM_CATEGORIES)
 
 
 class ProgressiveSpawnRate(Toggle):
@@ -84,7 +84,8 @@ class ProgressiveSpawnRate(Toggle):
 class SpawnRateMin(Range):
     """
     Starting spawn rate percent when "Progressive Spawn Rate" is on. 100 = vanilla baseline,
-    200 = 2x as many items spawn, etc. Ignored when progressive is off.
+    200 = 2x as many items spawn, etc. Spawn rate moves in 10% steps, so this is snapped to the
+    nearest multiple of 10 (e.g. 137 becomes 140). Ignored when progressive is off.
     """
 
     display_name = "Spawn Rate Min"
@@ -95,9 +96,10 @@ class SpawnRateMin(Range):
 
 class SpawnRateMax(Range):
     """
-    Spawn rate percent reached after collecting every "Spawn Rate Up" item. The item pool will
-    contain (max - min) / 10 Spawn Rate Up items (rounded down). Must be >= "Spawn Rate Min".
-    The mod's hard cap is 500% regardless of this value. Ignored when progressive is off.
+    Spawn rate percent reached after collecting every "Spawn Rate Up" item. Spawn rate moves in
+    10% steps, so this is snapped to the nearest multiple of 10 (e.g. 255 becomes 260). The item
+    pool will contain (max - min) / 10 Spawn Rate Up items. Must be >= "Spawn Rate Min". The mod's
+    hard cap is 500% regardless of this value. Ignored when progressive is off.
     """
 
     display_name = "Spawn Rate Max"
@@ -144,31 +146,6 @@ class RevealChecklists(Toggle):
     display_name = "Reveal Checklists"
 
 
-class CrossModePlacement(DefaultOnToggle):
-    """
-    Controls whether your own game modes share progression, when you have more than one enabled.
-
-    If on (default), all of your items can be placed at any of your checklist locations across every
-    enabled mode: an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
-
-    If off, your modes are kept separate: an item needed to progress a single mode, and that mode's
-    own checklist reward items, are restricted to that mode's locations. So City Trial content comes
-    only from City Trial checks, Air Ride from Air Ride, and Top Ride from Top Ride. Two caveats:
-      - Unlocks that genuinely apply to more than one mode (copy abilities and machines affect both
-        City Trial and Air Ride; colors affect all three) may be placed in any mode they apply to, so
-        those few items can still tie modes together.
-      - Progression and checklist rewards are locked to their mode; everything else that gates nothing
-        (spawn-rate-ups, traps, and filler) is still placed freely across all enabled modes.
-
-    This works whether or not Shuffle Checklist Rewards is on: with it off the reward is pinned to its
-    native box (already in its mode); with it on the reward is shuffled, but only within its own mode.
-
-    Items placed remotely (in other players' worlds) are never affected either way.
-    """
-
-    display_name = "Cross-Mode Placement"
-
-
 class ShuffleChecklistRewards(DefaultOnToggle):
     """
     Controls whether the game's native checklist reward items are shuffled, or placed back on the
@@ -178,13 +155,10 @@ class ShuffleChecklistRewards(DefaultOnToggle):
     a sound test, and so on. This option governs only those reward items.
 
     If on (default), each reward item is shuffled into the multiworld like any other item, so it can be
-    found anywhere your other items can. Cross-Mode Placement still applies: with it on, a reward may
-    be found in any of your enabled modes; with it off, a reward is still shuffled but kept within its
-    own mode.
+    found anywhere your other items can, across any of your enabled modes.
 
     If off, every reward item is placed back on its original box, so ticking that box gives what it gave
-    in the base game. This includes the Dragoon and Hydra parts. Cross-Mode Placement does not affect
-    pinned rewards (they are already fixed to a specific box).
+    in the base game. This includes the Dragoon and Hydra parts.
 
     Caveats:
       - Only reward items are affected. Boxes that award nothing in the base game, and content that is
@@ -199,7 +173,7 @@ class ShuffleChecklistRewards(DefaultOnToggle):
     display_name = "Shuffle Checklist Rewards"
 
 
-class ChecklistRewardsGated(DefaultOnToggle):
+class ChecklistRewardsGated(Toggle):
     """
     Controls whether the game's non-progression checklist reward items are gated behind the
     multiworld, or simply available from the start.
@@ -207,13 +181,14 @@ class ChecklistRewardsGated(DefaultOnToggle):
     Many checklist boxes award a minor extra when ticked: a music track, a sound test entry, an
     ending, a Top Ride rule, and so on. This option governs only those non-progression rewards.
 
-    When enabled (the default), each such reward is an item in the multiworld and must be found like
-    anything else. Shuffle Checklist Rewards and Cross-Mode Placement then decide where it can land.
+    When disabled (the default), none of these rewards are added to the pool; the mod unlocks them all
+    from the start, and the checklist boxes that would have awarded them hold ordinary multiworld items
+    instead. This leaves more room on your checklist boxes for the gating categories and other items.
+    Because the rewards are no longer in the pool, Shuffle Checklist Rewards has nothing to act on for
+    them.
 
-    When disabled, none of these rewards are added to the pool; the mod unlocks them all from the
-    start, and the checklist boxes that would have awarded them hold ordinary multiworld items
-    instead. Because the rewards are no longer in the pool, Shuffle Checklist Rewards and Cross-Mode
-    Placement have nothing to act on for them.
+    When enabled, each such reward is an item in the multiworld and must be found like anything else.
+    Shuffle Checklist Rewards then decides where it can land.
 
     The Dragoon and Hydra parts are unaffected: they are progression (they build the legendary
     machines), so they always stay in the pool regardless of this option. Content delivered by unlock
@@ -274,15 +249,6 @@ class CityTrialProgressionHighEffort(Toggle):
 
     default = 0
     display_name = "City Trial Long/High effort checkboxes are progression"
-
-
-class CityTrialPermanentPatches(Toggle):
-    """
-    This controls whether permanent patch increase items are generated. This applies to City Trial only.
-    """
-
-    default = 1
-    display_name = "City Trial Permanent Patches"
 
 
 class CityTrialProgressionMultiplayer(Toggle):
@@ -564,7 +530,7 @@ class AbilitiesGated(DefaultOnToggle):
 
 class CityTrialPatchesGated(DefaultOnToggle):
     """
-    When enabled, patch stat types (Accel, Top Speed, Offense, etc.) are locked and must be
+    When enabled, patch stat types (Boost, Top Speed, Offense, etc.) are locked and must be
     unlocked by finding their corresponding items.
 
     When disabled, all patch stat types are available from the start and no patch type unlock items
@@ -590,7 +556,8 @@ class CityTrialItemsGated(Toggle):
 class MachinesGated(Toggle):
     """
     When enabled, air ride machines are locked and must be unlocked by finding their
-    corresponding items. Applies to both City Trial and Air Ride.
+    corresponding items. Applies to both City Trial and Air Ride. The game starts with one random
+    machine already unlocked (and, when Top Ride is enabled, one random Top Ride control machine).
     Adds 25 unlock items to the progression pool; enable more game modes for more locations.
 
     When disabled, all machines are available from the start and no machine unlock items are added
@@ -615,7 +582,7 @@ class CityTrialBoxesGated(DefaultOnToggle):
 class AirRideCoursesGated(DefaultOnToggle):
     """
     When enabled, Air Ride courses are locked and must be unlocked by finding their
-    corresponding items.
+    corresponding items. The game starts with one random Air Ride course already unlocked.
 
     When disabled, all Air Ride courses are available from the start and no course unlock items are
     added to the pool.
@@ -626,8 +593,8 @@ class AirRideCoursesGated(DefaultOnToggle):
 
 class ColorsGated(DefaultOnToggle):
     """
-    When enabled, Kirby colors (other than Pink) are locked and must be unlocked by finding
-    their corresponding items.
+    When enabled, Kirby colors are locked and must be unlocked by finding their corresponding
+    items. The game starts with one random color already unlocked.
 
     When disabled, all Kirby colors are available from the start and no color unlock items are added
     to the pool.
@@ -639,7 +606,7 @@ class ColorsGated(DefaultOnToggle):
 class TopRideCoursesGated(DefaultOnToggle):
     """
     When enabled, Top Ride courses are locked and must be unlocked by finding their
-    corresponding items.
+    corresponding items. The game starts with one random Top Ride course already unlocked.
 
     When disabled, all Top Ride courses are available from the start and no course unlock items are
     added to the pool.
@@ -667,17 +634,14 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 
     # General
     trap_chance: TrapChance
-    trap_weight_direct_damage: TrapWeightDirectDamage
-    trap_weight_stat_debuff: TrapWeightStatDebuff
-    trap_weight_fake_patches: TrapWeightFakePatches
-    trap_weight_hazards: TrapWeightHazards
+    traps: Traps
+    allowed_items: AllowedItems
     trap_link: TrapLink
     spawn_rate_progressive: ProgressiveSpawnRate
     spawn_rate_min: SpawnRateMin
     spawn_rate_max: SpawnRateMax
     energy_link: EnergyLink
     reveal_checklists: RevealChecklists
-    cross_mode_placement: CrossModePlacement
     shuffle_checklist_rewards: ShuffleChecklistRewards
     checklist_rewards_gated: ChecklistRewardsGated
 
@@ -690,7 +654,6 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_progression_multiplayer: CityTrialProgressionMultiplayer
     city_trial_progression_rng: CityTrialProgressionRNG
     city_trial_progression_bust_vehicles: CityTrialProgressionBustVehicles
-    city_trial_permanent_patches: CityTrialPermanentPatches
     city_trial_checkbox_fillers: CityTrialCheckboxFillers
     city_trial_progressive_patch_caps: CityTrialProgressivePatchCaps
     city_trial_patch_cap_amount: CityTrialPatchCapAmount
@@ -731,7 +694,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 kar_option_groups = [
     OptionGroup(
         "General Options",
-        [EnergyLink, TrapLink, RevealChecklists, CrossModePlacement, ShuffleChecklistRewards, ChecklistRewardsGated],
+        [EnergyLink, TrapLink, RevealChecklists, ShuffleChecklistRewards, ChecklistRewardsGated],
     ),
     OptionGroup(
         "Item Options",
@@ -740,10 +703,8 @@ kar_option_groups = [
             SpawnRateMin,
             SpawnRateMax,
             TrapChance,
-            TrapWeightDirectDamage,
-            TrapWeightStatDebuff,
-            TrapWeightFakePatches,
-            TrapWeightHazards,
+            Traps,
+            AllowedItems,
         ],
     ),
     OptionGroup(
@@ -757,7 +718,6 @@ kar_option_groups = [
             CityTrialProgressionMultiplayer,
             CityTrialProgressionRNG,
             CityTrialProgressionBustVehicles,
-            CityTrialPermanentPatches,
             CityTrialCheckboxFillers,
             CityTrialProgressivePatchCaps,
             CityTrialPatchCapAmount,

@@ -17,7 +17,6 @@ Kirby Air Ride:
   colors_gated: true
   top_ride_items_gated: true
   city_trial_items_gated: false
-  cross_mode_placement: true
   trap_chance: 20
   local_items:
     - "City Trial Event Unlocks"
