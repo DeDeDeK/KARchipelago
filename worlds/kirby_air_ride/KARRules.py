@@ -1,6 +1,6 @@
 import typing
 
-from rule_builder.rules import AtLeast, CanReachLocation, Has, HasAll, HasAny, Rule, True_
+from rule_builder.rules import CanReachLocation, Has, HasAll, HasAny, HasFromListUnique, Rule
 
 from .KARItems import (
     LEGENDARY_PIECE_UNLOCK_ITEMS,
@@ -537,9 +537,8 @@ def set_rules(world: "KARWorld"):
         # than that many, so the player needs 11 / 21 of the 24 modes unlocked. With progressive stadiums
         # ON every mode is gated by its own Unlock Stadium item. With it OFF the mod unlocks all 24
         # stadiums at connect, so both cells are always reachable and need no rule.
-        stadium_has = [Has(item) for item in STADIUM_UNLOCK_ITEMS]
-        add_location_rule(CTLocation.STADIUM_PLAY_10_STADIUM_MODES, AtLeast(11, *stadium_has))
-        add_location_rule(CTLocation.STADIUM_PLAY_20_STADIUM_MODES, AtLeast(21, *stadium_has))
+        add_location_rule(CTLocation.STADIUM_PLAY_10_STADIUM_MODES, HasFromListUnique(*STADIUM_UNLOCK_ITEMS, count=11))
+        add_location_rule(CTLocation.STADIUM_PLAY_20_STADIUM_MODES, HasFromListUnique(*STADIUM_UNLOCK_ITEMS, count=21))
 
     if world.top_ride_enabled:
         # "Get over 18 different types of items!" needs 19 of the 21 distinct Top Ride item types to be
@@ -549,14 +548,27 @@ def set_rules(world: "KARWorld"):
         # at connect (including the three New-Item types it nudges on via the checklist has_reward flag),
         # so all 17 always spawn. The rule is a real constraint whenever either gate is on; with both off
         # it is vacuously satisfied, which is harmless.
-        type_available: list[Rule] = [
-            Has(item) if world.options.top_ride_items_gated else True_()
-            for item in sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK])
-        ]
-        type_available += [
-            Has(ability) if world.options.abilities_gated else True_() for ability in _TR_ABILITY_ITEM_UNLOCKS
-        ]
-        add_location_rule(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS, AtLeast(19, *type_available))
+        # A gate that is OFF means the mod unlocks that whole group at connect, so every type in it always
+        # spawns and counts toward the 19 unconditionally; only still-gated groups add real Has() terms and
+        # the threshold drops by the always-on count. HasFromListUnique counts distinct held unlocks and is
+        # available in 0.6.7 (unlike AtLeast). With both gates off the always-on count exceeds 19, so the
+        # cell needs no rule.
+        gated_types: list[str] = []
+        always_available = 0
+        if world.options.top_ride_items_gated:
+            gated_types += sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK])
+        else:
+            always_available += len(items_by_type[KARItemType.TR_ITEM_UNLOCK])
+        if world.options.abilities_gated:
+            gated_types += _TR_ABILITY_ITEM_UNLOCKS
+        else:
+            always_available += len(_TR_ABILITY_ITEM_UNLOCKS)
+        needed = 19 - always_available
+        if needed > 0:
+            add_location_rule(
+                TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
+                HasFromListUnique(*gated_types, count=needed),
+            )
 
     if world.top_ride_enabled and world.options.top_ride_items_gated and world.options.abilities_gated:
         # "Collect N items" / "get the same item 3 times" only need ONE item type able to spawn. The
