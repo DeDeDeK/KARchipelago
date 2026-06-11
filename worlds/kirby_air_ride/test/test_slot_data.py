@@ -2,16 +2,18 @@
 Slot data contract tests.
 
 KARWorld.fill_slot_data() returns the dict that the client (KARClient.py) consumes on
-connect. These tests pin the contract: required keys present, types correct, and
-spawn-rate option values shipped to the mod verbatim.
+connect. These tests pin the contract: required keys present, types correct, and the
+spawn-rate min shipped to the mod verbatim.
+
+Only options the client or mod consume are shipped. Generation-only options that no
+downstream consumer reads (trap_chance, spawn_rate_max) are deliberately omitted - they
+only size item pools at generation time.
 
 Update the EXPECTED_KEYS set when intentionally adding or removing a slot_data field;
 the client must be updated in lockstep.
 """
 
 import json
-
-from Options import Toggle
 
 from ..KAROptions import CityTrialGoal
 from . import ALL_MODES, CT_ONLY, KARTestBase
@@ -23,7 +25,6 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "energy_link",
         "trap_link",
         "reveal_checklists",
-        "trap_chance",
         # Goals
         "city_trial_goal",
         "city_trial_checklist_amount",
@@ -35,13 +36,11 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "top_ride_checklist_amount",
         "top_ride_goal_locations",
         # City Trial specifics
-        "city_trial_progressive_patch_caps",
-        "city_trial_patch_cap_amount",
+        "city_trial_patch_cap_min",
+        "city_trial_patch_cap_max",
         "city_trial_stadiums_gated",
-        # Item generation
-        "spawn_rate_progressive",
+        # Item generation (runtime spawn-rate min; max is generation-only)
         "spawn_rate_min",
-        "spawn_rate_max",
         # Gating
         "city_trial_events_gated",
         "abilities_gated",
@@ -84,13 +83,12 @@ class TestSlotDataDefaults(KARTestBase):
         data = self.world.fill_slot_data()
         # Numeric fields the client treats as ints/bools.
         for int_key in (
-            "trap_chance",
             "city_trial_checklist_amount",
             "air_ride_checklist_amount",
             "top_ride_checklist_amount",
-            "city_trial_patch_cap_amount",
+            "city_trial_patch_cap_min",
+            "city_trial_patch_cap_max",
             "spawn_rate_min",
-            "spawn_rate_max",
             "city_trial_goal",
             "air_ride_goal",
             "top_ride_goal",
@@ -103,55 +101,33 @@ class TestSlotDataDefaults(KARTestBase):
                 self.assertIsInstance(list(data[locset_key]), list)
 
 
-class TestSlotDataSpawnRateProgressiveOff(KARTestBase):
-    """The player's spawn_rate_min flows through unchanged even when progressive is off.
-    The mod owns the "ignore spawn_rate_min unless progressive is on" rule, so generation
-    ships the raw option value rather than pinning it here."""
+class TestSlotDataSpawnRateMinShips(KARTestBase):
+    """The player's spawn_rate_min flows through to the mod verbatim. An on-grid sub-vanilla
+    min (80) ships unchanged. Uses ALL_MODES so the Spawn Rate Up items the range generates
+    fit in the available default locations."""
 
-    options = {**CT_ONLY, "spawn_rate_progressive": Toggle.option_false, "spawn_rate_min": 250}
-
-    def test_min_passes_through(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(
-            data["spawn_rate_min"],
-            250,
-            "spawn_rate_min should ship unchanged; the mod ignores it when progressive is off",
-        )
-
-
-class TestSlotDataSpawnRateProgressiveOn(KARTestBase):
-    """When progressive is on, the player's spawn_rate_min flows through unchanged.
-    Uses ALL_MODES so the 30 Spawn Rate Up items the range (200-500) generates fit
-    in the available default locations."""
-
-    options = {
-        **ALL_MODES,
-        "spawn_rate_progressive": Toggle.option_true,
-        "spawn_rate_min": 200,
-        "spawn_rate_max": 500,
-    }
+    options = {**ALL_MODES, "spawn_rate_min": 80, "spawn_rate_max": 200}
 
     def test_min_passes_through(self):
         data = self.world.fill_slot_data()
-        self.assertEqual(data["spawn_rate_min"], 200)
-        self.assertEqual(data["spawn_rate_max"], 500)
+        self.assertEqual(data["spawn_rate_min"], 80)
 
 
 class TestSlotDataSpawnRateSnapped(KARTestBase):
-    """Spawn rate moves in 10% steps, so off-grid bounds are snapped to the nearest multiple of
-    10 during generation. The snapped values - not the raw ones - are what ship to the mod."""
+    """Spawn rate moves in 10% steps, so the min is snapped to the nearest multiple of
+    10 during generation. The snapped value - not the raw one - is what ships to the mod.
+    (spawn_rate_max is also snapped at generation but isn't shipped: it only sizes the
+    Spawn Rate Up pool.)"""
 
     options = {
         **ALL_MODES,
-        "spawn_rate_progressive": Toggle.option_true,
-        "spawn_rate_min": 134,
-        "spawn_rate_max": 287,
+        "spawn_rate_min": 64,
+        "spawn_rate_max": 227,
     }
 
-    def test_bounds_snapped_to_nearest_ten(self):
+    def test_min_snapped_to_nearest_ten(self):
         data = self.world.fill_slot_data()
-        self.assertEqual(data["spawn_rate_min"], 130)
-        self.assertEqual(data["spawn_rate_max"], 290)
+        self.assertEqual(data["spawn_rate_min"], 60)
 
 
 class TestSlotDataAllModes(KARTestBase):

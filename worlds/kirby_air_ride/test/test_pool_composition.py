@@ -25,16 +25,17 @@ class TestPatchCapIncreaseCount(KARTestBase):
     # modes give the pool room; patch caps stay City-Trial items, so the count is still 9.
     options = {
         **ALL_MODES,
-        "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 10,
+        "city_trial_patch_cap_min": 9,
+        "city_trial_patch_cap_max": 18,
     }
 
-    def test_count_equals_target_minus_one(self):
+    def test_count_equals_range_span(self):
         self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 9)
 
 
-class TestPatchCapDisabled(KARTestBase):
-    options = {**CT_ONLY, "city_trial_progressive_patch_caps": Toggle.option_false}
+class TestPatchCapFlat(KARTestBase):
+    # min == max: a flat cap with no Patch Cap Increase items (replaces the old "progressive off").
+    options = {**CT_ONLY, "city_trial_patch_cap_min": 18, "city_trial_patch_cap_max": 18}
 
     def test_no_patch_cap_items(self):
         self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 0)
@@ -44,7 +45,6 @@ class TestSpawnRateUpCount(KARTestBase):
     # ALL_MODES gives room for 20 Spawn Rate Up items alongside the gating unlocks.
     options = {
         **ALL_MODES,
-        "spawn_rate_progressive": Toggle.option_true,
         "spawn_rate_min": 100,
         "spawn_rate_max": 300,
     }
@@ -56,24 +56,34 @@ class TestSpawnRateUpCount(KARTestBase):
 
 class TestSpawnRateUpCountOffGrid(KARTestBase):
     # Spawn rate moves in 10% steps, so off-grid bounds are snapped to the nearest multiple of 10
-    # before the pool size is computed: min 134 -> 130, max 287 -> 290, giving (290 - 130) // 10 = 16.
-    # Under the old (unsnapped) behavior this was (287 - 134) // 10 = 15.
+    # before the pool size is computed: min 64 -> 60, max 227 -> 230, giving (230 - 60) // 10 = 17.
+    # Under the old (unsnapped) behavior this was (227 - 64) // 10 = 16.
     options = {
         **ALL_MODES,
-        "spawn_rate_progressive": Toggle.option_true,
-        "spawn_rate_min": 134,
-        "spawn_rate_max": 287,
+        "spawn_rate_min": 64,
+        "spawn_rate_max": 227,
     }
 
     def test_count_uses_snapped_bounds(self):
-        self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 16)
+        self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 17)
 
 
-class TestSpawnRateProgressiveDisabled(KARTestBase):
-    options = {**CT_ONLY, "spawn_rate_progressive": Toggle.option_false}
+class TestSpawnRateNoGrowth(KARTestBase):
+    # Min == max (the default 100/100) is the only no-growth config: max >= min always holds, so the
+    # ceiling equals the min only at vanilla. No Spawn Rate Up items are placed.
+    options = {**CT_ONLY, "spawn_rate_min": 100, "spawn_rate_max": 100}
 
     def test_no_spawn_rate_items(self):
         self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 0)
+
+
+class TestSpawnRateSubVanillaMin(KARTestBase):
+    # A sub-vanilla min still grows toward the ceiling even when the ceiling is vanilla (100):
+    # (100 - 50) // 10 = 5 Spawn Rate Up items climb the rate back up from 50% to 100%.
+    options = {**CT_ONLY, "spawn_rate_min": 50, "spawn_rate_max": 100}
+
+    def test_count_equals_range_steps(self):
+        self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 5)
 
 
 class TestCheckboxFillerCounts(KARTestBase):
@@ -186,27 +196,27 @@ class TestNoTrapsWhenChanceZero(KARTestBase):
         self.assertEqual(traps, [], f"Traps placed with trap_chance=0: {[t.name for t in traps]}")
 
 
-class TestPatchCapAmountOne(KARTestBase):
-    """Boundary: patch_cap_amount=1 means 0 progressive items (target - 1 = 0)."""
+class TestPatchCapMinEqualsMax(KARTestBase):
+    """Boundary: min == max (here 18) means 0 Patch Cap Increase items."""
 
     options = {
         **CT_ONLY,
-        "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 1,
+        "city_trial_patch_cap_min": 18,
+        "city_trial_patch_cap_max": 18,
     }
 
     def test_zero_patch_cap_items(self):
         self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 0)
 
 
-class TestPatchCapAmountMax(KARTestBase):
-    """Boundary: patch_cap_amount=30 (the option maximum) with most gating off so the
+class TestPatchCapFullSpan(KARTestBase):
+    """Boundary: the full span min=1 -> max=30 (the option extremes) with most gating off so the
     29-item pool fits. Pins that the max value is reachable in a real config."""
 
     options = {
         **ALL_MODES,
-        "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 30,
+        "city_trial_patch_cap_min": 1,
+        "city_trial_patch_cap_max": 30,
         "city_trial_stadiums_gated": Toggle.option_false,
         "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,
@@ -220,7 +230,7 @@ class TestPatchCapAmountMax(KARTestBase):
         "top_ride_courses_gated": Toggle.option_false,
     }
 
-    def test_count_equals_target_minus_one(self):
+    def test_count_equals_range_span(self):
         self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 29)
 
 
@@ -254,22 +264,6 @@ class TestChecklistAmountMax(KARTestBase):
             f"{KARRegion.CITY_TRIAL}: Complete 120 Checklist Blocks",
             self.event_location_names(),
         )
-
-
-class TestSpawnRateMinEqualsMax(KARTestBase):
-    """Boundary: spawn_rate_min == spawn_rate_max produces no Spawn Rate Up items.
-    The exclusion in _build_item_pools must trigger; otherwise stale items would
-    land in the pool with no progression range to traverse."""
-
-    options = {
-        **CT_ONLY,
-        "spawn_rate_progressive": Toggle.option_true,
-        "spawn_rate_min": 150,
-        "spawn_rate_max": 150,
-    }
-
-    def test_no_spawn_rate_items(self):
-        self.assertEqual(self.count_in_pool(KARItemName.SPAWN_RATE_UP), 0)
 
 
 class TestPoolFillsAllLocations(KARTestBase):
@@ -323,13 +317,13 @@ class TestStadiumUnlocksPlacedWhenGated(KARTestBase):
 
 
 class TestPatchCapExcludedWhenCTDisabled(KARTestBase):
-    """progressive_patch_caps is a CT-only mechanic. With CT disabled (AR-only) and the
-    toggle ON, Patch Cap Increase items are still excluded: they have no effect outside CT."""
+    """Patch caps are a CT-only mechanic. With CT disabled (AR-only) and a growing cap span set,
+    Patch Cap Increase items are still excluded: they have no effect outside CT."""
 
     options = {
         **AR_ONLY,
-        "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 30,
+        "city_trial_patch_cap_min": 1,
+        "city_trial_patch_cap_max": 30,
     }
 
     def test_no_patch_cap_items_in_pool(self):

@@ -12,9 +12,15 @@ silent crash; pinning these directly gives a clear error message.
 
 import unittest
 
-from ..KARData import GameMode, location_code_to_mode
+from ..KARData import GameMode, location_code_to_mode_clear
 from ..KARItems import ITEM_TABLE
 from ..KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
+
+
+def location_code_to_mode(code: int | None) -> GameMode | None:
+    """Return only the GameMode for a location code, or None if out of range / None."""
+    result = location_code_to_mode_clear(code)
+    return result[0] if result is not None else None
 
 
 class TestItemCodeUniqueness(unittest.TestCase):
