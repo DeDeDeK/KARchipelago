@@ -92,12 +92,13 @@ class MemoryAddress(IntEnum):
     OPTION_CHECKLIST_AMOUNT_AIRRIDE = 0x04C  # u32, 1-120
     OPTION_CHECKLIST_AMOUNT_TOPRIDE = 0x050  # u32, 1-120
     OPTION_CHECKLIST_AMOUNT_CITYTRIAL = 0x054  # u32, 1-120
-    OPTION_CT_PROGRESSIVE_PATCH_CAPS = 0x058  # u32, 0 or 1
-    OPTION_CT_PATCH_CAP_AMOUNT = 0x05C  # u32, 1-30
+    OPTION_CT_PATCH_CAP_MIN = 0x058  # u32, 1-30 — per-stat cap the player starts at
+    OPTION_CT_PATCH_CAP_MAX = 0x05C  # u32, 1-30 — per-stat cap ceiling / Max Stats goal threshold
     # Spawn rate floor (percent). Applies to CT + TR items; AR has no spawn rate to scale.
-    # 100 = vanilla baseline, 500 = 5x (the mod's hard cap). 0 is treated as 100.
+    # 100 = vanilla baseline, 300 = 3x (the mod's hard cap). The world floors this at 10; values
+    # below 100 suppress spawns below vanilla (the mod must honor sub-100 values; do not clamp to 100).
     # Each Spawn Rate Up item received adds +10% on top of this floor.
-    OPTION_SPAWN_RATE_MIN = 0x060  # u32, 100-500
+    OPTION_SPAWN_RATE_MIN = 0x060  # u32, 10-100
     # 4 bytes of padding here (struct contains u64; next field needs 8-byte alignment).
 
     # Required checkboxes for GOAL_CHECKLIST_LIST, per mode. 2 x u64 per mode (128 bits).
@@ -176,10 +177,6 @@ class MemoryAddress(IntEnum):
 REWARD_CODE_BASE = 500
 REWARD_CODE_STRIDE = 50
 
-# AP location code layout. Codes 1..360 split into 3 mode bands of 120 each:
-# 1-120 City Trial, 121-240 Air Ride, 241-360 Top Ride. clear_kind = code - band_start.
-LOCATION_CODES_PER_MODE = 120
-
 # Padded reward slots per mode in the mod's locations[3][46] array (see LOCATIONS_AIRRIDE).
 REWARDS_PER_MODE = 46
 
@@ -237,12 +234,6 @@ def mode_clear_to_location_code(mode: GameMode, clear_kind: int) -> int:
     return 0
 
 
-def location_code_to_mode(code: int | None) -> GameMode | None:
-    """Return only the GameMode for a location code, or None if out of range / None."""
-    result = location_code_to_mode_clear(code)
-    return result[0] if result is not None else None
-
-
 def reward_code_to_mode_index(code: int | None) -> tuple[GameMode, int] | None:
     """Decode an AP reward item code (500-649) to (source_mode, reward_index)."""
     if code is None:
@@ -252,9 +243,3 @@ def reward_code_to_mode_index(code: int | None) -> tuple[GameMode, int] | None:
         return None
     mode_idx, reward_index = divmod(offset, REWARD_CODE_STRIDE)
     return GameMode(mode_idx), reward_index
-
-
-def reward_code_to_source_mode(code: int | None) -> GameMode | None:
-    """Return only the source GameMode for a reward code, or None if not a reward."""
-    result = reward_code_to_mode_index(code)
-    return result[0] if result is not None else None

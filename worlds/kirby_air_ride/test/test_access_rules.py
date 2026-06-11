@@ -28,9 +28,10 @@ from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, item
 # Overlapping checklist rewards per gating option (always excluded from the pool).
 _OVERLAP = {cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES}
 
-# Pin the random starter picks so they don't shadow items under test.
+# Pin the random starter picks so they don't shadow items under test. Only categories that grant a
+# random starter need pinning: stadiums, machines, AR/TR courses, and colors. Patch types, events,
+# abilities, boxes, and CT/TR items grant no starter, so locations gated by those need no pin.
 _PIN_MACHINE_STARTER = {"start_inventory": {KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR: 1}}
-_PIN_PATCH_STARTER = {"start_inventory": {KARItemName.UNLOCK_PATCH_HP: 1}}
 _PIN_AR_COURSE_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS: 1}}
 _PIN_TR_COURSE_STARTER = {"start_inventory": {KARItemName.UNLOCK_TR_COURSE_GRASS: 1}}
 _PIN_STADIUM_STARTER = {"start_inventory": {KARItemName.UNLOCK_STADIUM_AIR_GLIDER: 1}}
@@ -169,11 +170,12 @@ class TestAbilitiesGatingNotApplied(KARTestBase):
 
 
 class TestPatchesGatingApplied(KARTestBase):
-    """city_trial_patches_gated ON: patch-specific locations need their unlock items."""
+    """city_trial_patches_gated ON: patch-specific locations need their unlock items.
 
-    # Pin the random patch starter to UNLOCK_PATCH_HP so the locations we test
-    # (which all require non-HP patch unlocks) aren't accidentally pre-unlocked.
-    options = {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true, **_PIN_PATCH_STARTER}
+    Patch types grant no random starter (only stadiums, machines, courses, and colors do), so
+    nothing pre-unlocks the patches under test and no start_inventory pin is needed."""
+
+    options = {**CT_ONLY, "city_trial_patches_gated": Toggle.option_true}
 
     def test_boost_patches_need_boost_unlock(self):
         self.assertAccessDependency(
@@ -224,12 +226,12 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
 
     def test_item_pickup_locations_need_any_counting_item_unlock(self):
         # "Get/pick up N items" cells count every collected itemkind except the three boxes, so patches,
-        # copy abilities, and the food/special/hazard/legendary items ALL count toward them. With items +
+        # copy abilities, and the food/special/misc/legendary items ALL count toward them. With items +
         # patches + abilities all gated (the defaults here), each cell is reachable once ANY ONE of those
         # unlocks is collected and unreachable with all held back (HasAny over all three sets). Boxes are
-        # deliberately not a source. patches_gated grants a random patch starter (itself a counting
-        # unlock), so precollected counting unlocks are dropped from the state to exercise the rule rather
-        # than that incidental starter -- the rule must hold regardless of starter items.
+        # deliberately not a source. No random starter is itself a counting unlock today (starters are
+        # stadiums / machines / courses / colors), but any precollected counting unlock is dropped below
+        # so the rule is exercised in isolation -- it must hold regardless of starter items.
         pickup_locations = [
             CTLocation.GET_50_ITEMS,
             CTLocation.GET_10_ITEMS_IN_20S,
@@ -246,8 +248,8 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
 
         state = CollectionState(self.multiworld)
         self.collect_all_but(counting_unlocks, state)
-        # Drop any precollected counting unlock (e.g. the random patch starter) so the cells are gated by
-        # the rule alone, not by a starter that happens to be one of the counting types.
+        # Drop any precollected counting unlock so the cells are gated by the rule alone, not by a
+        # starter that happens to be one of the counting types (defensive: no current starter is one).
         for item in self.multiworld.precollected_items[self.player]:
             if item.name in counting_unlocks:
                 state.remove(item)
