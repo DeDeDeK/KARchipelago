@@ -38,6 +38,11 @@ class KARItemType(StrEnum):
     # Top Ride item give: spawns the item at human Kirby positions (Top Ride scene only)
     TR_ITEM_GIVE = "Top Ride Item Give"
 
+    # Cosmetic all-mode filler: the mod applies a harmless visual effect on receipt in any mode.
+    # Deliberately NOT part of ALLOWED_ITEM_CATEGORIES, so allowed_items can never remove it; this
+    # guarantees filler_pool is never empty no matter which give categories the player disables.
+    FILLER = "Filler"
+
     # Checklist rewards (vanilla rewards from completing checklist entries).
     # Single-mode, so each carries a mode prefix.
     CT_CHECKLIST_REWARD = "City Trial Checklist Reward"
@@ -77,6 +82,7 @@ class KARItemGroup(StrEnum):
     CT_REWARDS = "City Trial Rewards"
     AR_REWARDS = "Air Ride Rewards"
     TR_REWARDS = "Top Ride Rewards"
+    FILLER_ITEMS = "Filler Items"
     TRAPS = "Traps"
 
 
@@ -191,7 +197,7 @@ class KARItemName(StrEnum):
     HOT_DOG = "Hot Dog"
     APPLE = "Apple"
 
-    # Direct Game Items: Hazards (351-354)
+    # Direct Game Items: miscellaneous (351-354)
     FIREWORKS = "Fireworks"
     PANIC_SPIN = "Panic Spin"
     SENSOR_BOMB = "Sensor Bomb"
@@ -556,6 +562,10 @@ class KARItemName(StrEnum):
     GIVE_TR_ITEM_CHICKIE = "Give TR Item: Chickie"
     GIVE_TR_ITEM_PARTY_BALL = "Give TR Item: Party Ball"
 
+    # Cosmetic all-mode filler (972-973): the mod scales Kirby's model on receipt, in any mode.
+    BIG_KIRBY = "Big Kirby"
+    SMALL_KIRBY = "Small Kirby"
+
     # Goal Events (no network code, internal AP events only)
     CITY_TRIAL_VICTORY = "City Trial Victory"
     AIR_RIDE_VICTORY = "Air Ride Victory"
@@ -729,7 +739,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.SUSHI: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 348, _CT),
     KARItemName.HOT_DOG: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 349, _CT),
     KARItemName.APPLE: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 350, _CT),
-    # Hazards / miscellaneous
+    # Miscellaneous game items
     KARItemName.FIREWORKS: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 351, _CT),
     KARItemName.PANIC_SPIN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 352, _CT),
     KARItemName.SENSOR_BOMB: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 353, _CT),
@@ -1629,6 +1639,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.GIVE_TR_ITEM_SMOKESCREEN: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 969, _TR),
     KARItemName.GIVE_TR_ITEM_CHICKIE: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 970, _TR),
     KARItemName.GIVE_TR_ITEM_PARTY_BALL: KARItemData(KARItemType.TR_ITEM_GIVE, ItemClassification.filler, 971, _TR),
+    # Cosmetic all-mode filler.
+    KARItemName.BIG_KIRBY: KARItemData(KARItemType.FILLER, ItemClassification.filler, 972, _ALL_MODES),
+    KARItemName.SMALL_KIRBY: KARItemData(KARItemType.FILLER, ItemClassification.filler, 973, _ALL_MODES),
     # Goal Events (no network code, internal AP events only)
     KARItemName.CITY_TRIAL_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.AIR_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
@@ -1643,7 +1656,7 @@ STADIUM_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
 
 # The six City Trial stadiums that vanilla unlocks via a checklist reward square (Drag Race 4, Kirby
 # Melee 2, Destruction Derby 3/4/5, Single Race 9 / Nebula Belt). The mod unlocks every stadium purely by
-# the stadium unlock mask — each Unlock Stadium item when progressive stadiums is ON, or all 24 at connect
+# the stadium unlock mask — each Unlock Stadium item when city_trial_stadiums_gated is ON, or all 24 at connect
 # when OFF (gate_stadiums.c replaces the vanilla unlock checks with a mask read, so the checklist
 # has_reward flag is never consulted). So these reward squares gate nothing and are always excluded from
 # the pool, exactly like every other gated category's overlapping rewards. They are the
@@ -1793,7 +1806,7 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
             }
         ),
     ),
-    # Stadiums: progressive ON = each Unlock Stadium item gates its stadium; OFF = mod unlocks all 24 at
+    # Stadiums: gated ON = each Unlock Stadium item gates its stadium; OFF = mod unlocks all 24 at
     # connect. The six reward-overlap stadiums are gated by their own Unlock Stadium item like the other
     # 18 (the mod's stadium gating is mask-only), and their checklist rewards are plain overlapping_rewards
     # excluded from the pool. A starter stadium is precollected separately (_determine_starter_items); the
@@ -1874,6 +1887,7 @@ _TYPE_TO_GROUP: dict[KARItemType, KARItemGroup] = {
     KARItemType.COLOR_UNLOCK: KARItemGroup.COLOR_UNLOCKS,
     KARItemType.TR_ITEM_UNLOCK: KARItemGroup.TR_ITEM_UNLOCKS,
     KARItemType.TR_ITEM_GIVE: KARItemGroup.TR_ITEM_GIVES,
+    KARItemType.FILLER: KARItemGroup.FILLER_ITEMS,
 }
 
 # All item names bucketed by their KARItemType. This is the type-keyed view used by

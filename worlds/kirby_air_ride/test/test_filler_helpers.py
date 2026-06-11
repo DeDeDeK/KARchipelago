@@ -58,19 +58,23 @@ class TestRandomFillerNoResurrectWhenBuilt(KARTestBase):
 
 
 class TestRandomTrap(KARTestBase):
-    """_random_trap returns None when no traps are active, otherwise an active trap name."""
+    """_random_trap returns None when no traps are active, otherwise an active trap name.
 
-    options = CT_ONLY
+    trap_chance is set above 0 so _build_item_pools actually populates trap_pool (it early-returns
+    without building the pool when trap_chance == 0). Under the old CT_ONLY/trap_chance=0 options the
+    pool was empty, so the active-trap path silently skipped instead of being exercised."""
+
+    options = {**CT_ONLY, "trap_chance": 50}
 
     def test_none_when_no_traps(self):
         self.world.trap_pool = set()
         self.assertIsNone(self.world._random_trap())
 
     def test_returns_an_active_trap(self):
+        # CT enabled + trap_chance > 0 guarantees a populated trap_pool; assert that rather than
+        # skipping, so this can never silently become a no-op again.
+        self.assertTrue(self.world.trap_pool, "trap_chance > 0 with CT enabled should populate trap_pool")
         # Force a single known trap so the pick is deterministic and in ITEM_TABLE.
-        name = next(iter(self.world.trap_pool), None)
-        if name is None:
-            # No traps in this config's pool; nothing to assert.
-            return
+        name = next(iter(self.world.trap_pool))
         self.world.trap_pool = {name}
         self.assertEqual(self.world._random_trap(), name)

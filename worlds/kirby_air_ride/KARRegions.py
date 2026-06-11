@@ -532,8 +532,8 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     Build the access rule for the Max Stats Insanity goal event.
 
     Requires:
-      - All Patch Cap Increase items collected (only when progressive caps are on; otherwise the
-        cap is locked at the target from the start, so no cap items exist in the pool).
+      - All Patch Cap Increase items collected (only when the cap max exceeds the cap min; otherwise
+        the cap is fixed from the start, so no cap items exist in the pool).
       - At least one route to maxing all 9 stats: either all 9 patch type unlocks (patches gated
         path) or the All-Up patch unlock (items gated path). Routes that aren't gated are
         trivially open, so the constraint is only emitted when both gates are on.
@@ -544,10 +544,9 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     options = world.options
     rule_parts: list[Rule] = []
 
-    if options.city_trial_progressive_patch_caps:
-        count = max(0, options.city_trial_patch_cap_amount.value - 1)
-        if count > 0:
-            rule_parts.append(Has(KARItemName.PATCH_CAP_INCREASE, count=count))
+    count = max(0, options.city_trial_patch_cap_max.value - options.city_trial_patch_cap_min.value)
+    if count > 0:
+        rule_parts.append(Has(KARItemName.PATCH_CAP_INCREASE, count=count))
 
     if options.city_trial_patches_gated and options.city_trial_items_gated:
         # HasAll/HasAny only accept item names, not nested rules. Compose with the | operator
