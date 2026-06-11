@@ -94,8 +94,8 @@ class TestCTGoalMaxStats(KARTestBase):
     options = {
         **CT_ONLY,
         "city_trial_goal": CityTrialGoal.option_max_stats_in_one_run,
-        "city_trial_progressive_patch_caps": Toggle.option_true,
-        "city_trial_patch_cap_amount": 5,
+        "city_trial_patch_cap_min": 14,
+        "city_trial_patch_cap_max": 18,
         # max_stats pool is dominated by patch-cap items; turn off broad gating so it fits.
         "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,

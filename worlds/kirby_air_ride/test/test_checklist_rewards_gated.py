@@ -3,15 +3,16 @@ Tests for the checklist_rewards_gated option.
 
 checklist_rewards_gated is off by default: the generator removes every NON-progression checklist
 reward from the pool, and the mod unlocks them all at connect (mirroring the other gated-off
-categories). The 6 progression Dragoon/Hydra part markers are unaffected and stay in the pool, so
-Shuffle Checklist Rewards still governs them but has nothing to act on for the removed rewards.
+categories). The 6 progression Dragoon/Hydra part markers are unaffected and stay in the pool, but they
+are left to float as ordinary progression - so Shuffle Checklist Rewards has nothing to act on and is a
+true no-op when rewards are gated off.
 
 These tests pin:
   - on => non-progression rewards present (the opt-in behavior);
   - off (default) => zero non-progression rewards in pool or precollected, world.reward_pool empty,
     the only reward-typed items left are progression part markers, and the pool still exactly fills the
     placeable locations (the generic backfill absorbs the freed boxes);
-  - off works per-mode and under shuffle-off (only the part markers are pinned);
+  - off => shuffle_checklist_rewards does nothing: nothing is pinned whether shuffle is on or off;
   - off relaxes capacity (a tight config that OptionErrors with rewards on generates with them off);
   - a full distribute_items_restrictive places no non-progression reward anywhere and stays beatable.
 """
@@ -101,8 +102,9 @@ class TestGatedOffTROnly(_GatedOffInvariantMixin, KARTestBase):
 
 
 class TestGatedOffShuffleOff(_GatedOffInvariantMixin, KARTestBase):
-    """Composition: with rewards gated off there is nothing for shuffle-off to pin among the
-    non-progression rewards. Only the 6 progression part markers are pinned."""
+    """The user-facing guarantee: with rewards gated off, shuffle_checklist_rewards does nothing.
+    reward_pool is empty so there is nothing to shuffle, and the 6 progression part markers are left
+    to float like ordinary progression rather than pinned to their native boxes. So nothing is pinned."""
 
     options = {
         **ALL_MODES,
@@ -110,11 +112,24 @@ class TestGatedOffShuffleOff(_GatedOffInvariantMixin, KARTestBase):
         "shuffle_checklist_rewards": Toggle.option_false,
     }
 
-    def test_only_progression_markers_pinned(self):
+    def test_nothing_pinned_when_gated_off(self):
         pins = getattr(self.world, "pinned_native_rewards", {})
-        pinned = {str(r) for r in pins.values()}
-        self.assertFalse(pinned & NONPROG_REWARDS, "no non-progression reward should be pinned when gated off")
-        self.assertTrue(pinned <= PROG_REWARD_MARKERS, "only progression part markers may be pinned when gated off")
+        self.assertEqual(pins, {}, "gated off + shuffle off should pin nothing (shuffle is inert)")
+
+
+class TestGatedOffShuffleOn(_GatedOffInvariantMixin, KARTestBase):
+    """Companion to TestGatedOffShuffleOff: gated off + shuffle ON also pins nothing, so the two shuffle
+    settings are indistinguishable when rewards are gated off - shuffle_checklist_rewards is a true no-op."""
+
+    options = {
+        **ALL_MODES,
+        **_GATED_OFF,
+        "shuffle_checklist_rewards": Toggle.option_true,
+    }
+
+    def test_nothing_pinned_when_gated_off(self):
+        pins = getattr(self.world, "pinned_native_rewards", {})
+        self.assertEqual(pins, {}, "gated off + shuffle on should pin nothing")
 
 
 class TestGatedOffFullFill(KARTestBase):
@@ -142,13 +157,13 @@ class TestGatedOffFullFill(KARTestBase):
 # needs-default budget: with rewards gated on they push progression + counted-useful + useful rewards
 # past City Trial's 90 default locations (raises in _validate_pool_fits_locations); with rewards gated
 # off they leave the pool entirely, so the same config fits. 75 base CT progression (gates-on) + 6
-# Patch Cap Increases (patch_cap_amount 7 -> amount - 1) = 81 progression, + 5 checkbox fillers gives
+# Patch Cap Increases (max 18 - min 12) = 81 progression, + 5 checkbox fillers gives
 # 86 needs-default with rewards off (fits) vs 93 with the 7 useful rewards on (overflows). City Trial is
 # the only mode here, so this isolates the reward-removal capacity relaxation from anything else.
 _REWARD_RELAX_OPTIONS = {
     **CT_ONLY,
-    "city_trial_progressive_patch_caps": Toggle.option_true,
-    "city_trial_patch_cap_amount": 7,
+    "city_trial_patch_cap_min": 12,
+    "city_trial_patch_cap_max": 18,
 }
 
 

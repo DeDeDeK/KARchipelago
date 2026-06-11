@@ -22,16 +22,6 @@
 
 Kirby Air Ride:
   fuzz_constraints:
-    # spawn_rate_max must be >= spawn_rate_min when progressive is on.
-    # The constraint language can only pin a value, not enforce ordering, so
-    # we pin min to its range_start (100) whenever progressive is on. Max is
-    # then always valid by construction. Loses coverage of "high min" cases
-    # but those are equivalent in behavior to higher max with min=100.
-    - option: spawn_rate_progressive
-      if_value: "true"
-      then:
-        spawn_rate_min: 100
-
     # checkbox_fillers must be < checklist_amount when goal is n_checklist_blocks.
     # Same limitation: can't express "less than the rolled amount", only pin a
     # value. Pin fillers to 0 when n_checklist_blocks is the goal for each mode.

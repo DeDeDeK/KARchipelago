@@ -496,10 +496,8 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd.get("city_trial_checklist_amount", 60)))
 
-        d.write_u32(
-            a(MemoryAddress.OPTION_CT_PROGRESSIVE_PATCH_CAPS), int(bool(sd.get("city_trial_progressive_patch_caps", 0)))
-        )
-        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_AMOUNT), int(sd.get("city_trial_patch_cap_amount", 18)))
+        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MIN), int(sd.get("city_trial_patch_cap_min", 18)))
+        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MAX), int(sd.get("city_trial_patch_cap_max", 18)))
         d.write_u32(a(MemoryAddress.OPTION_SPAWN_RATE_MIN), int(sd.get("spawn_rate_min", 100)))
 
         # Goal checks bitmasks for GOAL_CHECKLIST_LIST.
