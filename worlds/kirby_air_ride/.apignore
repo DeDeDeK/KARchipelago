@@ -1,0 +1,5 @@
+# World-specific ignore patterns, appended to data/GLOBAL.apignore.
+# Tool caches that should never ship in the built .apworld.
+.ruff_cache
+.pytest_cache
+.mypy_cache
