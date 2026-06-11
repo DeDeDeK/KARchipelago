@@ -95,9 +95,8 @@ class KARWeb(WebWorld):
         # CT-only single-world pool. Players can still enable AR and/or TR for more locations.
         "Max Stats Insanity": {
             "city_trial_goal": "max_stats_in_one_run",
-            "city_trial_patch_cap_amount": 30,
-            "city_trial_progressive_patch_caps": True,
-            "spawn_rate_progressive": True,
+            "city_trial_patch_cap_min": 1,
+            "city_trial_patch_cap_max": 30,
             "spawn_rate_min": 100,
             "spawn_rate_max": 300,
             "air_ride_goal": "n_checklist_blocks",
@@ -469,20 +468,14 @@ class KARWorld(World):
                     f"{mode_name} goal locations include names that are not {mode_name} locations: {misfiled}"
                 )
 
-        if self.options.spawn_rate_progressive:
-            # The spawn-rate mechanic only moves in fixed +10% steps: the mod starts at
-            # spawn_rate_min and adds 10% for each "Spawn Rate Up" item received. Snap both
-            # bounds to the nearest multiple of 10 so the option values actually match what the
-            # game can reach - otherwise a typed value like 255 silently behaves as 250, and an
-            # off-grid min like 137 produces an odd 137/147/157 progression. Done here so every
-            # downstream read (pool size, slot data, the min written to the mod) sees the snapped
-            # values.
-            self.options.spawn_rate_min.value = ((self.options.spawn_rate_min.value + 5) // 10) * 10
-            self.options.spawn_rate_max.value = ((self.options.spawn_rate_max.value + 5) // 10) * 10
-            sr_min = self.options.spawn_rate_min.value
-            sr_max = self.options.spawn_rate_max.value
-            if sr_max < sr_min:
-                raise OptionError(f"Spawn Rate Max ({sr_max}) must be >= Spawn Rate Min ({sr_min}).")
+        # The spawn-rate mechanic only moves in fixed +10% steps: the mod starts at the spawn-rate
+        # min and adds 10% for each "Spawn Rate Up" item received. Snap both bounds to the nearest
+        # multiple of 10 so the option values match what the game can reach and collecting every Spawn
+        # Rate Up item lands exactly on the max - otherwise a typed 255 silently behaves as 250 and an
+        # off-grid min like 67 produces an odd 67/77/87 progression. The min (10-100) and max
+        # (100-300) ranges meet at vanilla, so max >= min always holds with no validation needed.
+        self.options.spawn_rate_min.value = ((self.options.spawn_rate_min.value + 5) // 10) * 10
+        self.options.spawn_rate_max.value = ((self.options.spawn_rate_max.value + 5) // 10) * 10
 
     def _get_item_quantity(self, item_name: str, item_data: KARItemData) -> int:
         """Determine how many copies of an item to add to the pool."""
@@ -497,11 +490,10 @@ class KARWorld(World):
             return 1
 
         if item_data.type == KARItemType.PATCH_CAP_INCREASE:
-            # Cap progressives from 1 up to the target. The mod's progressive
-            # path (PatchCap_GetCap in patch_cap.c) starts the cap at 1 and adds
-            # one for each Patch Cap Increase received, so we need (target - 1)
-            # items in the pool to make the target reachable.
-            return max(0, self.options.city_trial_patch_cap_amount.value - 1)
+            # The mod starts the per-stat cap at the patch-cap min and adds one for each Patch Cap
+            # Increase received (PatchCap_GetCap in patch_cap.c), so pool size = max - min reaches
+            # the ceiling. min == max yields 0 items (flat cap, the old "progressive off").
+            return max(0, self.options.city_trial_patch_cap_max.value - self.options.city_trial_patch_cap_min.value)
 
         if item_name == KARItemName.SPAWN_RATE_UP:
             # Each item grants +10%. Pool size = floor((max - min) / 10) so collecting all reaches max.
@@ -558,15 +550,13 @@ class KARWorld(World):
             if category not in allowed:
                 excluded |= names
 
-        # Patch cap increase: excluded unless CT enabled AND progressive caps ON
-        if not self.city_trial_enabled or not self.options.city_trial_progressive_patch_caps:
+        # Patch cap increase: excluded unless CT enabled AND the cap can grow (max > min).
+        cap_can_grow = self.options.city_trial_patch_cap_max.value > self.options.city_trial_patch_cap_min.value
+        if not self.city_trial_enabled or not cap_can_grow:
             excluded.add(KARItemName.PATCH_CAP_INCREASE)
 
-        # Spawn Rate Up: excluded unless progressive spawn rate is ON and there's room to grow.
-        if (
-            not self.options.spawn_rate_progressive
-            or self.options.spawn_rate_max.value <= self.options.spawn_rate_min.value
-        ):
+        # Spawn Rate Up: excluded when the ceiling is at or below the min (no room to grow).
+        if self.options.spawn_rate_max.value <= self.options.spawn_rate_min.value:
             excluded.add(KARItemName.SPAWN_RATE_UP)
 
         # Drop Patches Trap: only meaningful in City Trial (the mod's handler
@@ -750,70 +740,23 @@ class KARWorld(World):
         )
 
     def _validate_allowed_items_filler(self) -> None:
+        """Defensive backstop: generic filler is always available, so allowed_items can no longer
+        starve the pool.
+
+        The cosmetic all-mode filler items (Big Kirby / Small Kirby, KARItemType.FILLER) are immune to
+        allowed_items (the FILLER type is absent from ALLOWED_ITEM_CATEGORIES) and carry _ALL_MODES, so the
+        source-mode backstop keeps them while any mode is enabled. _build_item_pools therefore always lands
+        them in filler_pool, guaranteeing every excluded box and every leftover create_items slot has a
+        filler to draw. The allowed_items starvation OptionErrors this method used to raise can no longer
+        occur for any user config. This now fires only if a future change breaks that invariant, converting
+        a would-be downstream FillError into a clean message in generate_early.
         """
-        Guard the failure modes the `allowed_items` OptionSet can create by emptying the draw pools.
-        Excluded boxes accept only filler, and create_items fills leftover (non-guaranteed, non-excluded)
-        slots from useful_pool/filler_pool/traps - so disabling enough categories can leave a slot with
-        nothing to draw, which would otherwise surface as a downstream FillError or an empty random.choice.
-        Two global checks suffice: the per-mode case (e.g. Air-Ride-only losing its only filler) collapses
-        into them because generic filler is mode-neutral in create_items, so a globally non-empty
-        filler_pool can fill any mode's excluded boxes. Raises a clean OptionError in generate_early, never
-        letting an impossible config reach the fill step.
-        """
-        cap = self._capacity
-        total_default = cap.total_default
-        total_excluded = cap.total_excluded
-        # Generic filler create_items mints for excluded boxes that filler-classified rewards don't cover.
-        # A filler reward only covers an excluded box if it actually lands on one: with shuffle on every
-        # filler reward floats and can, so all count; with shuffle off they are pinned to their native box,
-        # so only those whose native box is excluded cover an excluded box (the rest pin to / float onto
-        # default boxes and leave the excluded boxes for generic filler). Mirrors create_items' post-pin
-        # count so this never under-estimates generic_filler and miss an empty-filler_pool starvation.
-        if self.options.shuffle_checklist_rewards:
-            reward_filler_covering_excluded = cap.filler_rewards
-        else:
-            excluded_names: set[str] = set()
-            if self.city_trial_enabled:
-                excluded_names |= self.city_trial_excluded_locations
-            if self.air_ride_enabled:
-                excluded_names |= self.air_ride_excluded_locations
-            if self.top_ride_enabled:
-                excluded_names |= self.top_ride_excluded_locations
-            excluded_names |= set(self.options.exclude_locations)
-            excluded_names -= self.goal_locations_to_exclude
-            reward_filler_covering_excluded = sum(
-                1
-                for name in self.reward_pool
-                if not (ITEM_TABLE[name].classification & ItemClassification.useful)
-                and NATIVE_REWARD_TO_LOCATION.get(name) in excluded_names
-            )
-        generic_filler = max(0, total_excluded - reward_filler_covering_excluded)
-
-        # Traps can only stand in for minted filler when every roll is a trap (trap_chance == 100);
-        # below 100, get_filler_item_name falls through to _random_filler, which needs filler_pool.
-        traps_always = bool(self.trap_pool) and self.options.trap_chance.value >= 100
-
-        # (a) Leftover-slot starvation: slots beyond the guaranteed pool and the filler minted for
-        # excluded boxes draw from useful_pool, then filler_pool, then traps. If any such slot exists
-        # and all three are empty (traps only count at 100%), the draw has nothing.
-        guaranteed = len(self.progression_pool) + len(self.counted_useful_pool) + len(self.reward_pool)
-        leftover_slots = total_default + total_excluded - guaranteed - generic_filler
-        if leftover_slots > 0 and not (self.useful_pool or self.filler_pool or traps_always):
+        if not self.filler_pool:
             raise OptionError(
-                "allowed_items disables every category that could supply non-guaranteed item slots "
-                "(no useful items, no filler items, and no always-on traps remain), but the seed still "
-                "has open locations to fill. Re-enable at least one item category, set trap_chance to "
-                "100 with traps selected, or reduce gating so guaranteed items cover the locations."
-            )
-
-        # (b) Excluded-box starvation: excluded boxes take only filler. The generic filler minted for
-        # the excluded boxes that filler rewards don't cover needs filler_pool (or always-on traps).
-        if generic_filler > 0 and not (self.filler_pool or traps_always):
-            raise OptionError(
-                "allowed_items leaves no filler items in the pool, but the seed has excluded checklist "
-                "boxes that can only receive filler. Re-enable a filler-providing item category (City "
-                "Trial Item Gives or Top Ride Item Gives), set trap_chance to 100 with traps selected, "
-                "exclude fewer locations, or lower the affected mode's checkbox filler count."
+                "Internal invariant violated: filler_pool is empty after pool building. The cosmetic "
+                "all-mode filler items (Big Kirby / Small Kirby) are expected to keep it non-empty "
+                "regardless of allowed_items; this indicates a regression in item classification or "
+                "pool construction, not a user configuration error."
             )
 
     def _validate_pool_fits_locations(self) -> None:
@@ -840,18 +783,18 @@ class KARWorld(World):
             return
 
         hints: list[str] = []
-        if self.options.city_trial_progressive_patch_caps and self.options.city_trial_patch_cap_amount.value > 1:
+        cap_count = max(0, self.options.city_trial_patch_cap_max.value - self.options.city_trial_patch_cap_min.value)
+        if cap_count > 0:
             hints.append(
-                f"city_trial_patch_cap_amount={self.options.city_trial_patch_cap_amount.value} "
-                f"adds {self.options.city_trial_patch_cap_amount.value - 1} Patch Cap Increase items"
+                f"patch cap range ({self.options.city_trial_patch_cap_min.value}-"
+                f"{self.options.city_trial_patch_cap_max.value}) adds {cap_count} Patch Cap Increase items"
             )
-        if self.options.spawn_rate_progressive:
-            sr_count = max(0, (self.options.spawn_rate_max.value - self.options.spawn_rate_min.value) // 10)
-            if sr_count > 0:
-                hints.append(
-                    f"spawn_rate range ({self.options.spawn_rate_min.value}-{self.options.spawn_rate_max.value}) "
-                    f"adds {sr_count} Spawn Rate Up items"
-                )
+        sr_count = max(0, (self.options.spawn_rate_max.value - self.options.spawn_rate_min.value) // 10)
+        if sr_count > 0:
+            hints.append(
+                f"spawn_rate range ({self.options.spawn_rate_min.value}-{self.options.spawn_rate_max.value}) "
+                f"adds {sr_count} Spawn Rate Up items"
+            )
         hint_str = (" Likely culprits: " + "; ".join(hints) + ".") if hints else ""
         if needs_default > default_count:
             raise OptionError(
@@ -919,6 +862,11 @@ class KARWorld(World):
         non-progression rewards in reward_pool plus the six progression Dragoon/Hydra part markers. Runs
         before create_items counts locations, so the locked boxes self-balance the mint.
 
+        No-op when checklist_rewards_gated is off: the cosmetic rewards have already left the pool (the mod
+        grants them at connect), so reward_pool is empty and the only remaining in-scope items would be the
+        part markers. Those are left to float like any other progression item rather than pinned, so that
+        shuffle_checklist_rewards has no effect at all when rewards are gated off.
+
         Default boxes are the only home for progression / counted-useful / useful rewards, so default-box
         pins are rationed:
           - Always pin (capacity-neutral): a part marker on a default box (already in progression demand;
@@ -929,6 +877,11 @@ class KARWorld(World):
             global filler headroom remains. Non-fitting filler rewards float back into the pool.
         """
         if self.options.shuffle_checklist_rewards:
+            return
+
+        # Rewards gated off: nothing findable to pin (reward_pool is empty) and the part markers are left
+        # to float, so shuffle_checklist_rewards is inert here - same outcome as the shuffle-on early-out.
+        if not self.options.checklist_rewards_gated:
             return
 
         in_scope = list(self.reward_pool) + [
@@ -1096,6 +1049,13 @@ class KARWorld(World):
     def fill_slot_data(self) -> Mapping[str, Any]:
         """
         Return the `slot_data` field that will be in the `Connected` network package.
+
+        Only options the client or mod actually consume are shipped: the client uses
+        these directly (link toggles, goal logging) or writes them into the mod's
+        `APSlotOptions` struct via Dolphin. Generation-only options that no downstream
+        consumer reads (`trap_chance`, `spawn_rate_max`) are deliberately omitted - they
+        only size item pools at generation time. `spawn_rate_min` ships because it is the
+        runtime floor the mod reads.
         """
         return dict(
             self.options.as_dict(
@@ -1103,7 +1063,6 @@ class KARWorld(World):
                 "energy_link",
                 "trap_link",
                 "reveal_checklists",
-                "trap_chance",
                 "city_trial_goal",
                 "city_trial_checklist_amount",
                 "city_trial_goal_locations",
@@ -1113,12 +1072,10 @@ class KARWorld(World):
                 "top_ride_goal",
                 "top_ride_checklist_amount",
                 "top_ride_goal_locations",
-                "city_trial_progressive_patch_caps",
-                "city_trial_patch_cap_amount",
+                "city_trial_patch_cap_min",
+                "city_trial_patch_cap_max",
                 "city_trial_stadiums_gated",
-                "spawn_rate_progressive",
                 "spawn_rate_min",
-                "spawn_rate_max",
                 "city_trial_events_gated",
                 "abilities_gated",
                 "city_trial_patches_gated",

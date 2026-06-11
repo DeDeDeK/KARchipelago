@@ -143,8 +143,8 @@ _ITEM_LOCATION_RULES: dict[str, str] = {
 # itemkind EXCEPT the three boxes -- verified mod-side: CityTrial_CheckForNewUnlocks tallies these from
 # Sum(item_collect[ITKIND 3..0x43]), and Ply_IncrementItemCollectNum fires for every touched item, so
 # ITKIND_BOX{BLUE,GREEN,RED} (0/1/2) are excluded while patches, copy-ability panels, food, special
-# items, hazards and legendary parts all count. So reachability needs at least one of those counting
-# types able to spawn, which is gated by city_trial_items_gated (food/special/hazards/legendary),
+# items, miscellaneous items and legendary parts all count. So reachability needs at least one of those counting
+# types able to spawn, which is gated by city_trial_items_gated (food/special/misc/legendary),
 # city_trial_patches_gated (patches) and abilities_gated (copy panels) together. The apply block gates
 # these on HasAny over all three unlock sets, and only when all three gates are on (if any is off, that
 # gate's types always spawn so a counting item is always available). One unlock is enough since item
@@ -473,7 +473,7 @@ def set_rules(world: "KARWorld"):
     ):
         # "Get / pick up N items" only needs ONE counting item type able to spawn (see
         # _ITEM_PICKUP_LOCATIONS). The counting types are locked across three independent gates --
-        # city_trial_items_gated (food/special/hazards/legendary), city_trial_patches_gated (patches)
+        # city_trial_items_gated (food/special/misc/legendary), city_trial_patches_gated (patches)
         # and abilities_gated (copy panels) -- so when ALL THREE are on, nothing that counts spawns
         # until one of those unlocks is held and these cells need any one of them. If any of the three
         # gates is off, that gate's types always spawn (a counting item is always available) and no

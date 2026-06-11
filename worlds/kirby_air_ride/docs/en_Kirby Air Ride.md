@@ -56,7 +56,7 @@ Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top R
 - **Complete both Dragoon and Hydra in one match.** The standard legendary-machine checkbox from the base game.
 - **Beat King Dedede.** KO King Dedede in under a minute in the VS. KING DEDEDE stadium.
 - **Complete a specific list of checklist boxes.** You choose the exact boxes (or location group names) with "City Trial Goal Locations".
-- **Max stats in one run.** Reach the per-stat patch cap target on every stat in a single City Trial round. Pairs well with Progressive Patch Caps, which makes the target reachable only after collecting Patch Cap Increase items.
+- **Max stats in one run.** Reach the "Patch Cap Max" on every stat in a single City Trial round. Set "Patch Cap Min" below it to make the ceiling reachable only after collecting Patch Cap Increase items.
 - **None.** Disables City Trial.
 
 ### Air Ride
@@ -64,14 +64,14 @@ Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top R
 - **Fill in over 100 Checklist Boxes.**
 - **Fill in N Checklist Boxes** (1 to 120).
 - **Complete a specific list of checklist boxes** (via "Air Ride Goal Locations").
-- **None** (default).
+- **None.** Disables Air Ride (default).
 
 ### Top Ride
 
 - **Fill in over 100 Checklist Boxes.**
 - **Fill in N Checklist Boxes** (1 to 120).
 - **Complete a specific list of checklist boxes** (via "Top Ride Goal Locations").
-- **None** (default).
+- **None.** Disables Top Ride (default).
 
 ### Mixing goals
 
@@ -86,7 +86,7 @@ The gateable categories are:
 - **City Trial events** (Dyna Blade, Meteor, Tac, etc.)
 - **Copy abilities** (Fire, Sword, Bomb, etc.). Affects both City Trial and Air Ride.
 - **City Trial patch types** (Boost, Top Speed, Offense, etc.)
-- **City Trial game items** (All Up, Speed Max, Candy, food, hazards, legendary parts, etc.)
+- **City Trial game items** (All Up, Speed Max, Candy, food, legendary parts, etc.)
 - **Air ride machines.** Affects both City Trial and Air Ride.
 - **City Trial box types** (Blue, Green, Red)
 - **Air Ride courses**
@@ -133,6 +133,7 @@ The items you can receive include:
 - Stadium unlock items (City Trial)
 - Spawn Rate Up items (City Trial / Top Ride)
 - Game item gives (boxes, food, copy abilities, legendary machine parts, All Up, etc.)
+- Cosmetic filler (Big Kirby and Small Kirby, which scale Kirby's size)
 - Access-gating unlock items (events, abilities, machines, patch types, items, boxes, courses, colors, Top Ride items)
 - Traps (1 HP Trap, stat-down patches, fake patches)
 
@@ -142,7 +143,7 @@ Receiving a checkbox filler item for a given checklist auto-completes a checklis
 
 ### Patch cap increase items
 
-With "City Trial Progressive Patch Caps" enabled, the per-stat patch cap starts low and each Patch Cap Increase item raises it by one, up to your "Patch Cap Target". This is tracked per stat. For example, with a cap of 6, collecting a 7th Top Speed will drop you back to 6 until you raise the cap.
+When "Patch Cap Min" is below "Patch Cap Max", the per-stat patch cap starts at the min and each Patch Cap Increase item raises it by one, up to the max. This is tracked per stat. For example, with a cap of 6, collecting a 7th Top Speed will drop you back to 6 until you raise the cap. Set the min equal to the max (both default to the vanilla 18) for a flat cap with no Patch Cap Increase items.
 
 ### Permanent patch increase items
 
@@ -150,7 +151,7 @@ These items give a permanent +1 to a City Trial stat that persists for the rest 
 
 ### Allowed item types
 
-"Allowed Item Types" controls which categories of optional (non-progression) give items appear in your pool. All categories are on by default; removing one keeps all of that category's items out of your pool. It is independent of "Trap Types" — trap items are governed only by that option, so a category here never adds or removes traps. The categories are: Permanent Patches, City Trial Item Gives (boxes, single-stat patches, food, candy, All Up, hazards, legendary-part spawns, etc.), City Trial Event Gives, Copy Ability Gives, and Top Ride Item Gives.
+"Allowed Item Types" controls which categories of optional (non-progression) give items appear in your pool. All categories are on by default; removing one keeps all of that category's items out of your pool. It is independent of "Trap Types" — trap items are governed only by that option, so a category here never adds or removes traps. The categories are: Permanent Patches, City Trial Item Gives (boxes, single-stat patches, food, candy, All Up, Gordo, legendary-part spawns, etc.), City Trial Event Gives, Copy Ability Gives, and Top Ride Item Gives.
 
 Note: "City Trial Item Gives" doubles as Air Ride's filler source and "Top Ride Item Gives" as Top Ride's, so in an Air-Ride-only or Top-Ride-only seed removing the corresponding category can leave excluded checklist boxes with nothing to fill them and will be rejected with a clear error.
 
@@ -160,7 +161,7 @@ With "City Trial Stadiums Gated" enabled, stadiums must be found and unlocked, a
 
 ### Spawn Rate Up items
 
-With "Progressive Spawn Rate" enabled, the City Trial and Top Ride item spawn rate starts at your "Spawn Rate Min" and each Spawn Rate Up item raises it by 10% toward your "Spawn Rate Max". Air Ride has no spawn-rate scaling and is unaffected.
+The City Trial and Top Ride item spawn rate starts at your "Spawn Rate Min" and each Spawn Rate Up item raises it by 10% toward your "Spawn Rate Max". A min below 100% starts spawns suppressed below vanilla; set the min equal to the max for a flat rate with no Spawn Rate Up items. Air Ride has no spawn-rate scaling and is unaffected.
 
 ### Access-gating unlock items
 
@@ -203,8 +204,6 @@ With "Reveal Checklists" enabled, the checklists for each of your enabled modes 
 ### Server sync
 
 The client syncs your completed AP checks to your in-game checklist every time you connect to the server. This keeps your game in sync with the server even if you lose your save file, start fresh for a same-slot co-op, or have had checks collected by another player.
-
-**IMPORTANT:** Checks synced from the server are initially only *visible* in the checklist. They are unlocked by entering and then exiting (or normally finishing) a run in the relevant mode, which triggers the unlocking process for those checks.
 
 ## I need help! What do I do?
 
