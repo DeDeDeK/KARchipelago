@@ -125,6 +125,7 @@ class KARHook:
         owned_counts = Counter(it.name for it in owned_by_id.values())
 
         self._check_item_counts(tag, opts, pool_counts, ct_on, ar_on, tr_on)
+        self._check_generic_filler_present(tag, world)
         self._check_unlock_classifications(tag, pool_items)
         self._check_excluded_items_absent(tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on)
         self._check_reward_uniqueness(tag, world, owned_counts)
@@ -139,24 +140,24 @@ class KARHook:
         self._check_exclude_locations(tag, opts, our_locations)
 
     def _check_item_counts(self, tag, opts, pool_counts, ct_on, ar_on, tr_on):
-        # PATCH_CAP_INCREASE = target - 1 when CT enabled + progressive caps on, else 0
-        if ct_on and opts.city_trial_progressive_patch_caps:
-            expected = max(0, opts.city_trial_patch_cap_amount.value - 1)
+        # PATCH_CAP_INCREASE = max - min when CT enabled, else 0
+        if ct_on:
+            expected = max(0, opts.city_trial_patch_cap_max.value - opts.city_trial_patch_cap_min.value)
         else:
             expected = 0
         actual = pool_counts.get(str(KARItemName.PATCH_CAP_INCREASE), 0)
         if actual != expected:
             raise HookError(
                 f"{tag} PATCH_CAP_INCREASE count={actual}, expected {expected} "
-                f"(ct_on={ct_on}, progressive_caps={bool(opts.city_trial_progressive_patch_caps)}, "
-                f"cap_amount={opts.city_trial_patch_cap_amount.value})"
+                f"(ct_on={ct_on}, patch_cap_min={opts.city_trial_patch_cap_min.value}, "
+                f"patch_cap_max={opts.city_trial_patch_cap_max.value})"
             )
 
-        # SPAWN_RATE_UP = (max - min) // 10 when progressive on, else 0.
+        # SPAWN_RATE_UP = (max - min) // 10, else 0.
         # It is its own KARItemType.SPAWN_RATE with source_modes {CITYTRIAL, TOPRIDE}; spawn rate is
         # only meaningful in those modes, so the world's source-mode backstop drops it entirely when
-        # neither City Trial nor Top Ride is enabled (even with progressive on). Mirror that here.
-        if opts.spawn_rate_progressive and (ct_on or tr_on):
+        # neither City Trial nor Top Ride is enabled. Mirror that here.
+        if ct_on or tr_on:
             expected = max(0, (opts.spawn_rate_max.value - opts.spawn_rate_min.value) // 10)
         else:
             expected = 0
@@ -164,8 +165,7 @@ class KARHook:
         if actual != expected:
             raise HookError(
                 f"{tag} SPAWN_RATE_UP count={actual}, expected {expected} "
-                f"(progressive={bool(opts.spawn_rate_progressive)}, "
-                f"min={opts.spawn_rate_min.value}, max={opts.spawn_rate_max.value})"
+                f"(min={opts.spawn_rate_min.value}, max={opts.spawn_rate_max.value})"
             )
 
         # Checkbox fillers per mode
@@ -178,6 +178,18 @@ class KARHook:
             actual = pool_counts.get(str(name), 0)
             if actual != expected:
                 raise HookError(f"{tag} {name} count={actual}, expected {expected} (enabled={enabled}, opt={amount})")
+
+    def _check_generic_filler_present(self, tag, world):
+        # Big Kirby / Small Kirby are immune to allowed_items (FILLER type is not in ALLOWED_ITEM_CATEGORIES)
+        # and carry _ALL_MODES, so the source-mode backstop keeps them while any mode is enabled. Every KAR
+        # slot has >=1 mode enabled, so both must always be in filler_pool - this is the invariant that
+        # guarantees filler can never be starved, replacing the old allowed_items starvation OptionErrors.
+        for name in (KARItemName.BIG_KIRBY, KARItemName.SMALL_KIRBY):
+            if str(name) not in world.filler_pool:
+                raise HookError(
+                    f"{tag} cosmetic filler {str(name)!r} missing from filler_pool; it must always be "
+                    f"present so filler is never starved"
+                )
 
     def _check_reward_uniqueness(self, tag, world, owned_counts):
         # Checklist rewards are unique one-time unlocks, not draw-with-replacement filler: each reward the
