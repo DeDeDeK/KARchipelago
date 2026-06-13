@@ -500,7 +500,7 @@ class KARContext(CommonContext):
                 logger.info("APData pointer changed. Re-handshaking.")
                 self._reset_dolphin_state()
             self.ap_data_base = ptr
-            logger.info(f"APData struct at {ptr:#010x}")
+            logger.info(f"Found APData at {ptr:#010x}")
 
         # Wait for game_ready, and detect restarts. The mod sets game_ready once
         # in OnBoot and never clears it during play, so reading 0 after we've seen
