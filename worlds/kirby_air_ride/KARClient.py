@@ -45,6 +45,17 @@ GOAL_NAMES: dict[GoalKind, str] = {
 }
 
 
+# Friendly text for DolphinInterface.status_name()'s raw DME status values, so
+# "Not connected" can say *why* (Dolphin closed vs open-but-unreadable).
+_DOLPHIN_STATUS_TEXT = {
+    "hooked": "hooked",
+    "notRunning": "Dolphin not running",
+    "noEmu": "Dolphin running, but no game/emulation detected",
+    "unHooked": "not hooked yet",
+    "unknown": "status unavailable",
+}
+
+
 class KARCommandProcessor(ClientCommandProcessor):
     def _cmd_dolphin(self) -> None:
         """Display the current Dolphin emulator connection status."""
@@ -52,7 +63,14 @@ class KARCommandProcessor(ClientCommandProcessor):
             return
         ctx = self.ctx
         if not ctx.dolphin.is_hooked():
-            status = "Not connected"
+            # Prefer the last attempt's real outcome (e.g. "hooked, but the game id
+            # was wrong") over the bare DME status, which after an unhook is just
+            # "unHooked" and hides that we actually attached.
+            if ctx.last_attach_detail:
+                status = f"Not connected - {ctx.last_attach_detail}"
+            else:
+                name = ctx.dolphin.status_name()
+                status = f"Not connected ({_DOLPHIN_STATUS_TEXT.get(name, name)})"
         elif not ctx.dolphin.check_game_running():
             status = "Hooked, game not running"
         elif ctx.ap_data_base is None:
@@ -79,6 +97,14 @@ class KARContext(CommonContext):
         self.dolphin = DolphinInterface()
         self.dolphin_sync_task: asyncio.Task[None] | None = None
         self._dolphin_was_connected: bool | None = None
+        # Accurate, human-readable result of the most recent Dolphin connect attempt
+        # (e.g. "hooked, but the game id is wrong" vs "no process" vs "no emulation").
+        # last_attach_detail is surfaced by /dolphin and cleared once fully connected,
+        # so the status never bottoms out at a bare "not hooked yet" when DME actually
+        # attached. _logged_attach_detail dedups the loop log so an unchanging failure
+        # is reported once, not on every 5s retry.
+        self.last_attach_detail: str | None = None
+        self._logged_attach_detail: str | None = None
 
         # APData struct base address (resolved from static pointer).
         self.ap_data_base: int | None = None
@@ -375,32 +401,43 @@ class KARContext(CommonContext):
             # read. watcher_event still provides an instant early-wake when items
             # arrive from the server, so delivery isn't gated on the 0.1s tick.
             try:
-                async with asyncio.timeout(0.1):
-                    await self.watcher_event.wait()
-            except TimeoutError:
-                pass
-            finally:
-                self.watcher_event.clear()
+                try:
+                    async with asyncio.timeout(0.1):
+                        await self.watcher_event.wait()
+                except TimeoutError:
+                    pass
+                finally:
+                    self.watcher_event.clear()
 
-            try:
-                if self.dolphin.is_hooked() and self.dolphin.check_game_running():
-                    await self._dolphin_tick()
-                else:
-                    await self._try_connect_dolphin()
+                try:
+                    if self.dolphin.is_hooked() and self.dolphin.check_game_running():
+                        await self._dolphin_tick()
+                    else:
+                        await self._try_connect_dolphin()
+                except Exception as e:
+                    logger.error(f"Dolphin sync error: {e}")
+                    if self.dolphin.is_hooked():
+                        self.dolphin.unhook()
+                    self._reset_dolphin_state()
+
+                now_connected = self.dolphin.is_hooked() and self.dolphin.check_game_running()
+                if now_connected and not self._dolphin_was_connected:
+                    logger.info("Dolphin connected.")
+                    self.last_attach_detail = None
+                    self._logged_attach_detail = None
+                elif not now_connected and self._dolphin_was_connected:
+                    # The specific reason is logged by _note_attach_failure on the
+                    # next connect attempt; this is just the state marker.
+                    logger.info("Lost connection to Dolphin.")
+                self._dolphin_was_connected = now_connected
             except Exception as e:
-                logger.error(f"Dolphin sync error: {e}")
-                if self.dolphin.is_hooked():
-                    self.dolphin.unhook()
-                self._reset_dolphin_state()
-
-            now_connected = self.dolphin.is_hooked() and self.dolphin.check_game_running()
-            if now_connected and not self._dolphin_was_connected:
-                logger.info("Dolphin connected.")
-            elif not now_connected and self._dolphin_was_connected:
-                logger.info("Dolphin disconnected.")
-            elif not now_connected and self._dolphin_was_connected is None:
-                logger.info("Dolphin not connected. Waiting for Dolphin emulator...")
-            self._dolphin_was_connected = now_connected
+                # Last-resort guard. This task has no supervisor - async_main only
+                # awaits it at shutdown - so any unhandled exception escaping the
+                # loop body would silently kill the connector and the client would
+                # never hook again until a full restart. Log and continue to the
+                # next iteration instead. CancelledError is a BaseException, so
+                # shutdown cancellation still propagates and is unaffected.
+                logger.error(f"Unexpected error in Dolphin sync loop: {e}")
 
     async def _try_connect_dolphin(self) -> None:
         if self.dolphin.is_hooked():
@@ -408,10 +445,47 @@ class KARContext(CommonContext):
         self._reset_dolphin_state()
 
         self.dolphin.hook()
-        if not (self.dolphin.is_hooked() and self.dolphin.check_game_running()):
-            if self.dolphin.is_hooked():
-                self.dolphin.unhook()
-            await asyncio.sleep(5)
+        if self.dolphin.is_hooked() and self.dolphin.check_game_running():
+            return  # Fully attached; the main loop ticks on the next iteration.
+
+        # Not fully connected. Record an accurate reason *before* dropping any hook,
+        # so /dolphin and the log reflect the real state instead of the bare
+        # "not hooked yet" that unhooking leaves behind.
+        if self.dolphin.is_hooked():
+            # DME attached and found a MEM1-sized region, but GKYE01 wasn't at
+            # BASE_MEMORY_ADDRESS. The bytes actually there say why: all 0x00 -> no
+            # game booted into MEM1 yet (still on a menu); another valid id such as
+            # 'GKYP01'/'GKYJ01' -> wrong-region disc (the mod and addresses are
+            # NTSC-U only); arbitrary bytes -> DME likely attached to the wrong
+            # memory region (it picks a MEM1-sized mapping without checking contents).
+            addr = int(MemoryAddress.BASE_MEMORY_ADDRESS)
+            raw = self.dolphin.read_bytes(addr, 6)
+            self._note_attach_failure(
+                f"hooked Dolphin, but {addr:#010x} reads {raw!r}, not {self.dolphin.kar_game_id!r}"
+            )
+            self.dolphin.unhook()
+        else:
+            # Never attached. status distinguishes no-process from no-emulation.
+            status = self.dolphin.status_name()
+            if status == "notRunning":
+                self._note_attach_failure("no Dolphin process found")
+            elif status == "noEmu":
+                self._note_attach_failure("Dolphin open, but no emulated game readable yet")
+            else:
+                # unHooked here means hook() raised; DolphinInterface.hook() already
+                # logged the underlying exception.
+                self._note_attach_failure(f"hook attempt failed (status: {status})")
+
+        await asyncio.sleep(5)
+
+    def _note_attach_failure(self, detail: str) -> None:
+        """Record why the latest connect attempt didn't fully connect, and log it
+        only when it changes. last_attach_detail feeds /dolphin; the dedup means an
+        unchanging failure is logged once rather than on every 5s retry."""
+        self.last_attach_detail = detail
+        if detail != self._logged_attach_detail:
+            self._logged_attach_detail = detail
+            logger.info(f"Dolphin not fully connected: {detail}")
 
     async def _dolphin_tick(self) -> None:
         # Resolve / verify APData pointer
