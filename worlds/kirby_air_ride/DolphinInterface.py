@@ -32,15 +32,48 @@ class DolphinInterface:
             logger.warning(f"Error while unhooking from Dolphin: {e}")
 
     def is_hooked(self) -> bool:
-        """Check if currently connected to Dolphin memory."""
-        return dolphin_memory_engine.is_hooked()
+        """Check if currently connected to Dolphin memory.
+
+        Defensive: never raises. The dolphin sync loop calls this outside its
+        inner error handler, and the task has no supervisor, so a raised
+        exception here would escape and permanently kill the connector. The
+        underlying call doesn't normally fail; if it ever does, log it (never
+        silently) and treat it as not hooked.
+        """
+        try:
+            return dolphin_memory_engine.is_hooked()
+        except Exception as e:
+            logger.warning(f"Error checking Dolphin hook state: {e}")
+            return False
+
+    def status_name(self) -> str:
+        """Raw dolphin_memory_engine connection status name. Never raises.
+
+        One of "hooked", "notRunning" (no Dolphin process), "noEmu" (Dolphin
+        running but no readable emulated game), "unHooked" (not yet attached),
+        or "unknown" on error. is_hooked() collapses all of these to a bool;
+        this preserves the distinction so the client can tell "Dolphin closed"
+        apart from "Dolphin open but its memory is unreadable" (wrong Dolphin
+        version, no game booted, or a permission/sandbox mismatch) - on every
+        platform those otherwise surface identically as is_hooked() == False.
+        """
+        try:
+            return dolphin_memory_engine.get_status().name
+        except Exception as e:
+            logger.warning(f"Error reading Dolphin status: {e}")
+            return "unknown"
 
     def check_game_running(self) -> bool:
-        """Check if Kirby Air Ride is running within Dolphin."""
-        try:
-            return dolphin_memory_engine.read_bytes(MemoryAddress.BASE_MEMORY_ADDRESS, 6) == self.kar_game_id
-        except Exception:
-            return False
+        """Check whether Kirby Air Ride (NTSC-U) is the game running in Dolphin.
+
+        Reads through read_bytes so a failed read is logged rather than silently
+        swallowed (a wrong or empty game id simply returns False). int(): some
+        dolphin-memory-engine builds reject an IntEnum address with "expected int,
+        got MemoryAddress". BASE_MEMORY_ADDRESS and AP_DATA_POINTER (resolve_ap_data)
+        are the only fixed addresses passed straight to DME; everything else gets a
+        plain int via _addr().
+        """
+        return self.read_bytes(int(MemoryAddress.BASE_MEMORY_ADDRESS), 6) == self.kar_game_id
 
     # Resolve APData pointer
 
@@ -52,7 +85,7 @@ class DolphinInterface:
         waiting instead of latching a garbage address and spamming failed struct reads.
         """
         try:
-            ptr = dolphin_memory_engine.read_word(MemoryAddress.AP_DATA_POINTER)
+            ptr = dolphin_memory_engine.read_word(int(MemoryAddress.AP_DATA_POINTER))
             return ptr if MEM1_START <= ptr < MEM1_END else None
         except Exception as e:
             logger.warning(f"Failed to read APData pointer: {e}")
