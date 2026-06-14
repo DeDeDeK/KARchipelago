@@ -54,8 +54,11 @@ _ABILITY_LOCATION_RULES: dict[str, str] = {
     ARLocation.SWORD_CHALLENGE_10_SWINGS: KARItemName.UNLOCK_ABILITY_SWORD,
     # Air Ride: swallowing a specific copy-ability enemy needs that ability unlocked. The named enemy
     # only yields its copy ability (and so the checkbox only completes) once that ability can appear,
-    # which the gate locks behind the ability unlock. The generic "swallow N enemies" and the
-    # "garbage enemies (with no copy abilities)" checkboxes take any enemy and stay ungated.
+    # which abilities_gated locks behind the ability unlock. This is only HALF the requirement: the
+    # enemy must also actually spawn, and each named enemy only appears on a subset of Air Ride
+    # courses, so when air_ride_courses_gated is on these same cells also need one of those courses
+    # reachable -- gated via _SWALLOW_ENEMY_COURSE_RULES below. The generic "swallow N enemies" and
+    # the "garbage enemies (with no copy abilities)" checkboxes take any enemy and stay ungated.
     ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_SWORD,
     ARLocation.SWALL_WHEELIE_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_WHEEL,
     ARLocation.SWALL_CHILLY_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_FREEZE,
@@ -230,6 +233,40 @@ _AR_STANDARD_COURSE_UNLOCKS: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
     KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
 )
+
+# Swallow-a-named-enemy checkboxes: the course(s) each enemy can spawn on. Applied when
+# air_ride_courses_gated is on -- the cell can only complete on a course where the enemy appears, so
+# it needs HasAny(those courses). Extracted from the vanilla stage spawn tables (the mode-1 enemy
+# spawn data in each Air Ride course .dat): for each named enemy, the set of Air Ride courses whose
+# spawn table lists that enemy (across all tiers) with positive weight. Nebula Belt has no enemy
+# spawn table and never appears. This is independent of the ability half in _ABILITY_LOCATION_RULES:
+# both gates can be on at once, and the two rules compose with AND.
+_SWALLOW_ENEMY_COURSE_RULES: dict[str, tuple[str, ...]] = {
+    ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST: (
+        KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+        KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+        KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+        KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+        KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    ),
+    ARLocation.SWALL_WHEELIE_3_AND_FIRST: (
+        KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+        KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+        KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    ),
+    ARLocation.SWALL_CHILLY_3_AND_FIRST: (
+        KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+        KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    ),
+    ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: (
+        KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+        KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+        KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    ),
+}
 
 # All seven Top Ride courses (Top Ride has no secret course; "all courses" means every one).
 _TR_COURSE_UNLOCKS: tuple[str, ...] = (
@@ -436,6 +473,15 @@ def set_rules(world: "KARWorld"):
             add_location_rule(loc, Has(item))
         for loc, item in _ABILITY_TR_ITEM_RULES.items():
             add_location_rule(loc, Has(item))
+
+    # Swallow-a-named-enemy cells also need a course where that enemy spawns (independent of the
+    # ability half above). These cells live in the generic Air Ride region, so without this rule they
+    # would be reachable even when no course the enemy appears on is unlocked. When course gating is
+    # off the mod unlocks all courses at connect and the unlock items don't exist, so no rule is
+    # needed (a Has() on an absent item would wrongly make the cell unreachable).
+    if world.air_ride_enabled and world.options.air_ride_courses_gated:
+        for loc, courses in _SWALLOW_ENEMY_COURSE_RULES.items():
+            add_location_rule(loc, HasAny(*courses))
 
     if world.options.machines_gated:
         for loc, item in _MACHINE_SINGLE_RULES.items():
