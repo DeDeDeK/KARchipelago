@@ -1,13 +1,12 @@
 """
 Data integrity tests for ITEM_TABLE and the per-mode location tables.
 
-These are static-data invariants the rest of the code depends on:
+Static-data invariants the rest of the code depends on:
 - Item codes are unique (or None).
-- Location codes are unique, contiguous within their mode partition, and round-trip
-  through location_code_to_mode to the expected GameMode.
+- Location codes are unique, contiguous within their mode partition, and round-trip to the expected GameMode.
 
-A duplicate code or a partition violation would be caught at generation only as a weird
-silent crash; pinning these directly gives a clear error message.
+A duplicate code or a partition violation would otherwise surface at generation as a silent crash;
+pinning these directly gives a clear error message.
 """
 
 import unittest
@@ -40,8 +39,8 @@ class TestItemCodeUniqueness(unittest.TestCase):
 
 
 class TestLocationCodePartitioning(unittest.TestCase):
-    """Per CLAUDE.md: CT 1-120, AR 121-240, TR 241-360. Codes must round-trip through
-    location_code_to_mode to the expected GameMode."""
+    """Location codes partition into CT 1-120, AR 121-240, TR 241-360, and must round-trip to the expected
+    GameMode."""
 
     _BANDS = [
         (CITY_TRIAL_LOCATION_TABLE, GameMode.CITYTRIAL, 1, 120),
@@ -93,9 +92,8 @@ class TestLocationCodePartitioning(unittest.TestCase):
 
 
 class TestLocationCodeContiguity(unittest.TestCase):
-    """Each per-mode location table has exactly 120 entries and codes form a contiguous
-    range starting at the band's low end. CLAUDE.md describes them as 'sequential
-    indices'; a gap would indicate a removed location that left an unused code."""
+    """Each per-mode location table has exactly 120 entries and codes form a contiguous range starting at
+    the band's low end. A gap would indicate a removed location that left an unused code."""
 
     _BANDS = [
         (CITY_TRIAL_LOCATION_TABLE, 1, 120),

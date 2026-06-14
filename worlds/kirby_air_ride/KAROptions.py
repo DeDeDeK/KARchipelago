@@ -31,11 +31,6 @@ class TrapChance(Range):
 class Traps(OptionSet):
     """
     Which categories of trap may appear in your item pool. Has no effect unless "Trap Chance" is above 0.
-
-    - Direct Damage: 1 HP Trap.
-    - Stat Debuff: All Down, stat-down patches, Speed Min, Charge None, Copy Ability: Sleep,
-      Drop Patches Trap, and the Top Ride Speed Down item.
-    - Fake Patches: items that look like stat-ups but are harmful.
     """
 
     display_name = "Trap Types"
@@ -46,13 +41,7 @@ class Traps(OptionSet):
 class AllowedItems(OptionSet):
     """
     Which categories of optional (non-progression) give items may appear in your item pool. Removing a
-    category keeps all of its optional items out of your pool. Trap items are unaffected (see "Trap Types").
-
-    - Permanent Patches: City Trial permanent +1 stat items (and Permanent All Up).
-    - City Trial Item Gives: City Trial give-items (boxes, single-stat patches, food, candy, All Up, etc.).
-    - City Trial Event Gives: items that trigger a City Trial event on receipt.
-    - Copy Ability Gives: items that grant a copy ability on receipt.
-    - Top Ride Item Gives: Top Ride give-items.
+    category keeps all of its optional items out of your pool. Trap items are unaffected.
     """
 
     display_name = "Allowed Item Types"
@@ -89,9 +78,6 @@ class EnergyLink(Toggle):
     """
     Enables EnergyLink: collecting patches or destroying objects in City Trial sends energy to the
     Multiworld's shared pool, which you can spend on patches or other items.
-
-    Seeds the in-game Energy Link menu toggle on first connect; after that the in-game menu is
-    authoritative for the rest of the session.
     """
 
     default = 0
@@ -101,11 +87,7 @@ class EnergyLink(Toggle):
 class TrapLink(Toggle):
     """
     When on, traps you receive in-game are broadcast to other TrapLink players and you receive theirs.
-    Independent of "Trap Chance" — you can participate with no traps in your own pool, or keep traps
-    without broadcasting.
-
-    Seeds the in-game Trap Link menu toggle on first connect; after that the in-game menu is
-    authoritative for the rest of the session.
+    Independent of "Trap Chance".
     """
 
     default = 0
@@ -123,15 +105,14 @@ class RevealChecklists(Toggle):
 
 class ChecklistRewardsGated(Toggle):
     """
-    Controls whether the game's non-progression checklist rewards (a music track, a sound test entry, an
-    ending, a Top Ride rule, and so on) are gated behind the multiworld.
+    Controls whether the game's non-progression checklist rewards (music tracks, sound test entries,
+    endings, a Top Ride rule, and so on) are gated behind the multiworld.
 
-    When disabled (default), these rewards are not added to the pool — the mod unlocks them all from the
-    start, freeing their checklist boxes to hold other multiworld items. When enabled, each is an item
-    that must be found, and "Shuffle Checklist Rewards" decides where it can land.
+    When disabled (default), they are left out of the pool: the mod unlocks them all from the start,
+    freeing their checklist boxes to hold other items. When enabled, each must be found, and "Shuffle
+    Checklist Rewards" decides where it can land.
 
-    The Dragoon and Hydra parts are always in the pool regardless (they are progression). Content
-    delivered by unlock items rather than these rewards is governed by its own gating option.
+    The Dragoon and Hydra parts are always in the pool (they are progression).
     """
 
     display_name = "Checklist Rewards Gated"
@@ -139,16 +120,16 @@ class ChecklistRewardsGated(Toggle):
 
 class ShuffleChecklistRewards(DefaultOnToggle):
     """
-    Controls where the game's native checklist reward items (a machine, a Kirby color, a music track, a
-    sound test, the Dragoon/Hydra parts, and so on) are placed. Governs only those reward items.
+    Controls where the game's native checklist reward items (a machine, a Kirby color, a music track,
+    the Dragoon/Hydra parts, and so on) are placed. Governs only those reward items.
 
     If on (default), each reward is shuffled into the multiworld and can be found anywhere your other
-    items can, across any enabled mode. If off, each reward is placed back on the box that awards it in
-    the base game.
+    items can, across any enabled mode. If off, each is placed back on the box that awards it in the
+    base game.
 
-    Boxes that award nothing, and content delivered by other unlock items (extra machines, hidden
-    stadiums, spare colors, etc.), still randomize regardless. When off, a reward whose native box is
-    excluded, or is needed to keep progression placeable, is shuffled instead of pinned.
+    Boxes that award nothing, and content from other unlock items (extra machines, hidden stadiums,
+    spare colors), randomize regardless. When off, a reward whose native box is excluded or is needed
+    to keep progression placeable is shuffled instead of pinned.
     """
 
     display_name = "Shuffle Checklist Rewards"
@@ -158,10 +139,6 @@ class CityTrialGoal(Choice):
     """
     Sets the goal for City Trial. If you have goals on multiple game modes, all must be achieved to win.
     Select "None" to disable City Trial.
-
-    "max_stats_in_one_run" requires reaching the Patch Cap Max on every stat in a single City Trial
-    trial round. Set Patch Cap Min below it to make the target reachable only after collecting Patch
-    Cap Increase items.
     """
 
     display_name = "City Trial Goal"
@@ -287,8 +264,9 @@ class CityTrialStadiumsGated(DefaultOnToggle):
     """
     When enabled (the default), City Trial stadiums are locked and must be unlocked by finding their
     corresponding Unlock Stadium items. The game starts with one random stadium already unlocked (any of
-    the 24, except VS King Dedede when that is the goal). When disabled, every stadium is available from
-    the start and no Unlock Stadium items are added to the pool.
+    the 24, except VS King Dedede when that is the goal).
+
+    When disabled, every stadium is available from the start and no Unlock Stadium items are added to the pool.
     """
 
     display_name = "City Trial Stadiums Gated"
@@ -496,7 +474,6 @@ class CityTrialItemsGated(Toggle):
     """
     When enabled, game items (All Up, Speed Max, Candy, food, legendary parts, etc.)
     are locked and must be unlocked by finding their corresponding items.
-    Adds 30 unlock items to the progression pool; enable more game modes for more locations.
 
     When disabled, all game items are available from the start and no item unlock items are added to
     the pool.
@@ -510,7 +487,6 @@ class MachinesGated(Toggle):
     When enabled, air ride machines are locked and must be unlocked by finding their
     corresponding items. Applies to both City Trial and Air Ride. The game starts with one random
     machine already unlocked (and, when Top Ride is enabled, one random Top Ride control machine).
-    Adds 25 unlock items to the progression pool; enable more game modes for more locations.
 
     When disabled, all machines are available from the start and no machine unlock items are added
     to the pool.

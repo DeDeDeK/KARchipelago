@@ -1,15 +1,12 @@
 """Beatability + pool guards for the gate-off reward reconciliation.
 
-When a gating category's gate is OFF the mod pre-unlocks the whole category at connect
-(APOptions_ApplyUngatedCategories sets the mask all-1s, regardless of which modes are enabled), so the
-category's checklist rewards gate nothing and are excluded from the pool. This is now uniform across
-every category — top_ride_items (the mod sets the three New-Item has_reward flags at connect) and
-stadiums (the mod gates stadiums purely by the unlock mask) included. So a gated category's overlapping
-checklist rewards are excluded in every config, and its Unlock items are placed only when the gate is ON.
+When a gating category's gate is OFF the mod pre-unlocks the whole category at connect, so the
+category's checklist rewards gate nothing and are excluded from the pool. This is uniform across every
+category (top_ride_items and stadiums included). A gated category's overlapping checklist rewards are
+excluded in every config, and its Unlock items are placed only when the gate is ON.
 
-These tests pin that the reconciled configs still generate a beatable seed (the inherited
-test_all_state_can_reach_everything also confirms no location is stranded), and that overlapping rewards
-drop while the gate's own Unlock items carry progression.
+These tests pin that the reconciled configs still generate a beatable seed, and that overlapping
+rewards drop while the gate's own Unlock items carry progression.
 """
 
 from Options import Toggle
@@ -48,7 +45,7 @@ class TestReconcileCTOnlyMachinesOffStadiumsOn(KARTestBase):
 
     def test_stadium_unlocks_present_rewards_excluded(self):
         names = self.world_item_names()
-        # Stadiums gated -> the Unlock Stadium items carry the gate (one is the precollected starter).
+        # Stadiums gated: the Unlock Stadium items carry the gate (one is the precollected starter).
         self.assertTrue(any(unlock in names for unlock in items_of_type(KARItemType.CT_STADIUM_UNLOCK)))
         for reward in (*_OVERLAP["city_trial_stadiums_gated"], *_OVERLAP["machines_gated"]):
             self.assertNotIn(reward, names)
@@ -60,7 +57,7 @@ class TestReconcileCTOnlyMachinesOffStadiumsOn(KARTestBase):
 
 class TestReconcileAllModesMaxGateOff(KARTestBase):
     """Every reconcilable gate OFF: the mod unlocks each category fully at connect, so every overlapping
-    reward — machine / Nebula / stadium / TR-item — drops from the pool. Still beatable."""
+    reward - machine / Nebula / stadium / TR-item - drops from the pool. Still beatable."""
 
     options = {
         **ALL_MODES,
