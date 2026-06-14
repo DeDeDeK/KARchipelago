@@ -8,11 +8,10 @@ def _all_modes_with(**overrides):
     return {**ALL_MODES, **overrides}
 
 
-# Group expectations per gate: the unlock items that should appear when the gate is ON.
-# Derived from GATING_CATEGORIES so this stays in sync with the gating source of truth.
+# The unlock items that should appear when each gate is ON. Derived from GATING_CATEGORIES.
 _GATE_GROUPS: dict[str, set[str]] = {cat.option: items_of_type(cat.item_type) for cat in GATING_CATEGORIES}
 
-# Overlapping checklist rewards per gate (always excluded from the pool). Same source of truth.
+# Overlapping checklist rewards per gate (always excluded from the pool).
 _GATED_CHECKLIST_REWARDS: dict[str, frozenset] = {
     cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES if cat.overlapping_rewards
 }
@@ -57,8 +56,7 @@ class TestAllGatesOff(KARTestBase):
                 self.assertFalse(present, f"{option_name} OFF but unlocks leaked: {sorted(present)}")
 
 
-# Per-gate isolation: turn ON exactly one gate at a time (all others off).
-# Verifies that toggling each gate independently flips its group on/off.
+# Per-gate isolation: turn ON exactly one gate at a time and verify only its group appears.
 def _make_single_gate_test(gate_name: str, group: set[str]) -> type:
     class _SingleGateOn(KARTestBase):
         options = _all_modes_with(**{**_ALL_OFF, gate_name: Toggle.option_true})

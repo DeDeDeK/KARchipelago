@@ -1,12 +1,10 @@
 """
 Item-rule tests.
 
-`_set_goal_location_item_rules` in KARWorld.set_rules attaches an item_rule callable to each
-checklist_list goal location, restricting it to local items (item.player == self.player). This
-prevents other players' /collect from auto-completing the goal.
+set_rules attaches an item_rule callable to each checklist_list goal location, restricting it to local
+items (item.player == self.player). This prevents other players' /collect from auto-completing the goal.
 
-It is tested by constructing stub items and invoking the location's item_rule callable directly:
-the rule is a property of the Location object, so we don't need to drive a full fill to inspect it.
+Tested by invoking each location's item_rule callable directly with stub items - no full fill needed.
 """
 
 from BaseClasses import Item, ItemClassification
@@ -58,8 +56,8 @@ class TestGoalLocationsLocalOnly(KARTestBase):
                 )
 
     def test_non_goal_location_has_no_local_only_rule(self):
-        # Sanity counter: a non-goal CT location does NOT have the local-only rule, so its item_rule
-        # is Location.item_rule, i.e. accepts everything including foreign items.
+        # Sanity counter: a non-goal CT location has no local-only rule, so it accepts everything
+        # including foreign items.
         foreign = _make_foreign_item(KARItemName.AR_REWARD_FILLER_BOX_1)
         loc = self.world.get_location(CTLocation.GET_10_BOOST_PATCHES)
         self.assertTrue(

@@ -10,8 +10,7 @@ if TYPE_CHECKING:
 
 
 def items_of_type(t: KARItemType) -> set[str]:
-    """All item names in ITEM_TABLE whose type matches `t`. Thin wrapper over the
-    precomputed items_by_type (copied so callers can't mutate the shared bucket)."""
+    """All item names in ITEM_TABLE whose type matches `t` (copied so callers can't mutate the shared bucket)."""
     return set(items_by_type.get(t, set()))
 
 
@@ -21,9 +20,8 @@ class KARTestBase(WorldTestBase):
 
     def setUp(self) -> None:
         super().setUp()
-        # Main.py normally pushes start_inventory between generate_early and the rest,
-        # but the test framework's gen_steps skips that. Push them here so tests that
-        # use start_inventory behave like a real generation.
+        # The test framework's gen_steps skips the start_inventory push that real generation does.
+        # Push them here so start_inventory tests behave like a real generation.
         if not getattr(self, "constructed", False):
             return
         for item_name, count in self.world.options.start_inventory.value.items():
@@ -51,8 +49,8 @@ class KARTestBase(WorldTestBase):
         return set(self.itempool_names()) | set(self.precollected_names())
 
     def count_in_pool(self, name: str) -> int:
-        """Count of items in the itempool with this name. Distinct from the inherited
-        `count(...)` helper, which counts the item in the multiworld state."""
+        """Count of items in the itempool with this name (distinct from the inherited `count(...)`,
+        which counts the item in the multiworld state)."""
         return sum(1 for n in self.itempool_names() if n == name)
 
     def real_location_names(self) -> set[str]:
@@ -72,10 +70,9 @@ class KARTestBase(WorldTestBase):
         }
 
     def collect_all_but_victories(self) -> None:
-        """Like `collect_all_but([])` but excludes the three `*_VICTORY` event items.
-        `get_items()` includes items already placed at event locations, so a bare
-        `collect_all_but([])` auto-collects the victory events and makes any subsequent
-        `assertBeatable(True)` tautological. Use this for beatability sweeps."""
+        """Like `collect_all_but([])` but excludes the three `*_VICTORY` event items. A bare
+        `collect_all_but([])` would auto-collect the victory events (they're already placed at event
+        locations), making any subsequent `assertBeatable(True)` tautological. Use this for beatability sweeps."""
         self.collect_all_but(
             [
                 KARItemName.CITY_TRIAL_VICTORY,
@@ -85,8 +82,8 @@ class KARTestBase(WorldTestBase):
         )
 
 
-# Mode presets. CityTrialGoal defaults to 100_checklist_blocks, AR and TR default
-# to none, so CT_ONLY is the empty dict. Other presets explicitly toggle modes.
+# Mode presets. CityTrialGoal defaults to 100_checklist_blocks, AR and TR default to none,
+# so CT_ONLY is the empty dict. Other presets explicitly toggle modes.
 CT_ONLY: dict = {}
 
 AR_ONLY: dict = {

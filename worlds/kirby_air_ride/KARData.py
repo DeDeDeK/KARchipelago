@@ -22,22 +22,19 @@ class GoalKind(IntEnum):
 
 
 class TrapLinkKind(IntEnum):
-    """Mirrors the mod's TrapLinkKind enum (mods/archipelago/src/traplink.h)."""
+    """Mirrors the mod's TrapLinkKind enum."""
 
     BAD_PATCH = 1
     SLEEP = 2
     SPEED_DOWN = 3
 
 
-# GameCube MEM1 cached address range (24 MB). The APData struct is heap-allocated
-# by the mod and always lands here; any pointer outside this window is stale or
-# uninitialized memory read before the mod's OnBoot has written the real pointer.
-MEM1_START = 0x80000000
-MEM1_END = 0x81800000
-
-
 class MemoryAddress(IntEnum):
-    BASE_MEMORY_ADDRESS = 0x80000000
+    # GameCube MEM1 cached address range (24 MB). The mod's heap-allocated APData struct always lands
+    # here; a pointer outside this window is stale or read before OnBoot wrote the real pointer.
+    # MEM1_START is also the read base for the game-id check (the disc's game id sits at MEM1's start).
+    MEM1_START = 0x80000000
+    MEM1_END = 0x81800000
 
     # Static pointer to the APData struct, written by the mod in OnBoot().
     # Read this to get the struct base address; poll until non-zero.
@@ -45,15 +42,12 @@ class MemoryAddress(IntEnum):
 
     # Communication fields (offsets relative to APData struct base)
 
-    # EnergyLink pool balance. Client writes, game reads. s64 raw units (1 raw
-    # unit = 1 MJ in the AP pool). Widened to s64 so multiworld pools that
-    # exceed u64 joules still fit at MJ scale.
+    # EnergyLink pool balance. Client writes, game reads. s64 raw units (1 unit = 1 MJ), widened to
+    # s64 so multiworld pools exceeding u64 joules still fit at MJ scale.
     ENERGY_BALANCE = 0x000  # s64
-    # EnergyLink cumulative send counter. Game-owned: the game only ever adds
-    # (deposits) / subtracts (withdrawals); the client only reads-and-diffs it
-    # (delta since its last poll) and NEVER writes it. s64 signed raw MJ. Resets
-    # to 0 on each mod boot; persists across scene loads. See KARClient
-    # _handle_energylink for the diff / seed / restart-guard logic.
+    # EnergyLink cumulative send counter. Game-owned: the game only adds (deposits) / subtracts
+    # (withdrawals); the client reads-and-diffs it (delta since last poll) and NEVER writes it. s64
+    # signed raw MJ. Resets to 0 on each mod boot; persists across scene loads.
     ENERGY_SENT_TOTAL = 0x008  # s64
     # DeathLink receive flag. Client writes 1, game reads and clears to 0.
     DEATHLINK_RECEIVE = 0x010  # u32
@@ -92,25 +86,22 @@ class MemoryAddress(IntEnum):
     OPTION_CHECKLIST_AMOUNT_AIRRIDE = 0x04C  # u32, 1-120
     OPTION_CHECKLIST_AMOUNT_TOPRIDE = 0x050  # u32, 1-120
     OPTION_CHECKLIST_AMOUNT_CITYTRIAL = 0x054  # u32, 1-120
-    OPTION_CT_PATCH_CAP_MIN = 0x058  # u32, 1-30 — per-stat cap the player starts at
-    OPTION_CT_PATCH_CAP_MAX = 0x05C  # u32, 1-30 — per-stat cap ceiling / Max Stats goal threshold
-    # Spawn rate floor (percent). Applies to CT + TR items; AR has no spawn rate to scale.
-    # 100 = vanilla baseline, 300 = 3x (the mod's hard cap). The world floors this at 10; values
-    # below 100 suppress spawns below vanilla (the mod must honor sub-100 values; do not clamp to 100).
-    # Each Spawn Rate Up item received adds +10% on top of this floor.
+    OPTION_CT_PATCH_CAP_MIN = 0x058  # u32, 1-30 - per-stat cap the player starts at
+    OPTION_CT_PATCH_CAP_MAX = 0x05C  # u32, 1-30 - per-stat cap ceiling / Max Stats goal threshold
+    # Spawn rate floor (percent). Applies to CT + TR items; AR has none to scale. 100 = vanilla, 300 =
+    # 3x (mod hard cap). World floors it at 10; sub-100 values suppress spawns below vanilla and must be
+    # honored (do not clamp to 100). Each Spawn Rate Up item adds +10% on top.
     OPTION_SPAWN_RATE_MIN = 0x060  # u32, 10-100
     # 4 bytes of padding here (struct contains u64; next field needs 8-byte alignment).
 
-    # Required checkboxes for GOAL_CHECKLIST_LIST, per mode. 2 x u64 per mode (128 bits).
-    # Bit (k % 64) of word (k / 64) for clear_kind k.
-    # Client writes big-endian u64s. Zero-fill modes not using CHECKLIST_LIST.
+    # Required checkboxes for GOAL_CHECKLIST_LIST, per mode. 2 x u64 (128 bits); bit (k%64) of word
+    # (k/64) for clear_kind k. Client writes big-endian u64s; zero-fill modes not using CHECKLIST_LIST.
     OPTION_GOAL_CHECKS_AIRRIDE = 0x068  # u64[2], 16 bytes
     OPTION_GOAL_CHECKS_TOPRIDE = 0x078  # u64[2], 16 bytes
     OPTION_GOAL_CHECKS_CITYTRIAL = 0x088  # u64[2], 16 bytes
 
-    # Per-category access gating toggles. 1 = gated (default: players unlock via AP
-    # items). 0 = ungated (mod pre-fills the corresponding unlock mask with all-1s
-    # at connect time; AP world ships no unlock items for that category).
+    # Per-category access gating toggles. 1 = gated (players unlock via AP items). 0 = ungated (mod
+    # pre-fills that unlock mask all-1s at connect; AP world ships no unlock items for the category).
     OPTION_MACHINE_GATING_ENABLED = 0x098  # u32, 0 or 1
     OPTION_ABILITY_GATING_ENABLED = 0x09C  # u32, 0 or 1
     OPTION_EVENT_GATING_ENABLED = 0x0A0  # u32, 0 or 1
@@ -123,9 +114,9 @@ class MemoryAddress(IntEnum):
     OPTION_COLOR_GATING_ENABLED = 0x0BC  # u32, 0 or 1
     # Mirrors the KAROptions `city_trial_stadiums_gated` toggle.
     OPTION_STADIUM_GATING_ENABLED = 0x0C0  # u32, 0 or 1
-    # Mirrors the KAROptions `checklist_rewards_gated` toggle. Off => the mod unlocks every
-    # non-progression checklist reward at connect. Occupies what was the APSlotOptions trailing
-    # padding slot, so the struct stays 8-aligned at 152 bytes and no later offset shifts.
+    # Mirrors the `checklist_rewards_gated` toggle. Off => mod unlocks every non-progression checklist
+    # reward at connect. Reuses the old APSlotOptions padding slot, so the struct stays 8-aligned (152
+    # bytes) and no later offset shifts.
     OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0C4  # u32, 0 or 1
 
     # Location data fields
@@ -133,11 +124,9 @@ class MemoryAddress(IntEnum):
     # Client writes 1 after all location arrays are written. Game reads and clears to 0.
     LOCATION_DATA_VALID = 0x0C8  # u32
 
-    # Location arrays: u16[3][46], locations[source_mode][source_reward_index].
-    # Indexed by the source reward's (mode, reward_index), i.e. which vanilla
-    # checklist reward this entry refers to. Value: (target_mode << 8) | clear_kind
-    # for a local placement (the cell that holds this reward), 0xFFFF for remote
-    # or unused slots. 46 entries per mode, 2 bytes each = 92 bytes per mode.
+    # Location arrays: u16[3][46], locations[source_mode][source_reward_index], indexed by which
+    # vanilla checklist reward the entry refers to. Value: (target_mode << 8) | clear_kind for a local
+    # placement (the cell holding this reward), 0xFFFF for remote or unused slots. 92 bytes per mode.
     LOCATIONS_AIRRIDE = 0x0CC  # u16[46], 92 bytes (reward indices 0-45)
     LOCATIONS_TOPRIDE = 0x128  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
     LOCATIONS_CITYTRIAL = 0x184  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
@@ -150,9 +139,9 @@ class MemoryAddress(IntEnum):
     SENT_CHECKS_TOPRIDE = 0x1F0  # u64[2], 16 bytes
     SENT_CHECKS_CITYTRIAL = 0x200  # u64[2], 16 bytes
 
-    # Backfill bitmask. Client writes bits for checks the AP server knows about
-    # that the mod doesn't (e.g., fresh save / slot takeover / !collect).
-    # Game ORs into sent_checks, updates clear[].is_unlocked, re-evaluates goal, then clears.
+    # Backfill bitmask. Client writes bits for checks the AP server knows but the mod doesn't (fresh
+    # save / slot takeover / !collect). Game ORs into sent_checks, updates clear[], re-evaluates goal,
+    # then clears.
     CLIENT_BACKFILL_AIRRIDE = 0x210  # u64[2], 16 bytes
     CLIENT_BACKFILL_TOPRIDE = 0x220  # u64[2], 16 bytes
     CLIENT_BACKFILL_CITYTRIAL = 0x230  # u64[2], 16 bytes
@@ -160,12 +149,10 @@ class MemoryAddress(IntEnum):
     # Sticky goal completion flag. Game writes 1 when goal is satisfied. Client reads.
     GOAL_COMPLETE = 0x240  # u8
 
-    # Live menu toggle mirrors. Game writes (on boot, on first-connect option
-    # transfer, and on every menu change). Client reads only; these are the
-    # authoritative current state of the in-game DeathLink/EnergyLink/TrapLink
-    # toggles. Diff against last-seen to forward to the AP server (tags / pool
-    # membership). The OPTION_*_ENABLED slot fields above set initial values on
-    # first connect only and are NOT updated on subsequent toggles.
+    # Live menu toggle mirrors. Game writes (on boot, first-connect option transfer, and every menu
+    # change); client reads only. Authoritative current state of the in-game DeathLink/EnergyLink/
+    # TrapLink toggles; diff against last-seen to forward to the AP server (tags / pool membership).
+    # The OPTION_*_ENABLED slot fields set initial values on first connect only, not on later toggles.
     DEATHLINK_MENU_ENABLED = 0x244  # u32
     ENERGYLINK_MENU_ENABLED = 0x248  # u32
     TRAPLINK_MENU_ENABLED = 0x24C  # u32
@@ -177,7 +164,7 @@ class MemoryAddress(IntEnum):
 REWARD_CODE_BASE = 500
 REWARD_CODE_STRIDE = 50
 
-# Padded reward slots per mode in the mod's locations[3][46] array (see LOCATIONS_AIRRIDE).
+# Padded reward slots per mode in the mod's locations[3][46] array.
 REWARDS_PER_MODE = 46
 
 

@@ -14,8 +14,7 @@ from ..KARRegions import KARRegion
 from . import ALL_MODES, CT_ONLY, KARTestBase
 
 
-# Event-name templates mirror the synthesis in KARRegions._create_goal_events.
-# Keep these in lockstep with that file.
+# Event-name templates; must stay in lockstep with the mod's goal-event synthesis.
 def _n_blocks_event(mode_region: str, n: int) -> str:
     return f"{mode_region}: Complete {n} Checklist Blocks"
 
@@ -83,7 +82,7 @@ class TestCTGoalChecklistList(KARTestBase):
     }
 
     def test_goal_locations_remain_real(self):
-        # checklist_list keeps the goal locations as real locations (they back the event rule).
+        # checklist_list keeps the goal locations real (they back the victory event rule).
         real = self.real_location_names()
         for loc in self._GOAL_LOCS:
             self.assertIn(loc, real)

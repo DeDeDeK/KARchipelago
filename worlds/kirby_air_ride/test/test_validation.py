@@ -1,10 +1,5 @@
-"""
-Option validation tests: every OptionError-raising branch in KARWorld lives here.
-
-Covers KARWorld.generate_early, _validate_options, _validate_pool_fits_locations,
-and _determine_starter_items. Co-located so the exercised error branches are
-auditable at a glance.
-"""
+"""Option validation tests: every OptionError-raising branch in KARWorld, co-located so the exercised error
+branches are auditable at a glance."""
 
 from Options import OptionError, Toggle
 
@@ -150,11 +145,10 @@ class TestTRChecklistListEmpty(KARTestBase):
 
 
 class TestGuaranteedPoolExceedsLocations(KARTestBase):
-    # CT-only with the patch cap spanning 1 -> 30 (29 Patch Cap Increase items) on top of the default
-    # gated unlocks inflates the guaranteed pool to 116 items needing default locations (104 progression
-    # + 5 counted-useful + 7 useful rewards) against only 90 CT default locations, tripping
-    # _validate_pool_fits_locations. Rewards are gated on so the 7 useful rewards count toward the budget
-    # (they are off by default).
+    # CT-only with the patch cap spanning 1 -> 30 (29 Patch Cap Increase items) on top of the default gated
+    # unlocks inflates the guaranteed pool to 116 items needing default locations (104 progression + 5
+    # counted-useful + 7 useful rewards) against only 90 CT default locations, tripping the fit validator.
+    # Rewards are gated on so the 7 useful rewards count toward the budget (they are off by default).
     options = {
         **CT_ONLY,
         "checklist_rewards_gated": Toggle.option_true,
@@ -168,28 +162,22 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
             self.world_setup()
 
 
-# A config tuned to fit by exactly 1 location, now that checklist rewards are guaranteed once each
-# and so count against the default-location budget. Rewards are off by default, so this gates them on
-# to keep the 7 useful rewards in the budget. With the gating categories at their defaults (ON),
-# City Trial's progression is dominated by the gated unlock items rather than patch caps, so the patch
-# cap span (min 16 -> max 18) is kept small to land the budget right at the edge:
-#   75 CT progression with all gates on (gated unlocks + 6 legendary part markers + the CT/AR-tagged
-#       items that fall to City Trial when Air Ride is disabled + multi-mode unlocks; the stadium and
-#       color starters are precollected and removed, while patch types get no starter)
+# A config tuned to fit by exactly 1 location. Checklist rewards are guaranteed once each, so the 7 useful
+# rewards count against the default-location budget (gated on here; off by default). The patch cap span
+# (min 16 -> max 18) is kept small to land the budget right at the edge:
+#   75 CT progression with all gates on (gated unlocks + 6 legendary part markers + the CT/AR-tagged items
+#       that fall to City Trial when Air Ride is disabled + multi-mode unlocks; stadium and color starters
+#       are precollected and removed, while patch types get no starter)
 #   + 2 PATCH_CAP_INCREASE items (max 18 - min 16) -> 77 progression total
 #   + 5 default checkbox fillers
 #   + 7 useful checklist rewards (the non-overlapping CT rewards that must sit on default locations)
-#   = 89 items needing default locations
-#   = exactly 1 under the 90 CT default locations
-# Without exclude_locations: fits. With the pair's 3 excludes: doesn't fit. Used by the pair below to
-# pin that _validate_pool_fits_locations subtracts exclude_locations from the default count.
+#   = 89 items needing default locations = exactly 1 under the 90 CT default locations.
+# Without exclude_locations: fits. With the paired test's 3 excludes: doesn't fit - pinning that the fit
+# validator subtracts exclude_locations from the default count. Filler-classified rewards aren't counted
+# (they may sit on excluded boxes), so only the 7 useful rewards add.
 _TIGHT_POOL = {
     **CT_ONLY,
     "checklist_rewards_gated": Toggle.option_true,
-    # 2 Patch Cap Increases (max 18 - min 16) on top of the 75 gates-on progression (stadium and
-    # color starters precollected; no patch starter) = 77 progression, + 5 checkbox fillers + 7 useful
-    # checklist rewards = 89 needing default, which just fits the 90 default CT locations. Filler-classified
-    # rewards are not counted here - they may sit on excluded boxes - so only the 7 useful rewards add.
     "city_trial_patch_cap_min": 16,
     "city_trial_patch_cap_max": 18,
 }
@@ -201,8 +189,8 @@ class TestTightPoolFitsWithoutExcludeLocations(KARTestBase):
     options = _TIGHT_POOL
 
     def test_setup_succeeds(self):
-        # If this stops fitting (e.g. due to a default-locations rebalance or a reward-classification
-        # change), the paired exclude_locations test below will need its excludes count tuned.
+        # If this stops fitting (e.g. a default-locations rebalance or reward-classification change), the
+        # paired exclude_locations test will need its excludes count tuned.
         self.assertEqual(len(self.world.progression_pool), 77)
         self.assertEqual(len(self.world.counted_useful_pool), 5)
 
@@ -240,8 +228,8 @@ class TestStadiumStarterDededeInInventoryRaises(KARTestBase):
 
 
 # allowed_items can no longer starve the draw pools: the cosmetic all-mode filler items (Big Kirby /
-# Small Kirby, KARItemType.FILLER) are immune to allowed_items and carry _ALL_MODES, so filler_pool is
-# always non-empty. These configs used to OptionError; they now generate using the cosmetic filler.
+# Small Kirby, KARItemType.FILLER) are immune to allowed_items and carry _ALL_MODES, so filler_pool is always
+# non-empty. These configs used to OptionError; they now generate using the cosmetic filler.
 
 
 class TestAllowedItemsAllOffStillFills(KARTestBase):
@@ -258,9 +246,9 @@ class TestAllowedItemsAllOffStillFills(KARTestBase):
 
 
 class TestAllowedItemsTopRideOnlyNoTRGivesStillFills(KARTestBase):
-    """Top Ride Item Gives is Top Ride's only give-item filler source. With it off (and traps off), a
-    TR-only seed with many excluded boxes used to OptionError; the cosmetic all-mode filler now fills
-    those boxes. Low n_checklist amount forces many excluded boxes."""
+    """Top Ride Item Gives is Top Ride's only give-item filler source. With it off (and traps off), a TR-only
+    seed with many excluded boxes used to OptionError; the cosmetic all-mode filler now fills those boxes.
+    Low n_checklist amount forces many excluded boxes."""
 
     options = {
         **TR_ONLY,
@@ -278,9 +266,9 @@ class TestAllowedItemsTopRideOnlyNoTRGivesStillFills(KARTestBase):
 
 
 class TestAllowedItemsAirRideOnlyNoCTGivesStillFills(KARTestBase):
-    """City Trial Item Gives doubles as Air Ride's give-item filler source (the _AR_CT single-stat
-    patches). With it off (and traps off), an AR-only seed with many excluded boxes used to OptionError;
-    the cosmetic all-mode filler now fills those boxes."""
+    """City Trial Item Gives doubles as Air Ride's give-item filler source (the _AR_CT single-stat patches).
+    With it off (and traps off), an AR-only seed with many excluded boxes used to OptionError; the cosmetic
+    all-mode filler now fills those boxes."""
 
     options = {
         **AR_ONLY,

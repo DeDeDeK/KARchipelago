@@ -5,7 +5,7 @@ from enum import StrEnum
 from BaseClasses import CollectionState, LocationProgressType, Region
 from rule_builder.rules import CanReachLocation, Has, HasAll, Rule
 
-from .KARItems import LEGENDARY_PIECE_UNLOCK_ITEMS, KARItem, KARItemName
+from .KARItems import LEGENDARY_PIECE_UNLOCK_ITEMS, KARItem, KARItemName, KARItemType, items_by_type
 from .KAROptions import CityTrialGoal
 
 
@@ -105,7 +105,6 @@ class KARRegion(StrEnum):
 
 # KARLocations imports are deferred into function bodies to break the circular
 # dependency: KARLocations imports KARRegion from this module.
-
 if typing.TYPE_CHECKING:
     from . import KARWorld
 
@@ -233,7 +232,7 @@ def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> N
         KARRegion.STADIUM_SR9,
     )
 
-    # Entrance gating rules for these exits are applied later in set_rules.
+    # Entrance gating rules for these exits are applied later, during rule setup.
     city_trial_region.add_exits(
         [
             KARRegion.CT_FREE_RUN,
@@ -341,7 +340,7 @@ TR_FR_COURSE_REGIONS = [
 ]
 
 
-# Region-to-unlock-item mappings used by set_rules() for entrance gating.
+# Region-to-unlock-item mappings used for entrance gating during rule setup.
 
 STADIUM_REGION_TO_UNLOCK: dict[str, KARItemName] = {
     KARRegion.STADIUM_DR1: KARItemName.UNLOCK_STADIUM_DRAG_RACE_1,
@@ -451,7 +450,7 @@ def connect_air_ride_region(world: "KARWorld", air_ride_region: Region) -> None:
 
     air_ride_region.add_exits([KARRegion.AR_TIME_ATTACK, KARRegion.AR_FREE_RUN])
 
-    # Course entrance rules (e.g. Nebula Belt) are applied later in set_rules.
+    # Course entrance rules (e.g. Nebula Belt) are applied later, during rule setup.
     air_ride_region.add_exits(AR_COURSE_REGIONS)
 
     world.get_region(KARRegion.AR_TIME_ATTACK).add_exits(AR_TA_COURSE_REGIONS)
@@ -479,13 +478,12 @@ def create_n_blocks_rule(
     world: "KARWorld", mode_prefix: str, required_blocks: int, exclude_location_name: str | None = None
 ) -> Callable[[CollectionState], bool]:
     """
-    Create a rule that checks if the player can access enough locations to complete N blocks
-    in a given mode, by counting reachable locations whose region belongs to that mode.
+    Create a rule that passes when the player can reach N blocks in a mode, by counting reachable
+    locations whose region belongs to that mode.
 
-    `exclude_location_name` drops one location from the count. Pass the gated location's own name
-    when this rule is the access rule of a real checkbox (e.g. the "Fill in over 100" cell): the
-    count then means "100 OTHER boxes" and, crucially, the location is not asked to reach itself,
-    which would recurse infinitely.
+    `exclude_location_name` drops one location from the count: pass the gated cell's own name when this
+    rule gates a real checkbox (e.g. "Fill in over 100"), so the count means "N OTHER boxes" and the
+    cell isn't asked to reach itself, which would recurse infinitely.
     """
     player = world.player
     is_city_trial = mode_prefix == KARRegion.CITY_TRIAL
@@ -511,34 +509,17 @@ def create_n_blocks_rule(
     return can_access_n_blocks
 
 
-# Patch type unlocks consulted by the Max Stats Insanity goal's "all 9 patches"
-# alternative. Each entry is the unlock item that opens up CT spawns of that patch
-# stat type, required when city_trial_patches_gated is on.
-_MAX_STATS_PATCH_UNLOCKS: tuple[str, ...] = (
-    KARItemName.UNLOCK_PATCH_WEIGHT,
-    KARItemName.UNLOCK_PATCH_BOOST,
-    KARItemName.UNLOCK_PATCH_TOP_SPEED,
-    KARItemName.UNLOCK_PATCH_TURN,
-    KARItemName.UNLOCK_PATCH_CHARGE,
-    KARItemName.UNLOCK_PATCH_GLIDE,
-    KARItemName.UNLOCK_PATCH_OFFENSE,
-    KARItemName.UNLOCK_PATCH_DEFENSE,
-    KARItemName.UNLOCK_PATCH_HP,
-)
-
-
 def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     """
     Build the access rule for the Max Stats Insanity goal event.
 
     Requires:
-      - All Patch Cap Increase items collected (only when the cap max exceeds the cap min; otherwise
-        the cap is fixed from the start, so no cap items exist in the pool).
-      - At least one route to maxing all 9 stats: either all 9 patch type unlocks (patches gated
-        path) or the All-Up patch unlock (items gated path). Routes that aren't gated are
-        trivially open, so the constraint is only emitted when both gates are on.
+      - All Patch Cap Increase items (only when cap max > cap min; otherwise the cap is fixed and no
+        cap items exist).
+      - A route to maxing all 9 stats: all 9 patch type unlocks (patches-gated path) or the All-Up
+        unlock (items-gated path). Only emitted when both gates are on, since ungated routes are open.
 
-    Returns None if every clause would be trivially satisfied; caller then attaches the event
+    Returns None if every clause would be trivially satisfied; the caller then attaches the event
     with no access rule.
     """
     options = world.options
@@ -551,7 +532,8 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     if options.city_trial_patches_gated and options.city_trial_items_gated:
         # HasAll/HasAny only accept item names, not nested rules. Compose with the | operator
         # (defined on Rule) to express "all 9 patches OR all-up unlock".
-        rule_parts.append(HasAll(*_MAX_STATS_PATCH_UNLOCKS) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
+        all_patch_unlocks = sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK])
+        rule_parts.append(HasAll(*all_patch_unlocks) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
 
     if not rule_parts:
         return None
@@ -618,8 +600,8 @@ def _create_goal_events(
             blocks_rule = create_n_blocks_rule(world, mode_prefix, 100)
         elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon and world.options.city_trial_items_gated:
             # Assembling both legendary machines needs every piece to spawn; item gating locks that
-            # behind the six piece-spawn unlocks (mirrors the COMPLETE_DRAGOON_AND_HYDRA location rule
-            # in KARRules for when this is not the goal).
+            # behind the six piece-spawn unlocks (the same requirement the COMPLETE_DRAGOON_AND_HYDRA
+            # cell carries when this is not the goal).
             blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS)
 
         goal_region.add_event(

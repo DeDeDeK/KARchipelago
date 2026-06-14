@@ -44,13 +44,9 @@ class TestStadiumStarterRespectsStartInventory(KARTestBase):
     }
 
     def test_no_random_pick_when_preset(self):
-        # World skips its random pick when the player presets a stadium; the preset
-        # still lands in precollected (pushed by setUp).
+        # World skips its random pick when the player presets a stadium; the preset still lands in precollected.
         self.assertIsNone(self.world.stadium_starter_choice)
         self.assertIn(KARItemName.UNLOCK_STADIUM_AIR_GLIDER, self.precollected_names())
-
-
-# Dedede-as-stadium-starter rejection lives in test_validation.py.
 
 
 _TR_MACHINES = frozenset({KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR})
@@ -60,9 +56,8 @@ class TestMachineStarter(KARTestBase):
     options = {**ALL_MODES, "machines_gated": Toggle.option_true}
 
     def test_one_arct_and_one_tr_machine_precollected(self):
-        # With all modes + machines_gated there are two machine starters: one Air Ride /
-        # City Trial machine, and one Top Ride control machine (Free/Steer), since the mod
-        # hard-gates the Top Ride lobby on Free/Steer.
+        # All modes + machines_gated yields two machine starters: one Air Ride / City Trial machine and one
+        # Top Ride control machine (Free/Steer), since the mod hard-gates the Top Ride lobby on Free/Steer.
         precollected = self.precollected_names()
         machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
         self.assertEqual(len(machine_starters), 2)
@@ -72,8 +67,8 @@ class TestMachineStarter(KARTestBase):
         self.assertEqual(len(arct_starters), 1)
 
     def test_arct_starter_not_free_or_steer(self):
-        # The AR/CT machine starter must never be a Top Ride control machine (they don't
-        # spawn in City Trial and can't be ridden in Air Ride).
+        # The AR/CT machine starter must never be a Top Ride control machine (they don't spawn in
+        # City Trial and can't be ridden in Air Ride).
         self.assertNotIn(self.world.machine_starter_choice, _TR_MACHINES)
 
     def test_starter_not_hydra_or_dragoon(self):
@@ -101,8 +96,8 @@ class TestTRCourseStarter(KARTestBase):
 
 
 class TestColorStarter(KARTestBase):
-    # Colors are cross-mode: a random color starter is granted whenever colors_gated is on,
-    # regardless of which mode is enabled. Pink is eligible like any other color.
+    # Colors are cross-mode: a random color starter is granted whenever colors_gated is on, regardless of
+    # which mode is enabled. Pink is eligible like any other color.
     options = {**CT_ONLY, "colors_gated": Toggle.option_true}
 
     def test_exactly_one_color_precollected(self):
@@ -118,9 +113,8 @@ class TestColorStarter(KARTestBase):
 
 
 class TestAROnlyMachineStarter(KARTestBase):
-    # AR on, CT off. Machines apply to CT or AR (AR on, so a machine starter is picked); stadiums
-    # are CT-only (CT off, so none). Covers both halves of "starter only when its owning mode is
-    # enabled".
+    # AR on, CT off. A machine starter is picked (machines apply to AR), but no stadium starter (CT-only).
+    # Covers both halves of "starter only when its owning mode is enabled".
     options = {**AR_ONLY, "machines_gated": Toggle.option_true, "city_trial_stadiums_gated": Toggle.option_true}
 
     def test_machine_starter_picked(self):
@@ -135,9 +129,8 @@ class TestAROnlyMachineStarter(KARTestBase):
 
 
 class TestTRMachineStarterWhenOnlyTREnabled(KARTestBase):
-    # TR on, CT+AR off. The mod hard-gates the Top Ride lobby on Free/Steer, so a Top Ride
-    # machine starter (one of Free/Steer) must be precollected even though no AR/CT machine
-    # is — otherwise a gated Top-Ride-only seed could never start a race (softlock).
+    # TR on, CT+AR off. The mod hard-gates the Top Ride lobby on Free/Steer, so a Top Ride machine starter
+    # (one of Free/Steer) must be precollected even with no AR/CT machine - else a gated TR-only seed softlocks.
     options = {**TR_ONLY, "machines_gated": Toggle.option_true}
 
     def test_exactly_one_tr_machine_starter(self):
@@ -152,9 +145,8 @@ class TestTRMachineStarterWhenOnlyTREnabled(KARTestBase):
 
 
 class TestPresetUnlockNotDuplicatedInPool(KARTestBase):
-    # Unlock items are one-time, so presetting one in start_inventory must drop its pool copy -
-    # not only for the categories that grant a random starter. Copy abilities are gated by default
-    # and grant no starter, so they exercise the general (non-starter) dedup path.
+    # Unlock items are one-time, so presetting one in start_inventory must drop its pool copy. Copy abilities
+    # grant no starter, so they exercise the general (non-starter) dedup path.
     options = {
         **CT_ONLY,
         "abilities_gated": Toggle.option_true,
@@ -167,9 +159,9 @@ class TestPresetUnlockNotDuplicatedInPool(KARTestBase):
 
 
 class TestPresetRewardNotDuplicatedInPool(KARTestBase):
-    # Checklist rewards are one-time too. A reward preset in start_inventory must be deduped out of the
-    # pool, just like unlocks. CT_REWARD_MUSIC_CITY is a plain in-scope CT reward (shuffled into the pool
-    # under the default shuffle_checklist_rewards), so presetting it exercises the reward_pool dedup.
+    # Checklist rewards are one-time too: a reward preset in start_inventory must be deduped out of the pool.
+    # CT_REWARD_MUSIC_CITY is a plain in-scope CT reward (shuffled into the pool under the default
+    # Shuffle Checklist Rewards), so presetting it exercises the reward_pool dedup.
     options = {
         **CT_ONLY,
         "start_inventory": {KARItemName.CT_REWARD_MUSIC_CITY: 1},
@@ -180,9 +172,8 @@ class TestPresetRewardNotDuplicatedInPool(KARTestBase):
         self.assertNotIn(KARItemName.CT_REWARD_MUSIC_CITY, self.itempool_names())
 
 
-# Per starter category: presetting an item in start_inventory makes the world skip its
-# random pick (starter_choice attr is None) and the preset lands in precollected (via
-# KARTestBase.setUp). Parametric so a new category is one row, not a copy-pasted class.
+# Per starter category: presetting an item in start_inventory makes the world skip its random pick
+# (starter_choice attr is None) and the preset lands in precollected. Parametric so a new category is one row.
 _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
     # (label, options, world starter_choice attribute, preset item name)
     (

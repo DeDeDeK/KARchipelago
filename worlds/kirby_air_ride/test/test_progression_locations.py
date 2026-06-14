@@ -1,22 +1,19 @@
 """
 Progress-type tests for the *_progression_* location-category toggles.
 
-Each mode exposes several toggles (high effort, multiplayer, free run, RNG, bust-vehicle,
-time attack) that decide whether a whole category of checklist locations counts toward
-progression. KARWorld._determine_locations_progress_type wires each option to a
-location_name_groups entry: when the option is OFF (the default) every location in the group is
-EXCLUDED; when ON the group becomes DEFAULT (progression-eligible). The world records the result
-in the per-mode {default,excluded}_locations name sets.
+Each mode exposes several toggles (high effort, multiplayer, free run, RNG, bust-vehicle, time attack)
+that decide whether a whole category of checklist locations counts toward progression. When a toggle is
+OFF (the default) every location in its group is EXCLUDED; when ON the group becomes DEFAULT
+(progression-eligible). The result lands in the per-mode {default,excluded}_locations name sets.
 
 These tests pin both directions of that contract:
-  - default (all toggles off): every category's locations are excluded, and the excluded set is
-    exactly the union of the categories (nothing else is excluded by this mechanism);
-  - per-toggle isolation (one toggle on, the rest off): only that category's locations leave the
-    excluded set, proving each option is wired to its own group and not a sibling's.
+  - default (all toggles off): every category's locations are excluded, and the excluded set is exactly
+    the union of the categories (nothing else is excluded by this mechanism);
+  - per-toggle isolation (one toggle on, the rest off): only that category's locations leave the excluded
+    set, proving each option is wired to its own group and not a sibling's.
 
-The (option -> group) mapping below mirrors _determine_locations_progress_type; keep it in lockstep
-with that method. run_default_tests is off: these assert the static categorization only, so the
-full fill / reachability sweep (covered amply elsewhere) would just be wasted generation here.
+run_default_tests is off: these assert the static categorization only, so a full fill / reachability sweep
+would be wasted generation here.
 """
 
 from Options import Toggle
@@ -31,7 +28,6 @@ from ..KARLocations import (
 from . import AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
 
 # (label, mode preset, default-set attr, excluded-set attr, location table, [(option, group), ...]).
-# The option -> group rows mirror KARWorld._determine_locations_progress_type exactly.
 _MODES: list[tuple[str, dict, str, str, dict, list[tuple[str, KARLocationGroup]]]] = [
     (
         "city_trial",
@@ -87,8 +83,7 @@ def _make_default_off_test(label, preset, default_attr, excluded_attr, table, to
             # The two sets partition the whole mode table.
             self.assertEqual(default | excluded, table_names, "default/excluded must partition the table")
             self.assertEqual(default & excluded, set(), "a location cannot be both default and excluded")
-            # With every toggle at its default (off), the excluded set is exactly the union of the
-            # progression categories - nothing more, nothing less.
+            # All toggles off: excluded set is exactly the union of the progression categories.
             union: set[str] = set().union(*(location_name_groups[group] for _, group in toggles))
             self.assertEqual(excluded, union, "default-off excluded set must equal the union of all categories")
             for option, group in toggles:
@@ -117,8 +112,8 @@ def _make_toggle_isolation_test(label, preset, default_attr, excluded_attr, tabl
             # still-off categories remain excluded.
             self.assertEqual(excluded, others, f"{option} on should leave only the other categories excluded")
             self.assertEqual(default, table_names - others)
-            # The category's locations that belong to no other category must have moved to default;
-            # this also guards against a vacuous test (a group fully shadowed by its siblings).
+            # Locations unique to this category must have moved to default; also guards against a
+            # vacuous test (a group fully shadowed by its siblings).
             unique = location_name_groups[group] - others
             self.assertTrue(unique, f"{option}'s category has no locations of its own; effect is unobservable")
             self.assertTrue(unique <= default, f"{option} on should make its own-category locations default")
