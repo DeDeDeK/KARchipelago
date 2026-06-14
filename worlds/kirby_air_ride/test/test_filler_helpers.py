@@ -1,10 +1,9 @@
 """
 Tests for KARWorld._random_filler, _random_trap, and get_filler_item_name.
 
-These helpers run during create_items and as AP-framework callbacks. The fallback
-path (filler_pool empty -> ITEM_TABLE) isn't exercised by happy-path generation, so we
-drive it directly here. None of these helpers are mode-aware: every item floats freely
-across the player's enabled modes.
+The fallback path (filler_pool empty -> ITEM_TABLE) isn't exercised by happy-path generation, so we
+drive it directly here. None of these helpers are mode-aware: every item floats freely across enabled
+modes.
 """
 
 from BaseClasses import ItemClassification
@@ -25,8 +24,8 @@ class TestGetFillerItemName(KARTestBase):
 
 
 class TestRandomFillerFallbackWhenPoolNeverBuilt(KARTestBase):
-    """When the pools were never built (e.g. an ItemLink path that bypasses _build_item_pools),
-    an empty filler_pool falls back to the broadest ITEM_TABLE filler set."""
+    """When the pools were never built (e.g. an ItemLink path), an empty filler_pool falls back to the
+    broadest ITEM_TABLE filler set."""
 
     options = CT_ONLY
 
@@ -44,9 +43,8 @@ class TestRandomFillerFallbackWhenPoolNeverBuilt(KARTestBase):
 
 class TestRandomFillerNoResurrectWhenBuilt(KARTestBase):
     """Once the pools are built, _random_filler draws ONLY from filler_pool and never resurrects
-    ITEM_TABLE filler. This is what keeps allowed_items honest: a category the player disabled
-    must not reappear via the fallback. (The validator guarantees a built+empty pool is never
-    actually reached during generation, so we only assert the no-resurrect draw here.)"""
+    ITEM_TABLE filler. This keeps allowed_items honest: a category the player disabled must not reappear
+    via the fallback."""
 
     options = CT_ONLY
 
@@ -60,9 +58,8 @@ class TestRandomFillerNoResurrectWhenBuilt(KARTestBase):
 class TestRandomTrap(KARTestBase):
     """_random_trap returns None when no traps are active, otherwise an active trap name.
 
-    trap_chance is set above 0 so _build_item_pools actually populates trap_pool (it early-returns
-    without building the pool when trap_chance == 0). Under the old CT_ONLY/trap_chance=0 options the
-    pool was empty, so the active-trap path silently skipped instead of being exercised."""
+    trap_chance is set above 0 so the trap_pool is actually populated (it stays empty when
+    trap_chance == 0, which would silently skip the active-trap path)."""
 
     options = {**CT_ONLY, "trap_chance": 50}
 
@@ -71,10 +68,9 @@ class TestRandomTrap(KARTestBase):
         self.assertIsNone(self.world._random_trap())
 
     def test_returns_an_active_trap(self):
-        # CT enabled + trap_chance > 0 guarantees a populated trap_pool; assert that rather than
-        # skipping, so this can never silently become a no-op again.
+        # Assert the pool is populated rather than skipping, so this can never silently become a no-op.
         self.assertTrue(self.world.trap_pool, "trap_chance > 0 with CT enabled should populate trap_pool")
-        # Force a single known trap so the pick is deterministic and in ITEM_TABLE.
+        # Force a single known trap so the pick is deterministic.
         name = next(iter(self.world.trap_pool))
         self.world.trap_pool = {name}
         self.assertEqual(self.world._random_trap(), name)

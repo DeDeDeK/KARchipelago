@@ -124,8 +124,8 @@ class TestAllModes(KARTestBase):
 
     def test_all_mode_locations_present(self):
         loc_names = self.real_location_names()
-        # Excluded-by-default progression locations (multiplayer, free run, etc.) still exist;
-        # they're just excluded for progression. Use a sentinel non-excluded location per mode.
+        # Use a sentinel non-excluded location per mode (excluded-by-default progression locations
+        # still exist as locations, so they wouldn't prove the mode is present).
         self.assertIn(CTLocation.DESTROY_ALL_HOUSES, loc_names)
         self.assertIn(ARLocation.RACE_100_LAPS, loc_names)
         self.assertIn(TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS, loc_names)

@@ -1,16 +1,15 @@
 """
 Slot data contract tests.
 
-KARWorld.fill_slot_data() returns the dict that the client (KARClient.py) consumes on
-connect. These tests pin the contract: required keys present, types correct, and the
-spawn-rate min shipped to the mod verbatim.
+fill_slot_data() returns the dict the client consumes on connect. These tests pin the contract:
+required keys present, types correct, and the spawn-rate min shipped to the mod verbatim.
 
-Only options the client or mod consume are shipped. Generation-only options that no
-downstream consumer reads (trap_chance, spawn_rate_max) are deliberately omitted - they
-only size item pools at generation time.
+Only options the client or mod consume are shipped. Generation-only options that no downstream
+consumer reads (trap_chance, spawn_rate_max) are deliberately omitted - they only size item pools
+at generation time.
 
-Update the EXPECTED_KEYS set when intentionally adding or removing a slot_data field;
-the client must be updated in lockstep.
+Update the EXPECTED_KEYS set when intentionally adding or removing a slot_data field; the client
+must be updated in lockstep.
 """
 
 import json

@@ -5,6 +5,7 @@ from Options import Toggle
 
 from ..KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
+    CHECKLIST_REWARD_TYPES,
     ITEM_TABLE,
     STADIUM_CHECKLIST_REWARDS,
     KARItemName,
@@ -14,15 +15,10 @@ from ..KAROptions import CityTrialGoal
 from ..KARRegions import KARRegion
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
 
-_CHECKLIST_REWARD_TYPES = frozenset(
-    {KARItemType.CT_CHECKLIST_REWARD, KARItemType.AR_CHECKLIST_REWARD, KARItemType.TR_CHECKLIST_REWARD}
-)
-
 
 class TestPatchCapIncreaseCount(KARTestBase):
-    # ALL_MODES (not CT_ONLY): with checklist rewards now guaranteed once each, CT-only no longer has
-    # room for 9 Patch Cap Increases on top of full default gating + the unique CT rewards. The extra
-    # modes give the pool room; patch caps stay City-Trial items, so the count is still 9.
+    # ALL_MODES gives the pool room for 9 Patch Cap Increases on top of full gating + unique CT rewards;
+    # patch caps stay City-Trial items, so the count is still 9.
     options = {
         **ALL_MODES,
         "city_trial_patch_cap_min": 9,
@@ -55,9 +51,8 @@ class TestSpawnRateUpCount(KARTestBase):
 
 
 class TestSpawnRateUpCountOffGrid(KARTestBase):
-    # Spawn rate moves in 10% steps, so off-grid bounds are snapped to the nearest multiple of 10
-    # before the pool size is computed: min 64 -> 60, max 227 -> 230, giving (230 - 60) // 10 = 17.
-    # Under the old (unsnapped) behavior this was (227 - 64) // 10 = 16.
+    # Spawn rate moves in 10% steps, so off-grid bounds snap to the nearest multiple of 10 before the pool
+    # size is computed: min 64 -> 60, max 227 -> 230, giving (230 - 60) // 10 = 17.
     options = {
         **ALL_MODES,
         "spawn_rate_min": 64,
@@ -69,8 +64,7 @@ class TestSpawnRateUpCountOffGrid(KARTestBase):
 
 
 class TestSpawnRateNoGrowth(KARTestBase):
-    # Min == max (the default 100/100) is the only no-growth config: max >= min always holds, so the
-    # ceiling equals the min only at vanilla. No Spawn Rate Up items are placed.
+    # min == max (the default 100/100): no growth, so no Spawn Rate Up items are placed.
     options = {**CT_ONLY, "spawn_rate_min": 100, "spawn_rate_max": 100}
 
     def test_no_spawn_rate_items(self):
@@ -78,8 +72,7 @@ class TestSpawnRateNoGrowth(KARTestBase):
 
 
 class TestSpawnRateSubVanillaMin(KARTestBase):
-    # A sub-vanilla min still grows toward the ceiling even when the ceiling is vanilla (100):
-    # (100 - 50) // 10 = 5 Spawn Rate Up items climb the rate back up from 50% to 100%.
+    # A sub-vanilla min grows toward the ceiling: (100 - 50) // 10 = 5 Spawn Rate Up items climb 50% -> 100%.
     options = {**CT_ONLY, "spawn_rate_min": 50, "spawn_rate_max": 100}
 
     def test_count_equals_range_steps(self):
@@ -120,9 +113,8 @@ class TestPermanentPatchesDisabled(KARTestBase):
 
 
 class TestAllowedItemsDefaultAllOn(KARTestBase):
-    """Default allowed_items = all five categories on, so every category's non-trap items are
-    eligible (in the useful/filler draw pools). None of these types contain progression/reward/
-    counted items, so eligibility is exactly useful_pool | filler_pool."""
+    """Default allowed_items = all five categories on, so every category's non-trap items are eligible.
+    None of these types are progression/reward/counted, so eligibility is exactly useful_pool | filler_pool."""
 
     options = ALL_MODES
 
@@ -135,9 +127,8 @@ class TestAllowedItemsDefaultAllOn(KARTestBase):
 
 
 class TestAllowedItemsCategoryDisabled(KARTestBase):
-    """Removing categories from allowed_items keeps all of their non-trap items out of the pool and
-    the draw pools, while kept categories stay eligible. Keeps the filler-providing categories on so
-    the config is naturally fillable (the all-off case is covered in test_validation)."""
+    """Removing categories from allowed_items keeps all of their non-trap items out of the pool and the draw
+    pools, while kept categories stay eligible. Keeps filler-providing categories on so the config fills."""
 
     _KEPT = ["Permanent Patches", "City Trial Item Gives", "Top Ride Item Gives"]
     options = {**ALL_MODES, "allowed_items": _KEPT}
@@ -160,10 +151,9 @@ class TestAllowedItemsCategoryDisabled(KARTestBase):
 
 
 class TestAllowedItemsTrapsOrthogonal(KARTestBase):
-    """allowed_items governs only NON-trap items. With every give category disabled, the trap-class
-    items of those same types (fake patches, down patches, Copy Ability: Sleep, TR Speed Down) must
-    still be trap-eligible, since `traps` is the sole governor of traps. (trap_chance 100 + traps on
-    so the all-categories-off config is still fillable.)"""
+    """allowed_items governs only NON-trap items. With every give category disabled, the trap-class items of
+    those same types (fake patches, down patches, Copy Ability: Sleep, TR Speed Down) must still be
+    trap-eligible, since `traps` is the sole governor of traps. (trap_chance 100 + traps on so it fills.)"""
 
     options = {
         **ALL_MODES,
@@ -210,8 +200,8 @@ class TestPatchCapMinEqualsMax(KARTestBase):
 
 
 class TestPatchCapFullSpan(KARTestBase):
-    """Boundary: the full span min=1 -> max=30 (the option extremes) with most gating off so the
-    29-item pool fits. Pins that the max value is reachable in a real config."""
+    """Boundary: full span min=1 -> max=30 (the option extremes) with most gating off so the 29-item pool
+    fits. Pins that the max value is reachable in a real config."""
 
     options = {
         **ALL_MODES,
@@ -235,8 +225,8 @@ class TestPatchCapFullSpan(KARTestBase):
 
 
 class TestChecklistAmountMin(KARTestBase):
-    """Boundary: city_trial_checklist_amount=1. The n_checklist_blocks event should
-    still be created and victory placed."""
+    """Boundary: city_trial_checklist_amount=1. The n_checklist_blocks event is still created and victory
+    placed."""
 
     options = {
         **CT_ONLY,
@@ -279,9 +269,9 @@ class TestPoolFillsAllLocations(KARTestBase):
 
 
 class TestStadiumRewardsExcludedWhenUngated(KARTestBase):
-    """Stadiums ungated: the mod unlocks all 24 at connect, so every Unlock Stadium item is excluded AND
-    the six overlapping stadium checklist rewards are excluded (they gate nothing). Stadiums are a normal
-    gated category now — no reward is ever promoted to progression."""
+    """Stadiums ungated: the mod unlocks all 24 at connect, so every Unlock Stadium item is excluded AND the
+    six overlapping stadium checklist rewards are excluded (they gate nothing). No reward is ever promoted to
+    progression."""
 
     options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_false}
 
@@ -343,8 +333,8 @@ class TestPermanentPatchesExcludedWhenCTDisabled(KARTestBase):
 
 
 class TestDropPatchesTrapExcludedWhenCTDisabled(KARTestBase):
-    """Drop Patches Trap only fires in City Trial scenes (mod gates on Gm_IsInCity).
-    With CT disabled, it should be excluded even if trap_chance > 0."""
+    """Drop Patches Trap only fires in City Trial scenes. With CT disabled, it is excluded even if
+    trap_chance > 0."""
 
     options = {
         **TR_ONLY,
@@ -356,13 +346,12 @@ class TestDropPatchesTrapExcludedWhenCTDisabled(KARTestBase):
 
 
 class TestChecklistRewardsUnique(KARTestBase):
-    """Checklist rewards are unique one-time unlocks, not draw-with-replacement filler. Regression pin
-    for the old 'reward soup' bug, where rewards were drawn from sets with random.choice and ~half were
-    absent while others appeared many times. Now: useful rewards appear exactly once (they consume scarce
-    default locations); filler rewards appear at least once (so the unlock is obtainable) and may repeat
-    as junk-box filler, since filler-classified rewards also stay in the repeatable filler pool.
+    """Checklist rewards are unique one-time unlocks, not draw-with-replacement filler. Regression pin for the
+    old 'reward soup' bug, where rewards were drawn with replacement and ~half were absent while others
+    repeated. Now: useful rewards appear exactly once (they consume scarce default locations); filler rewards
+    appear at least once (so the unlock is obtainable) and may repeat as junk-box filler.
 
-    Rewards are off by default now, so this gates them on to exercise the uniqueness path."""
+    Rewards are off by default, so this gates them on to exercise the uniqueness path."""
 
     options = {**ALL_MODES, "checklist_rewards_gated": Toggle.option_true}
 
@@ -381,7 +370,7 @@ class TestChecklistRewardsUnique(KARTestBase):
         # Useful checklist rewards must never duplicate - the core of the soup bug.
         counts = Counter(self.itempool_names())
         for name, data in ITEM_TABLE.items():
-            if data.type in _CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.useful):
+            if data.type in CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.useful):
                 with self.subTest(reward=name):
                     self.assertLessEqual(counts[name], 1, f"useful reward {name} duplicated (soup-bug regression)")
 
@@ -395,8 +384,8 @@ class TestChecklistRewardsUnique(KARTestBase):
 
 
 class TestChecklistRewardsUniqueSingleModes(KARTestBase):
-    """Same uniqueness contract holds in single-mode configs, including Air Ride (whose only repeatable
-    filler is the reclassified CT+AR patch-gives - rewards must still each appear, not be crowded out)."""
+    """Same uniqueness contract holds in single-mode configs, including Air Ride (whose only repeatable filler
+    is the reclassified CT+AR patch-gives - rewards must still each appear, not be crowded out)."""
 
     options = AR_ONLY
 
@@ -413,15 +402,14 @@ class TestChecklistRewardsUniqueSingleModes(KARTestBase):
     def test_no_off_mode_or_duplicated_useful_rewards(self):
         counts = Counter(self.itempool_names())
         for name, data in ITEM_TABLE.items():
-            if data.type in _CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.useful):
+            if data.type in CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.useful):
                 with self.subTest(reward=name):
                     self.assertLessEqual(counts[name], 1)
 
 
 class TestNoTrapCategoriesWithTrapChance(KARTestBase):
-    """trap_chance > 0 but `traps` selects no categories: trap_pool ends up empty,
-    _random_trap is never called, and no trap items land in the pool. Regression pin
-    that an empty category selection short-circuits in _build_item_pools."""
+    """trap_chance > 0 but `traps` selects no categories: trap_pool ends up empty and no trap items land in
+    the pool. Regression pin that an empty category selection short-circuits trap placement."""
 
     options = {
         **ALL_MODES,

@@ -1,13 +1,12 @@
 """
 Beatability tests for KAR.
 
-`assertBeatable(bool)` checks whether `multiworld.state` can satisfy the completion
-condition (HasAll(*victory_events), one victory per enabled mode). These tests verify
-which items are actually load-bearing for the goal, and which goal variants have no
+`assertBeatable(bool)` checks whether `multiworld.state` can satisfy the completion condition (one victory per
+enabled mode). These tests verify which items are load-bearing for the goal, and which goal variants have no
 AP-side gate (the game itself enforces).
 
-Note: `multiworld.state` starts with precollected items only (random starters per gated
-category). collect_all_but / collect_by_name extend that state with itempool items.
+`multiworld.state` starts with precollected items only (random starters per gated category);
+collect_all_but / collect_by_name extend it with itempool items.
 """
 
 from Options import Toggle
@@ -38,8 +37,7 @@ class TestALLMODESBeatableWithAllItems(KARTestBase):
 
 
 class TestCT100BlocksNotBeatableFromPrecollected(KARTestBase):
-    """Default CT options (100-blocks goal, most gates ON): precollected-only state
-    cannot reach 100 locations and so cannot beat the game."""
+    """Default CT options (100-blocks goal, most gates ON): precollected-only state cannot reach 100 locations."""
 
     options = CT_ONLY
 
@@ -48,9 +46,8 @@ class TestCT100BlocksNotBeatableFromPrecollected(KARTestBase):
 
 
 class TestALLMODES100BlocksNotBeatableFromPrecollected(KARTestBase):
-    """ALL_MODES with 100 blocks each requires 100 reachable locations per mode.
-    From precollected-only state (one starter per gated category) far fewer are
-    reachable, so the game cannot be beaten."""
+    """ALL_MODES with 100 blocks each requires 100 reachable locations per mode. From precollected-only state
+    far fewer are reachable, so the game cannot be beaten."""
 
     options = ALL_MODES
 
@@ -59,12 +56,11 @@ class TestALLMODES100BlocksNotBeatableFromPrecollected(KARTestBase):
 
 
 class TestCTBeatKingDededeRequiresStadiumUnlock(KARTestBase):
-    """beat_king_dedede + progressive_stadiums on: UNLOCK_STADIUM_VS_KING_DEDEDE
-    is required to reach the victory event (placed in the VSKD stadium region).
+    """beat_king_dedede + stadiums gated on: UNLOCK_STADIUM_VS_KING_DEDEDE is required to reach the victory
+    event (placed in the VSKD stadium region).
 
-    collect_all_but iterates multiworld.get_items(), which includes the filled (event)
-    victory location. CITY_TRIAL_VICTORY must be excluded explicitly so the sweep, not
-    the pre-population, decides whether it gets collected."""
+    collect_all_but iterates get_items(), which includes the filled victory event. CITY_TRIAL_VICTORY must be
+    excluded explicitly so the sweep, not the pre-population, decides whether it gets collected."""
 
     options = {
         **CT_ONLY,
@@ -85,9 +81,8 @@ class TestCTBeatKingDededeRequiresStadiumUnlock(KARTestBase):
 
 
 class TestCTBeatKingDededeNoGateWithoutProgressiveStadiums(KARTestBase):
-    """beat_king_dedede + progressive_stadiums off: the victory event sits in the
-    VSKD region but no AP-side rule guards the entrance. The game enforces stadium
-    unlock through its vanilla path. Pins current behavior; change with care."""
+    """beat_king_dedede + stadiums gated off: the victory event sits in the VSKD region but no AP-side rule
+    guards the entrance; the game enforces stadium unlock via its vanilla path. Pins current behavior."""
 
     options = {
         **CT_ONLY,
@@ -100,9 +95,8 @@ class TestCTBeatKingDededeNoGateWithoutProgressiveStadiums(KARTestBase):
 
 
 class TestCTHydraAndDragoonNoItemGate(KARTestBase):
-    """hydra_and_dragoon goal: the victory event is placed in the CITY_TRIAL root
-    region with no AP-side access rule. Beatable from precollected state.
-    Pins current behavior; change with care if an item gate is added."""
+    """hydra_and_dragoon goal: the victory event sits in the CITY_TRIAL root region with no AP-side access rule,
+    so it is beatable from precollected state. Pins current behavior."""
 
     options = {**CT_ONLY, "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon}
 
@@ -111,9 +105,8 @@ class TestCTHydraAndDragoonNoItemGate(KARTestBase):
 
 
 class TestCTNBlocksSmallGoalBeatableFromPrecollected(KARTestBase):
-    """n_checklist_blocks goal with a very small N: from precollected-only state,
-    enough locations are reachable (CITY_TRIAL root has many trivially-reachable
-    locations) to satisfy the goal."""
+    """n_checklist_blocks goal with a very small N: from precollected-only state, enough locations are
+    reachable (the CITY_TRIAL root has many trivially-reachable ones) to satisfy the goal."""
 
     options = {
         **CT_ONLY,
@@ -127,11 +120,10 @@ class TestCTNBlocksSmallGoalBeatableFromPrecollected(KARTestBase):
 
 
 class TestALLMODESNeedsCTVictory(KARTestBase):
-    """ALL_MODES + CT beat_king_dedede: removing the CT-binding item makes the
-    overall multi-mode goal unbeatable even with AR and TR fully collectible.
+    """ALL_MODES + CT beat_king_dedede: removing the CT-binding item makes the overall multi-mode goal
+    unbeatable even with AR and TR fully collectible.
 
-    CITY_TRIAL_VICTORY is excluded for the get_items() reason documented on
-    TestCTBeatKingDededeRequiresStadiumUnlock: filled event items would otherwise
+    CITY_TRIAL_VICTORY is excluded because get_items() includes the filled victory event, which would otherwise
     short-circuit the completion check."""
 
     options = {**ALL_MODES, "city_trial_goal": CityTrialGoal.option_beat_king_dedede}
@@ -169,8 +161,8 @@ class TestTRBeatableWithAllItems(KARTestBase):
 
 
 class TestAR100BlocksNotBeatableFromPrecollected(KARTestBase):
-    """AR-only 100-blocks goal: many AR locations sit behind course/machine gates.
-    Precollected (one starter per gated category) can't reach 100 AR locations."""
+    """AR-only 100-blocks goal: many AR locations sit behind course/machine gates, so precollected can't reach
+    100 AR locations."""
 
     options = AR_ONLY
 
@@ -179,8 +171,7 @@ class TestAR100BlocksNotBeatableFromPrecollected(KARTestBase):
 
 
 class TestTR100BlocksNotBeatableFromPrecollected(KARTestBase):
-    """TR-only 100-blocks goal: TR locations gated behind course unlocks.
-    Precollected can't reach 100 TR locations."""
+    """TR-only 100-blocks goal: TR locations are gated behind course unlocks, so precollected can't reach 100."""
 
     options = TR_ONLY
 
@@ -189,8 +180,7 @@ class TestTR100BlocksNotBeatableFromPrecollected(KARTestBase):
 
 
 class TestARNBlocksSmallGoalBeatableFromPrecollected(KARTestBase):
-    """AR n_checklist_blocks with very small N: from precollected-only state, enough
-    locations are reachable in the AR root region to satisfy the goal."""
+    """AR n_checklist_blocks with very small N: enough AR root locations are reachable from precollected."""
 
     options = {
         **AR_ONLY,
@@ -204,8 +194,7 @@ class TestARNBlocksSmallGoalBeatableFromPrecollected(KARTestBase):
 
 
 class TestTRNBlocksSmallGoalBeatableFromPrecollected(KARTestBase):
-    """TR n_checklist_blocks with very small N: from precollected-only state, enough
-    locations are reachable in the TR root region to satisfy the goal."""
+    """TR n_checklist_blocks with very small N: enough TR root locations are reachable from precollected."""
 
     options = {
         **TR_ONLY,
@@ -219,8 +208,7 @@ class TestTRNBlocksSmallGoalBeatableFromPrecollected(KARTestBase):
 
 
 class TestARGoalAloneNotEnoughForALLMODES(KARTestBase):
-    """ALL_MODES requires every enabled mode's victory. Reaching AR's goal alone
-    is insufficient when CT and TR victories are also required."""
+    """ALL_MODES requires every enabled mode's victory: reaching AR's goal alone is insufficient."""
 
     options = {
         "city_trial_goal": CityTrialGoal.option_100_checklist_blocks,
@@ -233,6 +221,5 @@ class TestARGoalAloneNotEnoughForALLMODES(KARTestBase):
     }
 
     def test_precollected_not_beatable_even_with_trivial_ar_tr_goals(self):
-        # AR and TR goals are trivial (N=1) so reachable from precollected, but CT
-        # 100-blocks is not, so overall beatability is False.
+        # AR and TR goals are trivial (N=1) and reachable from precollected, but CT 100-blocks is not.
         self.assertBeatable(False)

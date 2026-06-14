@@ -1,13 +1,12 @@
 """
 Item creation and classification tests.
 
-For every entry in ITEM_TABLE, KARWorld.create_item must produce a KARItem with:
-- the correct name, code, and player slot
-- a classification matching the ITEM_TABLE entry verbatim (create_item no longer overrides
-  any classification — every gated category, stadiums included, is handled by exclusion)
+create_item must produce, for every ITEM_TABLE entry, a KARItem with the correct name, code,
+player slot, and a classification matching the table verbatim (no create-time override; every
+gated category, stadiums included, is handled by exclusion).
 
-Also pins the invariant that every UNLOCK-type item is progression: players cannot
-soft-lock through misclassified UNLOCK items getting placed at non-progression slots.
+Also pins the invariant that every UNLOCK-type item is progression: misclassified UNLOCK items
+could be placed at non-progression slots and soft-lock the player.
 """
 
 from ..KARItems import GATING_CATEGORIES, ITEM_TABLE, KARItem, KARItemType
@@ -37,9 +36,8 @@ class TestCreateEveryItem(KARTestBase):
                 self.assertEqual(item.type, data.type)
 
     def test_classification_matches_table(self):
-        """create_item preserves the ITEM_TABLE classification for every item verbatim — there is no
-        longer any create-time promotion (stadiums and every other gated category are handled purely by
-        pool exclusion, so the six stadium rewards keep their table classification)."""
+        """create_item preserves the ITEM_TABLE classification verbatim - no create-time promotion.
+        Gated categories (stadiums included) are handled purely by pool exclusion."""
         for name, data in ITEM_TABLE.items():
             with self.subTest(item=name):
                 item = self.world.create_item(name)
@@ -47,9 +45,8 @@ class TestCreateEveryItem(KARTestBase):
 
 
 class TestAllUnlocksAreProgression(KARTestBase):
-    """Per the project convention, every UNLOCK-type item in ITEM_TABLE must be classified
-    as progression. UNLOCK items gate access to locations; misclassification as filler/useful
-    would risk placing them at non-progression slots and soft-locking the player."""
+    """Every UNLOCK-type item must be progression. UNLOCK items gate location access; classifying one
+    as filler/useful risks placing it at a non-progression slot and soft-locking the player."""
 
     options = CT_ONLY
 
