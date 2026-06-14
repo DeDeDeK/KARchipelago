@@ -23,6 +23,7 @@ from ..KARItems import (
 from ..KARLocations import ARLocation, CTLocation, TRLocation
 from ..KAROptions import CityTrialGoal, TopRideGoal
 from ..KARRegions import KARRegion
+from ..KARRules import _SWALLOW_ENEMY_COURSE_RULES
 from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
 
 # Overlapping checklist rewards per gating option (always excluded from the pool).
@@ -35,6 +36,10 @@ _PIN_MACHINE_STARTER = {"start_inventory": {KARItemName.UNLOCK_MACHINE_FLIGHT_WA
 _PIN_AR_COURSE_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS: 1}}
 _PIN_TR_COURSE_STARTER = {"start_inventory": {KARItemName.UNLOCK_TR_COURSE_GRASS: 1}}
 _PIN_STADIUM_STARTER = {"start_inventory": {KARItemName.UNLOCK_STADIUM_AIR_GLIDER: 1}}
+# Beanstalk Park is the one standard Air Ride course that none of the four named swallow-enemies
+# spawn on, so it is the neutral pin: precollecting it disables the random AR-course starter (one
+# course in start_inventory short-circuits _pick_random_starter) without satisfying any swallow rule.
+_PIN_BEANSTALK_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK: 1}}
 
 
 class TestEventsGatingApplied(KARTestBase):
@@ -140,9 +145,13 @@ class TestAbilitiesGatingApplied(KARTestBase):
 
 
 class TestAbilitiesGatingNotApplied(KARTestBase):
-    """abilities_gated OFF: ability unlocks aren't in the pool and ability locations have no rule."""
+    """abilities_gated OFF: ability unlocks aren't in the pool and ability locations have no rule.
 
-    options = {**ALL_MODES, "abilities_gated": Toggle.option_false}
+    air_ride_courses_gated is also disabled so the swallow-named-enemy cells (which carry a separate
+    course rule when course gating is on) are rule-free here -- this class isolates the ability gate.
+    """
+
+    options = {**ALL_MODES, "abilities_gated": Toggle.option_false, "air_ride_courses_gated": Toggle.option_false}
 
     def test_ability_locations_reachable_empty(self):
         # Gate off means no rule, so each ability-specific location is reachable with nothing collected.
@@ -644,6 +653,99 @@ class TestTRCourseGatingApplied(KARTestBase):
             [[KARItemName.UNLOCK_TR_COURSE_SAND]],
             only_check_listed=True,
         )
+
+
+# The enemy -> spawn-course map under test is the production table itself (KARRules), reused here so
+# the wiring tests can't drift from it. Beanstalk Park and Nebula Belt are in no enemy's set (BP has
+# enemy data but none of these four; Nebula Belt has no enemy spawn table at all).
+_ALL_AR_COURSE_UNLOCKS = frozenset(items_of_type(KARItemType.AR_COURSE_UNLOCK))
+
+
+class TestARSwallowEnemyCourseGatingApplied(KARTestBase):
+    """air_ride_courses_gated ON: a "swallow a named copy-ability enemy" cell needs one of the
+    courses that enemy actually spawns on, not merely the ability. These cells live in the generic
+    Air Ride region, so without the course rule they would be reachable with no course unlocked.
+
+    abilities_gated is OFF here so the course HasAny is the only gate under test (the AND with the
+    ability is covered by TestARSwallowEnemyAbilityAndCourseGating). Beanstalk Park is pinned as the
+    starter: it is the one standard course none of these enemies spawn on, so it both disables the
+    random AR-course starter and satisfies no rule under test."""
+
+    options = {
+        **AR_ONLY,
+        "abilities_gated": Toggle.option_false,
+        "air_ride_courses_gated": Toggle.option_true,
+        **_PIN_BEANSTALK_STARTER,
+    }
+
+    def test_unreachable_with_all_courses_held_back(self):
+        state = CollectionState(self.multiworld)
+        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
+        for location in _SWALLOW_ENEMY_COURSE_RULES:
+            with self.subTest(location=location):
+                self.assertFalse(
+                    state.can_reach(location, "Location", self.player),
+                    f"{location} reachable with no spawn course held",
+                )
+
+    def test_each_spawn_course_independently_satisfies(self):
+        for location, courses in _SWALLOW_ENEMY_COURSE_RULES.items():
+            for course in courses:
+                with self.subTest(location=location, course=course):
+                    state = CollectionState(self.multiworld)
+                    self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
+                    state.collect(self.world.create_item(course))
+                    self.assertTrue(
+                        state.can_reach(location, "Location", self.player),
+                        f"{location} not reachable with only {course}",
+                    )
+
+    def test_non_spawn_courses_do_not_satisfy(self):
+        # Collecting EVERY course the enemy does not spawn on must still leave the cell unreachable.
+        # This pins the spawn-course set exactly: any course wrongly omitted from the rule would make
+        # the cell reachable here and fail the test.
+        for location, courses in _SWALLOW_ENEMY_COURSE_RULES.items():
+            non_spawn = sorted(_ALL_AR_COURSE_UNLOCKS - set(courses))
+            with self.subTest(location=location):
+                state = CollectionState(self.multiworld)
+                self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
+                for course in non_spawn:
+                    state.collect(self.world.create_item(course))
+                self.assertFalse(
+                    state.can_reach(location, "Location", self.player),
+                    f"{location} reachable with only non-spawn courses {non_spawn}",
+                )
+
+
+class TestARSwallowEnemyAbilityAndCourseGating(KARTestBase):
+    """abilities_gated AND air_ride_courses_gated both ON: a swallow-named-enemy cell needs BOTH the
+    copy-ability unlock AND a course the enemy spawns on. Verifies the two rules compose with AND."""
+
+    options = {
+        **AR_ONLY,
+        "abilities_gated": Toggle.option_true,
+        "air_ride_courses_gated": Toggle.option_true,
+        **_PIN_BEANSTALK_STARTER,
+    }
+
+    def test_needs_both_ability_and_a_spawn_course(self):
+        location = ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST
+        ability = KARItemName.UNLOCK_ABILITY_SWORD
+        course = KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS  # one of Sword Knight's spawn courses
+
+        base = CollectionState(self.multiworld)
+        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS | {ability}, base)
+
+        def reachable(*items: str) -> bool:
+            state = base.copy()
+            for name in items:
+                state.collect(self.world.create_item(name))
+            return state.can_reach(location, "Location", self.player)
+
+        self.assertFalse(reachable(), "reachable with neither ability nor course")
+        self.assertFalse(reachable(course), "reachable with course but no ability")
+        self.assertFalse(reachable(ability), "reachable with ability but no course")
+        self.assertTrue(reachable(course, ability), "not reachable with both ability and course")
 
 
 _NEBULA_REGIONS = (
