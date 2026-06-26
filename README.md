@@ -1,3 +1,5 @@
+<img src="https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/assets/karchipelago-logo.png" alt="karchipelago logo" width="300"/>
+
 # Kirby Air Ride APWorld
 
 - [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
@@ -256,3 +258,8 @@ You can see a current list of planned features and other requests [here.](https:
 Contributions are very welcome!
 
 Feel free to [raise an issue](https://github.com/DeDeDeK/KARchipelago/issues) or [submit a PR](https://github.com/DeDeDeK/KARchipelago/pulls)! And you can always pop into the [Discord channel](https://discord.com/channels/731205301247803413/1291501105389502554) to ask questions or collaborate!
+
+## Credits
+
+- Swiggity - karchipelago logo design
+- Taco - KAR Deluxe logo + font design
