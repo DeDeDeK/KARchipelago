@@ -114,48 +114,51 @@ class MemoryAddress(IntEnum):
     OPTION_COLOR_GATING_ENABLED = 0x0BC  # u32, 0 or 1
     # Mirrors the KAROptions `city_trial_stadiums_gated` toggle.
     OPTION_STADIUM_GATING_ENABLED = 0x0C0  # u32, 0 or 1
+    # Mirrors the KAROptions `base_abilities_gated` toggle. Gates Kirby's inhale / quick spin / machine
+    # charge behind AP unlock items. APSlotOptions is 8-byte aligned (it holds a u64), so it ends with 4
+    # bytes of trailing pad at 0x0CC before LOCATION_DATA_VALID at 0x0D0.
+    OPTION_BASE_ABILITY_GATING_ENABLED = 0x0C4  # u32, 0 or 1
     # Mirrors the `checklist_rewards_gated` toggle. Off => mod unlocks every non-progression checklist
-    # reward at connect. Reuses the old APSlotOptions padding slot, so the struct stays 8-aligned (152
-    # bytes) and no later offset shifts.
-    OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0C4  # u32, 0 or 1
+    # reward at connect.
+    OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0C8  # u32, 0 or 1
 
     # Location data fields
 
     # Client writes 1 after all location arrays are written. Game reads and clears to 0.
-    LOCATION_DATA_VALID = 0x0C8  # u32
+    LOCATION_DATA_VALID = 0x0D0  # u32
 
     # Location arrays: u16[3][46], locations[source_mode][source_reward_index], indexed by which
     # vanilla checklist reward the entry refers to. Value: (target_mode << 8) | clear_kind for a local
     # placement (the cell holding this reward), 0xFFFF for remote or unused slots. 92 bytes per mode.
-    LOCATIONS_AIRRIDE = 0x0CC  # u16[46], 92 bytes (reward indices 0-45)
-    LOCATIONS_TOPRIDE = 0x128  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
-    LOCATIONS_CITYTRIAL = 0x184  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
+    LOCATIONS_AIRRIDE = 0x0D4  # u16[46], 92 bytes (reward indices 0-45)
+    LOCATIONS_TOPRIDE = 0x130  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
+    LOCATIONS_CITYTRIAL = 0x18C  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
 
     # Check detection fields
 
     # Bitmask of completed checkboxes per mode. Game writes, client reads.
     # 2 x u64 per mode (128 bits). Bit (k % 64) of word (k / 64) for clear_kind k.
-    SENT_CHECKS_AIRRIDE = 0x1E0  # u64[2], 16 bytes
-    SENT_CHECKS_TOPRIDE = 0x1F0  # u64[2], 16 bytes
-    SENT_CHECKS_CITYTRIAL = 0x200  # u64[2], 16 bytes
+    SENT_CHECKS_AIRRIDE = 0x1E8  # u64[2], 16 bytes
+    SENT_CHECKS_TOPRIDE = 0x1F8  # u64[2], 16 bytes
+    SENT_CHECKS_CITYTRIAL = 0x208  # u64[2], 16 bytes
 
     # Backfill bitmask. Client writes bits for checks the AP server knows but the mod doesn't (fresh
     # save / slot takeover / !collect). Game ORs into sent_checks, updates clear[], re-evaluates goal,
     # then clears.
-    CLIENT_BACKFILL_AIRRIDE = 0x210  # u64[2], 16 bytes
-    CLIENT_BACKFILL_TOPRIDE = 0x220  # u64[2], 16 bytes
-    CLIENT_BACKFILL_CITYTRIAL = 0x230  # u64[2], 16 bytes
+    CLIENT_BACKFILL_AIRRIDE = 0x218  # u64[2], 16 bytes
+    CLIENT_BACKFILL_TOPRIDE = 0x228  # u64[2], 16 bytes
+    CLIENT_BACKFILL_CITYTRIAL = 0x238  # u64[2], 16 bytes
 
     # Sticky goal completion flag. Game writes 1 when goal is satisfied. Client reads.
-    GOAL_COMPLETE = 0x240  # u8
+    GOAL_COMPLETE = 0x248  # u8
 
     # Live menu toggle mirrors. Game writes (on boot, first-connect option transfer, and every menu
     # change); client reads only. Authoritative current state of the in-game DeathLink/EnergyLink/
     # TrapLink toggles; diff against last-seen to forward to the AP server (tags / pool membership).
     # The OPTION_*_ENABLED slot fields set initial values on first connect only, not on later toggles.
-    DEATHLINK_MENU_ENABLED = 0x244  # u32
-    ENERGYLINK_MENU_ENABLED = 0x248  # u32
-    TRAPLINK_MENU_ENABLED = 0x24C  # u32
+    DEATHLINK_MENU_ENABLED = 0x24C  # u32
+    ENERGYLINK_MENU_ENABLED = 0x250  # u32
+    TRAPLINK_MENU_ENABLED = 0x254  # u32
 
 
 # AP item code layout for checklist rewards. Codes 500..649 split into 3 mode bands
