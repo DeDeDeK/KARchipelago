@@ -170,6 +170,83 @@ class TestAbilitiesGatingNotApplied(KARTestBase):
             self.assertNotIn(unlock, item_names)
 
 
+class TestBaseAbilitiesGatingApplied(KARTestBase):
+    """base_abilities_gated ON: swallow cells need Inhale, quick-spin cells need Quick Spin. Copy-ability
+    and AR/TR course gates are OFF so those requirements don't stack, isolating the base-ability rule."""
+
+    options = {
+        **ALL_MODES,
+        "base_abilities_gated": Toggle.option_true,
+        "abilities_gated": Toggle.option_false,
+        "air_ride_courses_gated": Toggle.option_false,
+        "top_ride_courses_gated": Toggle.option_false,
+    }
+
+    def test_swallow_locations_need_inhale(self):
+        for location in (
+            ARLocation.SWALL_200_ENEMIES,
+            ARLocation.SWALL_5_GARBAGE_AND_FIRST,
+            ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST,
+            ARLocation.SWALL_CHILLY_3_AND_FIRST,
+        ):
+            with self.subTest(location=location):
+                self.assertAccessDependency(
+                    [location], [[KARItemName.UNLOCK_BASE_ABILITY_INHALE]], only_check_listed=True
+                )
+
+    def test_ar_quick_spin_locations_need_unlock(self):
+        self.assertAccessDependency(
+            [
+                ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN,
+                ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN,
+            ],
+            [[KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN]],
+            only_check_listed=True,
+        )
+
+    def test_tr_quick_spin_locations_need_unlock(self):
+        self.assertAccessDependency(
+            [
+                TRLocation.QUICK_SPIN_20_AND_FIRST,
+                TRLocation.FIRST_WHILE_DOING_A_QUICK_SPIN,
+            ],
+            [[KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN]],
+            only_check_listed=True,
+        )
+
+
+class TestBaseAbilitiesGatingNotApplied(KARTestBase):
+    """base_abilities_gated OFF: no base-ability unlocks in the pool and no base-ability rule on the
+    swallow/quick-spin cells. Copy-ability and course gates are OFF too, so the listed cells are rule-free."""
+
+    options = {
+        **ALL_MODES,
+        "base_abilities_gated": Toggle.option_false,
+        "abilities_gated": Toggle.option_false,
+        "air_ride_courses_gated": Toggle.option_false,
+        "top_ride_courses_gated": Toggle.option_false,
+    }
+
+    def test_base_ability_locations_reachable_empty(self):
+        for location in (
+            ARLocation.SWALL_200_ENEMIES,
+            ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST,
+            ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN,
+            TRLocation.QUICK_SPIN_20_AND_FIRST,
+        ):
+            with self.subTest(location=location):
+                self.assertTrue(self.can_reach_location(location))
+
+    def test_base_ability_unlock_items_absent_from_pool(self):
+        item_names = self.world_item_names()
+        for unlock in (
+            KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+            KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
+            KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
+        ):
+            self.assertNotIn(unlock, item_names)
+
+
 class TestPatchesGatingApplied(KARTestBase):
     """city_trial_patches_gated ON: patch-specific locations need their unlock items.
 

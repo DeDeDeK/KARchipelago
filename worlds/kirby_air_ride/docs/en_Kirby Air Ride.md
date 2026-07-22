@@ -35,6 +35,7 @@
   - [Known Issues](#known-issues)
   - [Planned Features](#planned-features)
   - [Contributing](#contributing)
+  - [Credits](#credits)
 
 
 ## What is this?
@@ -94,6 +95,7 @@ The gateable categories are:
 - **City Trial stadiums.** 
 - **City Trial events** (Dyna Blade, Meteor, Tac, etc.)
 - **Copy abilities** (Fire, Sword, Bomb, etc.). Affects all modes.
+- **Base abilities** (inhale, quick spin, and machine charge).
 - **City Trial patch types** (Boost, Top Speed, Offense, etc.)
 - **City Trial game items** (All Up, Speed Max, Candy, food, legendary parts, etc.)
 - **Air ride machines.** Across all modes.
@@ -112,7 +114,7 @@ Generation will choose one starting unlock item for the following categories. Ea
 - **Top Ride courses.** One course. Only when courses are gated and Top Ride is enabled.
 - **Kirby colors.** One color, Pink included. Only when colors are gated.
 
-If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
+If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, base abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
 
 **Note:** A few categories are normally unlocked in vanilla by completing specific in-game checklist squares - air ride machines, Kirby colors, the Nebula Belt course, the reward stadiums, and the Top Ride "New Item" types (Lantern, Who? Paint, Chickie). When one of those categories is ungated, the mod has already unlocked it at connect, so those checklist reward squares are not placed as items and are skipped. The only effect is cosmetic: you won't see those particular checkbox rewards (their description text or icon) appear in your own checklist. Nothing is lost for progression - the content is already available.
 
@@ -256,3 +258,8 @@ You can see a current list of planned features and other requests [here.](https:
 Contributions are very welcome!
 
 Feel free to [raise an issue](https://github.com/DeDeDeK/KARchipelago/issues) or [submit a PR](https://github.com/DeDeDeK/KARchipelago/pulls)! And you can always pop into the [Discord channel](https://discord.com/channels/731205301247803413/1291501105389502554) to ask questions or collaborate!
+
+## Credits
+
+- Swiggity - karchipelago logo design
+- Taco - KAR Deluxe logo + font design
