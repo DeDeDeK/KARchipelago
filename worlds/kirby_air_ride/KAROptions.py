@@ -458,6 +458,19 @@ class AbilitiesGated(DefaultOnToggle):
     display_name = "Copy Abilities Gated"
 
 
+class BaseAbilitiesGated(Toggle):
+    """
+    When enabled, Kirby's base moves - inhale, quick spin, and machine charge - start locked and must
+    each be unlocked by finding their item. Until then the human player cannot swallow, quick spin, or
+    charge for a boost (CPUs are unaffected); swallow and quick-spin checkboxes gate behind the unlock.
+
+    When disabled, all three moves are available from the start and no base ability unlock items are
+    added to the pool.
+    """
+
+    display_name = "Base Abilities Gated"
+
+
 class CityTrialPatchesGated(DefaultOnToggle):
     """
     When enabled, patch stat types (Boost, Top Speed, Offense, etc.) are locked and must be
@@ -608,6 +621,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     # Access Gating
     city_trial_events_gated: CityTrialEventsGated
     abilities_gated: AbilitiesGated
+    base_abilities_gated: BaseAbilitiesGated
     city_trial_patches_gated: CityTrialPatchesGated
     city_trial_items_gated: CityTrialItemsGated
     machines_gated: MachinesGated
@@ -686,6 +700,7 @@ kar_option_groups = [
         "Other Gating",
         [
             AbilitiesGated,
+            BaseAbilitiesGated,
             ColorsGated,
             MachinesGated,
         ],

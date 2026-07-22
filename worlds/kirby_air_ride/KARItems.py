@@ -32,6 +32,7 @@ class KARItemType(StrEnum):
     TR_COURSE_UNLOCK = "Top Ride Course Unlock"
     TR_ITEM_UNLOCK = "Top Ride Item Unlock"
     ABILITY_UNLOCK = "Copy Ability Unlock"
+    BASE_ABILITY_UNLOCK = "Base Ability Unlock"
     MACHINE_UNLOCK = "Machine Unlock"
     COLOR_UNLOCK = "Color Unlock"
 
@@ -76,6 +77,7 @@ class KARItemGroup(StrEnum):
     TR_COURSE_UNLOCKS = "Top Ride Course Unlocks"
     TR_ITEM_UNLOCKS = "Top Ride Item Unlocks"
     ABILITY_UNLOCKS = "Copy Ability Unlocks"
+    BASE_ABILITY_UNLOCKS = "Base Ability Unlocks"
     MACHINE_UNLOCKS = "Machine Unlocks"
     COLOR_UNLOCKS = "Color Unlocks"
     CT_REWARDS = "City Trial Rewards"
@@ -405,6 +407,11 @@ class KARItemName(StrEnum):
     UNLOCK_ABILITY_FREEZE = "Unlock Copy Ability: Freeze"
     UNLOCK_ABILITY_TORNADO = "Unlock Copy Ability: Tornado"
     UNLOCK_ABILITY_WING = "Unlock Copy Ability: Wing"
+
+    # Base Ability Unlocks (771-773)
+    UNLOCK_BASE_ABILITY_INHALE = "Unlock Base Ability: Inhale"
+    UNLOCK_BASE_ABILITY_QUICK_SPIN = "Unlock Base Ability: Quick Spin"
+    UNLOCK_BASE_ABILITY_CHARGE = "Unlock Base Ability: Charge"
 
     # Patch Type Unlocks (780-788)
     UNLOCK_PATCH_WEIGHT = "Unlock Patch: Weight"
@@ -1258,6 +1265,17 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ABILITY_WING: KARItemData(
         KARItemType.ABILITY_UNLOCK, ItemClassification.progression, 770, _AR_CT
     ),
+    # Base Ability Unlocks (771-773, BaseAbilityKind order). Inhale is Air Ride / City Trial only (Top
+    # Ride has no inhale); quick spin and charge apply in all modes.
+    KARItemName.UNLOCK_BASE_ABILITY_INHALE: KARItemData(
+        KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 771, _AR_CT
+    ),
+    KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN: KARItemData(
+        KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 772, _ALL_MODES
+    ),
+    KARItemName.UNLOCK_BASE_ABILITY_CHARGE: KARItemData(
+        KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 773, _ALL_MODES
+    ),
     # Patch Type Unlocks (780-788)
     # Gate whether specific patch stat types can appear as in-game items.
     KARItemName.UNLOCK_PATCH_WEIGHT: KARItemData(
@@ -1702,6 +1720,13 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
         KARItemType.ABILITY_UNLOCK,
         frozenset({"city_trial_enabled", "air_ride_enabled", "top_ride_enabled"}),
     ),
+    # Base abilities (inhale / quick spin / charge). Quick spin + charge apply in all modes; inhale is
+    # AR/CT only, so its item drops out of a Top-Ride-only world via _AR_CT source_modes.
+    GatingCategory(
+        "base_abilities_gated",
+        KARItemType.BASE_ABILITY_UNLOCK,
+        frozenset({"city_trial_enabled", "air_ride_enabled", "top_ride_enabled"}),
+    ),
     GatingCategory("city_trial_patches_gated", KARItemType.CT_PATCH_UNLOCK, frozenset({"city_trial_enabled"})),
     GatingCategory("city_trial_items_gated", KARItemType.CT_ITEM_UNLOCK, frozenset({"city_trial_enabled"})),
     GatingCategory(
@@ -1843,6 +1868,7 @@ _TYPE_TO_GROUP: dict[KARItemType, KARItemGroup] = {
     KARItemType.TR_CHECKLIST_REWARD: KARItemGroup.TR_REWARDS,
     KARItemType.CT_EVENT_UNLOCK: KARItemGroup.CT_EVENT_UNLOCKS,
     KARItemType.ABILITY_UNLOCK: KARItemGroup.ABILITY_UNLOCKS,
+    KARItemType.BASE_ABILITY_UNLOCK: KARItemGroup.BASE_ABILITY_UNLOCKS,
     KARItemType.CT_PATCH_UNLOCK: KARItemGroup.CT_PATCH_UNLOCKS,
     KARItemType.CT_ITEM_UNLOCK: KARItemGroup.CT_ITEM_UNLOCKS,
     KARItemType.MACHINE_UNLOCK: KARItemGroup.MACHINE_UNLOCKS,

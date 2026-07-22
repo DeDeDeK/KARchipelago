@@ -61,6 +61,26 @@ _ABILITY_LOCATION_RULES: dict[str, str] = {
     ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_PLASMA,
 }
 
+# Base-ability-dependent locations (when base_abilities_gated is ON): swallow cells need Inhale,
+# quick-spin cells need Quick Spin. Charge is intentionally absent - no check obviously needs it yet.
+_BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
+    # Air Ride "Swallow ..." cells
+    ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.SWALL_5_GARBAGE_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.SWALL_WHEELIE_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.CK_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.SWALL_CHILLY_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.SWALL_200_ENEMIES: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.BP_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    ARLocation.FM_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    # Air Ride + Top Ride quick-spin cells
+    ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
+    ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
+    TRLocation.QUICK_SPIN_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
+    TRLocation.FIRST_WHILE_DOING_A_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
+}
+
 # Machine-dependent locations requiring a SINGLE specific machine (when machines_gated is ON)
 _MACHINE_SINGLE_RULES: dict[str, str] = {
     # CT stadium locations requiring specific machines
@@ -441,6 +461,10 @@ def set_rules(world: "KARWorld"):
         for loc, item in _ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
         for loc, item in _ABILITY_TR_ITEM_RULES.items():
+            add_location_rule(loc, Has(item))
+
+    if world.options.base_abilities_gated:
+        for loc, item in _BASE_ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
     # Swallow-a-named-enemy cells also need a course where that enemy spawns (independent of the ability

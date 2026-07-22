@@ -43,6 +43,7 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         # Gating
         "city_trial_events_gated",
         "abilities_gated",
+        "base_abilities_gated",
         "city_trial_patches_gated",
         "city_trial_items_gated",
         "machines_gated",

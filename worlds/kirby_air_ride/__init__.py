@@ -105,6 +105,7 @@ class KARWeb(WebWorld):
             # Disable most gating so the pool isn't dominated by unlock items.
             "city_trial_events_gated": False,
             "abilities_gated": False,
+            "base_abilities_gated": False,
             "city_trial_patches_gated": False,
             "city_trial_items_gated": False,
             "machines_gated": False,
@@ -1059,6 +1060,7 @@ class KARWorld(World):
                 "spawn_rate_min",
                 "city_trial_events_gated",
                 "abilities_gated",
+                "base_abilities_gated",
                 "city_trial_patches_gated",
                 "city_trial_items_gated",
                 "machines_gated",

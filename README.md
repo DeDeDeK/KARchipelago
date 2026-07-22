@@ -26,8 +26,8 @@
     - [When items are applied](#when-items-are-applied)
   - [Traps and TrapLink](#traps-and-traplink)
   - [EnergyLink](#energylink)
-    - [Auto-Charge](#auto-charge)
     - [Energylink spend menu](#energylink-spend-menu)
+    - [Auto-Charge](#auto-charge)
   - [DeathLink](#deathlink)
   - [Other features](#other-features)
     - [In-game textbox](#in-game-textbox)
@@ -37,6 +37,7 @@
   - [Known Issues](#known-issues)
   - [Planned Features](#planned-features)
   - [Contributing](#contributing)
+  - [Credits](#credits)
 
 
 ## What is this?
@@ -96,6 +97,7 @@ The gateable categories are:
 - **City Trial stadiums.** 
 - **City Trial events** (Dyna Blade, Meteor, Tac, etc.)
 - **Copy abilities** (Fire, Sword, Bomb, etc.). Affects all modes.
+- **Base abilities** (inhale, quick spin, and machine charge).
 - **City Trial patch types** (Boost, Top Speed, Offense, etc.)
 - **City Trial game items** (All Up, Speed Max, Candy, food, legendary parts, etc.)
 - **Air ride machines.** Across all modes.
@@ -114,7 +116,7 @@ Generation will choose one starting unlock item for the following categories. Ea
 - **Top Ride courses.** One course. Only when courses are gated and Top Ride is enabled.
 - **Kirby colors.** One color, Pink included. Only when colors are gated.
 
-If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
+If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, base abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
 
 **Note:** A few categories are normally unlocked in vanilla by completing specific in-game checklist squares - air ride machines, Kirby colors, the Nebula Belt course, the reward stadiums, and the Top Ride "New Item" types (Lantern, Who? Paint, Chickie). When one of those categories is ungated, the mod has already unlocked it at connect, so those checklist reward squares are not placed as items and are skipped. The only effect is cosmetic: you won't see those particular checkbox rewards (their description text or icon) appear in your own checklist. Nothing is lost for progression - the content is already available.
 
@@ -205,15 +207,15 @@ EnergyLink applies to every mode. While it is on, charging your machine, collect
 
 You can enable or disable this in the in-game settings menu, or in your yaml.
 
+### Energylink spend menu
+
+There is an in-game menu where you can spend your pooled energy to purchase in-game items. You'll see the price listed below the item. 
+
 ### Auto-Charge
 
 Auto-Charge (Settings → Energy Link → Auto-Charge in the in-game menu) spends pooled energy to keep your machine's charge meter topped up. It adds a steady amount over time, so it gently assists your own charging - holding A, or coasting and gliding - and your energy drains gradually rather than all at once.
 
 The **Auto-Charge Rate** setting (Slow / Medium / Fast) controls how quickly the meter fills.
-
-### Energylink spend menu
-
-There is an in-game menu where you can spend your pooled energy to purchase in-game items. You'll see the price listed below the item. 
 
 ## DeathLink
 
