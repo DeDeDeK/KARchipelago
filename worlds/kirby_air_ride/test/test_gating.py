@@ -1,7 +1,7 @@
 from Options import Toggle
 
-from ..KARItems import GATING_CATEGORIES
-from . import ALL_MODES, KARTestBase, items_of_type
+from ..KARItems import GATING_CATEGORIES, KARItemType
+from . import ALL_MODES, AR_ONLY, KARTestBase, items_of_type
 
 
 def _all_modes_with(**overrides):
@@ -81,3 +81,63 @@ def _make_single_gate_test(gate_name: str, group: set[str]) -> type:
 
 for _gate, _group in _GATE_GROUPS.items():
     globals()[f"TestOnly_{_gate}_On"] = _make_single_gate_test(_gate, _group)
+
+
+class TestEffectiveGateShipping(KARTestBase):
+    """A gate ships to the mod as ON only when the seed actually holds that category's keys.
+
+    The mod applies gate flags goal-independently: no gate_*.c consults goal[]. So shipping a raw YAML
+    toggle for a category whose modes all lack a goal would lock that content behind unlock items that
+    were never minted, permanently. An AR-only seed is the sharpest case - City Trial's events, patches,
+    boxes and stadiums are DefaultOnToggles whose unlocks are dropped from an AR-only pool, so before
+    effective_gates they shipped locked with zero keys.
+
+    Derived from GATING_CATEGORIES so a new category is covered automatically.
+    """
+
+    options = _all_modes_with(**_ALL_ON, **AR_ONLY)
+
+    def test_no_category_ships_locked_without_keys(self):
+        slot_data = self.world.fill_slot_data()
+        world_items = self.world_item_names()
+        for cat in GATING_CATEGORIES:
+            with self.subTest(gate=cat.option):
+                has_keys = bool(items_of_type(cat.item_type) & world_items)
+                if not has_keys:
+                    self.assertEqual(
+                        slot_data[cat.option],
+                        0,
+                        f"{cat.option} ships ON but the seed contains none of its unlock items, "
+                        f"so that content could never be unlocked",
+                    )
+
+    def test_category_with_keys_still_ships_on(self):
+        """The fix must not over-correct: a category that does hold keys still ships ON."""
+        slot_data = self.world.fill_slot_data()
+        world_items = self.world_item_names()
+        for cat in GATING_CATEGORIES:
+            with self.subTest(gate=cat.option):
+                if items_of_type(cat.item_type) & world_items:
+                    self.assertEqual(slot_data[cat.option], 1, f"{cat.option} holds keys but ships OFF")
+
+    def test_effective_gates_matches_shipped_flags(self):
+        slot_data = self.world.fill_slot_data()
+        for cat in GATING_CATEGORIES:
+            with self.subTest(gate=cat.option):
+                self.assertEqual(slot_data[cat.option], int(cat.option in self.world.effective_gates))
+
+
+class TestColorsGateSurvivesModeAgnostic(KARTestBase):
+    """colors_gated has an empty required_modes, meaning mode-agnostic: always keyed, never
+    mode-excluded. The membership test must read `not required_modes or any(...)` - an intersection
+    against the enabled modes would treat "no required modes" as "no match" and silently drop colors
+    from every seed. Pinned in the mode combination least likely to keep them by accident."""
+
+    options = _all_modes_with(**_ALL_ON, **AR_ONLY)
+
+    def test_colors_effective_and_shipped(self):
+        self.assertIn("colors_gated", self.world.effective_gates)
+        self.assertEqual(self.world.fill_slot_data()["colors_gated"], 1)
+
+    def test_color_unlocks_in_pool(self):
+        self.assertTrue(items_of_type(KARItemType.COLOR_UNLOCK) & self.world_item_names())

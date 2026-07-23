@@ -5,6 +5,7 @@ from enum import StrEnum
 from BaseClasses import CollectionState, LocationProgressType, Region
 from rule_builder.rules import CanReachLocation, Has, HasAll, Rule
 
+from .KARData import GameMode, location_code_to_mode_clear
 from .KARItems import LEGENDARY_PIECE_UNLOCK_ITEMS, KARItem, KARItemName, KARItemType, items_by_type
 from .KAROptions import CityTrialGoal
 
@@ -102,6 +103,53 @@ class KARRegion(StrEnum):
     TR_FR_WATER = "Top Ride: Free Run: WATER"
     TR_FR_METAL = "Top Ride: Free Run: METAL"
 
+    # Archipelago checklist. The mode-agnostic Archipelago boxes live here; boxes describing an
+    # activity in another mode live in that mode's region instead, so the AP checklist is a tab, not a
+    # place. No sub-regions.
+    ARCHIPELAGO = "Archipelago"
+
+
+# Ordered name-prefix table backing REGION_TO_MODE. First match wins, so the exact mode-root names come
+# before their short prefixes. "ARCHIPELAGO" leads defensively; it does not collide with "AR_" today
+# (str.startswith("AR_") is False for it) but the intent is clearer stated than inferred.
+_REGION_MODE_NAME_PREFIXES: tuple[tuple[str, GameMode], ...] = (
+    ("ARCHIPELAGO", GameMode.ARCHIPELAGO),
+    ("CITY_TRIAL", GameMode.CITYTRIAL),
+    ("CT_", GameMode.CITYTRIAL),
+    ("STADIUM_", GameMode.CITYTRIAL),
+    ("AIR_RIDE", GameMode.AIRRIDE),
+    ("AR_", GameMode.AIRRIDE),
+    ("TOP_RIDE", GameMode.TOPRIDE),
+    ("TR_", GameMode.TOPRIDE),
+)
+
+
+def _build_region_to_mode() -> dict[str, GameMode]:
+    """Classify every KARRegion by the game mode it belongs to, keyed by region name.
+
+    Derived from the enum member names rather than hand-listed, and checked exhaustive here: a region
+    matching no prefix raises at import instead of silently going unclassified, which would strand an
+    Archipelago box in a tree that logic_modes never builds.
+    """
+    mapping: dict[str, GameMode] = {}
+    for region in KARRegion:
+        for prefix, mode in _REGION_MODE_NAME_PREFIXES:
+            if region.name.startswith(prefix):
+                mapping[region.value] = mode
+                break
+        else:
+            raise ValueError(
+                f"KARRegion.{region.name} matches no entry in _REGION_MODE_NAME_PREFIXES. "
+                f"Every region must map to a game mode; add a prefix for it."
+            )
+    return mapping
+
+
+# Which game mode each region belongs to. Static by construction and deliberately so: logic_modes
+# decides which region trees get built and derives itself from this table (via the AP location table's
+# regions), so this must never inspect built regions - that would be circular.
+REGION_TO_MODE: dict[str, GameMode] = _build_region_to_mode()
+
 
 # KARLocations imports are deferred into function bodies to break the circular
 # dependency: KARLocations imports KARRegion from this module.
@@ -146,29 +194,47 @@ def create_regions(world: "KARWorld"):
     """
     Create regions, place locations in regions, and connect regions for the Kirby Air Ride world.
     """
-    from .KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
+    from .KARLocations import (
+        AIR_RIDE_LOCATION_TABLE,
+        AP_CHECKLIST_LOCATION_TABLE,
+        CITY_TRIAL_LOCATION_TABLE,
+        TOP_RIDE_LOCATION_TABLE,
+    )
 
     # The Menu region is the origin that connects all enabled game modes.
     menu_region = Region(world.origin_region_name, world.player, world.multiworld)
     world.multiworld.regions.append(menu_region)
 
-    if world.city_trial_enabled:
+    # Two different questions, two different conditions. Whether a mode's tree is BUILT is
+    # `mode in logic_modes` - a mode has a tree if it has a goal or hosts an Archipelago box. Whether
+    # the mode's OWN checklist locations are assigned (below) is `*_enabled` - only a mode with a goal
+    # brings its own boxes. A goal-less City Trial hosting one AP box in a stadium gets all 28 CT
+    # regions with 27 of them empty; that is correct. Trees are built whole - the DD/KM/DR prerequisite
+    # chains need the structure, so there are no partial trees.
+    if GameMode.CITYTRIAL in world.logic_modes:
         city_trial_region = Region(KARRegion.CITY_TRIAL, world.player, world.multiworld)
         world.multiworld.regions.append(city_trial_region)
         menu_region.connect(city_trial_region)
         connect_city_trial_region(world, city_trial_region)
 
-    if world.air_ride_enabled:
+    if GameMode.AIRRIDE in world.logic_modes:
         air_ride_region = Region(KARRegion.AIR_RIDE, world.player, world.multiworld)
         world.multiworld.regions.append(air_ride_region)
         menu_region.connect(air_ride_region)
         connect_air_ride_region(world, air_ride_region)
 
-    if world.top_ride_enabled:
+    if GameMode.TOPRIDE in world.logic_modes:
         top_ride_region = Region(KARRegion.TOP_RIDE, world.player, world.multiworld)
         world.multiworld.regions.append(top_ride_region)
         menu_region.connect(top_ride_region)
         connect_top_ride_region(world, top_ride_region)
+
+    if GameMode.ARCHIPELAGO in world.logic_modes:
+        # Holds only the mode-agnostic Archipelago boxes; the rest live in the region of the mode they
+        # describe. No sub-regions.
+        archipelago_region = Region(KARRegion.ARCHIPELAGO, world.player, world.multiworld)
+        world.multiworld.regions.append(archipelago_region)
+        menu_region.connect(archipelago_region)
 
     if world.city_trial_enabled:
         assign_locations_to_regions(
@@ -194,6 +260,15 @@ def create_regions(world: "KARWorld"):
             TOP_RIDE_LOCATION_TABLE,
             world.top_ride_default_locations,
             world.top_ride_excluded_locations,
+            world.goal_locations_to_exclude,
+        )
+
+    if world.archipelago_enabled:
+        assign_locations_to_regions(
+            world,
+            AP_CHECKLIST_LOCATION_TABLE,
+            world.archipelago_default_locations,
+            world.archipelago_excluded_locations,
             world.goal_locations_to_exclude,
         )
 
@@ -475,30 +550,34 @@ def connect_top_ride_region(world: "KARWorld", top_ride_region: Region) -> None:
 
 
 def create_n_blocks_rule(
-    world: "KARWorld", mode_prefix: str, required_blocks: int, exclude_location_name: str | None = None
+    world: "KARWorld", mode: GameMode, required_blocks: int, exclude_location_name: str | None = None
 ) -> Callable[[CollectionState], bool]:
     """
     Create a rule that passes when the player can reach N blocks in a mode, by counting reachable
-    locations whose region belongs to that mode.
+    locations belonging to that mode.
+
+    Mode membership is the location's code band (CT 1-120, AR 121-240, TR 241-360, AP 361-480), which is
+    the canonical mode identity. Not the region name: an Archipelago box lives in the region where its
+    activity happens, so an AP box in "Air Ride: MAGMA FLOWS" would otherwise count toward the Air Ride
+    goal and never toward its own.
 
     `exclude_location_name` drops one location from the count: pass the gated cell's own name when this
     rule gates a real checkbox (e.g. "Fill in over 100"), so the count means "N OTHER boxes" and the
     cell isn't asked to reach itself, which would recurse infinitely.
     """
     player = world.player
-    is_city_trial = mode_prefix == KARRegion.CITY_TRIAL
 
     def can_access_n_blocks(state: CollectionState) -> bool:
         count = 0
         # Skip event locations (address is None), notably the victory event whose
         # access rule is this very function; iterating it would recurse infinitely.
         for loc in state.multiworld.get_locations(player):
-            if loc.address is None or loc.parent_region is None:
+            if loc.address is None:
                 continue
             if exclude_location_name is not None and loc.name == exclude_location_name:
                 continue
-            name = loc.parent_region.name
-            if not (name.startswith(mode_prefix) or (is_city_trial and name.startswith("Stadium:"))):
+            decoded = location_code_to_mode_clear(loc.address)
+            if decoded is None or decoded[0] != mode:
                 continue
             if loc.can_reach(state):
                 count += 1
@@ -548,6 +627,7 @@ def _create_goal_events(
     goal_option,
     checklist_amount_option,
     goal_locations_option,
+    mode: GameMode,
     mode_prefix: str,
     location_table: dict,
     goal_location_map: Mapping[int, str],
@@ -555,6 +635,9 @@ def _create_goal_events(
 ) -> str | None:
     """
     Create goal event locations for a single game mode.
+
+    `mode` identifies which locations count toward a block goal (by code band); `mode_prefix` is the
+    mode's root region name, where the victory event is hung.
 
     :return: The victory event item name if a goal was created, None otherwise.
     """
@@ -568,7 +651,7 @@ def _create_goal_events(
     region = world.get_region(mode_prefix)
 
     if goal_option.value == goal_option.option_n_checklist_blocks:
-        n_blocks_rule = create_n_blocks_rule(world, mode_prefix, checklist_amount_option.value)
+        n_blocks_rule = create_n_blocks_rule(world, mode, checklist_amount_option.value)
         region.add_event(
             f"{mode_prefix}: Complete {checklist_amount_option.value} Checklist Blocks",
             victory_event_type,
@@ -597,7 +680,7 @@ def _create_goal_events(
 
         blocks_rule = None
         if goal_option.value == goal_option.option_100_checklist_blocks:
-            blocks_rule = create_n_blocks_rule(world, mode_prefix, 100)
+            blocks_rule = create_n_blocks_rule(world, mode, 100)
         elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon and world.options.city_trial_items_gated:
             # Assembling both legendary machines needs every piece to spawn; item gating locks that
             # behind the six piece-spawn unlocks (the same requirement the COMPLETE_DRAGOON_AND_HYDRA
@@ -634,6 +717,8 @@ def determine_goal(world: "KARWorld") -> None:
     from .KARLocations import (
         AIR_RIDE_GOAL_TO_LOCATION,
         AIR_RIDE_LOCATION_TABLE,
+        AP_CHECKLIST_LOCATION_TABLE,
+        ARCHIPELAGO_GOAL_TO_LOCATION,
         CITY_TRIAL_GOAL_TO_LOCATION,
         CITY_TRIAL_LOCATION_TABLE,
         TOP_RIDE_GOAL_TO_LOCATION,
@@ -648,6 +733,7 @@ def determine_goal(world: "KARWorld") -> None:
                 world.options.city_trial_goal,
                 world.options.city_trial_checklist_amount,
                 world.options.city_trial_goal_locations,
+                GameMode.CITYTRIAL,
                 KARRegion.CITY_TRIAL,
                 CITY_TRIAL_LOCATION_TABLE,
                 CITY_TRIAL_GOAL_TO_LOCATION,
@@ -658,6 +744,7 @@ def determine_goal(world: "KARWorld") -> None:
                 world.options.air_ride_goal,
                 world.options.air_ride_checklist_amount,
                 world.options.air_ride_goal_locations,
+                GameMode.AIRRIDE,
                 KARRegion.AIR_RIDE,
                 AIR_RIDE_LOCATION_TABLE,
                 AIR_RIDE_GOAL_TO_LOCATION,
@@ -668,10 +755,22 @@ def determine_goal(world: "KARWorld") -> None:
                 world.options.top_ride_goal,
                 world.options.top_ride_checklist_amount,
                 world.options.top_ride_goal_locations,
+                GameMode.TOPRIDE,
                 KARRegion.TOP_RIDE,
                 TOP_RIDE_LOCATION_TABLE,
                 TOP_RIDE_GOAL_TO_LOCATION,
                 KARItemName.TOP_RIDE_VICTORY,
+            ),
+            _create_goal_events(
+                world,
+                world.options.archipelago_goal,
+                world.options.archipelago_checklist_amount,
+                world.options.archipelago_goal_locations,
+                GameMode.ARCHIPELAGO,
+                KARRegion.ARCHIPELAGO,
+                AP_CHECKLIST_LOCATION_TABLE,
+                ARCHIPELAGO_GOAL_TO_LOCATION,
+                KARItemName.ARCHIPELAGO_VICTORY,
             ),
         ]
         if result is not None
