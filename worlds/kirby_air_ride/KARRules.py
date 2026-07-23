@@ -217,7 +217,7 @@ _BOX_BREAK_LOCATIONS: tuple[str, ...] = (
 )
 
 # TR item-dependent locations (when top_ride_items_gated is ON). The four ability-themed TR items
-# (Freeze Fan, Fire, Bomb, Walky) are gated by their copy-ability unlock instead, so they are not here.
+# (Freeze Fan, Fire, Bomb, Walky) accept a second key and live in _TR_ABILITY_ITEM_LOCATION_RULES.
 _TR_ITEM_LOCATION_RULES: dict[str, str] = {
     TRLocation.FIRST_WHILE_HOLDING_HAMMER: KARItemName.UNLOCK_TR_ITEM_HAMMER,
     TRLocation.GET_20_INVINCIBLE_CANDY_ITEMS: KARItemName.UNLOCK_TR_ITEM_INVINCIBLE_CANDY,
@@ -226,20 +226,32 @@ _TR_ITEM_LOCATION_RULES: dict[str, str] = {
 }
 
 # Generic item-count TR locations: completing them only needs SOME Top Ride item type able to spawn,
-# so they gate on HasAny over every item type when both gates that lock item types are on.
+# so they gate on HasAny over every item type's keys when top_ride_items_gated is on.
 _TR_ANY_ITEM_LOCATIONS: tuple[str, ...] = (
     TRLocation.COLLECT_500_ITEMS,
     TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE,
 )
 
-# TR locations that depend on ability-themed TR items (Fire, Bomb, Walky). Applied when abilities_gated
-# is ON: the copy-ability unlock gates both the Air Ride ability and the matching Top Ride item
-# (Walky -> Mic).
-_ABILITY_TR_ITEM_RULES: dict[str, str] = {
-    TRLocation.FIRE_FIRST_WHILE_HOLDING_FIRE_ITEM: KARItemName.UNLOCK_ABILITY_FIRE,
-    TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM: KARItemName.UNLOCK_ABILITY_FIRE,
-    TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS: KARItemName.UNLOCK_ABILITY_BOMB,
-    TRLocation.GET_20_WALKY_ITEMS: KARItemName.UNLOCK_ABILITY_MIC,
+# TR locations that depend on an ability-themed TR item spawning, mapped to that item's two keys:
+# (TR item unlock, copy ability unlock). Applied when top_ride_items_gated is ON, taking the ability
+# key as an alternative only while abilities_gated is also on.
+_TR_ABILITY_ITEM_LOCATION_RULES: dict[str, tuple[str, str]] = {
+    TRLocation.FIRE_FIRST_WHILE_HOLDING_FIRE_ITEM: (
+        KARItemName.UNLOCK_TR_ITEM_FIRE,
+        KARItemName.UNLOCK_ABILITY_FIRE,
+    ),
+    TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM: (
+        KARItemName.UNLOCK_TR_ITEM_FIRE,
+        KARItemName.UNLOCK_ABILITY_FIRE,
+    ),
+    TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS: (
+        KARItemName.UNLOCK_TR_ITEM_BOMB,
+        KARItemName.UNLOCK_ABILITY_BOMB,
+    ),
+    TRLocation.GET_20_WALKY_ITEMS: (
+        KARItemName.UNLOCK_TR_ITEM_WALKY,
+        KARItemName.UNLOCK_ABILITY_MIC,
+    ),
 }
 
 # Course-aggregate checkboxes ("all courses ...") complete in-game only once every course they cover is
@@ -310,15 +322,15 @@ _TR_ALL_COURSES_LOCATIONS: tuple[str, ...] = (
     TRLocation.NOITEMS_FIRST_ALL_COURSES,
 )
 
-# The four ability-themed Top Ride items (Freeze Fan, Fire, Bomb, Walky) are gated by their copy-ability
-# unlock rather than the TR item mask. Used alongside the 17 TR_ITEM_UNLOCK items to count available
-# item types for "get N different types".
-_TR_ABILITY_ITEM_UNLOCKS: tuple[str, ...] = (
-    KARItemName.UNLOCK_ABILITY_FREEZE,
-    KARItemName.UNLOCK_ABILITY_FIRE,
-    KARItemName.UNLOCK_ABILITY_BOMB,
-    KARItemName.UNLOCK_ABILITY_MIC,
-)
+# The four ability-themed Top Ride items, mapping each one's TR item unlock to its copy ability
+# unlock. The mod enables the item when either is held, so these four types are the only ones with two
+# keys -- the other 17 TR item types are keyed solely by their TR item unlock.
+_TR_ABILITY_ITEM_KEYS: dict[str, str] = {
+    KARItemName.UNLOCK_TR_ITEM_FREEZE_FAN: KARItemName.UNLOCK_ABILITY_FREEZE,
+    KARItemName.UNLOCK_TR_ITEM_FIRE: KARItemName.UNLOCK_ABILITY_FIRE,
+    KARItemName.UNLOCK_TR_ITEM_BOMB: KARItemName.UNLOCK_ABILITY_BOMB,
+    KARItemName.UNLOCK_TR_ITEM_WALKY: KARItemName.UNLOCK_ABILITY_MIC,
+}
 
 
 def set_rules(world: "KARWorld"):
@@ -500,8 +512,6 @@ def set_rules(world: "KARWorld"):
     if world.options.abilities_gated:
         for loc, item in _ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
-        for loc, item in _ABILITY_TR_ITEM_RULES.items():
-            add_location_rule(loc, Has(item))
 
     if world.options.base_abilities_gated:
         for loc, item in _BASE_ABILITY_LOCATION_RULES.items():
@@ -561,6 +571,11 @@ def set_rules(world: "KARWorld"):
     if world.options.top_ride_items_gated:
         for loc, item in _TR_ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
+        # The ability-themed items take the copy ability unlock as a second key, but only while
+        # abilities are gated -- an ungated world's abilities are handed out at connect and the mod
+        # ignores them here, leaving the TR item unlock as the only key.
+        for loc, (tr_item, ability) in _TR_ABILITY_ITEM_LOCATION_RULES.items():
+            add_location_rule(loc, HasAny(tr_item, ability) if world.options.abilities_gated else Has(tr_item))
 
     if world.air_ride_enabled and world.options.air_ride_courses_gated:
         # Every non-course-specific Air Ride cell still needs SOME course to race on. Course-specific
@@ -604,37 +619,27 @@ def set_rules(world: "KARWorld"):
         add_location_rule(CTLocation.STADIUM_PLAY_10_STADIUM_MODES, HasFromListUnique(*STADIUM_UNLOCK_ITEMS, count=11))
         add_location_rule(CTLocation.STADIUM_PLAY_20_STADIUM_MODES, HasFromListUnique(*STADIUM_UNLOCK_ITEMS, count=21))
 
-    if world.top_ride_enabled:
-        # "Get over 18 different types of items!" needs 19 of the 21 distinct TR item types able to spawn:
-        # 17 mask-gated (top_ride_items_gated) and 4 ability-themed (abilities_gated). A gate that is OFF
-        # unlocks its whole group at connect, so those types always count -- drop the threshold by that
-        # many and only still-gated groups contribute Has() terms. HasFromListUnique counts distinct held
-        # unlocks (0.6.7-safe). With both gates off the always-on count exceeds 19, so no rule is needed.
-        gated_types: list[str] = []
-        always_available = 0
-        if world.options.top_ride_items_gated:
-            gated_types += sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK])
-        else:
-            always_available += len(items_by_type[KARItemType.TR_ITEM_UNLOCK])
-        if world.options.abilities_gated:
-            gated_types += _TR_ABILITY_ITEM_UNLOCKS
-        else:
-            always_available += len(_TR_ABILITY_ITEM_UNLOCKS)
-        needed = 19 - always_available
-        if needed > 0:
-            add_location_rule(
-                TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
-                HasFromListUnique(*gated_types, count=needed),
-            )
+    if world.top_ride_enabled and world.options.top_ride_items_gated:
+        tr_unlocks = sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK])
 
-    if world.top_ride_enabled and world.options.top_ride_items_gated and world.options.abilities_gated:
-        # "Collect N items" / "get the same item 3 times" only need ONE item type able to spawn. With
-        # both gates on, all 21 types (17 mask-gated + 4 ability-themed) are locked, so these cells need
-        # any one of those unlocks. If either gate is off, its types always spawn and no rule is needed.
-        any_tr_item = HasAny(
-            *sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK]),
-            *_TR_ABILITY_ITEM_UNLOCKS,
+        # "Get over 18 different types of items!" needs 19 of the 21 distinct TR item types able to
+        # spawn. Every type carries a TR item unlock, so the threshold is a straight 19 of the 21.
+        # The four ability-themed types accept a copy ability unlock as a second key, but that form is
+        # deliberately left out: HasFromListUnique counts distinct held items, so listing both keys
+        # would score one type twice. Ignoring it only ever makes the rule stricter. (With the gate OFF
+        # the mod unlocks all 21 types at connect and the cell needs no rule at all.)
+        add_location_rule(
+            TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
+            HasFromListUnique(*tr_unlocks, count=19),
         )
+
+        # "Collect N items" / "get the same item 3 times" only need ONE item type able to spawn, so
+        # they take any single key: any of the 21 TR item unlocks, plus the four copy abilities that
+        # double as a key when abilities are gated.
+        any_item_keys = list(tr_unlocks)
+        if world.options.abilities_gated:
+            any_item_keys += sorted(_TR_ABILITY_ITEM_KEYS.values())
+        any_tr_item = HasAny(*any_item_keys)
         for loc in _TR_ANY_ITEM_LOCATIONS:
             add_location_rule(loc, any_tr_item)
 
