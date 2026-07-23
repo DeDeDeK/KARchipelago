@@ -434,6 +434,73 @@ class TopRideCheckboxFillers(NamedRange):
     special_range_names = {"disabled": 0}  # noqa: RUF012
 
 
+class ArchipelagoGoal(Choice):
+    """
+    Sets the goal for the Archipelago checklist - the synthetic in-game checklist tab of
+    Archipelago-specific objectives. If you have goals on multiple game modes, all must be achieved to
+    win. Select "None" to disable the Archipelago checklist: its locations are then left out of the
+    multiworld, though the tab still appears in-game.
+
+    EXPERIMENTAL: the Archipelago checklist is incomplete and under active development. It offers far
+    fewer objectives than the 120 its options allow, so a large "n_checklist_blocks" target (or the
+    "100_checklist_blocks" goal) cannot be satisfied. Objective names and thresholds may still change
+    in ways that break existing YAMLs. Enable it only if you want to try it.
+    """
+
+    display_name = "Archipelago Checklist Goal"
+    option_100_checklist_blocks = 0
+    option_n_checklist_blocks = 1
+    option_none = 4
+    option_checklist_list = 5
+    default = 4
+
+
+class ArchipelagoChecklistAmount(Range):
+    """
+    This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for the
+    Archipelago checklist.
+
+    The Archipelago checklist is still incomplete, so it offers fewer boxes than the other modes and
+    this range is correspondingly smaller.
+    """
+
+    display_name = "Number of Checklist Boxes for Archipelago"
+    # range_end tracks the real size of AP_CHECKLIST_LOCATION_TABLE - unlike City Trial / Air Ride /
+    # Top Ride, which each have a full 120 boxes, the Archipelago checklist is still being built out.
+    # Offering more than exists would only produce an OptionError at generation. A data-integrity test
+    # pins this to the table; raise it as boxes are added. Default is half the table, as elsewhere.
+    default = 18
+    range_start = 1
+    range_end = 36
+
+
+class ArchipelagoGoalLocations(LocationSet):
+    """
+    The specific checklist locations required for the "checklist_list" goal on the Archipelago
+    checklist. Only used when Archipelago Checklist Goal is set to "checklist_list". Supports location
+    group names.
+    """
+
+    display_name = "Archipelago Goal Locations"
+    verify_location_name = True
+
+
+class ArchipelagoCheckboxFillers(NamedRange):
+    """
+    Number of "checkbox filler" items added to the pool for the Archipelago checklist. These
+    auto-complete an Archipelago checklist block when received. Set to 0 to disable.
+
+    Defaults to 0: the Archipelago checklist is an early stub with only a few boxes, so most fillers
+    would have nothing to fill.
+    """
+
+    display_name = "Archipelago Checkbox Fillers"
+    default = 0
+    range_start = 0
+    range_end = 20
+    special_range_names = {"disabled": 0}  # noqa: RUF012
+
+
 class CityTrialEventsGated(DefaultOnToggle):
     """
     When enabled, City Trial events (Dyna Blade, Meteor, Tac, etc.) are locked and must be
@@ -618,6 +685,12 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     top_ride_progression_multiplayer: TopRideProgressionMultiplayer
     top_ride_checkbox_fillers: TopRideCheckboxFillers
 
+    # Archipelago Checklist
+    archipelago_goal: ArchipelagoGoal
+    archipelago_checklist_amount: ArchipelagoChecklistAmount
+    archipelago_goal_locations: ArchipelagoGoalLocations
+    archipelago_checkbox_fillers: ArchipelagoCheckboxFillers
+
     # Access Gating
     city_trial_events_gated: CityTrialEventsGated
     abilities_gated: AbilitiesGated
@@ -694,6 +767,15 @@ kar_option_groups = [
             TopRideCheckboxFillers,
             TopRideCoursesGated,
             TopRideItemsGated,
+        ],
+    ),
+    OptionGroup(
+        "Archipelago Checklist Options",
+        [
+            ArchipelagoGoal,
+            ArchipelagoChecklistAmount,
+            ArchipelagoGoalLocations,
+            ArchipelagoCheckboxFillers,
         ],
     ),
     OptionGroup(

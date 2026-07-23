@@ -8,6 +8,7 @@
     - [City Trial](#city-trial)
     - [Air Ride](#air-ride)
     - [Top Ride](#top-ride)
+    - [Archipelago checklist](#archipelago-checklist)
     - [Mixing goals](#mixing-goals)
   - [Access gating](#access-gating)
   - [Shuffle checklist rewards](#shuffle-checklist-rewards)
@@ -56,7 +57,7 @@ Get it [here!](https://github.com/lighting8282/KAR-Poptracker)
 
 ## Game modes and goals
 
-Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top Ride. You can enable any combination of them, each with its own goal, locations, and progression settings. Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist.
+Kirby Air Ride has three independent game modes - City Trial, Air Ride, and Top Ride - plus an experimental fourth mode, the Archipelago checklist. You can enable any combination of them, each with its own goal, locations, and progression settings. Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist.
 
 ### City Trial
 
@@ -81,6 +82,19 @@ Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top R
 - **Fill in N Checklist Boxes** (1 to 120).
 - **Complete a specific list of checklist boxes** (via "Top Ride Goal Locations").
 - **None.** Disables Top Ride (default).
+
+### Archipelago checklist
+
+The Archipelago checklist is a new, Archipelago-only checklist tab of objectives that live outside the three vanilla game modes. Its boxes describe things you do in City Trial, Air Ride, and Top Ride - eating the foods the vanilla checklist ignores, winning single races, clearing harder versions of the stadium challenges - plus a few that are about Archipelago itself, like receiving your first item.
+
+It is **experimental** and still being built out. It has far fewer boxes than the three vanilla modes, so it is off by default, its goal target range is smaller, and objective names and thresholds may still change in ways that break an existing YAML.
+
+Enabling it does not force you to take goals in other modes. If a box describes a City Trial activity, City Trial simply becomes playable and ungated for you - you can score that box without City Trial having a goal of its own.
+
+- **Fill in over 100 Checklist Boxes.** Not usable yet - the checklist has fewer than 100 boxes, so generation rejects it.
+- **Fill in N Checklist Boxes.** Usable. The allowed range tracks the number of boxes that actually exist.
+- **Complete a specific list of checklist boxes** (via "Archipelago Goal Locations").
+- **None.** Disables the Archipelago checklist (default). The tab still appears in-game, but its boxes are not part of the multiworld.
 
 ### Mixing goals
 
@@ -159,7 +173,7 @@ The items you can receive include:
 
 ### Checkbox filler items
 
-Receiving a checkbox filler item for a given checklist auto-completes a checklist block immediately. Look to the side of the checklist for the purple boxes. The game only shows up to 5 of them at once, but if you have unlocked more they are still yours and you can keep using them as they run out. There is a separate filler item for each mode (City Trial, Air Ride, Top Ride). You cannot use these to unlock checkboxes that are goals.
+Receiving a checkbox filler item for a given checklist auto-completes a checklist block immediately. Look to the side of the checklist for the purple boxes. The game only shows up to 5 of them at once, but if you have unlocked more they are still yours and you can keep using them as they run out. There is a separate filler item for each mode (City Trial, Air Ride, Top Ride, and the Archipelago checklist). You cannot use these to unlock checkboxes that are goals.
 
 ### Patch cap increase items
 

@@ -78,6 +78,7 @@ class KARTestBase(WorldTestBase):
                 KARItemName.CITY_TRIAL_VICTORY,
                 KARItemName.AIR_RIDE_VICTORY,
                 KARItemName.TOP_RIDE_VICTORY,
+                KARItemName.ARCHIPELAGO_VICTORY,
             ]
         )
 
