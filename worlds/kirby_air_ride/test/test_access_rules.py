@@ -22,7 +22,7 @@ from ..KARItems import (
 from ..KARLocations import ARLocation, CTLocation, TRLocation
 from ..KAROptions import CityTrialGoal, TopRideGoal
 from ..KARRegions import KARRegion
-from ..KARRules import _SWALLOW_ENEMY_COURSE_RULES, _TR_ABILITY_ITEM_UNLOCKS
+from ..KARRules import _SWALLOW_ENEMY_COURSE_RULES, _TR_ABILITY_ITEM_KEYS
 from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
 
 # Overlapping checklist rewards per gating option (always excluded from the pool).
@@ -75,8 +75,9 @@ class TestEventsGatingNotApplied(KARTestBase):
 
 class TestAbilitiesGatingApplied(KARTestBase):
     """abilities_gated ON: ability-specific locations need their unlock items.
-    Covers Air Ride "finish/swallow with ability" locations, the CT Copy Chance Wheel locations,
-    and the TR locations gated by ability unlocks (Fire, Bomb, Walky)."""
+    Covers Air Ride "finish/swallow with ability" locations and the CT Copy Chance Wheel locations.
+    The TR ability-themed item locations take either key and are covered by
+    TestTRAbilityItemEitherKey."""
 
     options = {**ALL_MODES, "abilities_gated": Toggle.option_true}
 
@@ -85,14 +86,6 @@ class TestAbilitiesGatingApplied(KARTestBase):
         self.assertAccessDependency(
             [ARLocation.FIRST_WITH_WING_ABILITY],
             [[KARItemName.UNLOCK_ABILITY_WING]],
-            only_check_listed=True,
-        )
-
-    def test_tr_fire_location_needs_fire_unlock(self):
-        # TORCH_3_RIVALS is in the top-level TOP_RIDE region; the fire requirement is the ability, not course.
-        self.assertAccessDependency(
-            [TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM],
-            [[KARItemName.UNLOCK_ABILITY_FIRE]],
             only_check_listed=True,
         )
 
@@ -117,15 +110,6 @@ class TestAbilitiesGatingApplied(KARTestBase):
             with self.subTest(location=location):
                 self.assertAccessDependency([location], [[unlock]], only_check_listed=True)
 
-    def test_tr_walky_location_needs_mic_unlock(self):
-        # GET_20_WALKY_ITEMS is in the top-level TOP_RIDE region; the Walky item is gated by the
-        # Mic copy-ability unlock rather than the TR item mask.
-        self.assertAccessDependency(
-            [TRLocation.GET_20_WALKY_ITEMS],
-            [[KARItemName.UNLOCK_ABILITY_MIC]],
-            only_check_listed=True,
-        )
-
     def test_generic_swallow_locations_ungated(self):
         # "Swallow N enemies" / "garbage enemies" take any enemy, so they carry no ability rule and
         # are reachable with nothing collected even while abilities are gated.
@@ -140,11 +124,16 @@ class TestAbilitiesGatingApplied(KARTestBase):
 class TestAbilitiesGatingNotApplied(KARTestBase):
     """abilities_gated OFF: ability unlocks aren't in the pool and ability locations have no rule.
 
-    air_ride_courses_gated is also disabled so the swallow-named-enemy cells are rule-free here,
-    isolating the ability gate.
+    air_ride_courses_gated and top_ride_items_gated are also disabled so the swallow-named-enemy cells
+    and the TR ability-themed item cells are rule-free here, isolating the ability gate.
     """
 
-    options = {**ALL_MODES, "abilities_gated": Toggle.option_false, "air_ride_courses_gated": Toggle.option_false}
+    options = {
+        **ALL_MODES,
+        "abilities_gated": Toggle.option_false,
+        "air_ride_courses_gated": Toggle.option_false,
+        "top_ride_items_gated": Toggle.option_false,
+    }
 
     def test_ability_locations_reachable_empty(self):
         for location in (
@@ -942,15 +931,48 @@ class TestARChainBreaksWhenPrereqGated(KARTestBase):
                 )
 
 
-class TestTRBombAbilityGating(KARTestBase):
-    """abilities_gated ON: HIT_ENEMIES_3_X_WITH_BOMB_ITEMS needs UNLOCK_ABILITY_BOMB."""
+class TestTRAbilityItemEitherKey(KARTestBase):
+    """Both gates ON: the four ability-themed TR items (Freeze Fan, Fire, Bomb, Walky) accept either
+    key -- their own TR item unlock or the matching copy ability unlock -- so the cells that need one
+    of those items spawning are reachable with either alone and unreachable with neither."""
 
-    options = {**ALL_MODES, "abilities_gated": Toggle.option_true}
+    options = {**ALL_MODES, "abilities_gated": Toggle.option_true, "top_ride_items_gated": Toggle.option_true}
 
-    def test_tr_bomb_location_needs_bomb_unlock(self):
+    _EITHER_KEY = (
+        (
+            TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM,
+            KARItemName.UNLOCK_TR_ITEM_FIRE,
+            KARItemName.UNLOCK_ABILITY_FIRE,
+        ),
+        (
+            TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS,
+            KARItemName.UNLOCK_TR_ITEM_BOMB,
+            KARItemName.UNLOCK_ABILITY_BOMB,
+        ),
+        (
+            TRLocation.GET_20_WALKY_ITEMS,
+            KARItemName.UNLOCK_TR_ITEM_WALKY,
+            KARItemName.UNLOCK_ABILITY_MIC,
+        ),
+    )
+
+    def test_either_key_alone_suffices(self):
+        # Two single-item groups: unreachable with neither key, reachable with each on its own.
+        for location, tr_item, ability in self._EITHER_KEY:
+            with self.subTest(location=location):
+                self.assertAccessDependency([location], [[tr_item], [ability]], only_check_listed=True)
+
+
+class TestTRAbilityItemAbilitiesUngated(KARTestBase):
+    """top_ride_items_gated ON, abilities OFF: the copy ability key is handed out at connect, so the
+    mod ignores it and the TR item unlock is the only key for the four ability-themed items."""
+
+    options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true, "abilities_gated": Toggle.option_false}
+
+    def test_tr_bomb_location_needs_tr_item_unlock(self):
         self.assertAccessDependency(
             [TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS],
-            [[KARItemName.UNLOCK_ABILITY_BOMB]],
+            [[KARItemName.UNLOCK_TR_ITEM_BOMB]],
             only_check_listed=True,
         )
 
@@ -1230,9 +1252,9 @@ _CT_ALL_PROGRESSION_LOCATIONS = {
 
 
 class TestTRItemTypeCountItemGateOnly(KARTestBase):
-    """top_ride_items_gated ON, abilities OFF: 'get over 18 different types of items!' needs 19 of the
-    21 TR item types. The 4 ability-themed types are always available (abilities gating off), so this
-    reduces to 15 of the 17 mask-gated TR item unlocks."""
+    """top_ride_items_gated ON, abilities OFF: every TR item type is keyed solely by its own unlock
+    (an ungated world's copy abilities are handed out at connect and the mod ignores them as a key),
+    so 'get over 18 different types of items!' needs 19 of the 21 TR item unlocks."""
 
     options = {
         **TR_ONLY,
@@ -1240,18 +1262,19 @@ class TestTRItemTypeCountItemGateOnly(KARTestBase):
         "abilities_gated": Toggle.option_false,
     }
 
-    def test_needs_fifteen_of_seventeen_item_unlocks(self):
+    def test_needs_nineteen_of_twenty_one_item_unlocks(self):
         tr_unlocks = sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK))
-        # Hold back 3 -> 14 held + 4 free ability types = 18 < 19 -> unreachable.
+        # Hold back 3 -> 18 held < 19 -> unreachable; one more -> 19.
         self.collect_all_but(tr_unlocks[:3])
         self.assertFalse(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
-        self.collect_by_name(tr_unlocks[0])  # 15th unlock -> 19 total
+        self.collect_by_name(tr_unlocks[0])
         self.assertTrue(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
 
 
 class TestTRItemTypeCountBothGates(KARTestBase):
-    """top_ride_items_gated AND abilities_gated ON: 'get over 18 different types!' needs 19 of all 21
-    types (17 item unlocks + 4 ability unlocks)."""
+    """top_ride_items_gated AND abilities_gated ON: 'get over 18 different types!' still counts the 21
+    TR item unlocks only. The four ability-themed types accept a copy ability unlock as a second key,
+    but counting both keys would score one type twice, so the rule ignores the ability form."""
 
     options = {
         **TR_ONLY,
@@ -1259,12 +1282,12 @@ class TestTRItemTypeCountBothGates(KARTestBase):
         "abilities_gated": Toggle.option_true,
     }
 
-    def test_needs_nineteen_of_twenty_one_types(self):
-        all_types = [*sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK)), *_TR_ABILITY_ITEM_UNLOCKS]
+    def test_needs_nineteen_of_twenty_one_item_unlocks(self):
+        tr_unlocks = sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK))
         # Hold back 3 -> 18 held -> unreachable; one more -> 19.
-        self.collect_all_but(all_types[:3])
+        self.collect_all_but(tr_unlocks[:3])
         self.assertFalse(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
-        self.collect_by_name(all_types[0])
+        self.collect_by_name(tr_unlocks[0])
         self.assertTrue(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
 
 
@@ -1285,32 +1308,51 @@ class TestTRItemTypeCountNoGates(KARTestBase):
 
 class TestTRAnyItemBothGates(KARTestBase):
     """top_ride_items_gated AND abilities_gated ON: the generic 'collect/get items' cells (which name no
-    specific item) need at least one of the 21 TR item types able to spawn. Holding back every type
-    unlock makes them unreachable; any single one restores them (HasAny over the 17 mask items + 4
-    ability-themed types)."""
+    specific item) need at least one of the 21 TR item types able to spawn. Holding back every key makes
+    them unreachable; any single one restores them (HasAny over the 21 item unlocks plus the four copy
+    abilities that double as a key)."""
 
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true, "abilities_gated": Toggle.option_true}
 
     _GENERIC = [TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE]
 
     def test_generic_item_cells_need_any_type(self):
-        all_types = [*sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK)), *_TR_ABILITY_ITEM_UNLOCKS]
-        self.collect_all_but(all_types)  # everything but the 21 type unlocks (courses included)
+        all_keys = [*sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK)), *sorted(_TR_ABILITY_ITEM_KEYS.values())]
+        self.collect_all_but(all_keys)  # everything but the type keys (courses included)
         for loc in self._GENERIC:
             with self.subTest(location=loc, phase="no type"):
                 self.assertFalse(self.can_reach_location(loc))
-        self.collect_by_name(all_types[0])  # any single type
+        self.collect_by_name(all_keys[0])  # any single key
         for loc in self._GENERIC:
             with self.subTest(location=loc, phase="one type"):
                 self.assertTrue(self.can_reach_location(loc))
 
 
-class TestTRAnyItemOneGateOff(KARTestBase):
-    """Only one of the two item-type gates on: the other gate's item types always spawn, so the generic
-    'collect/get items' cells carry no HasAny rule and are reachable with nothing collected. Tested with
-    items gated but abilities off (the 4 ability-themed types always spawn)."""
+class TestTRAnyItemAbilitiesUngated(KARTestBase):
+    """top_ride_items_gated ON, abilities OFF: the copy ability key is out of play, so the generic
+    'collect/get items' cells need one of the 21 TR item unlocks and nothing else."""
 
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true, "abilities_gated": Toggle.option_false}
+
+    _GENERIC = [TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE]
+
+    def test_generic_item_cells_need_any_item_unlock(self):
+        tr_unlocks = sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK))
+        self.collect_all_but(tr_unlocks)
+        for loc in self._GENERIC:
+            with self.subTest(location=loc, phase="no type"):
+                self.assertFalse(self.can_reach_location(loc))
+        self.collect_by_name(tr_unlocks[0])
+        for loc in self._GENERIC:
+            with self.subTest(location=loc, phase="one type"):
+                self.assertTrue(self.can_reach_location(loc))
+
+
+class TestTRAnyItemGateOff(KARTestBase):
+    """top_ride_items_gated OFF: every TR item type spawns from connect, so the generic 'collect/get
+    items' cells carry no HasAny rule and are reachable with nothing collected."""
+
+    options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_false, "abilities_gated": Toggle.option_true}
 
     def test_generic_item_cells_reachable_empty(self):
         for loc in (TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE):

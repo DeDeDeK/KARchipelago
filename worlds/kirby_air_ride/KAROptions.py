@@ -626,8 +626,8 @@ class TopRideCoursesGated(DefaultOnToggle):
 class TopRideItemsGated(DefaultOnToggle):
     """
     When enabled, Top Ride items are locked and must be unlocked by finding their
-    corresponding items. Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky)
-    are gated by the copy ability unlock instead.
+    corresponding items. The four items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) accept
+    either key: their own Top Ride item unlock, or the matching copy ability unlock.
 
     When disabled, all Top Ride items are available from the start and no item unlock items are added
     to the pool.

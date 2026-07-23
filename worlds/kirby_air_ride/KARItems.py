@@ -517,10 +517,10 @@ class KARItemName(StrEnum):
     UNLOCK_TR_COURSE_WATER = "Unlock TR Course: Water"
     UNLOCK_TR_COURSE_METAL = "Unlock TR Course: Metal"
 
-    # Top Ride Item Unlocks (900-921, minus 5 reserved slots). Freeze Fan (909), Fire (911), Bomb
-    # (913) and Walky (916) are gated by the ability mask, not the TR item mask, so they have no
-    # unlock form (their ability unlock is the gate); give forms still exist at 959/961/963/966.
-    # ID 912 (KirbyKusdama Party Ball) is mirrored onto the visible Party Ball at 921 so both spawn.
+    # Top Ride Item Unlocks (900-921, minus ID 912: the KirbyKusdama Party Ball, which the mod mirrors
+    # onto the visible Party Ball at 921 so both spawn). The four ability-themed items -- Freeze Fan
+    # (909), Fire (911), Bomb (913), Walky (916) -- have two keys: this unlock or the matching copy
+    # ability unlock. Either one enables the item in Top Ride.
     UNLOCK_TR_ITEM_HAMMER = "Unlock TR Item: Hammer"
     UNLOCK_TR_ITEM_BIG_CAKE = "Unlock TR Item: Big Cake"
     UNLOCK_TR_ITEM_SPEED_UP = "Unlock TR Item: Speed Up"
@@ -530,9 +530,13 @@ class KARItemName(StrEnum):
     UNLOCK_TR_ITEM_INVINCIBLE_CANDY = "Unlock TR Item: Invincible Candy"
     UNLOCK_TR_ITEM_BUZZ_SAW = "Unlock TR Item: Buzz Saw"
     UNLOCK_TR_ITEM_DRILL = "Unlock TR Item: Drill"
+    UNLOCK_TR_ITEM_FREEZE_FAN = "Unlock TR Item: Freeze Fan"
     UNLOCK_TR_ITEM_MISSILE = "Unlock TR Item: Missile"
+    UNLOCK_TR_ITEM_FIRE = "Unlock TR Item: Fire"
+    UNLOCK_TR_ITEM_BOMB = "Unlock TR Item: Bomb"
     UNLOCK_TR_ITEM_STEP_BOOM = "Unlock TR Item: Step-boom"
     UNLOCK_TR_ITEM_LANTERN = "Unlock TR Item: Lantern"
+    UNLOCK_TR_ITEM_WALKY = "Unlock TR Item: Walky"
     UNLOCK_TR_ITEM_KRACKO = "Unlock TR Item: Kracko"
     UNLOCK_TR_ITEM_WHO_PAINT = "Unlock TR Item: Who? Paint"
     UNLOCK_TR_ITEM_SMOKESCREEN = "Unlock TR Item: Smokescreen"
@@ -1569,8 +1573,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_TR_COURSE_METAL: KARItemData(
         KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 896, _TR
     ),
-    # Top Ride Item Unlocks (900-921, minus 5 reserved slots: 909/911/913/916 are ability-mask gated
-    # with no unlock form, and 912 mirrors onto the visible Party Ball at 921).
+    # Top Ride Item Unlocks (900-921, minus 912, which mirrors onto the visible Party Ball at 921).
+    # The four ability-themed items (909/911/913/916) are also enabled by their copy ability unlock,
+    # so holding either key makes the item spawn.
     KARItemName.UNLOCK_TR_ITEM_HAMMER: KARItemData(
         KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 900, _TR
     ),
@@ -1598,14 +1603,26 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_TR_ITEM_DRILL: KARItemData(
         KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 908, _TR
     ),
+    KARItemName.UNLOCK_TR_ITEM_FREEZE_FAN: KARItemData(
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 909, _TR
+    ),
     KARItemName.UNLOCK_TR_ITEM_MISSILE: KARItemData(
         KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 910, _TR
+    ),
+    KARItemName.UNLOCK_TR_ITEM_FIRE: KARItemData(
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 911, _TR
+    ),
+    KARItemName.UNLOCK_TR_ITEM_BOMB: KARItemData(
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 913, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_STEP_BOOM: KARItemData(
         KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 914, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_LANTERN: KARItemData(
         KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 915, _TR
+    ),
+    KARItemName.UNLOCK_TR_ITEM_WALKY: KARItemData(
+        KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 916, _TR
     ),
     KARItemName.UNLOCK_TR_ITEM_KRACKO: KARItemData(
         KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 917, _TR

@@ -116,7 +116,7 @@ The gateable categories are:
 - **City Trial box types** (Blue, Green, Red)
 - **Air Ride courses**
 - **Top Ride courses**
-- **Top Ride items.** Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are gated by the copy ability unlock instead.
+- **Top Ride items.** The four items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) accept either key: their own Top Ride item unlock, or the matching copy ability unlock (when copy abilities are also gated).
 - **Kirby colors** (every color other than Pink). Affects all three modes.
 
 Generation will choose one starting unlock item for the following categories. Each is picked at random and given to you for free before your run begins:
