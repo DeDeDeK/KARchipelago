@@ -21,7 +21,7 @@ Kirby Air Ride:
       from_pool: true
       force: silent
       percentage: 100
-    - item: "Unlock Ability: Bomb"
+    - item: "Unlock Copy Ability: Bomb"
       location: "City Trial: Get the Bomb ability from the Copy Chance Wheel!"
       from_pool: true
       force: silent
