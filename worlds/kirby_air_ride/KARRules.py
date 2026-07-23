@@ -1,8 +1,10 @@
 import typing
 
-from rule_builder.rules import CanReachLocation, Has, HasAll, HasAny, HasFromListUnique, Rule
+from rule_builder.rules import CanReachLocation, CanReachRegion, Has, HasAll, HasAny, HasFromListUnique, Rule
 
+from .KARData import GameMode
 from .KARItems import (
+    ITEM_TABLE,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_UNLOCK_ITEMS,
     KARItemName,
@@ -12,6 +14,7 @@ from .KARItems import (
 from .KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     TOP_RIDE_LOCATION_TABLE,
+    APLocation,
     ARLocation,
     CTLocation,
     TRLocation,
@@ -157,6 +160,27 @@ _ITEM_LOCATION_RULES: dict[str, str] = {
     CTLocation.USE_SENSOR_BOMBS_TO_KO_RIVALS_3X: KARItemName.UNLOCK_ITEM_SENSOR_BOMB,
     CTLocation.USE_GOLD_SPIKES_TO_KO_RIVALS_3X: KARItemName.UNLOCK_ITEM_GORDO,
 }
+
+# Item-dependent Archipelago checklist locations (when city_trial_items_gated actually holds keys).
+# The 8 foods the vanilla checklist leaves uncovered, plus the All Up counter.
+_AP_ITEM_LOCATION_RULES: dict[str, str] = {
+    APLocation.COLLECT_10_ALL_UPS: KARItemName.UNLOCK_ITEM_ALL_UP,
+    APLocation.EAT_3_ICE_CREAMS: KARItemName.UNLOCK_ITEM_ICE_CREAM,
+    APLocation.EAT_3_RICE_BALLS: KARItemName.UNLOCK_ITEM_RICE_BALL,
+    APLocation.EAT_3_CHICKENS: KARItemName.UNLOCK_ITEM_CHICKEN,
+    APLocation.EAT_3_CURRIES: KARItemName.UNLOCK_ITEM_CURRY,
+    APLocation.EAT_3_RAMENS: KARItemName.UNLOCK_ITEM_RAMEN,
+    APLocation.EAT_3_OMELETS: KARItemName.UNLOCK_ITEM_OMELET,
+    APLocation.EAT_3_HAMBURGERS: KARItemName.UNLOCK_ITEM_HAMBURGER,
+    APLocation.EAT_3_APPLES: KARItemName.UNLOCK_ITEM_APPLE,
+}
+
+# Machines that can be ridden in the City Trial city. Derived from source_modes rather than listed, so
+# a new machine is classified by the same field the item pool already uses. Free Star and Steer Star are
+# Top Ride control machines and drop out here.
+_CT_MACHINE_UNLOCKS: list[str] = sorted(
+    name for name in items_by_type[KARItemType.MACHINE_UNLOCK] if GameMode.CITYTRIAL in ITEM_TABLE[name].source_modes
+)
 
 # Item-count CT locations. The in-game pickup counter tallies every collected itemkind EXCEPT the three
 # box types, so a cell here just needs one counting type able to spawn -- gated together by
@@ -324,33 +348,49 @@ def set_rules(world: "KARWorld"):
         existing = location_rules.get(location_name)
         location_rules[location_name] = existing & rule if existing is not None else rule
 
-    # Entrance rules: stadium sub-region prerequisites (location-based chains)
-    if world.city_trial_enabled:
+    # Entrance rules: stadium sub-region prerequisites (region-based chains).
+    # Guarded on logic_modes, not city_trial_enabled: a goal-less City Trial that hosts an Archipelago
+    # box still has the tree, and that box must sit behind the same chain a CT player faces.
+    #
+    # These chain on REGIONS, not on the prerequisite locations, because a goal-less City Trial builds
+    # its regions but assigns none of its own locations - and CanReachLocation resolves via
+    # world.get_location(), which raises KeyError for a location that doesn't exist. add_entrance_rule
+    # has no try/except (unlike add_location_rule), so that is a hard generation crash, not a soft miss.
+    # Behaviour is unchanged for seeds that generate today: every prerequisite location is the sole
+    # gatekeeper of the region named here and carries no location-specific rule, so CanReachLocation(X)
+    # was already exactly CanReachRegion(X's region).
+    if GameMode.CITYTRIAL in world.logic_modes:
         add_entrance_rule(
             f"{KARRegion.STADIUM_DD_ALL} -> {KARRegion.STADIUM_DD3}",
-            CanReachLocation(CTLocation.STADIUM_DD2_KO_A_RIVAL_10X),
+            CanReachRegion(KARRegion.STADIUM_DD2),
         )
         add_entrance_rule(
             f"{KARRegion.STADIUM_DD_ALL} -> {KARRegion.STADIUM_DD4}",
-            CanReachLocation(CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5),
+            CanReachRegion(KARRegion.STADIUM_DD3),
         )
         add_entrance_rule(
             f"{KARRegion.STADIUM_DD_ALL} -> {KARRegion.STADIUM_DD5}",
-            CanReachLocation(CTLocation.STADIUM_DD4_KO_A_RIVAL_10X),
+            CanReachRegion(KARRegion.STADIUM_DD4),
         )
         add_entrance_rule(
             f"{KARRegion.CITY_TRIAL} -> {KARRegion.STADIUM_DR4}",
-            CanReachLocation(CTLocation.STADIUM_DR3_FINISH_00_27_00),
+            CanReachRegion(KARRegion.STADIUM_DR3),
         )
         add_entrance_rule(
             f"{KARRegion.STADIUM_KM_ALL} -> {KARRegion.STADIUM_KM2}",
-            CanReachLocation(CTLocation.STADIUM_KM1_KO_75_ENEMIES_BY_YOURSELF),
+            CanReachRegion(KARRegion.STADIUM_KM1),
         )
 
-    # Entrance rules: progressive stadiums (when enabled)
+    # Entrance rules: progressive stadiums (when the category actually holds keys)
     # Stadium gating OFF needs no entrance rules: the mod unlocks all 24 stadiums at connect, so every
     # one is open from the start. The DD/KM/DR chain prerequisites are unconditional and still apply.
-    if world.city_trial_enabled and world.options.city_trial_stadiums_gated:
+    #
+    # The guard is effective_gates, not `*_enabled and *_gated`: the question an entrance guard asks is
+    # "does this category hold keys", and a goal-less logic mode holds none. Asking the old question
+    # would leave an Archipelago box in a goal-less mode's tree with no entrance rule at all - a free
+    # check fill could hide progression behind. For every seed that generates today the two agree
+    # exactly; they differ only where the old expression had no defined answer.
+    if "city_trial_stadiums_gated" in world.effective_gates:
         for region in world.get_regions():
             if region.name in STADIUM_REGION_TO_UNLOCK and region.entrances:
                 unlock = STADIUM_REGION_TO_UNLOCK[region.name]
@@ -359,14 +399,14 @@ def set_rules(world: "KARWorld"):
                 unlocks = STADIUM_ALL_REGION_TO_UNLOCKS[region.name]
                 add_entrance_rule(region.entrances[0].name, HasAny(*unlocks))
 
-    # Entrance rules: AR course unlocks (when enabled)
-    if world.air_ride_enabled and world.options.air_ride_courses_gated:
+    # Entrance rules: AR course unlocks (when the category actually holds keys - see above)
+    if "air_ride_courses_gated" in world.effective_gates:
         for region in world.get_regions():
             if region.name in AR_COURSE_REGION_TO_UNLOCK and region.entrances:
                 add_entrance_rule(region.entrances[0].name, Has(AR_COURSE_REGION_TO_UNLOCK[region.name]))
 
-    # Entrance rules: TR course unlocks (when enabled)
-    if world.top_ride_enabled and world.options.top_ride_courses_gated:
+    # Entrance rules: TR course unlocks (when the category actually holds keys - see above)
+    if "top_ride_courses_gated" in world.effective_gates:
         for region in world.get_regions():
             if region.name in TR_COURSE_REGION_TO_UNLOCK and region.entrances:
                 add_entrance_rule(region.entrances[0].name, Has(TR_COURSE_REGION_TO_UNLOCK[region.name]))
@@ -598,6 +638,36 @@ def set_rules(world: "KARWorld"):
         for loc in _TR_ANY_ITEM_LOCATIONS:
             add_location_rule(loc, any_tr_item)
 
+    # Archipelago checklist item rules.
+    #
+    # Guarded on effective_gates, NOT on the raw *_gated options like the mode blocks above. Those
+    # blocks may read the raw option safely because add_location_rule skips a location that doesn't
+    # exist, and a goal-less mode assigns none of its own boxes. Archipelago boxes are different: they
+    # exist in every AP seed regardless of which modes have goals. Reading the raw option would gate an
+    # AP box on an unlock item that a goal-less mode never put in the pool, making it unreachable and
+    # failing the fill. effective_gates asks the right question - does this category hold keys.
+    #
+    # Each box's stadium / course requirement is inherited from its region's entrance rule, so only
+    # item-spawn dependencies appear here.
+    if "city_trial_items_gated" in world.effective_gates:
+        for loc, item in _AP_ITEM_LOCATION_RULES.items():
+            add_location_rule(loc, Has(item))
+
+    if "city_trial_patches_gated" in world.effective_gates:
+        add_location_rule(APLocation.GET_10_HP_PATCHES, Has(KARItemName.UNLOCK_PATCH_HP))
+
+    if "machines_gated" in world.effective_gates:
+        # Breaking the coral and leaving the map both need a machine to ride; any City Trial machine
+        # does. (Free Star and Steer Star are Top Ride control machines that never spawn in the city,
+        # so they are excluded via source_modes.)
+        any_ct_machine = HasAny(*_CT_MACHINE_UNLOCKS)
+        add_location_rule(APLocation.BREAK_ALL_CORAL, any_ct_machine)
+        add_location_rule(APLocation.GO_OUT_OF_BOUNDS, any_ct_machine)
+        add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_MACHINE_BULK_STAR))
+
+    if "colors_gated" in world.effective_gates:
+        add_location_rule(APLocation.SR1_FINISH_1ST_3X_AS_PURPLE, Has(KARItemName.UNLOCK_COLOR_PURPLE))
+
     # Single apply pass: write the composed rules out to the multiworld.
     for entrance_name, rule in entrance_rules.items():
         world.set_rule(world.get_entrance(entrance_name), rule)
@@ -609,10 +679,10 @@ def set_rules(world: "KARWorld"):
     # fill could strand an early item behind ~100 checks. The count rule excludes the cell itself (else
     # it would recurse). When it IS the goal it is excluded from the pool and its victory event carries
     # the equivalent rule. This rule is a raw callable, so it is applied directly here.
-    for enabled, mode_prefix, fill_100_location in (
-        (world.city_trial_enabled, KARRegion.CITY_TRIAL, CTLocation.FILL_IN_100_CHECKLIST_BLOCKS),
-        (world.air_ride_enabled, KARRegion.AIR_RIDE, ARLocation.FILL_IN_100_CHECKLIST_BLOCKS),
-        (world.top_ride_enabled, KARRegion.TOP_RIDE, TRLocation.FILL_IN_100_CHECKLIST_BLOCKS),
+    for enabled, mode, fill_100_location in (
+        (world.city_trial_enabled, GameMode.CITYTRIAL, CTLocation.FILL_IN_100_CHECKLIST_BLOCKS),
+        (world.air_ride_enabled, GameMode.AIRRIDE, ARLocation.FILL_IN_100_CHECKLIST_BLOCKS),
+        (world.top_ride_enabled, GameMode.TOPRIDE, TRLocation.FILL_IN_100_CHECKLIST_BLOCKS),
     ):
         if not enabled:
             continue
@@ -622,5 +692,5 @@ def set_rules(world: "KARWorld"):
             continue  # excluded because it is this mode's goal, or otherwise absent
         world.set_rule(
             fill_100,
-            create_n_blocks_rule(world, mode_prefix, 100, exclude_location_name=fill_100_location),
+            create_n_blocks_rule(world, mode, 100, exclude_location_name=fill_100_location),
         )

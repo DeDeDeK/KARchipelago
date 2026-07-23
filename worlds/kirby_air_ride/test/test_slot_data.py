@@ -34,6 +34,9 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "top_ride_goal",
         "top_ride_checklist_amount",
         "top_ride_goal_locations",
+        "archipelago_goal",
+        "archipelago_checklist_amount",
+        "archipelago_goal_locations",
         # City Trial specifics
         "city_trial_patch_cap_min",
         "city_trial_patch_cap_max",
@@ -92,11 +95,18 @@ class TestSlotDataDefaults(KARTestBase):
             "city_trial_goal",
             "air_ride_goal",
             "top_ride_goal",
+            "archipelago_goal",
+            "archipelago_checklist_amount",
         ):
             with self.subTest(key=int_key):
                 self.assertIsInstance(data[int_key], int, f"{int_key} should be int-like")
         # LocationSet fields serialize as iterable of strings.
-        for locset_key in ("city_trial_goal_locations", "air_ride_goal_locations", "top_ride_goal_locations"):
+        for locset_key in (
+            "city_trial_goal_locations",
+            "air_ride_goal_locations",
+            "top_ride_goal_locations",
+            "archipelago_goal_locations",
+        ):
             with self.subTest(key=locset_key):
                 self.assertIsInstance(list(data[locset_key]), list)
 
