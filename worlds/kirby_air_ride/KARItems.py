@@ -90,10 +90,11 @@ class KARItemGroup(StrEnum):
 class KARItemName(StrEnum):
     """Canonical item names for Kirby Air Ride. Single source of truth for all item name strings."""
 
-    # Standalone Items (1-12)
+    # Standalone Items (1-13)
     CHECKBOX_FILLER_AIR_RIDE = "Checkbox Filler (Air Ride)"
     CHECKBOX_FILLER_TOP_RIDE = "Checkbox Filler (Top Ride)"
     CHECKBOX_FILLER_CITY_TRIAL = "Checkbox Filler (City Trial)"
+    CHECKBOX_FILLER_ARCHIPELAGO = "Checkbox Filler (Archipelago)"
     PATCH_CAP_INCREASE = "Patch Cap Increase"
     ONE_HP_TRAP = "1 HP Trap"
     ALL_UP = "All Up"
@@ -570,6 +571,7 @@ class KARItemName(StrEnum):
     CITY_TRIAL_VICTORY = "City Trial Victory"
     AIR_RIDE_VICTORY = "Air Ride Victory"
     TOP_RIDE_VICTORY = "Top Ride Victory"
+    ARCHIPELAGO_VICTORY = "Archipelago Victory"
 
 
 class KARItemData(NamedTuple):
@@ -593,9 +595,14 @@ class KARItemData(NamedTuple):
 _AR = frozenset({GameMode.AIRRIDE})
 _TR = frozenset({GameMode.TOPRIDE})
 _CT = frozenset({GameMode.CITYTRIAL})
+_AP = frozenset({GameMode.ARCHIPELAGO})
 _AR_CT = frozenset({GameMode.AIRRIDE, GameMode.CITYTRIAL})
 _CT_TR = frozenset({GameMode.CITYTRIAL, GameMode.TOPRIDE})
-_ALL_MODES = frozenset({GameMode.AIRRIDE, GameMode.TOPRIDE, GameMode.CITYTRIAL})
+# Every mode, including the Archipelago checklist. Used for genuinely game-wide items (copy abilities,
+# Kirby colors, the always-available Big/Small Kirby cosmetic filler): they apply whenever the player
+# is in the game, so an Archipelago-only world must still keep them (notably the cosmetic filler, which
+# guarantees a non-empty filler pool - see _validate_allowed_items_filler).
+_ALL_MODES = frozenset({GameMode.AIRRIDE, GameMode.TOPRIDE, GameMode.CITYTRIAL, GameMode.ARCHIPELAGO})
 
 
 class KARItem(Item):
@@ -622,21 +629,25 @@ class KARItem(Item):
 # Dolphin memory). Pool quantities are determined by options and pool-building logic.
 
 ITEM_TABLE: dict[str, KARItemData] = {
-    # Standalone Items (1-12)
+    # Standalone Items (1-13). The 4 checkbox fillers lead, one per checklist mode, in
+    # checklist-mode row order.
     KARItemName.CHECKBOX_FILLER_AIR_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 1, _AR),
     KARItemName.CHECKBOX_FILLER_TOP_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 2, _TR),
     KARItemName.CHECKBOX_FILLER_CITY_TRIAL: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 3, _CT),
-    KARItemName.PATCH_CAP_INCREASE: KARItemData(
-        KARItemType.PATCH_CAP_INCREASE, ItemClassification.progression_deprioritized_skip_balancing, 4, _CT
+    KARItemName.CHECKBOX_FILLER_ARCHIPELAGO: KARItemData(
+        KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 4, _AP
     ),
-    KARItemName.ONE_HP_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 5, _AR_CT),
-    KARItemName.ALL_UP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 6, _AR_CT),
-    KARItemName.PERMANENT_ALL_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 7, _CT),
-    KARItemName.ALL_DOWN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 8, _AR_CT),
-    KARItemName.GIVE_DRAGOON: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 9, _CT),
-    KARItemName.GIVE_HYDRA: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 10, _CT),
-    KARItemName.SPAWN_RATE_UP: KARItemData(KARItemType.SPAWN_RATE, ItemClassification.useful, 11, _CT_TR),
-    KARItemName.DROP_PATCHES_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 12, _CT),
+    KARItemName.PATCH_CAP_INCREASE: KARItemData(
+        KARItemType.PATCH_CAP_INCREASE, ItemClassification.progression_deprioritized_skip_balancing, 5, _CT
+    ),
+    KARItemName.ONE_HP_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 6, _AR_CT),
+    KARItemName.ALL_UP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 7, _AR_CT),
+    KARItemName.PERMANENT_ALL_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 8, _CT),
+    KARItemName.ALL_DOWN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 9, _AR_CT),
+    KARItemName.GIVE_DRAGOON: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 10, _CT),
+    KARItemName.GIVE_HYDRA: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 11, _CT),
+    KARItemName.SPAWN_RATE_UP: KARItemData(KARItemType.SPAWN_RATE, ItemClassification.useful, 12, _CT_TR),
+    KARItemName.DROP_PATCHES_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 13, _CT),
     # Permanent +1 Patches (100-108)
     KARItemName.PERMANENT_WEIGHT_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 100, _CT),
     KARItemName.PERMANENT_BOOST_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 101, _CT),
@@ -1642,6 +1653,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.CITY_TRIAL_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.AIR_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.TOP_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
+    KARItemName.ARCHIPELAGO_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
 }
 
 

@@ -33,11 +33,12 @@ from worlds.kirby_air_ride.KARItems import (
 )
 from worlds.kirby_air_ride.KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
+    AP_CHECKLIST_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     NATIVE_REWARD_TO_LOCATION,
     TOP_RIDE_LOCATION_TABLE,
 )
-from worlds.kirby_air_ride.KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
+from worlds.kirby_air_ride.KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 
 
 class HookError(AssertionError):
@@ -91,8 +92,9 @@ class KARHook:
         ct_on = opts.city_trial_goal.value != CityTrialGoal.option_none
         ar_on = opts.air_ride_goal.value != AirRideGoal.option_none
         tr_on = opts.top_ride_goal.value != TopRideGoal.option_none
+        ap_on = opts.archipelago_goal.value != ArchipelagoGoal.option_none
 
-        if not any((ct_on, ar_on, tr_on)):
+        if not any((ct_on, ar_on, tr_on, ap_on)):
             raise HookError(f"{tag} Generated with all modes disabled, should have OptionError'd in generate_early")
 
         # Items in our slot, partitioned by where they live.
@@ -124,7 +126,7 @@ class KARHook:
             owned_by_id[id(it)] = it
         owned_counts = Counter(it.name for it in owned_by_id.values())
 
-        self._check_item_counts(tag, opts, pool_counts, ct_on, ar_on, tr_on)
+        self._check_item_counts(tag, opts, pool_counts, ct_on, ar_on, tr_on, ap_on)
         self._check_generic_filler_present(tag, world)
         self._check_unlock_classifications(tag, pool_items)
         self._check_excluded_items_absent(tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on)
@@ -133,13 +135,13 @@ class KARHook:
         self._check_pinned_native_rewards(tag, mw, player, world, pool_counts)
         self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
         self._check_start_inventory(tag, opts, pool_counts, precollected_counts)
-        self._check_checklist_list_goal_locations(tag, mw, player, opts, ct_on, ar_on, tr_on)
+        self._check_checklist_list_goal_locations(tag, mw, player, opts, ct_on, ar_on, tr_on, ap_on)
         self._check_non_local_items(tag, opts, player, items_at_our_locations)
         self._check_local_items(tag, opts, player, items_we_own)
         self._check_priority_locations(tag, opts, our_locations)
         self._check_exclude_locations(tag, opts, our_locations)
 
-    def _check_item_counts(self, tag, opts, pool_counts, ct_on, ar_on, tr_on):
+    def _check_item_counts(self, tag, opts, pool_counts, ct_on, ar_on, tr_on, ap_on):
         # PATCH_CAP_INCREASE = max - min when CT enabled, else 0
         if ct_on:
             expected = max(0, opts.city_trial_patch_cap_max.value - opts.city_trial_patch_cap_min.value)
@@ -173,6 +175,7 @@ class KARHook:
             (ct_on, KARItemName.CHECKBOX_FILLER_CITY_TRIAL, opts.city_trial_checkbox_fillers.value),
             (ar_on, KARItemName.CHECKBOX_FILLER_AIR_RIDE, opts.air_ride_checkbox_fillers.value),
             (tr_on, KARItemName.CHECKBOX_FILLER_TOP_RIDE, opts.top_ride_checkbox_fillers.value),
+            (ap_on, KARItemName.CHECKBOX_FILLER_ARCHIPELAGO, opts.archipelago_checkbox_fillers.value),
         ]:
             expected = amount if enabled else 0
             actual = pool_counts.get(str(name), 0)
@@ -431,11 +434,12 @@ class KARHook:
                     f"itempool; it should be deduped out in _build_item_pools"
                 )
 
-    def _check_checklist_list_goal_locations(self, tag, mw, player, opts, ct_on, ar_on, tr_on):
+    def _check_checklist_list_goal_locations(self, tag, mw, player, opts, ct_on, ar_on, tr_on, ap_on):
         for enabled, goal_opt, locs_opt, table, label in [
             (ct_on, opts.city_trial_goal, opts.city_trial_goal_locations, CITY_TRIAL_LOCATION_TABLE, "City Trial"),
             (ar_on, opts.air_ride_goal, opts.air_ride_goal_locations, AIR_RIDE_LOCATION_TABLE, "Air Ride"),
             (tr_on, opts.top_ride_goal, opts.top_ride_goal_locations, TOP_RIDE_LOCATION_TABLE, "Top Ride"),
+            (ap_on, opts.archipelago_goal, opts.archipelago_goal_locations, AP_CHECKLIST_LOCATION_TABLE, "Archipelago"),
         ]:
             if not enabled or goal_opt.value != goal_opt.option_checklist_list:
                 continue
@@ -513,6 +517,8 @@ class KARHook:
             expected.append(str(KARItemName.AIR_RIDE_VICTORY))
         if world.top_ride_enabled:
             expected.append(str(KARItemName.TOP_RIDE_VICTORY))
+        if world.archipelago_enabled:
+            expected.append(str(KARItemName.ARCHIPELAGO_VICTORY))
 
         placed_event_items = {
             loc.item.name for loc in mw.get_locations(player) if loc.address is None and loc.item is not None

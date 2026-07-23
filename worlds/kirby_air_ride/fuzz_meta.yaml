@@ -19,6 +19,12 @@
 #     ~1% rejection rate is cheaper than that lost coverage.
 #   - checklist_list with wrong-mode locations. The fuzzer doesn't randomize
 #     LocationSet contents, so wrong-mode names can't appear in random YAMLs.
+#   - Archipelago 100_checklist_blocks. The AP checklist holds fewer than 100
+#     boxes, so that target always OptionErrors; the constraint language can't
+#     restrict a rolled option's own value, so it lands in "ignored" like the
+#     cases above. n_checklist_blocks needs no such pruning:
+#     ArchipelagoChecklistAmount's range_end tracks the real table size, so every
+#     rolled target is satisfiable.
 
 Kirby Air Ride:
   fuzz_constraints:
@@ -39,6 +45,12 @@ Kirby Air Ride:
       if_value: "n_checklist_blocks"
       then:
         top_ride_checkbox_fillers: 0
+    # The AP target itself needs no pin - every in-range value fits the table. Only
+    # the fillers do, since a rolled target of 1 would reject any nonzero count.
+    - option: archipelago_goal
+      if_value: "n_checklist_blocks"
+      then:
+        archipelago_checkbox_fillers: 0
 
     # checklist_list goal requires at least one location in *_goal_locations.
     # The fuzzer doesn't randomize LocationSet contents, so a random YAML that
@@ -60,3 +72,8 @@ Kirby Air Ride:
       then_include:
         top_ride_goal_locations:
           - "Top Ride: Take 1st place while holding the Hammer!"
+    - option: archipelago_goal
+      if_value: "checklist_list"
+      then_include:
+        archipelago_goal_locations:
+          - "Archipelago: Receive an item"

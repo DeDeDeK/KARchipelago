@@ -22,6 +22,7 @@ from .KARItems import (
     ITEM_TABLE,
     STADIUM_UNLOCK_ITEMS,
     TRAP_CATEGORIES,
+    GatingCategory,
     KARItem,
     KARItemData,
     KARItemName,
@@ -32,6 +33,8 @@ from .KARItems import (
 from .KARLocations import (
     AIR_RIDE_GOAL_TO_LOCATION,
     AIR_RIDE_LOCATION_TABLE,
+    AP_CHECKLIST_LOCATION_TABLE,
+    ARCHIPELAGO_GOAL_TO_LOCATION,
     CITY_TRIAL_GOAL_TO_LOCATION,
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_TABLE,
@@ -43,12 +46,13 @@ from .KARLocations import (
 )
 from .KAROptions import (
     AirRideGoal,
+    ArchipelagoGoal,
     CityTrialGoal,
     KAROptions,
     TopRideGoal,
     kar_option_groups,
 )
-from .KARRegions import create_regions
+from .KARRegions import REGION_TO_MODE, create_regions
 from .KARRules import set_rules
 
 
@@ -186,6 +190,15 @@ class KARWorld(World):
         self.top_ride_enabled: bool = False
         self.top_ride_default_locations: set[str] = set()
         self.top_ride_excluded_locations: set[str] = set()
+        self.archipelago_enabled: bool = False
+        self.archipelago_default_locations: set[str] = set()
+        self.archipelago_excluded_locations: set[str] = set()
+        # The gating categories that really hold keys this seed (option names). Computed in
+        # generate_early; see _compute_effective_gates for why this differs from the raw YAML toggles.
+        self.effective_gates: set[str] = set()
+        # The modes whose region trees are built. A superset of the modes with a goal; see
+        # _compute_logic_modes.
+        self.logic_modes: set[GameMode] = set()
         self.useful_pool: set[str] = set()
         self.filler_pool: set[str] = set()
         self.reward_pool: list[str] = []
@@ -282,6 +295,12 @@ class KARWorld(World):
             ],
         )
 
+        # The Archipelago checklist has no progression sub-flags, so every AP location is DEFAULT.
+        self.archipelago_default_locations, self.archipelago_excluded_locations = self._categorize_locations(
+            AP_CHECKLIST_LOCATION_TABLE,
+            [],
+        )
+
     def _determine_goal_locations_to_exclude(self) -> None:
         """
         Determine which goal locations should be excluded from the multiworld.
@@ -292,6 +311,7 @@ class KARWorld(World):
             (self.city_trial_enabled, self.options.city_trial_goal, CITY_TRIAL_GOAL_TO_LOCATION),
             (self.air_ride_enabled, self.options.air_ride_goal, AIR_RIDE_GOAL_TO_LOCATION),
             (self.top_ride_enabled, self.options.top_ride_goal, TOP_RIDE_GOAL_TO_LOCATION),
+            (self.archipelago_enabled, self.options.archipelago_goal, ARCHIPELAGO_GOAL_TO_LOCATION),
         ]:
             if not enabled:
                 continue
@@ -373,6 +393,69 @@ class KARWorld(World):
         if self.options.colors_gated:
             self.color_starter_choice = self._pick_random_starter(items_by_type[KARItemType.COLOR_UNLOCK])
 
+    def _compute_logic_modes(self) -> set[GameMode]:
+        """
+        The modes whose region trees get built: every mode with a goal, plus every mode an Archipelago
+        checklist box names, when the AP checklist is on.
+
+        An AP box lives in the region where its activity happens - a "win a race on Magma Flows" box
+        sits in AR_MAGMA_FLOWS - so it inherits that region's entrance chain instead of hand-copying it
+        as Has(...) rules that drift. That only works if the tree exists, which is what pulls a goal-less
+        mode into logic here.
+
+        Reads the *static* REGION_TO_MODE table, never the built regions and never a filtered location
+        set: logic_modes is what decides which regions get built, so inspecting them would be circular.
+
+        A mode pulled in this way has a tree but no goal, so it contributes no unlock items, none of its
+        categories land in effective_gates, set_rules adds no entrance guard for them and fill_slot_data
+        ships its gates as 0. The tree is present, reachable and free - which is exactly what an AP box
+        in a City Trial stadium needs, and what the upstream all-regions-reachable test requires.
+
+        The cost to accept: an AP+TR seed still builds the CT and AR trees. They are empty and ungated,
+        and cost nothing but region count.
+        """
+        modes = {
+            mode
+            for mode, enabled in (
+                (GameMode.CITYTRIAL, self.city_trial_enabled),
+                (GameMode.AIRRIDE, self.air_ride_enabled),
+                (GameMode.TOPRIDE, self.top_ride_enabled),
+                (GameMode.ARCHIPELAGO, self.archipelago_enabled),
+            )
+            if enabled
+        }
+        if self.archipelago_enabled:
+            modes |= {REGION_TO_MODE[data.region] for data in AP_CHECKLIST_LOCATION_TABLE.values()}
+        return modes
+
+    def _category_holds_keys(self, cat: GatingCategory) -> bool:
+        """
+        Whether a gating category actually holds unlock items in this seed: its gate is on AND some mode
+        that gives its items meaning has a goal.
+
+        An empty required_modes means mode-agnostic (colors) - always keyed, never mode-excluded. The
+        mode test must read `not cat.required_modes or any(...)`: an intersection against the enabled
+        modes would treat "no required modes" as "no match" and silently drop colors from every seed.
+
+        The mode test uses the *_enabled flags (modes with a goal), not logic_modes - a goal-less mode
+        contributes no unlock items, which is what makes it a free side mode.
+        """
+        if not getattr(self.options, cat.option):
+            return False
+        return not cat.required_modes or any(getattr(self, mode) for mode in cat.required_modes)
+
+    def _compute_effective_gates(self) -> set[str]:
+        """
+        The gating categories that really hold keys this seed, by option name.
+
+        A gate is only meaningful when the seed contains its unlock items. The YAML toggle alone does not
+        establish that: a category whose modes all lack a goal has its unlocks dropped from the pool, so
+        shipping its toggle to the mod would lock that content behind keys that were never minted. This
+        set is the single answer three consumers share - _build_item_pools (where it is the definition of
+        the exclusion), the entrance-rule guards in set_rules, and fill_slot_data.
+        """
+        return {cat.option for cat in GATING_CATEGORIES if self._category_holds_keys(cat)}
+
     def _validate_options(self) -> None:
         """
         Validate that option combinations are coherent.
@@ -402,6 +485,14 @@ class KARWorld(World):
                 self.options.top_ride_checkbox_fillers,
                 "Top Ride",
                 TOP_RIDE_LOCATION_TABLE,
+            ),
+            (
+                self.archipelago_enabled,
+                self.options.archipelago_goal,
+                self.options.archipelago_checklist_amount,
+                self.options.archipelago_checkbox_fillers,
+                "Archipelago",
+                AP_CHECKLIST_LOCATION_TABLE,
             ),
         ]:
             if not enabled:
@@ -452,6 +543,13 @@ class KARWorld(World):
                 "Top Ride",
                 TOP_RIDE_LOCATION_TABLE,
             ),
+            (
+                self.archipelago_enabled,
+                self.options.archipelago_goal,
+                self.options.archipelago_goal_locations,
+                "Archipelago",
+                AP_CHECKLIST_LOCATION_TABLE,
+            ),
         ]:
             if not enabled or goal_option.value != goal_option.option_checklist_list:
                 continue
@@ -485,6 +583,8 @@ class KARWorld(World):
                     return self.options.air_ride_checkbox_fillers.value
                 case KARItemName.CHECKBOX_FILLER_TOP_RIDE:
                     return self.options.top_ride_checkbox_fillers.value
+                case KARItemName.CHECKBOX_FILLER_ARCHIPELAGO:
+                    return self.options.archipelago_checkbox_fillers.value
             return 1
 
         if item_data.type == KARItemType.PATCH_CAP_INCREASE:
@@ -504,15 +604,14 @@ class KARWorld(World):
         (progression, useful, filler, trap) for placement during create_items().
         """
 
-        # Gating categories (GATING_CATEGORIES, the single source of truth): exclude a category's unlock
-        # items when its gate is OFF or no relevant mode is enabled. Overlapping checklist rewards are
-        # always excluded too - the UNLOCK items deliver that content when gated ON, and the mod
-        # pre-unlocks the whole category at connect when OFF, so the reward gates nothing either way.
+        # Gating categories (GATING_CATEGORIES, the single source of truth): a category not in
+        # effective_gates has its gate OFF or no relevant mode enabled, so its unlock items are excluded.
+        # This is the definition of effective_gates, not a separate reading of it. Overlapping checklist
+        # rewards are always excluded too - the UNLOCK items deliver that content when gated ON, and the
+        # mod pre-unlocks the whole category at connect when OFF, so the reward gates nothing either way.
         excluded: set[str] = set()
         for cat in GATING_CATEGORIES:
-            gated_off = not getattr(self.options, cat.option)
-            no_mode = cat.required_modes and not any(getattr(self, mode) for mode in cat.required_modes)
-            if gated_off or no_mode:
+            if cat.option not in self.effective_gates:
                 excluded |= items_by_type[cat.item_type]
             if cat.overlapping_rewards:
                 excluded |= set(cat.overlapping_rewards)
@@ -564,6 +663,8 @@ class KARWorld(World):
             excluded.add(KARItemName.CHECKBOX_FILLER_AIR_RIDE)
         if not self.top_ride_enabled or self.options.top_ride_checkbox_fillers.value == 0:
             excluded.add(KARItemName.CHECKBOX_FILLER_TOP_RIDE)
+        if not self.archipelago_enabled or self.options.archipelago_checkbox_fillers.value == 0:
+            excluded.add(KARItemName.CHECKBOX_FILLER_ARCHIPELAGO)
 
         # Backstop: any item whose source_modes is non-empty but doesn't intersect with the
         # enabled modes has no in-game effect in the modes that ARE enabled. Drop it from the pool.
@@ -574,6 +675,8 @@ class KARWorld(World):
             enabled_modes.add(GameMode.AIRRIDE)
         if self.top_ride_enabled:
             enabled_modes.add(GameMode.TOPRIDE)
+        if self.archipelago_enabled:
+            enabled_modes.add(GameMode.ARCHIPELAGO)
         for name, data in ITEM_TABLE.items():
             if data.source_modes and not (data.source_modes & enabled_modes):
                 excluded.add(name)
@@ -656,9 +759,16 @@ class KARWorld(World):
         self.city_trial_enabled = self.options.city_trial_goal.value != CityTrialGoal.option_none
         self.air_ride_enabled = self.options.air_ride_goal.value != AirRideGoal.option_none
         self.top_ride_enabled = self.options.top_ride_goal.value != TopRideGoal.option_none
+        self.archipelago_enabled = self.options.archipelago_goal.value != ArchipelagoGoal.option_none
 
-        if not any((self.city_trial_enabled, self.air_ride_enabled, self.top_ride_enabled)):
+        if not any((self.city_trial_enabled, self.air_ride_enabled, self.top_ride_enabled, self.archipelago_enabled)):
             raise OptionError("No modes enabled. You need to have at least one goal in a mode!")
+
+        # Both depend only on the *_enabled flags above. effective_gates must precede _build_item_pools
+        # (which it defines) and set_rules (whose entrance guards read it); logic_modes must precede
+        # create_regions, which it drives.
+        self.effective_gates = self._compute_effective_gates()
+        self.logic_modes = self._compute_logic_modes()
 
         self._determine_goal_locations_to_exclude()
         self._determine_locations_progress_type()
@@ -700,6 +810,7 @@ class KARWorld(World):
             (self.city_trial_enabled, self.city_trial_default_locations, self.city_trial_excluded_locations),
             (self.air_ride_enabled, self.air_ride_default_locations, self.air_ride_excluded_locations),
             (self.top_ride_enabled, self.top_ride_default_locations, self.top_ride_excluded_locations),
+            (self.archipelago_enabled, self.archipelago_default_locations, self.archipelago_excluded_locations),
         ]:
             if not enabled:
                 continue
@@ -813,6 +924,7 @@ class KARWorld(World):
             (self.city_trial_enabled, self.options.city_trial_goal, self.options.city_trial_goal_locations),
             (self.air_ride_enabled, self.options.air_ride_goal, self.options.air_ride_goal_locations),
             (self.top_ride_enabled, self.options.top_ride_goal, self.options.top_ride_goal_locations),
+            (self.archipelago_enabled, self.options.archipelago_goal, self.options.archipelago_goal_locations),
         ]:
             if not enabled or goal_option.value != goal_option.option_checklist_list:
                 continue
@@ -940,6 +1052,8 @@ class KARWorld(World):
             excluded_locations |= self.air_ride_excluded_locations
         if self.top_ride_enabled:
             excluded_locations |= self.top_ride_excluded_locations
+        if self.archipelago_enabled:
+            excluded_locations |= self.archipelago_excluded_locations
 
         # Remove goal locations from excluded_locations since they don't actually exist as real locations
         excluded_locations -= self.goal_locations_to_exclude
@@ -1038,8 +1152,10 @@ class KARWorld(World):
         consumer reads (`trap_chance`, `spawn_rate_max`) are deliberately omitted - they
         only size item pools at generation time. `spawn_rate_min` ships because it is the
         runtime floor the mod reads.
+
+        Every gating category ships its *effective* state rather than the raw YAML toggle; see below.
         """
-        return dict(
+        slot_data = dict(
             self.options.as_dict(
                 "death_link",
                 "energy_link",
@@ -1054,6 +1170,9 @@ class KARWorld(World):
                 "top_ride_goal",
                 "top_ride_checklist_amount",
                 "top_ride_goal_locations",
+                "archipelago_goal",
+                "archipelago_checklist_amount",
+                "archipelago_goal_locations",
                 "city_trial_patch_cap_min",
                 "city_trial_patch_cap_max",
                 "city_trial_stadiums_gated",
@@ -1072,3 +1191,13 @@ class KARWorld(World):
                 "checklist_rewards_gated",
             )
         )
+
+        # Ship each gating category's effective state, not the player's raw toggle. The mod applies gate
+        # flags goal-independently, so a category whose keys never entered the pool (none of its modes
+        # has a goal) would otherwise ship locked with nothing able to unlock it - permanently locking
+        # that content. An AR-only seed shipped City Trial's events, patches, boxes and stadiums locked
+        # with zero keys before this. checklist_rewards_gated is not a gating category and ships raw.
+        for cat in GATING_CATEGORIES:
+            slot_data[cat.option] = int(cat.option in self.effective_gates)
+
+        return slot_data

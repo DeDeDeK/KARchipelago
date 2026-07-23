@@ -299,6 +299,7 @@ class KARContext(CommonContext):
             ("City Trial", "city_trial_goal", "city_trial_checklist_amount", "city_trial_goal_locations"),
             ("Air Ride", "air_ride_goal", "air_ride_checklist_amount", "air_ride_goal_locations"),
             ("Top Ride", "top_ride_goal", "top_ride_checklist_amount", "top_ride_goal_locations"),
+            ("Archipelago", "archipelago_goal", "archipelago_checklist_amount", "archipelago_goal_locations"),
         ]:
             goal_val = GoalKind(int(sd.get(goal_key, GoalKind.NONE)))
             if goal_val != GoalKind.NONE:
@@ -535,10 +536,12 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_GOAL_AIRRIDE), int(sd.get("air_ride_goal", 4)))
         d.write_u32(a(MemoryAddress.OPTION_GOAL_TOPRIDE), int(sd.get("top_ride_goal", 4)))
         d.write_u32(a(MemoryAddress.OPTION_GOAL_CITYTRIAL), int(sd.get("city_trial_goal", 0)))
+        d.write_u32(a(MemoryAddress.OPTION_GOAL_ARCHIPELAGO), int(sd.get("archipelago_goal", 4)))
 
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_AIRRIDE), int(sd.get("air_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd.get("city_trial_checklist_amount", 60)))
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 60)))
 
         d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MIN), int(sd.get("city_trial_patch_cap_min", 18)))
         d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MAX), int(sd.get("city_trial_patch_cap_max", 18)))
@@ -549,6 +552,7 @@ class KARContext(CommonContext):
             GameMode.AIRRIDE: "air_ride_goal_locations",
             GameMode.TOPRIDE: "top_ride_goal_locations",
             GameMode.CITYTRIAL: "city_trial_goal_locations",
+            GameMode.ARCHIPELAGO: "archipelago_goal_locations",
         }
         for mode, addr in OPTION_GOAL_CHECKS_PER_MODE.items():
             self._write_goal_checks_bitmask(mode, sd.get(goal_loc_keys[mode], []), a(addr))

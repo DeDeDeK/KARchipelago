@@ -2,11 +2,21 @@ from enum import IntEnum
 
 
 class GameMode(IntEnum):
-    """Mirrors the mod's GameMode enum. Indexes per-mode arrays (locations, goal checks)."""
+    """Checklist modes the client tracks. 0-2 mirror the mod's GameMode enum; ARCHIPELAGO is the
+    synthetic 4th "Archipelago checklist" mode.
+
+    These values are checklist-mode ROW indices, which is what every per-mode array on the wire is
+    indexed by (goal, checklist_amount, goal_checks, sent_checks, client_backfill) and what the mod
+    stores a reward placement's target as. The AP tab's *runtime* index in the game is assigned
+    dynamically by the custom_checklist framework and may be higher; the mod maps it back to this row.
+
+    The exception is the reward-placement array (LOCATIONS_*), which stays 3 wide: the AP checklist
+    awards no native rewards of its own."""
 
     AIRRIDE = 0
     TOPRIDE = 1
     CITYTRIAL = 2
+    ARCHIPELAGO = 3
 
 
 class GoalKind(IntEnum):
@@ -82,83 +92,90 @@ class MemoryAddress(IntEnum):
     OPTION_GOAL_AIRRIDE = 0x040  # u32
     OPTION_GOAL_TOPRIDE = 0x044  # u32
     OPTION_GOAL_CITYTRIAL = 0x048  # u32
+    OPTION_GOAL_ARCHIPELAGO = 0x04C  # u32
     # N for GOAL_N_CHECKLIST, per mode.
-    OPTION_CHECKLIST_AMOUNT_AIRRIDE = 0x04C  # u32, 1-120
-    OPTION_CHECKLIST_AMOUNT_TOPRIDE = 0x050  # u32, 1-120
-    OPTION_CHECKLIST_AMOUNT_CITYTRIAL = 0x054  # u32, 1-120
-    OPTION_CT_PATCH_CAP_MIN = 0x058  # u32, 1-30 - per-stat cap the player starts at
-    OPTION_CT_PATCH_CAP_MAX = 0x05C  # u32, 1-30 - per-stat cap ceiling / Max Stats goal threshold
+    OPTION_CHECKLIST_AMOUNT_AIRRIDE = 0x050  # u32, 1-120
+    OPTION_CHECKLIST_AMOUNT_TOPRIDE = 0x054  # u32, 1-120
+    OPTION_CHECKLIST_AMOUNT_CITYTRIAL = 0x058  # u32, 1-120
+    OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO = 0x05C  # u32, 1-120
+    OPTION_CT_PATCH_CAP_MIN = 0x060  # u32, 1-30 - per-stat cap the player starts at
+    OPTION_CT_PATCH_CAP_MAX = 0x064  # u32, 1-30 - per-stat cap ceiling / Max Stats goal threshold
     # Spawn rate floor (percent). Applies to CT + TR items; AR has none to scale. 100 = vanilla, 300 =
     # 3x (mod hard cap). World floors it at 10; sub-100 values suppress spawns below vanilla and must be
     # honored (do not clamp to 100). Each Spawn Rate Up item adds +10% on top.
-    OPTION_SPAWN_RATE_MIN = 0x060  # u32, 10-100
+    OPTION_SPAWN_RATE_MIN = 0x068  # u32, 10-100
     # 4 bytes of padding here (struct contains u64; next field needs 8-byte alignment).
 
     # Required checkboxes for GOAL_CHECKLIST_LIST, per mode. 2 x u64 (128 bits); bit (k%64) of word
     # (k/64) for clear_kind k. Client writes big-endian u64s; zero-fill modes not using CHECKLIST_LIST.
-    OPTION_GOAL_CHECKS_AIRRIDE = 0x068  # u64[2], 16 bytes
-    OPTION_GOAL_CHECKS_TOPRIDE = 0x078  # u64[2], 16 bytes
-    OPTION_GOAL_CHECKS_CITYTRIAL = 0x088  # u64[2], 16 bytes
+    OPTION_GOAL_CHECKS_AIRRIDE = 0x070  # u64[2], 16 bytes
+    OPTION_GOAL_CHECKS_TOPRIDE = 0x080  # u64[2], 16 bytes
+    OPTION_GOAL_CHECKS_CITYTRIAL = 0x090  # u64[2], 16 bytes
+    OPTION_GOAL_CHECKS_ARCHIPELAGO = 0x0A0  # u64[2], 16 bytes
 
     # Per-category access gating toggles. 1 = gated (players unlock via AP items). 0 = ungated (mod
     # pre-fills that unlock mask all-1s at connect; AP world ships no unlock items for the category).
-    OPTION_MACHINE_GATING_ENABLED = 0x098  # u32, 0 or 1
-    OPTION_ABILITY_GATING_ENABLED = 0x09C  # u32, 0 or 1
-    OPTION_EVENT_GATING_ENABLED = 0x0A0  # u32, 0 or 1
-    OPTION_PATCH_GATING_ENABLED = 0x0A4  # u32, 0 or 1
-    OPTION_ITEM_GATING_ENABLED = 0x0A8  # u32, 0 or 1
-    OPTION_BOX_GATING_ENABLED = 0x0AC  # u32, 0 or 1
-    OPTION_AIRRIDE_STAGE_GATING_ENABLED = 0x0B0  # u32, 0 or 1
-    OPTION_TOPRIDE_STAGE_GATING_ENABLED = 0x0B4  # u32, 0 or 1
-    OPTION_TOPRIDE_ITEM_GATING_ENABLED = 0x0B8  # u32, 0 or 1
-    OPTION_COLOR_GATING_ENABLED = 0x0BC  # u32, 0 or 1
+    OPTION_MACHINE_GATING_ENABLED = 0x0B0  # u32, 0 or 1
+    OPTION_ABILITY_GATING_ENABLED = 0x0B4  # u32, 0 or 1
+    OPTION_EVENT_GATING_ENABLED = 0x0B8  # u32, 0 or 1
+    OPTION_PATCH_GATING_ENABLED = 0x0BC  # u32, 0 or 1
+    OPTION_ITEM_GATING_ENABLED = 0x0C0  # u32, 0 or 1
+    OPTION_BOX_GATING_ENABLED = 0x0C4  # u32, 0 or 1
+    OPTION_AIRRIDE_STAGE_GATING_ENABLED = 0x0C8  # u32, 0 or 1
+    OPTION_TOPRIDE_STAGE_GATING_ENABLED = 0x0CC  # u32, 0 or 1
+    OPTION_TOPRIDE_ITEM_GATING_ENABLED = 0x0D0  # u32, 0 or 1
+    OPTION_COLOR_GATING_ENABLED = 0x0D4  # u32, 0 or 1
     # Mirrors the KAROptions `city_trial_stadiums_gated` toggle.
-    OPTION_STADIUM_GATING_ENABLED = 0x0C0  # u32, 0 or 1
+    OPTION_STADIUM_GATING_ENABLED = 0x0D8  # u32, 0 or 1
     # Mirrors the KAROptions `base_abilities_gated` toggle. Gates Kirby's inhale / quick spin / machine
-    # charge behind AP unlock items. APSlotOptions is 8-byte aligned (it holds a u64), so it ends with 4
-    # bytes of trailing pad at 0x0CC before LOCATION_DATA_VALID at 0x0D0.
-    OPTION_BASE_ABILITY_GATING_ENABLED = 0x0C4  # u32, 0 or 1
+    # charge behind AP unlock items.
+    OPTION_BASE_ABILITY_GATING_ENABLED = 0x0DC  # u32, 0 or 1
     # Mirrors the `checklist_rewards_gated` toggle. Off => mod unlocks every non-progression checklist
     # reward at connect.
-    OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0C8  # u32, 0 or 1
+    OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0E0  # u32, 0 or 1
+    # APSlotOptions is 8-byte aligned (it holds u64s), so the block ends at 0x0E8 (184 bytes) with
+    # LOCATION_DATA_VALID immediately after.
 
     # Location data fields
 
     # Client writes 1 after all location arrays are written. Game reads and clears to 0.
-    LOCATION_DATA_VALID = 0x0D0  # u32
+    LOCATION_DATA_VALID = 0x0E8  # u32
 
     # Location arrays: u16[3][46], locations[source_mode][source_reward_index], indexed by which
     # vanilla checklist reward the entry refers to. Value: (target_mode << 8) | clear_kind for a local
     # placement (the cell holding this reward), 0xFFFF for remote or unused slots. 92 bytes per mode.
-    LOCATIONS_AIRRIDE = 0x0D4  # u16[46], 92 bytes (reward indices 0-45)
-    LOCATIONS_TOPRIDE = 0x130  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
-    LOCATIONS_CITYTRIAL = 0x18C  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
+    # The AP checklist awards no native rewards, so there is no LOCATIONS_ARCHIPELAGO array.
+    LOCATIONS_AIRRIDE = 0x0EC  # u16[46], 92 bytes (reward indices 0-45)
+    LOCATIONS_TOPRIDE = 0x148  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
+    LOCATIONS_CITYTRIAL = 0x1A4  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
 
     # Check detection fields
 
     # Bitmask of completed checkboxes per mode. Game writes, client reads.
     # 2 x u64 per mode (128 bits). Bit (k % 64) of word (k / 64) for clear_kind k.
-    SENT_CHECKS_AIRRIDE = 0x1E8  # u64[2], 16 bytes
-    SENT_CHECKS_TOPRIDE = 0x1F8  # u64[2], 16 bytes
-    SENT_CHECKS_CITYTRIAL = 0x208  # u64[2], 16 bytes
+    SENT_CHECKS_AIRRIDE = 0x200  # u64[2], 16 bytes
+    SENT_CHECKS_TOPRIDE = 0x210  # u64[2], 16 bytes
+    SENT_CHECKS_CITYTRIAL = 0x220  # u64[2], 16 bytes
+    SENT_CHECKS_ARCHIPELAGO = 0x230  # u64[2], 16 bytes
 
     # Backfill bitmask. Client writes bits for checks the AP server knows but the mod doesn't (fresh
     # save / slot takeover / !collect). Game ORs into sent_checks, updates clear[], re-evaluates goal,
     # then clears.
-    CLIENT_BACKFILL_AIRRIDE = 0x218  # u64[2], 16 bytes
-    CLIENT_BACKFILL_TOPRIDE = 0x228  # u64[2], 16 bytes
-    CLIENT_BACKFILL_CITYTRIAL = 0x238  # u64[2], 16 bytes
+    CLIENT_BACKFILL_AIRRIDE = 0x240  # u64[2], 16 bytes
+    CLIENT_BACKFILL_TOPRIDE = 0x250  # u64[2], 16 bytes
+    CLIENT_BACKFILL_CITYTRIAL = 0x260  # u64[2], 16 bytes
+    CLIENT_BACKFILL_ARCHIPELAGO = 0x270  # u64[2], 16 bytes
 
     # Sticky goal completion flag. Game writes 1 when goal is satisfied. Client reads.
-    GOAL_COMPLETE = 0x248  # u8
+    GOAL_COMPLETE = 0x280  # u8
 
     # Live menu toggle mirrors. Game writes (on boot, first-connect option transfer, and every menu
     # change); client reads only. Authoritative current state of the in-game DeathLink/EnergyLink/
     # TrapLink toggles; diff against last-seen to forward to the AP server (tags / pool membership).
     # The OPTION_*_ENABLED slot fields set initial values on first connect only, not on later toggles.
-    DEATHLINK_MENU_ENABLED = 0x24C  # u32
-    ENERGYLINK_MENU_ENABLED = 0x250  # u32
-    TRAPLINK_MENU_ENABLED = 0x254  # u32
+    DEATHLINK_MENU_ENABLED = 0x284  # u32
+    ENERGYLINK_MENU_ENABLED = 0x288  # u32
+    TRAPLINK_MENU_ENABLED = 0x28C  # u32
 
 
 # AP item code layout for checklist rewards. Codes 500..649 split into 3 mode bands
@@ -178,18 +195,23 @@ LOCATIONS_PER_MODE: dict[GameMode, MemoryAddress] = {
     GameMode.CITYTRIAL: MemoryAddress.LOCATIONS_CITYTRIAL,
 }
 
-# Per-mode base addresses for the game-writes-checked-bits u64[2] bitmasks.
+# Per-mode base addresses for the game-writes-checked-bits u64[2] bitmasks. Includes the AP checklist,
+# so its completed boxes are forwarded as checks like any mode's.
 SENT_CHECKS_PER_MODE: dict[GameMode, MemoryAddress] = {
     GameMode.AIRRIDE: MemoryAddress.SENT_CHECKS_AIRRIDE,
     GameMode.TOPRIDE: MemoryAddress.SENT_CHECKS_TOPRIDE,
     GameMode.CITYTRIAL: MemoryAddress.SENT_CHECKS_CITYTRIAL,
+    GameMode.ARCHIPELAGO: MemoryAddress.SENT_CHECKS_ARCHIPELAGO,
 }
 
-# Per-mode base addresses for the client-writes-backfill-bits u64[2] bitmasks.
+# Per-mode base addresses for the client-writes-backfill-bits u64[2] bitmasks. Includes the AP
+# checklist, so its checks backfill like any mode's. Must stay key-for-key with SENT_CHECKS_PER_MODE:
+# _handle_backfill diffs one against the other.
 CLIENT_BACKFILL_PER_MODE: dict[GameMode, MemoryAddress] = {
     GameMode.AIRRIDE: MemoryAddress.CLIENT_BACKFILL_AIRRIDE,
     GameMode.TOPRIDE: MemoryAddress.CLIENT_BACKFILL_TOPRIDE,
     GameMode.CITYTRIAL: MemoryAddress.CLIENT_BACKFILL_CITYTRIAL,
+    GameMode.ARCHIPELAGO: MemoryAddress.CLIENT_BACKFILL_ARCHIPELAGO,
 }
 
 # Per-mode base addresses for the GOAL_CHECKLIST_LIST required-checkboxes u64[2] bitmasks.
@@ -197,11 +219,12 @@ OPTION_GOAL_CHECKS_PER_MODE: dict[GameMode, MemoryAddress] = {
     GameMode.AIRRIDE: MemoryAddress.OPTION_GOAL_CHECKS_AIRRIDE,
     GameMode.TOPRIDE: MemoryAddress.OPTION_GOAL_CHECKS_TOPRIDE,
     GameMode.CITYTRIAL: MemoryAddress.OPTION_GOAL_CHECKS_CITYTRIAL,
+    GameMode.ARCHIPELAGO: MemoryAddress.OPTION_GOAL_CHECKS_ARCHIPELAGO,
 }
 
 
 def location_code_to_mode_clear(code: int | None) -> tuple[GameMode, int] | None:
-    """Decode an AP location code (1-360) to (game_mode, clear_kind)."""
+    """Decode an AP location code (1-480) to (game_mode, clear_kind)."""
     if code is None:
         return None
     if 1 <= code <= 120:
@@ -210,6 +233,8 @@ def location_code_to_mode_clear(code: int | None) -> tuple[GameMode, int] | None
         return GameMode.AIRRIDE, code - 121
     if 241 <= code <= 360:
         return GameMode.TOPRIDE, code - 241
+    if 361 <= code <= 480:
+        return GameMode.ARCHIPELAGO, code - 361
     return None
 
 
@@ -221,6 +246,8 @@ def mode_clear_to_location_code(mode: GameMode, clear_kind: int) -> int:
         return clear_kind + 121
     if mode == GameMode.TOPRIDE:
         return clear_kind + 241
+    if mode == GameMode.ARCHIPELAGO:
+        return clear_kind + 361
     return 0
 
 
