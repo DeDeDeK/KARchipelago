@@ -26,7 +26,7 @@ Kirby Air Ride:
   spawn_rate_max: 250
   start_inventory:
     "Unlock Patch: Top Speed": 1
-    "Unlock Patch: Accel": 1
+    "Unlock Patch: Boost": 1
     "Unlock Machine: Warp Star": 1
     "Unlock AR Course: Sky Sands": 1
     "Unlock TR Course: Light": 1
