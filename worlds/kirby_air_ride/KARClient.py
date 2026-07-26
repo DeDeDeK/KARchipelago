@@ -398,7 +398,8 @@ class KARContext(CommonContext):
                         await self._dolphin_tick()
                     else:
                         await self._try_connect_dolphin()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
+                    # Any tick failure means the hook is untrustworthy; drop it and re-attach.
                     logger.error(f"Dolphin sync error: {e}")
                     if self.dolphin.is_hooked():
                         self.dolphin.unhook()
@@ -414,7 +415,7 @@ class KARContext(CommonContext):
                     # next connect attempt; this is just the state marker.
                     logger.info("Lost connection to Dolphin.")
                 self._dolphin_was_connected = now_connected
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 # Last-resort guard. This task has no supervisor, so an unhandled exception escaping
                 # the loop body would silently kill the connector until a full restart. Log and
                 # continue instead. CancelledError is a BaseException, so shutdown still propagates.
@@ -541,7 +542,9 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_AIRRIDE), int(sd.get("air_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd.get("city_trial_checklist_amount", 60)))
-        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 60)))
+        d.write_u32(
+            a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 60))
+        )
 
         d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MIN), int(sd.get("city_trial_patch_cap_min", 18)))
         d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MAX), int(sd.get("city_trial_patch_cap_max", 18)))
@@ -724,10 +727,9 @@ class KARContext(CommonContext):
             )
 
         # deliver one pending trap when the game's receive flag is clear.
-        if self.pending_trap_receives > 0:
-            if self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_RECEIVE)) == 0:
-                self.pending_trap_receives -= 1
-                self.dolphin.write_u32(self._addr(MemoryAddress.TRAPLINK_RECEIVE), 1)
+        if self.pending_trap_receives > 0 and self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_RECEIVE)) == 0:
+            self.pending_trap_receives -= 1
+            self.dolphin.write_u32(self._addr(MemoryAddress.TRAPLINK_RECEIVE), 1)
 
     async def _handle_energylink(self) -> None:
         if not self.energy_link_enabled:
