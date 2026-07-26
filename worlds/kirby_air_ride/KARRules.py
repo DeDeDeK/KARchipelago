@@ -289,6 +289,17 @@ _SWALLOW_ENEMY_COURSE_RULES: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Air Ride cells that live in the mode-root region but only complete on a subset of courses. Without a
+# rule here the blanket "any course unlocked" rule below would call them reachable on any single course.
+_AR_COURSE_SUBSET_RULES: dict[str, tuple[str, ...]] = {
+    **_SWALLOW_ENEMY_COURSE_RULES,
+    # Celestial Valley and Beanstalk Park are the only courses with a cliff that drops you.
+    ARLocation.DROP_FROM_CLIFFS_3X: (
+        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+        KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    ),
+}
+
 # All seven Top Ride courses -- Top Ride has no secret course, so "all courses" means every one.
 _TR_COURSE_UNLOCKS: tuple[str, ...] = (
     KARItemName.UNLOCK_TR_COURSE_GRASS,
@@ -405,10 +416,10 @@ def set_rules(world: "KARWorld"):
         for loc, item in _BASE_ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    # Swallow-a-named-enemy cells sit in the generic Air Ride region, so without this they would be
-    # reachable with no spawn course unlocked.
+    # Course-subset cells sit in the generic Air Ride region, so without this they would be reachable
+    # with no course that can actually complete them unlocked.
     if world.air_ride_enabled and world.options.air_ride_courses_gated:
-        for loc, courses in _SWALLOW_ENEMY_COURSE_RULES.items():
+        for loc, courses in _AR_COURSE_SUBSET_RULES.items():
             add_location_rule(loc, HasAny(*courses))
 
     # machines_gated OFF needs no machine rules: the mod unlocks every machine at connect, in all modes.
@@ -461,15 +472,18 @@ def set_rules(world: "KARWorld"):
     if world.air_ride_enabled and world.options.air_ride_courses_gated:
         # Mode-root cells still need SOME course to race on; course-specific ones already gate on their
         # course entrance. FILL_100 is skipped because its count rule, applied later, would overwrite
-        # this one; RACE_ALL gets the stronger all-eight-standard-courses rule instead.
+        # this one; RACE_ALL gets the stronger all-eight-standard-courses rule instead. The course-subset
+        # cells already carry a stricter HasAny over their own courses, which implies this one.
         any_ar_course = HasAny(*sorted(items_by_type[KARItemType.AR_COURSE_UNLOCK]))
+        ar_course_skip = (
+            ARLocation.FILL_IN_100_CHECKLIST_BLOCKS,
+            ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,
+            *_AR_COURSE_SUBSET_RULES,
+        )
         for name, data in AIR_RIDE_LOCATION_TABLE.items():
             if data.region in AR_COURSE_REGION_TO_UNLOCK:
                 continue
-            if name in (
-                ARLocation.FILL_IN_100_CHECKLIST_BLOCKS,
-                ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,
-            ):
+            if name in ar_course_skip:
                 continue
             add_location_rule(name, any_ar_course)
         add_location_rule(

@@ -22,7 +22,7 @@ from ..KARItems import (
 from ..KARLocations import ARLocation, CTLocation, TRLocation
 from ..KAROptions import CityTrialGoal, TopRideGoal
 from ..KARRegions import KARRegion
-from ..KARRules import _SWALLOW_ENEMY_COURSE_RULES, _TR_ABILITY_ITEM_KEYS
+from ..KARRules import _AR_COURSE_SUBSET_RULES, _SWALLOW_ENEMY_COURSE_RULES, _TR_ABILITY_ITEM_KEYS
 from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
 
 # Overlapping checklist rewards per gating option (always excluded from the pool).
@@ -819,6 +819,63 @@ class TestARSwallowEnemyAbilityAndCourseGating(KARTestBase):
         self.assertFalse(reachable(course), "reachable with course but no ability")
         self.assertFalse(reachable(ability), "reachable with ability but no course")
         self.assertTrue(reachable(course, ability), "not reachable with both ability and course")
+
+
+_CLIFF_COURSES = frozenset(
+    {
+        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+        KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    }
+)
+
+
+class TestARDropFromCliffsCourseGating(KARTestBase):
+    """air_ride_courses_gated ON: "drop from the cliffs 3 times" only completes on Celestial Valley or
+    Beanstalk Park, the only two courses with a cliff that drops you. The cell lives in the generic Air
+    Ride region, so without its rule the blanket "any course" rule would call it reachable on any one
+    course. Starter pinned to Fantasy Meadows, which is neither cliff course."""
+
+    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
+
+    def test_rule_table_lists_exactly_the_cliff_courses(self):
+        self.assertEqual(
+            frozenset(_AR_COURSE_SUBSET_RULES[ARLocation.DROP_FROM_CLIFFS_3X]),
+            _CLIFF_COURSES,
+        )
+
+    def test_each_cliff_course_independently_satisfies(self):
+        for course in _CLIFF_COURSES:
+            with self.subTest(course=course):
+                state = CollectionState(self.multiworld)
+                self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
+                state.collect(self.world.create_item(course))
+                self.assertTrue(
+                    state.can_reach(ARLocation.DROP_FROM_CLIFFS_3X, "Location", self.player),
+                    f"not reachable with only {course}",
+                )
+
+    def test_non_cliff_courses_do_not_satisfy(self):
+        # Every course without a cliff, collected together, must still leave the cell unreachable.
+        non_cliff = sorted(_ALL_AR_COURSE_UNLOCKS - _CLIFF_COURSES)
+        state = CollectionState(self.multiworld)
+        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
+        for course in non_cliff:
+            state.collect(self.world.create_item(course))
+        self.assertFalse(
+            state.can_reach(ARLocation.DROP_FROM_CLIFFS_3X, "Location", self.player),
+            f"reachable with only non-cliff courses {non_cliff}",
+        )
+
+
+class TestARDropFromCliffsGatingNotApplied(KARTestBase):
+    """AR course gating OFF: all nine courses unlock at connect, so the cliff cell needs no rule."""
+
+    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_false}
+
+    def test_reachable_with_no_courses(self):
+        state = CollectionState(self.multiworld)
+        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
+        self.assertTrue(state.can_reach(ARLocation.DROP_FROM_CLIFFS_3X, "Location", self.player))
 
 
 _NEBULA_REGIONS = (
