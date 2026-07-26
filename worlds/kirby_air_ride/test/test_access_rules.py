@@ -369,8 +369,6 @@ class TestMachinesSingleGatingApplied(KARTestBase):
         )
 
     def test_shadow_ar_location_needs_unlock(self):
-        # The location also has a CanReachLocation prereq on DEFEAT_10_ENEMIES_USING_QUICK_SPIN, but
-        # that AR-root location stays reachable, so SHADOW_STAR is the binding constraint.
         self.assertAccessDependency(
             [ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR],
             [[KARItemName.UNLOCK_MACHINE_SHADOW_STAR]],
@@ -502,8 +500,8 @@ class TestProgressiveStadiumGating(KARTestBase):
         )
 
     def test_dr4_stadium_location_needs_dr4_unlock(self):
-        # DRAG_RACE_4 gates on its own Unlock Stadium item like every other stadium. DR4 also has a
-        # CanReachLocation(DR3_FINISH) prereq, but collect_all_but leaves DR3 reachable here.
+        # DRAG_RACE_4 gates on its own Unlock Stadium item like every other stadium, even though vanilla
+        # hands it out as a checklist reward.
         self.assertAccessDependency(
             [CTLocation.STADIUM_DR4_FINISH_00_24_00],
             [[KARItemName.UNLOCK_STADIUM_DRAG_RACE_4]],
@@ -548,12 +546,12 @@ class TestProgressiveStadiumAllGroupGating(KARTestBase):
         )
 
 
-class TestProgressiveStadiumPreservesChain(KARTestBase):
-    """Regression: progressive_stadiums must compose with the DD/KM/DR chain prereqs, not overwrite them.
-
-    Stripping only the chain prerequisite leaves the stadium's own gating item collected. If the chain
-    rule were overwritten, the stadium would become reachable from its own gate alone with the chain
-    broken; preserving the chain keeps it unreachable until the chain prereq is also satisfied."""
+class TestStadiumNeedsOnlyOwnUnlock(KARTestBase):
+    """Regression: the five stadiums vanilla hands out as checklist rewards need only their own Unlock
+    Stadium item, not their vanilla predecessor's. They used to sit behind a DD3<-DD2 / DD4<-DD3 /
+    DD5<-DD4 / DR4<-DR3 / KM2<-KM1 entrance chain, which the mod does not reproduce -- stadium
+    availability is read from the AP unlock mask, never from completing the box that awards the stadium
+    in vanilla. Same class of stale rule as the AR machine chains."""
 
     options = {
         **CT_ONLY,
@@ -561,24 +559,58 @@ class TestProgressiveStadiumPreservesChain(KARTestBase):
         **_PIN_STADIUM_STARTER,
     }
 
-    def test_dd3_requires_dd2_chain_prereq(self):
-        # DD_ALL -> DD3 entrance: CanReachLocation(DD2_KO_A_RIVAL_10X) & Has(DD3_REWARD). Without DD2
-        # unlock, DD2_KO is unreachable and the chain fails. DD3_REWARD stays collected, so a
-        # chain-overwrite bug would make DD3 reachable purely from its own Has rule.
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5],
-            [[KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2]],
-            only_check_listed=True,
-        )
+    # (location, its own stadium unlock, the predecessor unlock it must NOT need).
+    _CHAIN_STADIUMS: list[tuple[str, str, str]] = [
+        (
+            CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5,
+            KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
+            KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2,
+        ),
+        (
+            CTLocation.STADIUM_DD4_KO_YOUR_RIVALS_5,
+            KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
+            KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
+        ),
+        (
+            CTLocation.STADIUM_DD5_KO_YOUR_RIVALS_5,
+            KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5,
+            KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
+        ),
+        (
+            CTLocation.STADIUM_DR4_FINISH_00_24_00,
+            KARItemName.UNLOCK_STADIUM_DRAG_RACE_4,
+            KARItemName.UNLOCK_STADIUM_DRAG_RACE_3,
+        ),
+        (
+            CTLocation.STADIUM_KM2_KO_ENEMIES_30X,
+            KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2,
+            KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1,
+        ),
+    ]
 
-    def test_dr4_requires_dr3_chain_prereq(self):
-        # CT -> DR4 entrance: CanReachLocation(DR3_FINISH_00_27_00) & Has(DR4_REWARD). Removing
-        # UNLOCK_STADIUM_DRAG_RACE_3 makes the prereq location unreachable and the chain fails.
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DR4_FINISH_00_24_00],
-            [[KARItemName.UNLOCK_STADIUM_DRAG_RACE_3]],
-            only_check_listed=True,
-        )
+    def test_reachable_on_own_unlock_alone(self):
+        for loc, own_unlock, predecessor in self._CHAIN_STADIUMS:
+            with self.subTest(location=loc, withheld=predecessor):
+                state = CollectionState(self.multiworld)
+                state.collect(self.get_item_by_name(own_unlock), prevent_sweep=True)
+                self.assertFalse(
+                    state.has(predecessor, self.player),
+                    f"{predecessor} leaked into the state, making this subtest vacuous",
+                )
+                self.assertTrue(
+                    state.can_reach(loc, "Location", self.player),
+                    f"{loc} should be reachable on {own_unlock} alone",
+                )
+
+    def test_unreachable_without_own_unlock(self):
+        # Guard against the above passing for the wrong reason.
+        for loc, own_unlock, _ in self._CHAIN_STADIUMS:
+            with self.subTest(location=loc, stripped=own_unlock):
+                self.assertAccessDependency(
+                    [loc],
+                    [[own_unlock]],
+                    only_check_listed=True,
+                )
 
 
 class TestStadiumGatingUsesUnlockItems(KARTestBase):
@@ -621,8 +653,7 @@ class TestStadiumUngatedReachable(KARTestBase):
         self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DR1_FINISH_00_24_00))
 
     def test_reward_overlap_stadium_cells_reachable_empty(self):
-        # DR4 / DD3 are reward-overlap stadiums; they open from the start (their chain prereqs DR3 /
-        # DD2 are likewise open).
+        # DR4 / DD3 are reward-overlap stadiums; they open from the start like every other stadium.
         self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DR4_FINISH_00_24_00))
         self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5))
 
@@ -833,8 +864,8 @@ class TestARNebulaBeltUnlockGate(KARTestBase):
                 self.assertTrue(region.can_reach(self.multiworld.state))
 
 
-class TestARChainPrereqs(KARTestBase):
-    """Sanity that each chain's dependent location is gated by its own machine unlock under
+class TestARMachineCellPrereqs(KARTestBase):
+    """Sanity that a machine-specific AR location is gated by its own machine unlock under
     collect_all_but."""
 
     options = {
@@ -847,87 +878,128 @@ class TestARChainPrereqs(KARTestBase):
         },
     }
 
-    # (dependent location, prereq location, item-to-strip). The prereq is the AR-root DEFEAT_10_ENEMIES,
-    # which course gating can't make unreachable, so we strip SHADOW_STAR to exercise the dependent's
-    # own gate in isolation.
-    _CHAINS: list[tuple[str, str, str]] = [
+    # (location, its machine unlock).
+    _MACHINE_CELLS: list[tuple[str, str]] = [
         (
             ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR,
-            ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN,
             KARItemName.UNLOCK_MACHINE_SHADOW_STAR,
         ),
     ]
 
-    def test_dependent_unreachable_when_its_own_unlock_missing(self):
-        for dep, _, strip in self._CHAINS:
-            with self.subTest(location=dep):
+    def test_location_unreachable_when_its_own_unlock_missing(self):
+        for loc, strip in self._MACHINE_CELLS:
+            with self.subTest(location=loc):
                 self.assertAccessDependency(
-                    [dep],
+                    [loc],
                     [[strip]],
                     only_check_listed=True,
                 )
 
 
-class TestARChainBreaksWhenPrereqGated(KARTestBase):
-    """Subset of AR chains where the prereq location lives in a course region. Stripping the course
-    unlock makes the prereq unreachable, which must make the dependent unreachable too (the chain rule
-    must compose with the dependent's own gate).
+class TestARMachineCellNeedsOnlyOwnCourse(KARTestBase):
+    """Regression: a machine-specific AR cell needs its machine and its OWN course, nothing else. It
+    used to chain onto the box that awards the machine in vanilla, which the mod does not reproduce
+    (machine availability comes from the AP unlock mask, never from completing a box) -- and where that
+    box lived in another course's region, the chain silently demanded that course too. The reported case
+    was Swerve Star's Machine Passage cell being held behind Sky Sands.
 
     Both starter pins live in one start_inventory dict (a naive merge of two separate dicts would drop
-    one). Pinning matters because the random AR-course pick could otherwise precollect a course we
-    strip, making the assertion vacuous."""
+    one). Pinning matters because the random AR-course / machine picks could otherwise precollect
+    something a subtest withholds, making its assertion vacuous. Nebula Belt is the pinned course
+    precisely because no cell below names it: pinning any AR course suppresses the random pick, and
+    Nebula is the only one that is neither an own-course nor a withheld course here."""
 
     options = {
         **AR_ONLY,
         "air_ride_courses_gated": Toggle.option_true,
         "machines_gated": Toggle.option_true,
         "start_inventory": {
-            KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS: 1,
+            KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT: 1,
             KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR: 1,
         },
     }
 
-    # (dependent, prereq, course-unlock-of-prereq).
-    _COURSE_CHAINS: list[tuple[str, str, str]] = [
+    # (location, its machine unlock, its own course unlock, a course it must NOT need -- the one whose
+    # region holds the box that awards that machine in vanilla).
+    _MACHINE_CELLS: list[tuple[str, str, str, str]] = [
+        (
+            ARLocation.FR_MP_LAP_00_57_00_ON_SWERVE_STAR,
+            KARItemName.UNLOCK_MACHINE_SWERVE_STAR,
+            KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+            KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+        ),
         (
             ARLocation.FR_FH_LAP_01_10_00_ON_FORMULA_STAR,
-            ARLocation.TA_FH_FINISH_03_14_00,
+            KARItemName.UNLOCK_MACHINE_FORMULA_STAR,
+            KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+            # Formula Star's vanilla box is TA_FH_FINISH_03_14_00, same course, so there is no
+            # foreign course to withhold; re-use its own as a no-op third entry.
             KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
         ),
         (
             ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR,
-            ARLocation.CK_FINISH_2_LAPS_IN_UNDER_03_05_00,
+            KARItemName.UNLOCK_MACHINE_SLICK_STAR,
+            KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
             KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
         ),
         (
             ARLocation.TA_FM_FINISH_01_05_00_ON_SLICK_STAR,
-            ARLocation.CK_FINISH_2_LAPS_IN_UNDER_03_05_00,
+            KARItemName.UNLOCK_MACHINE_SLICK_STAR,
+            KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
             KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
         ),
         (
-            ARLocation.FR_MF_LAP_01_02_00_ON_TURBO_STAR,
-            ARLocation.MF_USE_ALL_VOLCANO_RAILS_AND_FIRST,
-            KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
-        ),
-        (
             ARLocation.TA_FH_FINISH_03_10_00_ON_TURBO_STAR,
-            ARLocation.MF_USE_ALL_VOLCANO_RAILS_AND_FIRST,
+            KARItemName.UNLOCK_MACHINE_TURBO_STAR,
+            KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
             KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
         ),
         (
             ARLocation.TA_CV_FINISH_02_58_00_ON_JET_STAR,
-            ARLocation.MP_RACE_4500_FEET,
+            KARItemName.UNLOCK_MACHINE_JET_STAR,
+            KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
             KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+        ),
+        (
+            ARLocation.TA_BP_FINISH_03_00_00_ON_ROCKET_STAR,
+            KARItemName.UNLOCK_MACHINE_ROCKET_STAR,
+            KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+            KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+        ),
+        (
+            ARLocation.FR_SS_LAP_01_05_00_ON_BULK_STAR,
+            KARItemName.UNLOCK_MACHINE_BULK_STAR,
+            KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+            KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
         ),
     ]
 
-    def test_chain_break_makes_dependent_unreachable(self):
-        for dep, prereq, course_unlock in self._COURSE_CHAINS:
-            with self.subTest(dependent=dep, prereq=prereq, stripped=course_unlock):
-                self.assertAccessDependency(
-                    [dep],
-                    [[course_unlock]],
-                    only_check_listed=True,
+    def test_reachable_on_machine_plus_own_course_alone(self):
+        for loc, machine, own_course, foreign_course in self._MACHINE_CELLS:
+            with self.subTest(location=loc, withheld=foreign_course):
+                state = CollectionState(self.multiworld)
+                for name in (machine, own_course):
+                    state.collect(self.get_item_by_name(name), prevent_sweep=True)
+                # Non-vacuity: the course the removed chain used to drag in must still be missing.
+                if foreign_course != own_course:
+                    self.assertFalse(
+                        state.has(foreign_course, self.player),
+                        f"{foreign_course} leaked into the state, making this subtest vacuous",
+                    )
+                self.assertTrue(
+                    state.can_reach(loc, "Location", self.player),
+                    f"{loc} should be reachable on {machine} + {own_course} alone",
+                )
+
+    def test_unreachable_without_machine(self):
+        # Guard against the above passing for the wrong reason: with the course but no machine, no.
+        for loc, machine, own_course, _ in self._MACHINE_CELLS:
+            with self.subTest(location=loc, stripped=machine):
+                state = CollectionState(self.multiworld)
+                state.collect(self.get_item_by_name(own_course), prevent_sweep=True)
+                self.assertFalse(
+                    state.can_reach(loc, "Location", self.player),
+                    f"{loc} should need {machine}",
                 )
 
 
