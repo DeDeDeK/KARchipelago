@@ -512,13 +512,15 @@ class KARWorld(World):
                     f"{available} locations exist for this mode."
                 )
 
-            if goal_option.value == goal_option.option_n_checklist_blocks:
-                if filler_option.value >= checklist_amount_option.value:
-                    raise OptionError(
-                        f"Cannot start with {filler_option.value} {mode_name} checkbox fillers with "
-                        f"{checklist_amount_option.value} checklist blocks as a goal. "
-                        f"Checkbox filler number must be less than goal amount."
-                    )
+            if (
+                goal_option.value == goal_option.option_n_checklist_blocks
+                and filler_option.value >= checklist_amount_option.value
+            ):
+                raise OptionError(
+                    f"Cannot start with {filler_option.value} {mode_name} checkbox fillers with "
+                    f"{checklist_amount_option.value} checklist blocks as a goal. "
+                    f"Checkbox filler number must be less than goal amount."
+                )
 
         # Validate that checklist_list goal locations belong to their own mode.
         for enabled, goal_option, goal_locations_option, mode_name, location_table in [
@@ -1135,11 +1137,14 @@ class KARWorld(World):
     def get_filler_item_name(self) -> str:
         """Called by the AP framework when the item pool needs additional filler. Rolls a trap when
         traps are enabled (by trap_chance), otherwise returns a plain filler item."""
-        if self.trap_pool and self.options.trap_chance.value > 0:
-            if self.random.random() * 100 < self.options.trap_chance.value:
-                trap = self._random_trap()
-                if trap is not None:
-                    return trap
+        if (
+            self.trap_pool
+            and self.options.trap_chance.value > 0
+            and self.random.random() * 100 < self.options.trap_chance.value
+        ):
+            trap = self._random_trap()
+            if trap is not None:
+                return trap
         return self._random_filler()
 
     def fill_slot_data(self) -> Mapping[str, Any]:
