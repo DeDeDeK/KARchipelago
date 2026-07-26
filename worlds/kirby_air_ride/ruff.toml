@@ -1,4 +1,43 @@
-extend = "../../ruff.toml"
-lint.ignore = [
-    "N999",
+line-length = 120
+indent-width = 4
+target-version = "py311"
+
+# Deliberately does not `extend = "../../ruff.toml"`. The root config pins an explicit
+# `select`, which overrides ruff's built-in defaults. Leaving `select` unset here means we
+# get ruff's full default rule set (413 rules as of 0.16) and track it as ruff grows,
+# with `extend-select` layering the AP-flavoured extras the root config wanted on top.
+
+[lint]
+extend-select = [
+    "C",  # flake8-comprehensions + mccabe
+    "E",  # pycodestyle errors (defaults only carry E4/E7/E9; this adds E501)
+    "ISC",
+    "N",
+    "PERF",
+    "PLC",
+    "PLE",
+    "PLW",
+    "Q",
+    "RET",
+    "RSE",
+    "T20",
+    "UP",
+    "W",  # pycodestyle warnings
 ]
+ignore = [
+    # Carried over from the root AP config, with its rationale.
+    "B011",  # In AP, the use of assert False is essential because we optimise out these statements for release builds.
+    "C901",  # Author disagrees with limiting branch complexity
+    "N818",  # Author agrees with this rule, but Core AP violates this and changing it would be a hassle.
+    "PLC0415",  # In AP, we consider local imports totally fine & necessary
+    "PLC1802",  # Author agrees with this rule, but it literally changes the functionality of the code, which is unsafe.
+    "PLC1901",  # This is just not equivalent
+    "PLE1141",  # Gives false positives when the dict keys are tuples, but does not mention this in the suggested fix.
+    "UP015",  # Explicit is better than implicit, so we'd prefer to keep "r" in open() calls.
+
+    # KAR-specific.
+    "N999",  # Module names are CamelCase to match the rest of the world (KARClient, KARItems, ...).
+]
+
+[lint.per-file-ignores]
+"DolphinInterface.py" = ["BLE001"]
