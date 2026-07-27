@@ -76,4 +76,4 @@ Kirby Air Ride:
       if_value: "checklist_list"
       then_include:
         archipelago_goal_locations:
-          - "Archipelago: Receive an item"
+          - "Archipelago: Go out of bounds in City Trial!"
