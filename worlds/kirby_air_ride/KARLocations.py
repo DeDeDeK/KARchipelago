@@ -981,58 +981,54 @@ class APLocation(StrEnum):
     prefix also keeps *_goal_locations validation able to tell the tabs apart.
     """
 
-    BOOT_THE_GAME = "Archipelago: Boot the game"  # clear_kind 0
-    RECEIVE_AN_ITEM = "Archipelago: Receive an item"  # clear_kind 1
-    RECEIVE_5_ITEMS = "Archipelago: Receive 5 items"  # clear_kind 2
-
     # City Trial exploration
-    CASTLE_FLOWER_ON_FOOT = "Archipelago: Visit the flower on top of the castle on foot!"  # 3
-    BREAK_ALL_CORAL = "Archipelago: Break all the coral in one game!"  # 4
-    GO_OUT_OF_BOUNDS = "Archipelago: Go out of bounds in City Trial!"  # 5
+    CASTLE_FLOWER_ON_FOOT = "Archipelago: Visit the flower on top of the castle on foot!"  # 0
+    BREAK_ALL_CORAL = "Archipelago: Break all the coral in one game!"  # 1
+    GO_OUT_OF_BOUNDS = "Archipelago: Go out of bounds in City Trial!"  # 2
 
     # City Trial patches / items
-    GET_10_HP_PATCHES = "Archipelago: In one game, get 10 or more HP Patches!"  # 6
-    COLLECT_10_ALL_UPS = "Archipelago: Collect 10 All Ups in total!"  # 7
+    GET_10_HP_PATCHES = "Archipelago: In one game, get 10 or more HP Patches!"  # 3
+    COLLECT_10_ALL_UPS = "Archipelago: Collect 10 All Ups in total!"  # 4
 
     # City Trial foods. The vanilla checklist already covers Hot Dog, Sushi, Maxim Tomato and Energy
     # Drink; these are the 8 it leaves out. Candy is deliberately absent - it is invincibility, not food.
-    EAT_3_ICE_CREAMS = "Archipelago: In one game, eat 3 or more Ice Creams!"  # 8
-    EAT_3_RICE_BALLS = "Archipelago: In one game, eat 3 or more Rice Balls!"  # 9
-    EAT_3_CHICKENS = "Archipelago: In one game, eat 3 or more Chickens!"  # 10
-    EAT_3_CURRIES = "Archipelago: In one game, eat 3 or more plates of Curry!"  # 11
-    EAT_3_RAMENS = "Archipelago: In one game, eat 3 or more bowls of Ramen!"  # 12
-    EAT_3_OMELETS = "Archipelago: In one game, eat 3 or more Omelets!"  # 13
-    EAT_3_HAMBURGERS = "Archipelago: In one game, eat 3 or more Hamburgers!"  # 14
-    EAT_3_APPLES = "Archipelago: In one game, eat 3 or more Apples!"  # 15
+    EAT_3_ICE_CREAMS = "Archipelago: In one game, eat 3 or more Ice Creams!"  # 5
+    EAT_3_RICE_BALLS = "Archipelago: In one game, eat 3 or more Rice Balls!"  # 6
+    EAT_3_CHICKENS = "Archipelago: In one game, eat 3 or more Chickens!"  # 7
+    EAT_3_CURRIES = "Archipelago: In one game, eat 3 or more plates of Curry!"  # 8
+    EAT_3_RAMENS = "Archipelago: In one game, eat 3 or more bowls of Ramen!"  # 9
+    EAT_3_OMELETS = "Archipelago: In one game, eat 3 or more Omelets!"  # 10
+    EAT_3_HAMBURGERS = "Archipelago: In one game, eat 3 or more Hamburgers!"  # 11
+    EAT_3_APPLES = "Archipelago: In one game, eat 3 or more Apples!"  # 12
 
     # City Trial single races. One box per Single Race stadium; each inherits its stadium unlock from
     # the region's entrance rule rather than restating it as a Has(...) rule.
-    SR1_FINISH_1ST = "Archipelago: SINGLE RACE 1 Finish in 1st place!"  # 16
-    SR2_FINISH_1ST = "Archipelago: SINGLE RACE 2 Finish in 1st place!"  # 17
-    SR3_FINISH_1ST = "Archipelago: SINGLE RACE 3 Finish in 1st place!"  # 18
-    SR4_FINISH_1ST = "Archipelago: SINGLE RACE 4 Finish in 1st place!"  # 19
-    SR5_FINISH_1ST = "Archipelago: SINGLE RACE 5 Finish in 1st place!"  # 20
-    SR6_FINISH_1ST = "Archipelago: SINGLE RACE 6 Finish in 1st place!"  # 21
-    SR7_FINISH_1ST = "Archipelago: SINGLE RACE 7 Finish in 1st place!"  # 22
-    SR8_FINISH_1ST = "Archipelago: SINGLE RACE 8 Finish in 1st place!"  # 23
-    SR9_FINISH_1ST = "Archipelago: SINGLE RACE 9 Finish in 1st place!"  # 24
+    SR1_FINISH_1ST = "Archipelago: SINGLE RACE 1 Finish in 1st place!"  # 13
+    SR2_FINISH_1ST = "Archipelago: SINGLE RACE 2 Finish in 1st place!"  # 14
+    SR3_FINISH_1ST = "Archipelago: SINGLE RACE 3 Finish in 1st place!"  # 15
+    SR4_FINISH_1ST = "Archipelago: SINGLE RACE 4 Finish in 1st place!"  # 16
+    SR5_FINISH_1ST = "Archipelago: SINGLE RACE 5 Finish in 1st place!"  # 17
+    SR6_FINISH_1ST = "Archipelago: SINGLE RACE 6 Finish in 1st place!"  # 18
+    SR7_FINISH_1ST = "Archipelago: SINGLE RACE 7 Finish in 1st place!"  # 19
+    SR8_FINISH_1ST = "Archipelago: SINGLE RACE 8 Finish in 1st place!"  # 20
+    SR9_FINISH_1ST = "Archipelago: SINGLE RACE 9 Finish in 1st place!"  # 21
 
     # City Trial higher tiers - each threshold sits above the vanilla checklist's hardest.
-    HJ_JUMP_HIGHER_THAN_1500_FEET = "Archipelago: HIGH JUMP Jump higher than 1,500 feet!"  # 25
-    AG_FLY_2000_FEET = "Archipelago: AIR GLIDER fly more than 2,000 feet!"  # 26
-    KM1_KO_100_ENEMIES_BY_YOURSELF = "Archipelago: KIRBY MELEE 1 In one game, KO over 100 enemies by yourself!"  # 27
-    KM2_KO_60_ENEMIES_BY_YOURSELF = "Archipelago: KIRBY MELEE 2 In one game, KO over 60 enemies by yourself!"  # 28
+    HJ_JUMP_HIGHER_THAN_1500_FEET = "Archipelago: HIGH JUMP Jump higher than 1,500 feet!"  # 22
+    AG_FLY_2000_FEET = "Archipelago: AIR GLIDER fly more than 2,000 feet!"  # 23
+    KM1_KO_100_ENEMIES_BY_YOURSELF = "Archipelago: KIRBY MELEE 1 In one game, KO over 100 enemies by yourself!"  # 24
+    KM2_KO_60_ENEMIES_BY_YOURSELF = "Archipelago: KIRBY MELEE 2 In one game, KO over 60 enemies by yourself!"  # 25
 
     # "Useless progression" checks: give colors and off-meta machines a real reason to be progression.
-    SR1_FINISH_1ST_ON_BULK_STAR = "Archipelago: SINGLE RACE 1 Finish in 1st place on Bulk Star!"  # 29
-    SR1_FINISH_1ST_3X_AS_PURPLE = "Archipelago: SINGLE RACE 1 Finish in 1st place 3 times as Purple Kirby!"  # 30
+    SR1_FINISH_1ST_ON_BULK_STAR = "Archipelago: SINGLE RACE 1 Finish in 1st place on Bulk Star!"  # 26
+    SR1_FINISH_1ST_3X_AS_PURPLE = "Archipelago: SINGLE RACE 1 Finish in 1st place 3 times as Purple Kirby!"  # 27
 
     # Photo finishes. Solo-achievable: CPU racers count as players.
-    DR1_PHOTO_FINISH = "Archipelago: DRAG RACE 1 Have 2 players finish within 0.10 seconds!"  # 31
-    DR2_PHOTO_FINISH = "Archipelago: DRAG RACE 2 Have 2 players finish within 0.10 seconds!"  # 32
-    DR3_PHOTO_FINISH = "Archipelago: DRAG RACE 3 Have 2 players finish within 0.10 seconds!"  # 33
-    DR4_PHOTO_FINISH = "Archipelago: DRAG RACE 4 Have 2 players finish within 0.10 seconds!"  # 34
-    AIR_RIDE_PHOTO_FINISH = "Archipelago: Air Ride Have 2 players finish within 0.10 seconds!"  # 35
+    DR1_PHOTO_FINISH = "Archipelago: DRAG RACE 1 Have 2 players finish within 0.10 seconds!"  # 28
+    DR2_PHOTO_FINISH = "Archipelago: DRAG RACE 2 Have 2 players finish within 0.10 seconds!"  # 29
+    DR3_PHOTO_FINISH = "Archipelago: DRAG RACE 3 Have 2 players finish within 0.10 seconds!"  # 30
+    DR4_PHOTO_FINISH = "Archipelago: DRAG RACE 4 Have 2 players finish within 0.10 seconds!"  # 31
+    AIR_RIDE_PHOTO_FINISH = "Archipelago: Air Ride Have 2 players finish within 0.10 seconds!"  # 32
 
 
 # The Archipelago checklist awards no native rewards, so every entry has native_reward=None.
@@ -1040,47 +1036,45 @@ class APLocation(StrEnum):
 # Each box lives in the region where its activity actually happens, not in a flat Archipelago region:
 # that way it inherits the region's entrance chain (stadium unlocks, course unlocks, the DD/KM/DR
 # prerequisite chains) for free, instead of hand-copying those as Has(...) rules that drift out of sync.
-# The ARCHIPELAGO region holds only the genuinely mode-agnostic boxes. Naming a mode's region here is
-# what pulls that mode into logic_modes, so its tree is built even when it has no goal.
+# Every box is an in-game achievement and so names a mode's region; the ARCHIPELAGO region itself holds
+# no boxes, only the victory event. Naming a mode's region here is what pulls that mode into
+# logic_modes, so its tree is built even when it has no goal.
 AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
-    APLocation.BOOT_THE_GAME: KARLocationData(361, KARRegion.ARCHIPELAGO),
-    APLocation.RECEIVE_AN_ITEM: KARLocationData(362, KARRegion.ARCHIPELAGO),
-    APLocation.RECEIVE_5_ITEMS: KARLocationData(363, KARRegion.ARCHIPELAGO),
-    APLocation.CASTLE_FLOWER_ON_FOOT: KARLocationData(364, KARRegion.CITY_TRIAL),
-    APLocation.BREAK_ALL_CORAL: KARLocationData(365, KARRegion.CITY_TRIAL),
-    APLocation.GO_OUT_OF_BOUNDS: KARLocationData(366, KARRegion.CITY_TRIAL),
-    APLocation.GET_10_HP_PATCHES: KARLocationData(367, KARRegion.CITY_TRIAL),
-    APLocation.COLLECT_10_ALL_UPS: KARLocationData(368, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_ICE_CREAMS: KARLocationData(369, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_RICE_BALLS: KARLocationData(370, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_CHICKENS: KARLocationData(371, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_CURRIES: KARLocationData(372, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_RAMENS: KARLocationData(373, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_OMELETS: KARLocationData(374, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_HAMBURGERS: KARLocationData(375, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_APPLES: KARLocationData(376, KARRegion.CITY_TRIAL),
-    APLocation.SR1_FINISH_1ST: KARLocationData(377, KARRegion.STADIUM_SR1),
-    APLocation.SR2_FINISH_1ST: KARLocationData(378, KARRegion.STADIUM_SR2),
-    APLocation.SR3_FINISH_1ST: KARLocationData(379, KARRegion.STADIUM_SR3),
-    APLocation.SR4_FINISH_1ST: KARLocationData(380, KARRegion.STADIUM_SR4),
-    APLocation.SR5_FINISH_1ST: KARLocationData(381, KARRegion.STADIUM_SR5),
-    APLocation.SR6_FINISH_1ST: KARLocationData(382, KARRegion.STADIUM_SR6),
-    APLocation.SR7_FINISH_1ST: KARLocationData(383, KARRegion.STADIUM_SR7),
-    APLocation.SR8_FINISH_1ST: KARLocationData(384, KARRegion.STADIUM_SR8),
-    APLocation.SR9_FINISH_1ST: KARLocationData(385, KARRegion.STADIUM_SR9),
-    APLocation.HJ_JUMP_HIGHER_THAN_1500_FEET: KARLocationData(386, KARRegion.STADIUM_HJ),
-    APLocation.AG_FLY_2000_FEET: KARLocationData(387, KARRegion.STADIUM_AG),
-    APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF: KARLocationData(388, KARRegion.STADIUM_KM1),
+    APLocation.CASTLE_FLOWER_ON_FOOT: KARLocationData(361, KARRegion.CITY_TRIAL),
+    APLocation.BREAK_ALL_CORAL: KARLocationData(362, KARRegion.CITY_TRIAL),
+    APLocation.GO_OUT_OF_BOUNDS: KARLocationData(363, KARRegion.CITY_TRIAL),
+    APLocation.GET_10_HP_PATCHES: KARLocationData(364, KARRegion.CITY_TRIAL),
+    APLocation.COLLECT_10_ALL_UPS: KARLocationData(365, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_ICE_CREAMS: KARLocationData(366, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_RICE_BALLS: KARLocationData(367, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_CHICKENS: KARLocationData(368, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_CURRIES: KARLocationData(369, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_RAMENS: KARLocationData(370, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_OMELETS: KARLocationData(371, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_HAMBURGERS: KARLocationData(372, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_APPLES: KARLocationData(373, KARRegion.CITY_TRIAL),
+    APLocation.SR1_FINISH_1ST: KARLocationData(374, KARRegion.STADIUM_SR1),
+    APLocation.SR2_FINISH_1ST: KARLocationData(375, KARRegion.STADIUM_SR2),
+    APLocation.SR3_FINISH_1ST: KARLocationData(376, KARRegion.STADIUM_SR3),
+    APLocation.SR4_FINISH_1ST: KARLocationData(377, KARRegion.STADIUM_SR4),
+    APLocation.SR5_FINISH_1ST: KARLocationData(378, KARRegion.STADIUM_SR5),
+    APLocation.SR6_FINISH_1ST: KARLocationData(379, KARRegion.STADIUM_SR6),
+    APLocation.SR7_FINISH_1ST: KARLocationData(380, KARRegion.STADIUM_SR7),
+    APLocation.SR8_FINISH_1ST: KARLocationData(381, KARRegion.STADIUM_SR8),
+    APLocation.SR9_FINISH_1ST: KARLocationData(382, KARRegion.STADIUM_SR9),
+    APLocation.HJ_JUMP_HIGHER_THAN_1500_FEET: KARLocationData(383, KARRegion.STADIUM_HJ),
+    APLocation.AG_FLY_2000_FEET: KARLocationData(384, KARRegion.STADIUM_AG),
+    APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF: KARLocationData(385, KARRegion.STADIUM_KM1),
     # STADIUM_KM2 sits behind the KM_ALL -> KM2 prerequisite chain, which this box inherits.
-    APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF: KARLocationData(389, KARRegion.STADIUM_KM2),
-    APLocation.SR1_FINISH_1ST_ON_BULK_STAR: KARLocationData(390, KARRegion.STADIUM_SR1),
-    APLocation.SR1_FINISH_1ST_3X_AS_PURPLE: KARLocationData(391, KARRegion.STADIUM_SR1),
-    APLocation.DR1_PHOTO_FINISH: KARLocationData(392, KARRegion.STADIUM_DR1),
-    APLocation.DR2_PHOTO_FINISH: KARLocationData(393, KARRegion.STADIUM_DR2),
-    APLocation.DR3_PHOTO_FINISH: KARLocationData(394, KARRegion.STADIUM_DR3),
+    APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF: KARLocationData(386, KARRegion.STADIUM_KM2),
+    APLocation.SR1_FINISH_1ST_ON_BULK_STAR: KARLocationData(387, KARRegion.STADIUM_SR1),
+    APLocation.SR1_FINISH_1ST_3X_AS_PURPLE: KARLocationData(388, KARRegion.STADIUM_SR1),
+    APLocation.DR1_PHOTO_FINISH: KARLocationData(389, KARRegion.STADIUM_DR1),
+    APLocation.DR2_PHOTO_FINISH: KARLocationData(390, KARRegion.STADIUM_DR2),
+    APLocation.DR3_PHOTO_FINISH: KARLocationData(391, KARRegion.STADIUM_DR3),
     # STADIUM_DR4 sits behind the CITY_TRIAL -> DR4 prerequisite chain, which this box inherits.
-    APLocation.DR4_PHOTO_FINISH: KARLocationData(395, KARRegion.STADIUM_DR4),
-    APLocation.AIR_RIDE_PHOTO_FINISH: KARLocationData(396, KARRegion.AIR_RIDE),
+    APLocation.DR4_PHOTO_FINISH: KARLocationData(392, KARRegion.STADIUM_DR4),
+    APLocation.AIR_RIDE_PHOTO_FINISH: KARLocationData(393, KARRegion.AIR_RIDE),
 }
 
 

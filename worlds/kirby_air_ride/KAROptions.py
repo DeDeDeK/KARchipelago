@@ -469,9 +469,9 @@ class ArchipelagoChecklistAmount(Range):
     # Top Ride, which each have a full 120 boxes, the Archipelago checklist is still being built out.
     # Offering more than exists would only produce an OptionError at generation. A data-integrity test
     # pins this to the table; raise it as boxes are added. Default is half the table, as elsewhere.
-    default = 18
+    default = 16
     range_start = 1
-    range_end = 36
+    range_end = 33
 
 
 class ArchipelagoGoalLocations(LocationSet):
@@ -490,8 +490,8 @@ class ArchipelagoCheckboxFillers(NamedRange):
     Number of "checkbox filler" items added to the pool for the Archipelago checklist. These
     auto-complete an Archipelago checklist block when received. Set to 0 to disable.
 
-    Defaults to 0: the Archipelago checklist is an early stub with only a few boxes, so most fillers
-    would have nothing to fill.
+    Defaults to 0: the Archipelago checklist holds far fewer boxes than the other modes, so a large
+    filler count would have little to fill.
     """
 
     display_name = "Archipelago Checkbox Fillers"

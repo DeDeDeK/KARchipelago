@@ -1,6 +1,6 @@
-"""Tests for the Archipelago checklist - the synthetic 4th checklist mode (an early stub of
-Archipelago-specific objectives). Covers mode enable/disable, the checkbox-filler item, the stub
-location table + codec, goal wiring, and the option-validation branches specific to the AP mode."""
+"""Tests for the Archipelago checklist - the synthetic 4th checklist mode of Archipelago-specific
+objectives. Covers mode enable/disable, the checkbox-filler item, the location table + codec, goal
+wiring, and the option-validation branches specific to the AP mode."""
 
 import unittest
 
@@ -41,8 +41,8 @@ AP_WITH_CT: dict = {
 
 
 class TestArchipelagoCodec(unittest.TestCase):
-    """The AP location band (361-480) round-trips through the mode/clear_kind codec, and the stub
-    table's codes match 361 + clear_kind in ap_checks[] order."""
+    """The AP location band (361-480) round-trips through the mode/clear_kind codec, and the table's
+    codes match 361 + clear_kind in ap_checks[] order."""
 
     def test_band_roundtrip(self):
         for clear_kind in range(120):
@@ -50,10 +50,10 @@ class TestArchipelagoCodec(unittest.TestCase):
             self.assertEqual(code, 361 + clear_kind)
             self.assertEqual(location_code_to_mode_clear(code), (GameMode.ARCHIPELAGO, clear_kind))
 
-    def test_stub_location_codes(self):
-        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.BOOT_THE_GAME].code, 361)
-        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.RECEIVE_AN_ITEM].code, 362)
-        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.RECEIVE_5_ITEMS].code, 363)
+    def test_first_location_codes(self):
+        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.CASTLE_FLOWER_ON_FOOT].code, 361)
+        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.BREAK_ALL_CORAL].code, 362)
+        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.GO_OUT_OF_BOUNDS].code, 363)
 
     def test_boundaries(self):
         self.assertEqual(location_code_to_mode_clear(360), (GameMode.TOPRIDE, 119))  # last Top Ride code
@@ -148,8 +148,8 @@ class TestArchipelagoDisabledByDefault(KARTestBase):
 
 class TestArchipelagoEnabledLocations(KARTestBase):
     """With the AP mode enabled, every AP location exists as a real (address-bearing) location and the
-    victory event is placed. Boxes live in the region of the mode they describe, so only the
-    mode-agnostic ones are in the Archipelago region itself."""
+    victory event is placed. Every box lives in the region of the mode it describes, so the
+    Archipelago region itself holds none of them - only the victory event."""
 
     options = AP_WITH_CT
 
@@ -193,7 +193,7 @@ class TestArchipelagoChecklistListGoal(KARTestBase):
     options = {
         **CT_ONLY,
         "archipelago_goal": ArchipelagoGoal.option_checklist_list,
-        "archipelago_goal_locations": [APLocation.RECEIVE_AN_ITEM],
+        "archipelago_goal_locations": [APLocation.GO_OUT_OF_BOUNDS],
     }
 
     def test_victory_event_placed(self):
@@ -275,7 +275,7 @@ class TestArchipelagoChecklistListWrongModeRejected(KARTestBase):
 
 class TestArchipelagoOnly(KARTestBase):
     """The AP checklist can stand alone as the only enabled mode. Item-injecting gates are turned off
-    so the guaranteed pool fits the tiny 3-location world (analogous to a tightly-scoped single-mode
+    so the guaranteed pool fits the small AP-only world (analogous to a tightly-scoped single-mode
     seed); the world still generates and is beatable."""
 
     options = {
@@ -426,10 +426,9 @@ class TestArchipelagoPullsModesIntoLogic(KARTestBase):
 class TestArchipelagoOnlyDefaultGates(KARTestBase):
     """AP-only generates at default gate settings.
 
-    It could not before the table grew: colors are mode-agnostic, so an AP-only seed genuinely holds 7
-    color keys (8 minus the starter) and they need default boxes. Against 3 stub boxes that raised
-    OptionError, and AP-only was only generatable with colors_gated off. The boxes, not the gate logic,
-    are what fixed this - so this test guards the box count, and would fail again if the table shrank.
+    Colors are mode-agnostic, so an AP-only seed genuinely holds 7 color keys (8 minus the starter) and
+    they need default boxes to land on. The AP table has to stay large enough to absorb them, so this
+    test guards the box count and would fail if the table shrank far enough.
     """
 
     options = {
