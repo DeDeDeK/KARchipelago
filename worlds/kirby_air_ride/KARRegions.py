@@ -230,8 +230,8 @@ def create_regions(world: "KARWorld"):
         connect_top_ride_region(world, top_ride_region)
 
     if GameMode.ARCHIPELAGO in world.logic_modes:
-        # Holds only the mode-agnostic Archipelago boxes; the rest live in the region of the mode they
-        # describe. No sub-regions.
+        # Holds no locations - every Archipelago box lives in the region of the mode it describes. The
+        # region exists to host the Archipelago victory event. No sub-regions.
         archipelago_region = Region(KARRegion.ARCHIPELAGO, world.player, world.multiworld)
         world.multiworld.regions.append(archipelago_region)
         menu_region.connect(archipelago_region)

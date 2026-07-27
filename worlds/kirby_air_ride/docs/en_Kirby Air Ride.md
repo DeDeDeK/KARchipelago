@@ -85,7 +85,7 @@ Kirby Air Ride has three independent game modes - City Trial, Air Ride, and Top 
 
 ### Archipelago checklist
 
-The Archipelago checklist is a new, Archipelago-only checklist tab of objectives that live outside the three vanilla game modes. Its boxes describe things you do in City Trial, Air Ride, and Top Ride - eating the foods the vanilla checklist ignores, winning single races, clearing harder versions of the stadium challenges - plus a few that are about Archipelago itself, like receiving your first item.
+The Archipelago checklist is a new, Archipelago-only checklist tab of objectives that live outside the three vanilla game modes. Its boxes describe things you do in City Trial and Air Ride - eating the foods the vanilla checklist ignores, winning single races, clearing harder versions of the stadium challenges, and a few that reward off-meta choices like Bulk Star or Purple Kirby. Every box is something you earn by playing.
 
 It is **experimental** and still being built out. It has far fewer boxes than the three vanilla modes, so it is off by default, its goal target range is smaller, and objective names and thresholds may still change in ways that break an existing YAML.
 
@@ -245,7 +245,7 @@ Configure it in the in-game settings menu.
 
 ### Reveal checklists
 
-With "Reveal Checklists" enabled, the checklists for each of your enabled modes start fully revealed instead of hidden.
+With "Reveal Checklists" enabled, the checklists for each of your enabled modes start fully revealed instead of hidden. The Archipelago checklist reveals the boxes it actually has - its grid is the same 120 squares as the other tabs, but only the boxes that exist as objectives are shown.
 
 ### Server sync
 
