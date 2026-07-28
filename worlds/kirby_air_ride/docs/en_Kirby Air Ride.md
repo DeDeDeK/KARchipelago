@@ -9,7 +9,6 @@
     - [Air Ride](#air-ride)
     - [Top Ride](#top-ride)
     - [Archipelago checklist](#archipelago-checklist)
-    - [Mixing goals](#mixing-goals)
   - [Access gating](#access-gating)
   - [Shuffle checklist rewards](#shuffle-checklist-rewards)
   - [Checklist rewards gated](#checklist-rewards-gated)
@@ -31,6 +30,9 @@
   - [Other features](#other-features)
     - [In-game textbox](#in-game-textbox)
     - [Reveal checklists](#reveal-checklists)
+    - [Drop ability](#drop-ability)
+    - [Air quick spin](#air-quick-spin)
+    - [Random start machine](#random-start-machine)
     - [Server sync](#server-sync)
   - [I need help! What do I do?](#i-need-help-what-do-i-do)
   - [Known Issues](#known-issues)
@@ -57,7 +59,7 @@ Get it [here!](https://github.com/lighting8282/KAR-Poptracker)
 
 ## Game modes and goals
 
-Kirby Air Ride has three independent game modes - City Trial, Air Ride, and Top Ride - plus an experimental fourth mode, the Archipelago checklist. You can enable any combination of them, each with its own goal, locations, and progression settings. Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist.
+Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top Ride. The mod adds a fourth checklist of its own, the Archipelago checklist. You can enable any combination of them, each with its own goal, locations, and progression settings. Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist. When more than one mode has a goal, you only complete your game by completing every one of them, and your items share a single pool across your enabled modes: any of your items can land at any of your checklist locations, so an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
 
 ### City Trial
 
@@ -85,20 +87,13 @@ Kirby Air Ride has three independent game modes - City Trial, Air Ride, and Top 
 
 ### Archipelago checklist
 
-The Archipelago checklist is a new, Archipelago-only checklist tab of objectives that live outside the three vanilla game modes. Its boxes describe things you do in City Trial and Air Ride - eating the foods the vanilla checklist ignores, winning single races, clearing harder versions of the stadium challenges, and a few that reward off-meta choices like Bulk Star or Purple Kirby. Every box is something you earn by playing.
+A fourth checklist tab added by the mod. Its boxes are Archipelago-specific objectives you complete while playing the real modes - eat three of a food, break all the coral, finish 1st on a stadium - and it behaves like any other mode for goals, locations, and items.
 
-It is **experimental** and still being built out. It has far fewer boxes than the three vanilla modes, so it is off by default, its goal target range is smaller, and objective names and thresholds may still change in ways that break an existing YAML.
-
-Enabling it does not force you to take goals in other modes. If a box describes a City Trial activity, City Trial simply becomes playable and ungated for you - you can score that box without City Trial having a goal of its own.
-
-- **Fill in over 100 Checklist Boxes.** Not usable yet - the checklist has fewer than 100 boxes, so generation rejects it.
-- **Fill in N Checklist Boxes.** Usable. The allowed range tracks the number of boxes that actually exist.
+- **Fill in N Checklist Boxes** (1 to 33).
 - **Complete a specific list of checklist boxes** (via "Archipelago Goal Locations").
-- **None.** Disables the Archipelago checklist (default). The tab still appears in-game, but its boxes are not part of the multiworld.
+- **None.** Disables the Archipelago checklist (default).
 
-### Mixing goals
-
-You can mix and match goals across modes. When more than one mode has a goal, you only complete your game by completing every enabled goal. Your items all share a single pool across your enabled modes: any of your items can land at any of your checklist locations, so an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
+**EXPERIMENTAL:** this checklist is incomplete and under active development. It has 33 boxes rather than 120, so the "Fill in over 100 Checklist Boxes" goal is rejected at generation, and objective names and thresholds may still change in ways that break existing YAMLs.
 
 ## Access gating
 
@@ -109,15 +104,15 @@ The gateable categories are:
 - **City Trial stadiums.** 
 - **City Trial events** (Dyna Blade, Meteor, Tac, etc.)
 - **Copy abilities** (Fire, Sword, Bomb, etc.). Affects all modes.
-- **Base abilities** (inhale, quick spin, and machine charge).
+- **Base abilities** (inhale, quick spin, and machine charge). Affects all modes.
 - **City Trial patch types** (Boost, Top Speed, Offense, etc.)
 - **City Trial game items** (All Up, Speed Max, Candy, food, legendary parts, etc.)
 - **Air ride machines.** Across all modes.
 - **City Trial box types** (Blue, Green, Red)
 - **Air Ride courses**
 - **Top Ride courses**
-- **Top Ride items.** The four items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) accept either key: their own Top Ride item unlock, or the matching copy ability unlock (when copy abilities are also gated).
-- **Kirby colors** (every color other than Pink). Affects all three modes.
+- **Top Ride items.** Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are gated by the copy ability unlock instead.
+- **Kirby colors** Affects all three modes.
 
 Generation will choose one starting unlock item for the following categories. Each is picked at random and given to you for free before your run begins:
 
@@ -126,7 +121,7 @@ Generation will choose one starting unlock item for the following categories. Ea
 - **Top Ride machines.** Free Star or Steer Star, since Top Ride cannot be entered without one of them. Only when machines are gated and Top Ride is enabled.
 - **Air Ride courses.** One course. Only when courses are gated and Air Ride is enabled.
 - **Top Ride courses.** One course. Only when courses are gated and Top Ride is enabled.
-- **Kirby colors.** One color, Pink included. Only when colors are gated.
+- **Kirby colors.** One color. Only when colors are gated.
 
 If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, base abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
 
@@ -173,7 +168,7 @@ The items you can receive include:
 
 ### Checkbox filler items
 
-Receiving a checkbox filler item for a given checklist auto-completes a checklist block immediately. Look to the side of the checklist for the purple boxes. The game only shows up to 5 of them at once, but if you have unlocked more they are still yours and you can keep using them as they run out. There is a separate filler item for each mode (City Trial, Air Ride, Top Ride, and the Archipelago checklist). You cannot use these to unlock checkboxes that are goals.
+Receiving a checkbox filler item for a given checklist auto-completes a checklist block immediately. Look to the side of the checklist for the purple boxes. The game only shows up to 5 of them at once, but if you have unlocked more they are still yours and you can keep using them as they run out. There is a separate filler item for each checklist (City Trial, Air Ride, Top Ride, Archipelago). You cannot use these to unlock checkboxes that are goals.
 
 ### Patch cap increase items
 
@@ -245,7 +240,29 @@ Configure it in the in-game settings menu.
 
 ### Reveal checklists
 
-With "Reveal Checklists" enabled, the checklists for each of your enabled modes start fully revealed instead of hidden. The Archipelago checklist reveals the boxes it actually has - its grid is the same 120 squares as the other tabs, but only the boxes that exist as objectives are shown.
+With "Reveal Checklists" enabled, the checklists for each of your enabled modes start fully revealed instead of hidden.
+
+### Drop ability
+
+With "Drop Ability" on, pressing Z discards your current copy ability in City Trial and Air Ride, or your current ability-power item in Top Ride. There is no vanilla way to get rid of an ability you don't want, so this is handy when you are hunting a checkbox that needs a different one.
+
+Off by default. Toggle it in the in-game settings menu.
+
+### Air quick spin
+
+Vanilla only checks for the L/R-flick quick spin while you are grounded on your machine - flicking in the air does nothing. With "Air Quick Spin" on, the check runs airborne too, in City Trial and Air Ride, for Kirby, King Dedede, and Meta Knight alike.
+
+It still respects [access gating](#access-gating): if base abilities are gated and you have not found "Unlock Base Ability: Quick Spin" yet, the spin stays locked in the air as well.
+
+Off by default. Toggle it in the in-game settings menu.
+
+### Random start machine
+
+With "Random Start Machine" on, City Trial starts you on a random machine you have unlocked instead of the Compact Star. If you pick a machine yourself from the Stadium or Free Run grid, your pick is kept.
+
+With it off you get the Compact Star as usual, falling back to a random unlocked machine when machines are gated and you have not found the Compact Star yet.
+
+On by default. Toggle it in the in-game settings menu.
 
 ### Server sync
 
