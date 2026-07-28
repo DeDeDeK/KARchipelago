@@ -1,4 +1,4 @@
-<img src="https://github.com/DeDeDeK/KARchipelago/blob/main/worlds/kirby_air_ride/assets/karchipelago-logo.png" alt="karchipelago logo" width="300"/>
+<img src="worlds/kirby_air_ride/assets/karchipelago-logo.png" alt="karchipelago logo" width="400"/>
 
 # Kirby Air Ride APWorld
 
