@@ -1,3 +1,5 @@
+<img src="worlds/kirby_air_ride/assets/karchipelago-logo.png" alt="karchipelago logo" width="400"/>
+
 # Kirby Air Ride APWorld
 
 - [Kirby Air Ride APWorld](#kirby-air-ride-apworld)
@@ -59,12 +61,18 @@ Get it [here!](https://github.com/lighting8282/KAR-Poptracker)
 
 ## Game modes and goals
 
-Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top Ride. The mod adds a fourth checklist of its own, the Archipelago checklist. You can enable any combination of them, each with its own goal, locations, and progression settings. Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist. When more than one mode has a goal, you only complete your game by completing every one of them, and your items share a single pool across your enabled modes: any of your items can land at any of your checklist locations, so an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
+Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top Ride. The mod adds a fourth checklist/mode of its own, the Archipelago checklist. 
+
+You can enable any combination of them, each with its own goal, locations, and progression settings. 
+
+Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist. 
+
+When more than one mode has a goal, you only complete your game by completing every one of them, and your items share a single pool across your enabled modes: any of your items can land at any of your checklist locations, so an Air Ride unlock might be found on a City Trial checkbox, and vice versa.
 
 ### City Trial
 
-- **Fill in over 100 Checklist Boxes** (default). In the base game this unlocks viewing the ending.
-- **Fill in N Checklist Boxes.** Choose the number from 1 to 120 with "Number of Checklist Boxes for City Trial".
+- **Fill in over 100 Checklist Boxes** (default). The in-game checkbox for filling in over 100 checklist boxes.
+- **Fill in N Checklist Boxes.** Choose the number from 1 to 120.
 - **Complete both Dragoon and Hydra in one match.** The standard legendary-machine checkbox from the base game.
 - **Beat King Dedede.** KO King Dedede in under a minute in the VS. KING DEDEDE stadium.
 - **Complete a specific list of checklist boxes.** (via "City Trial Goal Locations").
@@ -74,26 +82,25 @@ Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top R
 ### Air Ride
 
 - **Fill in over 100 Checklist Boxes.**
-- **Fill in N Checklist Boxes** (1 to 120).
+- **Fill in N Checklist Boxes** 
 - **Complete a specific list of checklist boxes** (via "Air Ride Goal Locations").
 - **None.** Disables Air Ride (default).
 
 ### Top Ride
 
 - **Fill in over 100 Checklist Boxes.**
-- **Fill in N Checklist Boxes** (1 to 120).
+- **Fill in N Checklist Boxes**
 - **Complete a specific list of checklist boxes** (via "Top Ride Goal Locations").
 - **None.** Disables Top Ride (default).
 
 ### Archipelago checklist
 
-A fourth checklist tab added by the mod. Its boxes are Archipelago-specific objectives you complete while playing the real modes - eat three of a food, break all the coral, finish 1st on a stadium - and it behaves like any other mode for goals, locations, and items.
+**EXPERIMENTAL:** this checklist is incomplete and under active development. It does not yet have all 120 checkboxes. Logic or checks for this may
+not work properly. 
 
-- **Fill in N Checklist Boxes** (1 to 50).
+- **Fill in N Checklist Boxes**
 - **Complete a specific list of checklist boxes** (via "Archipelago Goal Locations").
 - **None.** Disables the Archipelago checklist (default).
-
-**EXPERIMENTAL:** this checklist is incomplete and under active development. It has 50 boxes rather than 120, so it does not offer the "Fill in over 100 Checklist Boxes" goal the other three modes do, and objective names and thresholds may still change in ways that break existing YAMLs.
 
 ## Access gating
 
@@ -102,22 +109,22 @@ Most categories of content can be locked behind AP items. When a category is gat
 The gateable categories are:
 
 - **City Trial stadiums.** 
-- **City Trial events** (Dyna Blade, Meteor, Tac, etc.)
-- **Copy abilities** (Fire, Sword, Bomb, etc.). Affects all modes.
-- **Base abilities** (inhale, quick spin, and machine charge). Affects all modes. Two knock-on effects are in logic: Charge is what makes the Hydra, Slick Star and Turbo Star driveable at all - and what beats a level-5 Top Ride CPU - and the three KO stadiums (KIRBY MELEE, DESTRUCTION DERBY, VS. KING DEDEDE) need some way to deal damage, which means quick spin, a copy ability that hurts, King Dedede or Meta Knight, or - in melee only - inhale.
+- **City Trial events**
+- **Copy abilities** Affects all modes.
+- **Base abilities** (inhale, quick spin, and machine charge). Affects all modes.
 - **City Trial patch types** (Boost, Top Speed, Offense, etc.)
 - **City Trial game items** (All Up, Speed Max, Candy, food, legendary parts, etc.)
 - **Air ride machines.** Across all modes.
 - **City Trial box types** (Blue, Green, Red)
 - **Air Ride courses**
 - **Top Ride courses**
-- **Top Ride items.** Items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are gated by the copy ability unlock instead.
-- **Kirby colors** Affects all three modes.
+- **Top Ride items.**
+- **Kirby colors** Affects all modes.
 
 Generation will choose one starting unlock item for the following categories. Each is picked at random and given to you for free before your run begins:
 
 - **City Trial stadiums.** One of the 24 stadiums (never VS. KING DEDEDE when that is your goal). Only when stadiums are gated and City Trial is enabled.
-- **Air Ride machines.** One machine you can ride in City Trial and Air Ride (never the Hydra or Dragoon, and never the Slick or Turbo Star while base abilities are gated - neither can be steered until you find Charge). Only when machines are gated and City Trial or Air Ride is enabled.
+- **Air Ride machines.** One machine you can ride in City Trial and Air Ride (never the Hydra or Dragoon). Only when machines are gated and City Trial or Air Ride is enabled.
 - **Top Ride machines.** Free Star or Steer Star, since Top Ride cannot be entered without one of them. Only when machines are gated and Top Ride is enabled.
 - **Air Ride courses.** One course. Only when courses are gated and Air Ride is enabled.
 - **Top Ride courses.** One course. Only when courses are gated and Top Ride is enabled.
@@ -125,25 +132,21 @@ Generation will choose one starting unlock item for the following categories. Ea
 
 If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, base abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
 
-**Note:** A few categories are normally unlocked in vanilla by completing specific in-game checklist squares - air ride machines, Kirby colors, the Nebula Belt course, the reward stadiums, and the Top Ride "New Item" types (Lantern, Who? Paint, Chickie). When one of those categories is ungated, the mod has already unlocked it at connect, so those checklist reward squares are not placed as items and are skipped. The only effect is cosmetic: you won't see those particular checkbox rewards (their description text or icon) appear in your own checklist. Nothing is lost for progression - the content is already available.
-
 ## Shuffle checklist rewards
 
 Many checklist boxes (red boxes) award a specific reward when ticked in the base game: a machine, a Kirby color, a music track, a sound test, a Dragoon or Hydra part, and so on. "Shuffle Checklist Rewards" controls only those reward items.
 
 - **On (default):** each reward is shuffled into the multiworld like any other item, so it can turn up anywhere your items can, across any of your enabled modes.
-- **Off:** every reward is placed back on the box that awards it in the base game, including the Dragoon and Hydra parts, so ticking that box gives what it gave in the original game.
-
-A couple of edge cases when this is off: a reward whose native box is excluded from receiving good items (for example a box behind a progression flag you left off) is pinned only when it is a filler reward - a more valuable reward there is shuffled instead. And in a very tight single-mode seed, some filler rewards may shuffle rather than pin if their native box is needed to keep progression placeable. Content delivered by other unlock items (extra machines, hidden stadiums, the spare Kirby colors, and so on) still randomizes either way.
+- **Off:** every reward is placed back on the box that awards it in the base game, so ticking that box gives what it gave in the original game.
 
 ## Checklist rewards gated
 
 Some checklist boxes award a minor extra when ticked: a music track, a sound test entry, an ending, a Top Ride rule, and so on. "Checklist Rewards Gated" controls whether those non-progression rewards are part of the multiworld at all.
 
-- **Off (default):** none of these rewards are placed; the mod unlocks them all the instant you connect (the same way an ungated category works), and the checklist boxes that would have awarded them carry ordinary multiworld items instead. This leaves more room on your checklist boxes for the gating categories and other items. Because the rewards are no longer in the pool, "Shuffle Checklist Rewards" has nothing to act on for them.
+- **Off (default):** none of these rewards are placed; the mod unlocks them all the instant you connect, and the checklist boxes that would have awarded them carry ordinary multiworld items instead. The unlocked rewards are not in the pool or the in-game checklist.
 - **On:** each such reward is an item you find in the multiworld, and "Shuffle Checklist Rewards" decides where it can land.
 
-The Dragoon and Hydra parts are never affected - they are progression (they build the legendary machines), so they always stay in the multiworld regardless of this option. Turning this off is a good way to thin out low-value cosmetic items, at the cost of those checklist boxes no longer feeling like they "give" anything in-game.
+The Dragoon and Hydra parts are never affected - they are progression (they build the legendary machines), so they always stay in the multiworld regardless of this option.
 
 ## What does randomization do to this game?
 
@@ -168,7 +171,7 @@ The items you can receive include:
 
 ### Checkbox filler items
 
-Receiving a checkbox filler item for a given checklist auto-completes a checklist block immediately. Look to the side of the checklist for the purple boxes. The game only shows up to 5 of them at once, but if you have unlocked more they are still yours and you can keep using them as they run out. There is a separate filler item for each checklist (City Trial, Air Ride, Top Ride, Archipelago). You cannot use these to unlock checkboxes that are goals.
+Receiving a checkbox filler item for a given checklist gives you a purple checkbox filler in-game for that checklist. Look to the side of the checklist for the purple boxes. The game only shows up to 5 of them at once, but if you have unlocked more they are still yours and you can keep using them as they run out. There is a separate filler item for each checklist (City Trial, Air Ride, Top Ride, Archipelago). **You cannot use these to unlock checkboxes that are goals.**
 
 ### Patch cap increase items
 
@@ -176,7 +179,7 @@ When "Patch Cap Min" is below "Patch Cap Max", the per-stat patch cap starts at 
 
 ### Permanent patch increase items
 
-These items give a permanent +1 to a City Trial stat that persists for the rest of your run. They are in the pool as long as "Permanent Patches" is among your "Allowed Item Types" (see below). This also works in Air Ride and Stadiums.
+These items give a permanent +1 to a City Trial stat that persists for the rest of your run. They are in the pool as long as "Permanent Patches" is among your "Allowed Item Types". This also works in Air Ride and Stadiums.
 
 You can change which modes these will apply to in the in-game settings menu.
 
@@ -186,7 +189,7 @@ You can change which modes these will apply to in the in-game settings menu.
 
 ### Spawn Rate Up items
 
-The City Trial and Top Ride item spawn rate starts at your "Spawn Rate Min" and each Spawn Rate Up item raises it by 10% toward your "Spawn Rate Max". A min below 100% starts spawns suppressed below vanilla; set the min equal to the max for a flat rate with no Spawn Rate Up items. Air Ride has no spawn-rate scaling and is unaffected.
+The City Trial and Top Ride item spawn rate starts at your "Spawn Rate Min" and each Spawn Rate Up item raises it by 10% toward your "Spawn Rate Max". A min below 100% starts spawns suppressed below vanilla; set the min equal to the max for a flat rate with no Spawn Rate Up items.
 
 For CT, it not only affects the spawn rate, but the max amount of items that will appear in the City at a time. This will go beyond the vanilla max of 100.
 
@@ -196,9 +199,9 @@ When a category is gated (see [Access gating](#access-gating)), receiving its un
 
 ### When items are applied
 
-Items for game modes like CT, AR, TR are applied immediately when playing, or if not, at the start of the next round/course.
+Received items for game modes like CT, AR, TR are applied immediately when playing, or if not, at the start of the next round/course.
 
-Items that don't apply directly to game modes (checkbox fillers, reward items, etc.) are applied immediately. 
+Items that don't apply directly to in-game modes (checkbox fillers, reward items, etc.) are applied immediately. 
 
 ## Traps and TrapLink
 
@@ -220,7 +223,7 @@ There is an in-game menu where you can spend your pooled energy to purchase in-g
 
 ### Auto-Charge
 
-Auto-Charge (Settings → Energy Link → Auto-Charge in the in-game menu) spends pooled energy to keep your machine's charge meter topped up. It adds a steady amount over time, so it gently assists your own charging - holding A, or coasting and gliding - and your energy drains gradually rather than all at once.
+Auto-Charge (Settings -> Energy Link -> Auto-Charge in the in-game menu) spends pooled energy to keep your machine's charge meter topped up. It adds a steady amount over time, so it gently assists your own charging - holding A, or coasting and gliding - and your energy drains gradually rather than all at once.
 
 The **Auto-Charge Rate** setting (Slow / Medium / Fast) controls how quickly the meter fills.
 
