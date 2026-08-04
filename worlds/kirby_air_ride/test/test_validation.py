@@ -145,10 +145,9 @@ class TestTRChecklistListEmpty(KARTestBase):
 
 
 class TestGuaranteedPoolExceedsLocations(KARTestBase):
-    # CT-only with the patch cap spanning 1 -> 30 (29 Patch Cap Increase items) on top of the default gated
-    # unlocks inflates the guaranteed pool to 116 items needing default locations (104 progression + 5
-    # counted-useful + 7 useful rewards) against only 90 CT default locations, tripping the fit validator.
-    # Rewards are gated on so the 7 useful rewards count toward the budget (they are off by default).
+    # CT-only with the patch cap spanning 1 -> 30 (29 Patch Cap Increases) needs 116 default locations
+    # (104 progression + 5 counted-useful + 7 useful rewards) against 90, tripping the fit validator.
+    # Rewards are gated on here (off by default) so the 7 useful ones count toward the budget.
     options = {
         **CT_ONLY,
         "checklist_rewards_gated": Toggle.option_true,
@@ -162,19 +161,12 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
             self.world_setup()
 
 
-# A config tuned to fit by exactly 1 location. Checklist rewards are guaranteed once each, so the 7 useful
-# rewards count against the default-location budget (gated on here; off by default). The patch cap span
-# (min 16 -> max 18) is kept small to land the budget right at the edge:
-#   75 CT progression with all gates on (gated unlocks + 6 legendary part markers + the CT/AR-tagged items
-#       that fall to City Trial when Air Ride is disabled + multi-mode unlocks; stadium and color starters
-#       are precollected and removed, while patch types get no starter)
-#   + 2 PATCH_CAP_INCREASE items (max 18 - min 16) -> 77 progression total
-#   + 5 default checkbox fillers
-#   + 7 useful checklist rewards (the non-overlapping CT rewards that must sit on default locations)
-#   = 89 items needing default locations = exactly 1 under the 90 CT default locations.
-# Without exclude_locations: fits. With the paired test's 3 excludes: doesn't fit - pinning that the fit
-# validator subtracts exclude_locations from the default count. Filler-classified rewards aren't counted
-# (they may sit on excluded boxes), so only the 7 useful rewards add.
+# A config tuned to fit by exactly 1 location, with the patch cap span (16 -> 18) kept small to land the
+# budget right at the edge:
+#   75 CT progression with all gates on + 2 PATCH_CAP_INCREASE + 5 checkbox fillers + 7 useful checklist
+#   rewards = 89 needing default locations, 1 under the 90 CT default locations.
+# Without exclude_locations it fits; with the paired test's 3 excludes it does not, pinning that the fit
+# validator subtracts exclude_locations. Filler rewards aren't counted - they may sit on excluded boxes.
 _TIGHT_POOL = {
     **CT_ONLY,
     "checklist_rewards_gated": Toggle.option_true,
@@ -227,9 +219,8 @@ class TestStadiumStarterDededeInInventoryRaises(KARTestBase):
             self.world_setup()
 
 
-# allowed_items can no longer starve the draw pools: the cosmetic all-mode filler items (Big Kirby /
-# Small Kirby, KARItemType.FILLER) are immune to allowed_items and carry _ALL_MODES, so filler_pool is always
-# non-empty. These configs used to OptionError; they now generate using the cosmetic filler.
+# allowed_items can no longer starve the draw pools: Big Kirby / Small Kirby are immune to it and carry
+# _ALL_MODES, so filler_pool is never empty. These configs used to OptionError; they now generate.
 
 
 class TestAllowedItemsAllOffStillFills(KARTestBase):

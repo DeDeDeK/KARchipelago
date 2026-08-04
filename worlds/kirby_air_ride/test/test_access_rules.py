@@ -1,11 +1,9 @@
 """
 Access-rule tests for set_rules().
 
-Each test asserts the rule-protected locations are unreachable without the gating item and
-reachable when it is collected. only_check_listed=True keeps each test focused on its own rule.
-
-Random starter picks are non-deterministic under default options. Where a test depends on a
-specific starter not having been chosen, it pins the starter via start_inventory.
+Each test asserts the rule-protected locations are unreachable without the gating item and reachable
+when it is collected; only_check_listed=True keeps each focused on its own rule. Random starter picks
+are non-deterministic, so a test that depends on one not being chosen pins it via start_inventory.
 """
 
 from BaseClasses import CollectionState, ItemClassification
@@ -51,8 +49,7 @@ _PIN_COLOR_STARTER = {"start_inventory": {KARItemName.UNLOCK_COLOR_PINK: 1}}
 _PIN_BEANSTALK_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK: 1}}
 
 # Every alternative key of a combat stadium's damage rule, as assertAccessDependency groups. The lists
-# must be exhaustive: the helper collects everything NOT listed, so a missing key would leave the
-# stadium reachable and fail the "unreachable without" half.
+# must be exhaustive: the helper collects everything NOT listed, so a missing key fails the test.
 _MELEE_DAMAGE_KEYS = [
     [KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN],
     [KARItemName.UNLOCK_BASE_ABILITY_INHALE],
@@ -105,10 +102,9 @@ class TestEventsGatingNotApplied(KARTestBase):
 
 
 class TestAbilitiesGatingApplied(KARTestBase):
-    """abilities_gated ON: ability-specific locations need their unlock items.
-    Covers Air Ride "finish/swallow with ability" locations and the CT Copy Chance Wheel locations.
-    The TR ability-themed item locations take either key and are covered by
-    TestTRAbilityItemEitherKey."""
+    """abilities_gated ON: ability-specific locations need their unlock items. Covers the Air Ride
+    "finish/swallow with ability" cells and the CT Copy Chance Wheel cells; the TR ability-themed item
+    cells take either key and are covered by TestTRAbilityItemEitherKey."""
 
     options = {**ALL_MODES, "abilities_gated": Toggle.option_true}
 
@@ -129,9 +125,8 @@ class TestAbilitiesGatingApplied(KARTestBase):
         )
 
     def test_ar_swallow_ability_enemies_need_their_unlock(self):
-        # Swallowing a named copy-ability enemy needs that ability unlocked. Each location is in
-        # the top-level AIR_RIDE region, so the only gate is the ability. One assertion per enemy
-        # since each depends on a different ability unlock.
+        # Swallowing a named copy-ability enemy needs that ability unlocked. Each location is in the
+        # top-level AIR_RIDE region, so the ability is the only gate - one assertion per enemy.
         for location, unlock in (
             (ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST, KARItemName.UNLOCK_ABILITY_SWORD),
             (ARLocation.SWALL_WHEELIE_3_AND_FIRST, KARItemName.UNLOCK_ABILITY_WHEEL),
@@ -154,10 +149,8 @@ class TestAbilitiesGatingApplied(KARTestBase):
 
 class TestAbilitiesGatingNotApplied(KARTestBase):
     """abilities_gated OFF: ability unlocks aren't in the pool and ability locations have no rule.
-
-    air_ride_courses_gated and top_ride_items_gated are also disabled so the swallow-named-enemy cells
-    and the TR ability-themed item cells are rule-free here, isolating the ability gate.
-    """
+    air_ride_courses_gated and top_ride_items_gated are also off so the swallow-named-enemy and TR
+    ability-themed item cells are rule-free here, isolating the ability gate."""
 
     options = {
         **ALL_MODES,
@@ -477,9 +470,9 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
                 self.assertAccessDependency([location], [[unlock]], only_check_listed=True)
 
     def test_tac_location_needs_something_to_steal(self):
-        # "Steal over 8 items from Tac" needs at least one item type able to spawn for Tac to carry off.
-        # Any CT item unlock qualifies except All Up, whose city fall chance is zero. The event gate is
-        # on by default, so collect_all_but leaves the Tac event unlock held and the item rule isolated.
+        # "Steal over 8 items from Tac" needs some item type able to spawn for Tac to carry off - any CT
+        # item unlock except All Up, whose city fall chance is zero. The event gate is on by default, so
+        # collect_all_but leaves the Tac event unlock held and isolates the item rule.
         item_unlocks = items_of_type(KARItemType.CT_ITEM_UNLOCK)
         stealable = sorted(item_unlocks - {KARItemName.UNLOCK_ITEM_ALL_UP})
 
@@ -514,10 +507,9 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
             state.remove(item)
 
     def test_item_pickup_locations_need_any_counting_item_unlock(self):
-        # "Get/pick up N items" cells count every collected itemkind except the three boxes, so patches,
-        # abilities, and food/special/misc/legendary items all count. With items + patches + abilities
-        # gated, each cell is reachable once ANY ONE of those unlocks is collected (HasAny over all three
-        # sets), and unreachable with all held back. Boxes are deliberately not a source.
+        # "Get/pick up N items" cells count every itemkind except the three boxes, so with items, patches
+        # and abilities all gated, one unlock from any of the three sets suffices and none leaves the cell
+        # unreachable. Boxes are deliberately not a source.
         pickup_locations = [
             CTLocation.GET_50_ITEMS,
             CTLocation.GET_10_ITEMS_IN_20S,
@@ -656,10 +648,9 @@ class TestMachinesPairGatingApplied(KARTestBase):
 
 
 class TestMachinesGatingNotApplied(KARTestBase):
-    """machines_gated OFF: the mod unlocks every machine at connect (regardless of which modes are
-    enabled), so the machine-specific finish/bust cells carry no rule and the Air Ride machine reward
-    items are excluded from the pool. Stadiums ungated so the named stadiums are open and the machine
-    question is isolated."""
+    """machines_gated OFF: the mod unlocks every machine at connect whatever the enabled modes, so the
+    machine-specific finish/bust cells carry no rule and the AR machine rewards leave the pool. Stadiums
+    ungated so the named stadiums are open and the machine question is isolated."""
 
     options = {
         **ALL_MODES,
@@ -691,10 +682,9 @@ class TestMachinesGatingNotApplied(KARTestBase):
 
 
 class TestCTOnlyMachinesGatingNotApplied(KARTestBase):
-    """City-Trial-only + machines_gated OFF (edge case): the Air Ride machine reward items don't exist
-    (AR disabled) and there are no Unlock Machine items, yet the mod unlocks every machine at connect
-    regardless of which modes are enabled, so the CT machine cells carry no rule and nothing is stranded.
-    Stadiums ungated so the named stadiums are open and the machine question is isolated."""
+    """City-Trial-only + machines_gated OFF (edge case): with AR disabled there are no machine reward
+    items and no Unlock Machine items, yet the mod still unlocks every machine at connect, so the CT
+    machine cells carry no rule and nothing is stranded. Stadiums ungated to isolate the question."""
 
     options = {
         **CT_ONLY,
@@ -814,10 +804,9 @@ class TestProgressiveStadiumAllGroupGating(KARTestBase):
 
 class TestStadiumNeedsOnlyOwnUnlock(KARTestBase):
     """Regression: the five stadiums vanilla hands out as checklist rewards need only their own Unlock
-    Stadium item, not their vanilla predecessor's. They used to sit behind a DD3<-DD2 / DD4<-DD3 /
-    DD5<-DD4 / DR4<-DR3 / KM2<-KM1 entrance chain, which the mod does not reproduce -- stadium
-    availability is read from the AP unlock mask, never from completing the box that awards the stadium
-    in vanilla. Same class of stale rule as the AR machine chains."""
+    Stadium item, not their vanilla predecessor's. They used to sit behind a DD3<-DD2 / DR4<-DR3 /
+    KM2<-KM1 style chain, which the mod does not reproduce - stadium availability comes from the AP
+    unlock mask, never from completing the box. Same class of stale rule as the AR machine chains."""
 
     options = {
         **CT_ONLY,
@@ -880,10 +869,9 @@ class TestStadiumNeedsOnlyOwnUnlock(KARTestBase):
 
 
 class TestStadiumGatingUsesUnlockItems(KARTestBase):
-    """Stadiums gated: every stadium - including the six that vanilla unlocks via a checklist reward - is
-    gated by its own Unlock Stadium item. So all 24 Unlock Stadium items are obtainable and
-    progression-classified, while the overlapping stadium checklist rewards are excluded from the
-    pool (they gate nothing)."""
+    """Stadiums gated: every stadium, including the six vanilla unlocks via a checklist reward, is gated
+    by its own Unlock Stadium item. So all 24 are obtainable and progression-classified, while the
+    overlapping stadium checklist rewards leave the pool - they gate nothing."""
 
     options = {
         **CT_ONLY,
@@ -1003,12 +991,10 @@ _ALL_AR_COURSE_UNLOCKS = frozenset(items_of_type(KARItemType.AR_COURSE_UNLOCK))
 
 class TestARSwallowEnemyCourseGatingApplied(KARTestBase):
     """air_ride_courses_gated ON: a "swallow a named copy-ability enemy" cell needs one of the courses
-    that enemy actually spawns on, not merely the ability. These cells live in the generic Air Ride
-    region, so without the course rule they would be reachable with no course unlocked.
-
-    abilities_gated is OFF here so the course HasAny is the only gate under test. Beanstalk Park is
-    pinned as the starter: it is the one standard course none of these enemies spawn on, so it disables
-    the random AR-course starter and satisfies no rule under test."""
+    that enemy actually spawns on, not merely the ability - these cells live in the generic Air Ride
+    region and would otherwise be reachable with no course unlocked. abilities_gated is OFF so the course
+    HasAny is the only gate under test, and Beanstalk Park is pinned as the starter: the one standard
+    course none of these enemies spawn on, so it suppresses the random pick without satisfying a rule."""
 
     options = {
         **AR_ONLY,
@@ -1040,9 +1026,8 @@ class TestARSwallowEnemyCourseGatingApplied(KARTestBase):
                     )
 
     def test_non_spawn_courses_do_not_satisfy(self):
-        # Collecting EVERY course the enemy does not spawn on must still leave the cell unreachable.
-        # This pins the spawn-course set exactly: any course wrongly omitted from the rule would make
-        # the cell reachable here and fail the test.
+        # Collecting EVERY course the enemy does not spawn on must still leave the cell unreachable, which
+        # pins the spawn-course set exactly: a wrongly omitted course would make it reachable here.
         for location, courses in _SWALLOW_ENEMY_COURSE_RULES.items():
             non_spawn = sorted(_ALL_AR_COURSE_UNLOCKS - set(courses))
             with self.subTest(location=location):
@@ -1097,9 +1082,8 @@ _CLIFF_COURSES = frozenset(
 
 class TestARDropFromCliffsCourseGating(KARTestBase):
     """air_ride_courses_gated ON: "drop from the cliffs 3 times" only completes on Celestial Valley or
-    Beanstalk Park, the only two courses with a cliff that drops you. The cell lives in the generic Air
-    Ride region, so without its rule the blanket "any course" rule would call it reachable on any one
-    course. Starter pinned to Fantasy Meadows, which is neither cliff course."""
+    Beanstalk Park, the only courses with a cliff that drops you. Without its rule the blanket "any
+    course" rule would call it reachable on any one. Starter pinned to Fantasy Meadows, neither of them."""
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
 
@@ -1150,9 +1134,9 @@ _PIN_AR_CHECKER_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_CHEC
 
 class TestARAirFinishCourseGating(KARTestBase):
     """air_ride_courses_gated ON: "finish 1st while flying through the air" needs a course with something
-    to launch off near the finish line. Checker Knights, Frozen Hillside and Magma Flows are out. The cell
-    lives in the generic Air Ride region, so without its rule the blanket "any course" rule would call it
-    reachable on any one of the three. Starter pinned to Checker Knights, which is one of them."""
+    to launch off near the finish. Checker Knights, Frozen Hillside and Magma Flows are out; without its
+    rule the blanket "any course" rule would call it reachable on any of the three. Starter pinned to
+    Checker Knights, which is one of them."""
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_CHECKER_STARTER}
 
@@ -1284,17 +1268,15 @@ class TestARMachineCellPrereqs(KARTestBase):
 
 
 class TestARMachineCellNeedsOnlyOwnCourse(KARTestBase):
-    """Regression: a machine-specific AR cell needs its machine and its OWN course, nothing else. It
-    used to chain onto the box that awards the machine in vanilla, which the mod does not reproduce
-    (machine availability comes from the AP unlock mask, never from completing a box) -- and where that
-    box lived in another course's region, the chain silently demanded that course too. The reported case
-    was Swerve Star's Machine Passage cell being held behind Sky Sands.
+    """Regression: a machine-specific AR cell needs its machine and its OWN course, nothing else. It used
+    to chain onto the box that awards the machine in vanilla - which the mod does not reproduce - and
+    where that box lived in another course's region the chain silently demanded that course too. The
+    reported case was Swerve Star's Machine Passage cell held behind Sky Sands.
 
-    Both starter pins live in one start_inventory dict (a naive merge of two separate dicts would drop
-    one). Pinning matters because the random AR-course / machine picks could otherwise precollect
-    something a subtest withholds, making its assertion vacuous. Nebula Belt is the pinned course
-    precisely because no cell below names it: pinning any AR course suppresses the random pick, and
-    Nebula is the only one that is neither an own-course nor a withheld course here."""
+    Both starter pins live in one start_inventory dict (a naive merge of two would drop one). Pinning
+    matters because a random AR-course / machine pick could precollect something a subtest withholds,
+    making it vacuous. Nebula Belt is pinned because no cell below names it: it suppresses the random
+    pick while being neither an own-course nor a withheld course."""
 
     options = {
         **AR_ONLY,
@@ -1395,9 +1377,8 @@ class TestFantasyMeadows20MphNeedsCapableMachine(KARTestBase):
     a seed could hand out only Rocket Star and leave it unwinnable. It polls speed every frame, so it
     needs a machine that both caps above the floor and can corner without stopping."""
 
-    # Pinning the starter machine matters: the random pick would otherwise hand out a capable machine
-    # and make the negative test vacuous. It has to be one of the excluded four for that test to mean
-    # anything, so Rocket Star is both the pin and part of the set under test.
+    # Pinning the starter machine matters: a random pick could hand out a capable machine and make the
+    # negative test vacuous. Rocket Star is both the pin and part of the excluded set under test.
     options = {
         **AR_ONLY,
         "air_ride_courses_gated": Toggle.option_true,
@@ -1533,10 +1514,9 @@ class TestCTLegendaryPartChecklistGating(KARTestBase):
 
 
 class TestARAllStandardCoursesGating(KARTestBase):
-    """air_ride_courses_gated ON: 'Race all of the standard Air Ride courses!' completes in-game only
-    once every standard course is unlocked (a locked course cannot be raced). Nebula Belt is the
-    secret course and is intentionally NOT required by the 'standard' wording. Starter is pinned to a
-    standard course so the secret course is never pre-collected."""
+    """air_ride_courses_gated ON: 'Race all of the standard Air Ride courses!' completes only once every
+    standard course is unlocked. Nebula Belt is the secret course and is intentionally NOT required by
+    the 'standard' wording. Starter pinned to a standard course so the secret one is never precollected."""
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
 
@@ -1573,10 +1553,9 @@ class TestARAllStandardCoursesGating(KARTestBase):
 
 
 class TestAPEveryColorGating(KARTestBase):
-    """colors_gated ON: the Archipelago 'Finish a race as every Kirby color' box needs all eight
-    colors. The mod counts one finished Air Ride race per color, so a locked color can never be
-    raced as. Colors grant a random starter, so it is pinned to Pink to keep the pick from
-    shadowing another color."""
+    """colors_gated ON: the Archipelago 'Finish a race as every Kirby color' box needs all eight colors -
+    the mod counts one finished Air Ride race per color, and a locked color can never be raced as. The
+    color starter is pinned to Pink so the random pick cannot shadow another color."""
 
     options = {
         **AR_ONLY,
@@ -1612,11 +1591,10 @@ class TestAPEveryColorGating(KARTestBase):
 
 
 class TestAPBoxColorGating(KARTestBase):
-    """The three per-color box counts. A color spawns only while its own unlock is held and its
-    contents pool still holds something, so each count needs the color plus a key to that color's
-    pool: patches or food for blue, the special items for green, a copy ability for red. Red also
-    accepts a legendary piece, whose carrier box the game spawns without consulting the color
-    picker at all."""
+    """The three per-color box counts. A color spawns only while its own unlock is held and its contents
+    pool still holds something, so each needs the color plus a key to that pool: patches or food for
+    blue, the special items for green, a copy ability for red. Red also accepts a legendary piece, whose
+    carrier box the game spawns without consulting the color picker."""
 
     options = {
         **CT_ONLY,
@@ -1652,9 +1630,8 @@ class TestAPBoxColorGating(KARTestBase):
         )
 
     def test_all_up_alone_does_not_open_blue(self):
-        # All Up's City Trial fall chance is zero, so it never joins the blue pool on its own -
-        # the mod injects it only under the Max Stats Insanity goal. Holding it must not count as
-        # the key that makes blue boxes spawn.
+        # All Up's City Trial fall chance is zero, so it never joins the blue pool on its own (the mod
+        # injects it only under Max Stats Insanity). Holding it must not make blue boxes spawn.
         withheld = [
             *items_of_type(KARItemType.CT_PATCH_UNLOCK),
             *_BLUE_BOX_FOOD_ITEMS,
@@ -1735,9 +1712,8 @@ _PIN_TR_SKY_STARTER = {"start_inventory": {KARItemName.UNLOCK_TR_COURSE_SKY: 1}}
 
 class TestTRNoWallLapCourseGating(KARTestBase):
     """top_ride_courses_gated ON: "race one lap without hitting a wall and finish 1st" only completes on
-    Grass, Sand, Light or Metal. The cell lives in the mode-root Top Ride region, so without its rule the
-    blanket "any course" rule would call it reachable on Sky, Water or Fire alone. Starter pinned to Sky,
-    which is one of the cut courses."""
+    Grass, Sand, Light or Metal. Without its rule the blanket "any course" rule would call it reachable
+    on Sky, Water or Fire alone. Starter pinned to Sky, one of the cut courses."""
 
     options = {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true, **_PIN_TR_SKY_STARTER}
 
@@ -1809,10 +1785,10 @@ class TestCourseAggregatesGatingNotApplied(KARTestBase):
 
 
 class TestARRootCourseGating(KARTestBase):
-    """air_ride_courses_gated ON: mode-root Air Ride cells need at least one AR course unlocked, since
-    you cannot race without a course. The course starter normally satisfies this, so the test removes
-    it to expose the rule. Any single course restores access, Nebula Belt included. Starter is pinned
-    to a known course so the removal is deterministic."""
+    """air_ride_courses_gated ON: mode-root Air Ride cells need at least one AR course, since you cannot
+    race without one. The course starter normally satisfies this, so the test removes it to expose the
+    rule; any single course restores access, Nebula Belt included. The starter is pinned so removal is
+    deterministic."""
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
 
@@ -1922,9 +1898,8 @@ class TestStadiumPlayCountProgressiveOff(KARTestBase):
         self.assertTrue(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
 
 
-# city_trial_items_gated adds ~30 CT_ITEM_UNLOCK items as progression, overflowing the 90 default
-# CT-only locations. Opening every CT progression-location flag raises capacity to all 120 CT cells
-# so the world fills. Independent of the access rules under test.
+# city_trial_items_gated adds ~30 CT_ITEM_UNLOCK progression items, overflowing the 90 default CT-only
+# locations. Opening every CT progression-location flag raises capacity to all 120 CT cells so it fills.
 _CT_ALL_PROGRESSION_LOCATIONS = {
     "city_trial_progression_high_effort": Toggle.option_true,
     "city_trial_progression_multiplayer": Toggle.option_true,
@@ -1990,10 +1965,9 @@ class TestTRItemTypeCountNoGates(KARTestBase):
 
 
 class TestTRAnyItemBothGates(KARTestBase):
-    """top_ride_items_gated AND abilities_gated ON: the generic 'collect/get items' cells (which name no
-    specific item) need at least one of the 21 TR item types able to spawn. Holding back every key makes
-    them unreachable; any single one restores them (HasAny over the 21 item unlocks plus the four copy
-    abilities that double as a key)."""
+    """top_ride_items_gated AND abilities_gated ON: the generic 'collect/get items' cells name no specific
+    item, so they need any one of the 21 TR item types able to spawn. Holding back every key makes them
+    unreachable; any single one restores them (the 21 unlocks plus the four copy abilities)."""
 
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true, "abilities_gated": Toggle.option_true}
 
@@ -2103,12 +2077,11 @@ class TestCTHydraAndDragoonGoalItemGating(KARTestBase):
 
 
 class TestFill100NonGoalGating(KARTestBase):
-    """'Fill in over 100 Checklist blocks!' is a real in-game meta checkbox the game auto-completes only
-    after the player fills over 100 of that mode's other boxes - distinct from the synthetic 'N checklist
-    blocks' goal. When it is NOT this mode's goal it stays a normal location and must carry that same
-    requirement (100 OTHER reachable boxes), or fill could strand progression on a cell unreachable until
-    ~100 checks are done. Top Ride is on the N-blocks goal here, with course gating holding six of seven
-    courses behind unlocks."""
+    """'Fill in over 100 Checklist blocks!' is a real in-game meta checkbox the game auto-completes once
+    the player fills over 100 of that mode's other boxes - distinct from the synthetic 'N checklist
+    blocks' goal. When it is NOT the mode's goal it stays a normal location and must carry that same
+    requirement, or fill could strand progression behind ~100 checks. Top Ride is on the N-blocks goal
+    here, with course gating holding six of seven courses."""
 
     options = {
         **TR_ONLY,

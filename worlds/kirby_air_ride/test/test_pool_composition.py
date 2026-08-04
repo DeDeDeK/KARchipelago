@@ -346,12 +346,10 @@ class TestDropPatchesTrapExcludedWhenCTDisabled(KARTestBase):
 
 
 class TestChecklistRewardsUnique(KARTestBase):
-    """Checklist rewards are unique one-time unlocks, not draw-with-replacement filler. Regression pin for the
-    old 'reward soup' bug, where rewards were drawn with replacement and ~half were absent while others
-    repeated. Now: useful rewards appear exactly once (they consume scarce default locations); filler rewards
-    appear at least once (so the unlock is obtainable) and may repeat as junk-box filler.
-
-    Rewards are off by default, so this gates them on to exercise the uniqueness path."""
+    """Checklist rewards are unique one-time unlocks, not draw-with-replacement filler. Regression pin for
+    the old 'reward soup' bug, where ~half were absent while others repeated. Now: useful rewards appear
+    exactly once (they consume scarce default locations); filler rewards appear at least once and may
+    repeat as junk-box filler. Rewards are off by default, so this gates them on."""
 
     options = {**ALL_MODES, "checklist_rewards_gated": Toggle.option_true}
 

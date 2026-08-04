@@ -93,10 +93,8 @@ class KARWeb(WebWorld):
     option_groups = kar_option_groups
     rich_text_options_doc = True
     options_presets = {  # noqa: RUF012
-        # Max Stats Insanity bundles a runnable seed: City Trial goal is hitting the patch cap target
-        # (30) on every stat in one round; pool is heavy on Patch Cap Increase and Spawn Rate Up, most
-        # gating off so they fit. Target and ceiling stay modest so the counted items fit even a CT-only
-        # single-world pool. Players can still enable AR/TR for more locations.
+        # Max Stats Insanity: hit the patch cap target (30) on every stat in one round. Heavy on Patch
+        # Cap Increase and Spawn Rate Up, most gating off and the target modest so they fit a CT-only pool.
         "Max Stats Insanity": {
             "city_trial_goal": "max_stats_in_one_run",
             "city_trial_patch_cap_min": 1,
@@ -132,19 +130,15 @@ class KARWeb(WebWorld):
 
 
 class _CapacityModel(NamedTuple):
-    """Location budget and reward demand, computed once and shared by the capacity validators
-    (_validate_pool_fits_locations, _validate_allowed_items_filler) and the reward-pin budgeter
-    (_reward_pin_filler_headroom). Items float freely across the player's enabled modes, so only
-    global totals matter. All counts derive from the location name-sets and the built item pools, so
-    the model is pre-pin and stays valid through create_items' pin step.
-
-    total_default: real, non-goal, non-user-excluded default boxes across all enabled modes.
-    total_excluded: real, non-goal excluded (filler-only) boxes across all enabled modes.
-    useful_rewards / filler_rewards: in-pool checklist rewards split by classification.
+    """Location budget and reward demand, shared by the capacity validators and the reward-pin budgeter.
+    Items float freely across the enabled modes, so only global totals matter. All counts derive from the
+    location name-sets and the built item pools, so the model stays valid through create_items' pin step.
     """
 
+    # Real, non-goal boxes across all enabled modes: default (non-user-excluded) and excluded (filler-only).
     total_default: int
     total_excluded: int
+    # In-pool checklist rewards, split by classification.
     useful_rewards: int
     filler_rewards: int
 
@@ -303,11 +297,8 @@ class KARWorld(World):
         )
 
     def _determine_goal_locations_to_exclude(self) -> None:
-        """
-        Determine which goal locations should be excluded from the multiworld.
-        Goal locations that correspond to specific checklist entries are replaced by event locations,
-        so the original location must not exist as a real location.
-        """
+        """Goal locations backed by a specific checklist entry are replaced by event locations, so the
+        original must not exist as a real location."""
         for enabled, goal_option, goal_location_map in [
             (self.city_trial_enabled, self.options.city_trial_goal, CITY_TRIAL_GOAL_TO_LOCATION),
             (self.air_ride_enabled, self.options.air_ride_goal, AIR_RIDE_GOAL_TO_LOCATION),
@@ -320,11 +311,8 @@ class KARWorld(World):
                 self.goal_locations_to_exclude.add(goal_location_map[goal_option.value])
 
     def _pick_random_starter(self, eligible: set[str]) -> str | None:
-        """
-        Pick a deterministic random item from `eligible`. Returns None if the pool is empty.
-        Skips the pick entirely if the player already preset an item from this category via
-        start_inventory.
-        """
+        """Pick a deterministic random item from `eligible`, or None if it is empty. Skips the pick when
+        the player already preset an item from this category via start_inventory."""
         if not eligible:
             return None
         if any(item in self.options.start_inventory for item in eligible):
@@ -333,21 +321,16 @@ class KARWorld(World):
 
     def _determine_starter_items(self) -> None:
         """
-        Pre-determine one random starter item per gated category the player should not boot
-        into without. Each is push_precollected in generate_early. Categories:
-          - Stadiums (when city_trial_stadiums_gated + CT): any of the 24 stadium unlocks,
-            excluding VS King Dedede when it's the goal.
-          - Machines (when machines_gated + CT or AR): excludes Hydra/Dragoon (legendary), and
-            the machines Charge makes rideable while base abilities are gated.
-          - Air Ride courses (when air_ride_courses_gated + AR).
-          - Top Ride courses (when top_ride_courses_gated + TR).
-          - Colors (when colors_gated): any of the 8 Kirby colors, Pink included - the mod
-            falls back to Pink only when no color is unlocked, so Pink is a valid starter.
-            Colors are a deliberate cosmetic-variety exception to the "needed to play" rule
-            below; every other starter opens a mode's core loop.
+        Pre-determine one random starter item per gated category the player should not boot into without.
+        Each is push_precollected in generate_early.
+          - Stadiums (city_trial_stadiums_gated + CT): any of the 24, minus VS King Dedede when it is the goal.
+          - Machines (machines_gated + CT or AR): minus Hydra/Dragoon, and minus the Charge-dependent
+            machines while base abilities are gated.
+          - Air Ride courses (air_ride_courses_gated + AR), Top Ride courses (top_ride_courses_gated + TR).
+          - Colors (colors_gated): any of the 8, Pink included - the mod falls back to Pink only when no
+            color is unlocked. A deliberate cosmetic exception; every other starter opens a mode's loop.
 
-        Deliberately skipped (playable without): events, abilities, boxes, CT items, TR items,
-        patch types.
+        Deliberately skipped (playable without): events, abilities, boxes, CT items, TR items, patch types.
         """
         if self.city_trial_enabled and self.options.city_trial_stadiums_gated:
             beat_dedede = self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
@@ -402,23 +385,17 @@ class KARWorld(World):
     def _compute_logic_modes(self) -> set[GameMode]:
         """
         The modes whose region trees get built: every mode with a goal, plus every mode an Archipelago
-        checklist box names, when the AP checklist is on.
+        checklist box names when the AP checklist is on.
 
-        An AP box lives in the region where its activity happens - a "win a race on Magma Flows" box
-        sits in AR_MAGMA_FLOWS - so it inherits that region's entrance chain instead of hand-copying it
-        as Has(...) rules that drift. That only works if the tree exists, which is what pulls a goal-less
-        mode into logic here.
+        An AP box lives in the region where its activity happens, so it inherits that region's entrance
+        chain instead of hand-copied Has(...) rules that drift. That only works if the tree exists, which
+        is what pulls a goal-less mode in here. Reads the *static* REGION_TO_MODE table, never the built
+        regions: logic_modes decides which get built, so inspecting them would be circular.
 
-        Reads the *static* REGION_TO_MODE table, never the built regions and never a filtered location
-        set: logic_modes is what decides which regions get built, so inspecting them would be circular.
-
-        A mode pulled in this way has a tree but no goal, so it contributes no unlock items, none of its
-        categories land in effective_gates, set_rules adds no entrance guard for them and fill_slot_data
-        ships its gates as 0. The tree is present, reachable and free - which is exactly what an AP box
-        in a City Trial stadium needs, and what the upstream all-regions-reachable test requires.
-
-        The cost to accept: an AP+TR seed still builds the CT and AR trees. They are empty and ungated,
-        and cost nothing but region count.
+        A mode pulled in this way has a tree but no goal, so it contributes no unlock items, lands in no
+        effective_gates, gets no entrance guard and ships its gates as 0 - present, reachable and free,
+        which is what an AP box in a City Trial stadium needs. The cost: an AP+TR seed still builds the
+        CT and AR trees, empty and ungated.
         """
         modes = {
             mode
@@ -437,14 +414,12 @@ class KARWorld(World):
     def _category_holds_keys(self, cat: GatingCategory) -> bool:
         """
         Whether a gating category actually holds unlock items in this seed: its gate is on AND some mode
-        that gives its items meaning has a goal.
+        that gives its items meaning has a goal. The mode test uses the *_enabled flags, not logic_modes,
+        since a goal-less mode contributes no unlock items - that is what makes it a free side mode.
 
-        An empty required_modes means mode-agnostic (colors) - always keyed, never mode-excluded. The
-        mode test must read `not cat.required_modes or any(...)`: an intersection against the enabled
-        modes would treat "no required modes" as "no match" and silently drop colors from every seed.
-
-        The mode test uses the *_enabled flags (modes with a goal), not logic_modes - a goal-less mode
-        contributes no unlock items, which is what makes it a free side mode.
+        An empty required_modes means mode-agnostic (colors) - always keyed. The test must therefore read
+        `not cat.required_modes or any(...)`: an intersection against the enabled modes would treat "no
+        required modes" as "no match" and silently drop colors from every seed.
         """
         if not getattr(self.options, cat.option):
             return False
@@ -454,19 +429,15 @@ class KARWorld(World):
         """
         The gating categories that really hold keys this seed, by option name.
 
-        A gate is only meaningful when the seed contains its unlock items. The YAML toggle alone does not
-        establish that: a category whose modes all lack a goal has its unlocks dropped from the pool, so
-        shipping its toggle to the mod would lock that content behind keys that were never minted. This
-        set is the single answer three consumers share - _build_item_pools (where it is the definition of
-        the exclusion), the entrance-rule guards in set_rules, and fill_slot_data.
+        The YAML toggle alone does not establish that: a category whose modes all lack a goal has its
+        unlocks dropped from the pool, so shipping its toggle would lock content behind keys that were
+        never minted. Shared by _build_item_pools (where it defines the exclusion), set_rules' entrance
+        guards, and fill_slot_data.
         """
         return {cat.option for cat in GATING_CATEGORIES if self._category_holds_keys(cat)}
 
     def _validate_options(self) -> None:
-        """
-        Validate that option combinations are coherent.
-        Checks checklist block goals are achievable and checkbox filler amounts are valid.
-        """
+        """Validate that option combinations are coherent: checklist goals achievable, filler amounts sane."""
         for enabled, goal_option, checklist_amount_option, filler_option, mode_name, location_table in [
             (
                 self.city_trial_enabled,
@@ -506,9 +477,8 @@ class KARWorld(World):
 
             if goal_option.value == goal_option.option_n_checklist_blocks:
                 required = checklist_amount_option.value
-            # getattr, not an attribute access: ArchipelagoGoal deliberately does not offer
-            # 100_checklist_blocks (its checklist is smaller than 100 boxes). A goal value is always an
-            # int, so the None default can never compare equal.
+            # getattr, not attribute access: ArchipelagoGoal has no 100_checklist_blocks (its checklist is
+            # under 100 boxes). Goal values are ints, so the None default can never compare equal.
             elif goal_option.value == getattr(goal_option, "option_100_checklist_blocks", None):
                 required = 100
             else:
@@ -576,11 +546,10 @@ class KARWorld(World):
                     f"{mode_name} goal locations include names that are not {mode_name} locations: {misfiled}"
                 )
 
-        # The spawn-rate mechanic moves in fixed +10% steps (mod starts at the min, adds 10% per "Spawn
-        # Rate Up"). Snap both bounds to a multiple of 10 so they match what the game can reach and
-        # collecting every item lands exactly on the max - else a typed 255 acts as 250 and an off-grid
-        # min like 67 gives an odd 67/77/87 progression. The min (10-100) and max (100-300) ranges meet
-        # at vanilla, so max >= min always holds.
+        # The mod starts at the min and adds a fixed 10% per "Spawn Rate Up". Snap both bounds to a
+        # multiple of 10 so collecting every item lands exactly on the max - else a typed 255 acts as 250
+        # and an off-grid min like 67 gives an odd 67/77/87 progression. The ranges meet at vanilla, so
+        # max >= min always holds.
         self.options.spawn_rate_min.value = ((self.options.spawn_rate_min.value + 5) // 10) * 10
         self.options.spawn_rate_max.value = ((self.options.spawn_rate_max.value + 5) // 10) * 10
 
@@ -610,16 +579,12 @@ class KARWorld(World):
         return 1
 
     def _build_item_pools(self) -> None:
-        """
-        Determine which items are excluded based on player options, then sort the remaining items into pools
-        (progression, useful, filler, trap) for placement during create_items().
-        """
+        """Determine which items the player's options exclude, then sort the rest into pools (progression,
+        useful, filler, trap) for create_items() to place."""
 
-        # Gating categories (GATING_CATEGORIES, the single source of truth): a category not in
-        # effective_gates has its gate OFF or no relevant mode enabled, so its unlock items are excluded.
-        # This is the definition of effective_gates, not a separate reading of it. Overlapping checklist
-        # rewards are always excluded too - the UNLOCK items deliver that content when gated ON, and the
-        # mod pre-unlocks the whole category at connect when OFF, so the reward gates nothing either way.
+        # Gating categories: a category outside effective_gates has its gate OFF or no relevant mode
+        # enabled, so its unlock items are excluded - this is the definition of effective_gates, not a
+        # separate reading of it. Overlapping checklist rewards are always excluded too, gate ON or OFF.
         excluded: set[str] = set()
         for cat in GATING_CATEGORIES:
             if cat.option not in self.effective_gates:
@@ -636,18 +601,16 @@ class KARWorld(World):
         if not self.city_trial_enabled:
             excluded |= items_by_type[KARItemType.CT_CHECKLIST_REWARD]
 
-        # Non-progression checklist rewards: removed from the pool when checklist_rewards_gated is off.
-        # The mod unlocks them all at connect, so their boxes carry ordinary items instead. The 6
-        # Dragoon/Hydra part markers are progression (they gate the legendary machines) and stay.
+        # Non-progression checklist rewards leave the pool when checklist_rewards_gated is off: the mod
+        # unlocks them at connect. The 6 Dragoon/Hydra part markers are progression and stay.
         if not self.options.checklist_rewards_gated:
             for name, data in ITEM_TABLE.items():
                 if data.type in CHECKLIST_REWARD_TYPES and not (data.classification & ItemClassification.progression):
                     excluded.add(name)
 
-        # Allowed item categories: a category absent from `allowed_items` removes all of that category's
-        # optional NON-TRAP items. (Trap items stay governed solely by `traps`, so
-        # ALLOWED_ITEM_CATEGORY_ITEMS omits them.) The source-modes backstop still applies on top, so
-        # e.g. Permanent Patches (all _CT) are also dropped when City Trial is off, no separate guard.
+        # Allowed item categories: a category absent from `allowed_items` removes that category's optional
+        # NON-TRAP items (traps stay governed solely by `traps`). The source-modes backstop applies on top,
+        # so e.g. Permanent Patches are also dropped when City Trial is off - no separate guard needed.
         allowed = self.options.allowed_items.value
         for category, names in ALLOWED_ITEM_CATEGORY_ITEMS.items():
             if category not in allowed:
@@ -693,11 +656,9 @@ class KARWorld(World):
                 excluded.add(name)
 
         # One-time items the player preset in start_inventory: drop the pool copy. Plain start_inventory
-        # only precollects an item; AP does NOT remove it from the pool, so without this a second
-        # findable copy gets minted. Every gating-category unlock and checklist reward is placed once,
-        # so dedup them all (including the six progression part markers, which are still one-time).
-        # Stackable items (patch caps, spawn-rate ups, checkbox fillers) and filler/give-items are left
-        # in the pool: extra preset copies are harmless there.
+        # precollects without removing from the pool, so without this a second findable copy gets minted.
+        # Every gating-category unlock and checklist reward is placed once, so dedup them all. Stackables
+        # (patch caps, spawn-rate ups, checkbox fillers) and give-items stay - extra copies are harmless.
         one_time_items: set[str] = set()
         for cat in GATING_CATEGORIES:
             one_time_items |= items_by_type[cat.item_type]
@@ -745,10 +706,9 @@ class KARWorld(World):
                 KARItemType.AR_CHECKLIST_REWARD,
                 KARItemType.TR_CHECKLIST_REWARD,
             ):
-                # Checklist rewards are unique one-time unlocks, each tied to a specific box - not
-                # interchangeable filler. Route each into reward_pool once so every in-scope reward is
-                # placed. (Progression part-markers go to progression_pool; overlapping and
-                # mode-disabled rewards are already excluded.)
+                # Checklist rewards are unique one-time unlocks tied to a specific box, not
+                # interchangeable filler, so each goes into reward_pool exactly once. (Progression
+                # part-markers go to progression_pool; overlapping/mode-disabled rewards are excluded.)
                 self.reward_pool.append(item_name)
             elif classification & ItemClassification.useful:
                 self.useful_pool.add(item_name)
@@ -758,9 +718,8 @@ class KARWorld(World):
             else:
                 self.filler_pool.add(item_name)
 
-        # Pools are now authoritative. _random_filler keys off this to avoid resurrecting items the
-        # player disabled via allowed_items (an empty filler_pool after a real build is intentional,
-        # not a "pools never built" ItemLink bypass).
+        # Pools are now authoritative. _random_filler keys off this so it never resurrects items the
+        # player disabled via allowed_items: an empty filler_pool after a real build is intentional.
         self.item_pools_built = True
 
     def generate_early(self) -> None:
@@ -776,8 +735,7 @@ class KARWorld(World):
             raise OptionError("No modes enabled. You need to have at least one goal in a mode!")
 
         # Both depend only on the *_enabled flags above. effective_gates must precede _build_item_pools
-        # (which it defines) and set_rules (whose entrance guards read it); logic_modes must precede
-        # create_regions, which it drives.
+        # and set_rules, which read it; logic_modes must precede create_regions, which it drives.
         self.effective_gates = self._compute_effective_gates()
         self.logic_modes = self._compute_logic_modes()
 
@@ -809,12 +767,8 @@ class KARWorld(World):
         return self._capacity_model
 
     def _compute_capacity(self) -> _CapacityModel:
-        """
-        Build the location capacity/demand model shared by the capacity validators and the reward-pin
-        budgeter. Computed once from the location name-sets and built item pools, so it stays valid from
-        the end of generate_early through create_items' pin step. Items float across all enabled modes,
-        so only global totals are tracked.
-        """
+        """Build the location capacity/demand model shared by the capacity validators and the reward-pin
+        budgeter. Computed once; valid from the end of generate_early through create_items' pin step."""
         total_default = 0
         total_excluded = 0
         for enabled, default_locs, excluded_locs in [
@@ -851,13 +805,11 @@ class KARWorld(World):
         )
 
     def _validate_allowed_items_filler(self) -> None:
-        """Defensive backstop: generic filler is always available, so allowed_items can no longer
-        starve the pool.
+        """Defensive backstop: generic filler is always available, so allowed_items cannot starve the pool.
 
-        The cosmetic all-mode filler (Big Kirby / Small Kirby, KARItemType.FILLER) is immune to
-        allowed_items and carries _ALL_MODES, so it always lands in filler_pool while any mode is
-        enabled, covering every excluded box and leftover slot. This fires only if a future change
-        breaks that invariant, turning a would-be downstream FillError into a clean generate_early error.
+        Big Kirby / Small Kirby are immune to allowed_items and carry _ALL_MODES, so filler_pool is never
+        empty while any mode is enabled. This fires only if a future change breaks that invariant, turning
+        a would-be downstream FillError into a clean generate_early error.
         """
         if not self.filler_pool:
             raise OptionError(
@@ -869,13 +821,10 @@ class KARWorld(World):
 
     def _validate_pool_fits_locations(self) -> None:
         """
-        Verify the guaranteed item pool fits the available locations. Two budgets are checked:
-          - "needs-default": progression + counted-useful + useful-classified rewards can only sit on
-            default (non-excluded) locations.
-          - "total": every guaranteed item (the needs-default items plus filler-classified rewards,
-            which may sit on excluded boxes) must fit the total placeable location count.
-        Rewards are unique one-time unlocks, so each counts once. Raises OptionError with a hint about
-        the likely culprit options.
+        Verify the guaranteed item pool fits the available locations, on two budgets:
+          - needs-default: progression + counted-useful + useful rewards, which need non-excluded boxes.
+          - total: those plus filler-classified rewards, which may sit on excluded boxes.
+        Rewards are unique one-time unlocks, so each counts once. Raises OptionError naming likely culprits.
         """
         cap = self._capacity
         default_count = cap.total_default
@@ -925,12 +874,8 @@ class KARWorld(World):
         self._set_goal_location_item_rules()
 
     def _set_goal_location_item_rules(self) -> None:
-        """
-        Restrict checklist_list goal locations to local items only.
-
-        This prevents other players' /collect from checking these locations,
-        which would auto-complete checklist entries and prematurely satisfy the goal.
-        """
+        """Restrict checklist_list goal locations to local items, so another player's /collect cannot check
+        them, auto-complete the checklist entries and prematurely satisfy the goal."""
         for enabled, goal_option, goal_locations_option in [
             (self.city_trial_enabled, self.options.city_trial_goal, self.options.city_trial_goal_locations),
             (self.air_ride_enabled, self.options.air_ride_goal, self.options.air_ride_goal_locations),
@@ -953,11 +898,8 @@ class KARWorld(World):
         raise KeyError(f"Invalid item name: {name}")
 
     def _reward_pin_filler_headroom(self) -> int:
-        """
-        Headroom for pinning *filler* checklist rewards onto default boxes without starving progression
-        of the default locations it needs: (all default boxes) - (all needs-default items: progression +
-        counted-useful + useful rewards). Guaranteed >= 0 by _validate_pool_fits_locations.
-        """
+        """Headroom for pinning *filler* rewards onto default boxes without starving progression of the
+        boxes it needs: (all default boxes) - (all needs-default items). >= 0 per _validate_pool_fits_locations."""
         cap = self._capacity
         needs_default = len(self.progression_pool) + len(self.counted_useful_pool) + cap.useful_rewards
         return cap.total_default - needs_default
@@ -965,23 +907,19 @@ class KARWorld(World):
     def _pin_native_rewards(self, excluded_locations: set[str]) -> None:
         """
         When shuffle_checklist_rewards is off, pin each in-pool checklist reward back onto its vanilla box
-        (place_locked_item) and drop it from its pool so create_items mints no duplicate. In scope: the
-        non-progression rewards in reward_pool plus the six progression Dragoon/Hydra part markers. Runs
-        before create_items counts locations, so the locked boxes self-balance the mint.
+        and drop it from its pool so create_items mints no duplicate. In scope: reward_pool's
+        non-progression rewards plus the six progression Dragoon/Hydra part markers. Runs before
+        create_items counts locations, so the locked boxes self-balance the mint.
 
-        No-op when checklist_rewards_gated is off: the cosmetic rewards have already left the pool (the mod
-        grants them at connect), so reward_pool is empty and the only remaining in-scope items would be the
-        part markers. Those are left to float like any other progression item rather than pinned, so that
-        shuffle_checklist_rewards has no effect at all when rewards are gated off.
+        No-op when checklist_rewards_gated is off: reward_pool is already empty (the mod grants those at
+        connect) and the part markers float like any other progression item, so shuffle_checklist_rewards
+        has no effect at all in that state.
 
         Default boxes are the only home for progression / counted-useful / useful rewards, so default-box
-        pins are rationed:
-          - Always pin (capacity-neutral): a part marker on a default box (already in progression demand;
-            parts gate the Hydra/Dragoon cells, not their own boxes, so this never self-locks), or a filler
-            reward on an excluded box (its proper home).
-          - Budgeted: a useful reward pins onto its native default box (it needs a default box regardless,
-            so this is capacity-neutral), and a filler reward pins onto its native default box only while
-            global filler headroom remains. Non-fitting filler rewards float back into the pool.
+        pins are rationed. Capacity-neutral pins always happen: a part marker on a default box (already in
+        progression demand; parts gate the Hydra/Dragoon cells, not their own boxes) or a filler reward on
+        an excluded box. Budgeted pins take a useful reward's native default box unconditionally and a
+        filler reward's only while global headroom remains, floating the rest back into the pool.
         """
         if self.options.shuffle_checklist_rewards:
             return
@@ -994,9 +932,9 @@ class KARWorld(World):
         in_scope = list(self.reward_pool) + [
             name for name in self.progression_pool if ITEM_TABLE[name].type in CHECKLIST_REWARD_TYPES
         ]
-        # Resolve each in-scope reward to a pinnable native box and bucket it. always_pin: capacity-
-        # neutral (part on default box, filler on excluded box). budgeted: default-box pins competing for
-        # capacity (useful rewards + filler-on-default), useful first so it wins the scarce slots.
+        # Resolve each in-scope reward to a pinnable native box and bucket it. always_pin is capacity-
+        # neutral (part on default box, filler on excluded box); budgeted competes for default-box
+        # capacity, useful rewards first so they win the scarce slots.
         always_pin: list[tuple[str, Location]] = []
         budgeted: list[tuple[str, Location, bool]] = []
         for reward in sorted(in_scope):
@@ -1049,9 +987,8 @@ class KARWorld(World):
             self.progression_pool.remove(part)
 
     def create_items(self) -> None:
-        # Progression, checklist rewards, and filler all float freely across the player's enabled modes,
-        # so create_items mints everything with no mode awareness. (source_modes only governs which items
-        # exist in the pool at all, via the disabled-mode pool backstop.)
+        # Progression, checklist rewards, and filler all float freely across the enabled modes, so this
+        # mints with no mode awareness - source_modes only governs which items exist in the pool at all.
         pool: list[str] = []
 
         # Determine excluded locations. Add in excluded locations only if the respective game modes are
@@ -1082,9 +1019,8 @@ class KARWorld(World):
             1 for location in self.get_locations() if location.name in excluded_locations and not location.locked
         )
 
-        # Checklist rewards are unique one-time unlocks, each minted once. Filler-classified rewards are
-        # eligible for excluded boxes, so they offset the generic filler minted there; useful-classified
-        # rewards need default locations like progression. _validate_pool_fits_locations guarantees fit.
+        # Checklist rewards are minted once each. Filler-classified ones may sit on excluded boxes, so
+        # they offset the generic filler minted there; useful ones need default boxes like progression.
         num_reward_filler = sum(
             1 for name in self.reward_pool if not (ITEM_TABLE[name].classification & ItemClassification.useful)
         )
@@ -1134,10 +1070,8 @@ class KARWorld(World):
 
     def _random_filler(self) -> str:
         """Pick a random filler item from the built filler_pool. Falls back to the broadest ITEM_TABLE
-        filler set ONLY when the pools were never built (e.g. an ItemLink path that bypasses
-        _build_item_pools). Once pools are built, an empty filler_pool is authoritative (the player
-        disabled every filler category via allowed_items), so we must not resurrect disabled items here;
-        _validate_allowed_items_filler guarantees _random_filler is never called in that state."""
+        filler set ONLY when the pools were never built (e.g. an ItemLink path bypassing _build_item_pools);
+        once built, an empty filler_pool is authoritative and disabled items must not be resurrected."""
         eligible = set(self.filler_pool)
         if not eligible and not self.item_pools_built:
             eligible = {n for n, d in ITEM_TABLE.items() if d.classification == ItemClassification.filler}
@@ -1160,14 +1094,9 @@ class KARWorld(World):
         """
         Return the `slot_data` field that will be in the `Connected` network package.
 
-        Only options the client or mod actually consume are shipped: the client uses
-        these directly (link toggles, goal logging) or writes them into the mod's
-        `APSlotOptions` struct via Dolphin. Generation-only options that no downstream
-        consumer reads (`trap_chance`, `spawn_rate_max`) are deliberately omitted - they
-        only size item pools at generation time. `spawn_rate_min` ships because it is the
-        runtime floor the mod reads.
-
-        Every gating category ships its *effective* state rather than the raw YAML toggle; see below.
+        Only options the client or mod actually consume are shipped; generation-only ones (`trap_chance`,
+        `spawn_rate_max`) are omitted, while `spawn_rate_min` ships because it is the runtime floor the mod
+        reads. Every gating category ships its *effective* state rather than the raw YAML toggle; see below.
         """
         slot_data = dict(
             self.options.as_dict(
@@ -1207,10 +1136,9 @@ class KARWorld(World):
         )
 
         # Ship each gating category's effective state, not the player's raw toggle. The mod applies gate
-        # flags goal-independently, so a category whose keys never entered the pool (none of its modes
-        # has a goal) would otherwise ship locked with nothing able to unlock it - permanently locking
-        # that content. An AR-only seed shipped City Trial's events, patches, boxes and stadiums locked
-        # with zero keys before this. checklist_rewards_gated is not a gating category and ships raw.
+        # flags goal-independently, so a category whose keys never entered the pool would otherwise ship
+        # locked with nothing able to unlock it - an AR-only seed used to lock City Trial's events,
+        # patches, boxes and stadiums permanently. checklist_rewards_gated is not a category; it ships raw.
         for cat in GATING_CATEGORIES:
             slot_data[cat.option] = int(cat.option in self.effective_gates)
 

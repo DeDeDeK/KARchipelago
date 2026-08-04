@@ -1,9 +1,8 @@
 """
 Tests for KARWorld._random_filler, _random_trap, and get_filler_item_name.
 
-The fallback path (filler_pool empty -> ITEM_TABLE) isn't exercised by happy-path generation, so we
-drive it directly here. None of these helpers are mode-aware: every item floats freely across enabled
-modes.
+The fallback path (filler_pool empty -> ITEM_TABLE) isn't exercised by happy-path generation, so it is
+driven directly here. None of these helpers are mode-aware; every item floats across enabled modes.
 """
 
 from BaseClasses import ItemClassification
@@ -56,10 +55,8 @@ class TestRandomFillerNoResurrectWhenBuilt(KARTestBase):
 
 
 class TestRandomTrap(KARTestBase):
-    """_random_trap returns None when no traps are active, otherwise an active trap name.
-
-    trap_chance is set above 0 so the trap_pool is actually populated (it stays empty when
-    trap_chance == 0, which would silently skip the active-trap path)."""
+    """_random_trap returns None when no traps are active, otherwise an active trap name. trap_chance is
+    set above 0 so trap_pool is populated - at 0 it stays empty and silently skips the active path."""
 
     options = {**CT_ONLY, "trap_chance": 50}
 

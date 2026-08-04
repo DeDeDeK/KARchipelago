@@ -1,15 +1,11 @@
 """
 Slot data contract tests.
 
-fill_slot_data() returns the dict the client consumes on connect. These tests pin the contract:
-required keys present, types correct, and the spawn-rate min shipped to the mod verbatim.
+fill_slot_data() returns the dict the client consumes on connect. These pin the contract: required keys
+present, types correct, and the spawn-rate min shipped to the mod verbatim. Only options the client or
+mod consume are shipped - generation-only ones (trap_chance, spawn_rate_max) are deliberately omitted.
 
-Only options the client or mod consume are shipped. Generation-only options that no downstream
-consumer reads (trap_chance, spawn_rate_max) are deliberately omitted - they only size item pools
-at generation time.
-
-Update the EXPECTED_KEYS set when intentionally adding or removing a slot_data field; the client
-must be updated in lockstep.
+Update EXPECTED_KEYS when intentionally adding or removing a field; the client moves in lockstep.
 """
 
 import json
@@ -124,10 +120,9 @@ class TestSlotDataSpawnRateMinShips(KARTestBase):
 
 
 class TestSlotDataSpawnRateSnapped(KARTestBase):
-    """Spawn rate moves in 10% steps, so the min is snapped to the nearest multiple of
-    10 during generation. The snapped value - not the raw one - is what ships to the mod.
-    (spawn_rate_max is also snapped at generation but isn't shipped: it only sizes the
-    Spawn Rate Up pool.)"""
+    """Spawn rate moves in 10% steps, so the min is snapped to the nearest multiple of 10 at generation
+    and the snapped value is what ships. spawn_rate_max is snapped too but isn't shipped: it only sizes
+    the Spawn Rate Up pool."""
 
     options = {
         **ALL_MODES,

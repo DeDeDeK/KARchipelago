@@ -39,12 +39,10 @@ class KARItemType(StrEnum):
     # Top Ride item give: spawns the item at human Kirby positions (Top Ride scene only)
     TR_ITEM_GIVE = "Top Ride Item Give"
 
-    # Cosmetic all-mode filler (harmless visual effect on receipt). Deliberately outside the
-    # allowed_items categories so it can never be removed, guaranteeing filler is always available.
+    # Cosmetic all-mode filler. Outside the allowed_items categories so it can never be removed.
     FILLER = "Filler"
 
-    # Checklist rewards (vanilla rewards from completing checklist entries).
-    # Single-mode, so each carries a mode prefix.
+    # Checklist rewards (the vanilla rewards for completing checklist entries). Single-mode, so prefixed.
     CT_CHECKLIST_REWARD = "City Trial Checklist Reward"
     AR_CHECKLIST_REWARD = "Air Ride Checklist Reward"
     TR_CHECKLIST_REWARD = "Top Ride Checklist Reward"
@@ -54,11 +52,9 @@ class KARItemType(StrEnum):
 
 
 class KARItemGroup(StrEnum):
-    """Player-facing item-group names. Reference these members instead of hardcoding
-    the strings (YAML configs must match the values verbatim).
-
-    Most map 1:1 from a KARItemType via _TYPE_TO_GROUP; TRAPS is classification-derived.
-    """
+    """Player-facing item-group names. Reference these members instead of hardcoding the strings (YAML
+    configs must match the values verbatim). Most map 1:1 from a KARItemType via _TYPE_TO_GROUP; TRAPS
+    is classification-derived."""
 
     CHECKBOX_FILLERS = "Checkbox Fillers"
     PATCH_CAP_INCREASES = "Patch Cap Increases"
@@ -457,8 +453,7 @@ class KARItemName(StrEnum):
     UNLOCK_ITEM_DRAGOON_PART_B = "Unlock Item: Dragoon Part B"
     UNLOCK_ITEM_DRAGOON_PART_C = "Unlock Item: Dragoon Part C"
 
-    # Machine Unlocks (830-854). VCKIND_WHEELVSDEDEDE (855) excluded: CPU-only Vs. King Dedede
-    # machine, not player-rideable.
+    # Machine Unlocks (830-854). 855 VCKIND_WHEELVSDEDEDE excluded: CPU-only, not player-rideable.
     UNLOCK_MACHINE_WARP_STAR = "Unlock Machine: Warp Star"
     UNLOCK_MACHINE_COMPACT_STAR = "Unlock Machine: Compact Star"
     UNLOCK_MACHINE_WINGED_STAR = "Unlock Machine: Winged Star"
@@ -517,10 +512,8 @@ class KARItemName(StrEnum):
     UNLOCK_TR_COURSE_WATER = "Unlock TR Course: Water"
     UNLOCK_TR_COURSE_METAL = "Unlock TR Course: Metal"
 
-    # Top Ride Item Unlocks (900-921, minus ID 912: the KirbyKusdama Party Ball, which the mod mirrors
-    # onto the visible Party Ball at 921 so both spawn). The four ability-themed items -- Freeze Fan
-    # (909), Fire (911), Bomb (913), Walky (916) -- have two keys: this unlock or the matching copy
-    # ability unlock. Either one enables the item in Top Ride.
+    # Top Ride Item Unlocks (900-921, minus 912: the KirbyKusdama Party Ball, mirrored onto the visible
+    # Party Ball at 921). The four ability-themed items (909/911/913/916) also unlock via their ability.
     UNLOCK_TR_ITEM_HAMMER = "Unlock TR Item: Hammer"
     UNLOCK_TR_ITEM_BIG_CAKE = "Unlock TR Item: Big Cake"
     UNLOCK_TR_ITEM_SPEED_UP = "Unlock TR Item: Speed Up"
@@ -543,8 +536,7 @@ class KARItemName(StrEnum):
     UNLOCK_TR_ITEM_CHICKIE = "Unlock TR Item: Chickie"
     UNLOCK_TR_ITEM_PARTY_BALL = "Unlock TR Item: Party Ball"
 
-    # Top Ride Item Gives (950-971). Spawn the TR item at each human Kirby's position (collected next
-    # frame). Only effective in a Top Ride scene; queued otherwise.
+    # Top Ride Item Gives (950-971). Spawn at each human Kirby's position; queued outside a TR scene.
     GIVE_TR_ITEM_HAMMER = "Give TR Item: Hammer"
     GIVE_TR_ITEM_BIG_CAKE = "Give TR Item: Big Cake"
     GIVE_TR_ITEM_SPEED_UP = "Give TR Item: Speed Up"
@@ -579,19 +571,14 @@ class KARItemName(StrEnum):
 
 
 class KARItemData(NamedTuple):
-    """Data for an item in Kirby Air Ride.
-
-    type: The item's functional category.
-    classification: Default AP classification (progression, useful, filler, trap).
-    code: AP item code matching the mod's APItemId enum. None for event-only items.
-    source_modes: Modes the item is meaningful for. An item whose source_modes is non-empty but
-        doesn't intersect the enabled modes is dropped from the pool (no in-game effect); empty means
-        mode-neutral. Placement is otherwise unrestricted - items float freely across enabled modes.
-    """
+    """Data for an item in Kirby Air Ride."""
 
     type: KARItemType
     classification: ItemClassification
+    # Matches the mod's APItemId enum. None for event-only items.
     code: int | None
+    # Modes the item is meaningful for; empty means mode-neutral. A non-empty set that misses every
+    # enabled mode drops the item from the pool. Placement is otherwise unrestricted.
     source_modes: frozenset[GameMode] = frozenset()
 
 
@@ -603,18 +590,15 @@ _AP = frozenset({GameMode.ARCHIPELAGO})
 _AR_CT = frozenset({GameMode.AIRRIDE, GameMode.CITYTRIAL})
 _AR_CT_AP = frozenset({GameMode.AIRRIDE, GameMode.CITYTRIAL, GameMode.ARCHIPELAGO})
 _CT_TR = frozenset({GameMode.CITYTRIAL, GameMode.TOPRIDE})
-# Every mode, including the Archipelago checklist. Used for genuinely game-wide items (copy abilities,
-# Kirby colors, the always-available Big/Small Kirby cosmetic filler): they apply whenever the player
-# is in the game, so an Archipelago-only world must still keep them (notably the cosmetic filler, which
-# guarantees a non-empty filler pool - see _validate_allowed_items_filler).
+# Every mode, including the Archipelago checklist: game-wide items (copy abilities, colors, cosmetic
+# filler) apply in any scene. The filler must stay all-mode to guarantee a non-empty filler pool.
 _ALL_MODES = frozenset({GameMode.AIRRIDE, GameMode.TOPRIDE, GameMode.CITYTRIAL, GameMode.ARCHIPELAGO})
 
 
 class KARItem(Item):
     """An Archipelago item for Kirby Air Ride.
 
-    Uses the base Item constructor signature so it composes with helpers like
-    Region.add_event that instantiate items as Item(name, classification, code, player).
+    Uses the base Item constructor signature so it composes with helpers like Region.add_event.
     Table-driven items should be created via KARItem.from_data instead.
     """
 
@@ -634,8 +618,7 @@ class KARItem(Item):
 # Dolphin memory). Pool quantities are determined by options and pool-building logic.
 
 ITEM_TABLE: dict[str, KARItemData] = {
-    # Standalone Items (1-13). The 4 checkbox fillers lead, one per checklist mode, in
-    # checklist-mode row order.
+    # Standalone Items (1-13). The 4 checkbox fillers lead, one per checklist mode, in row order.
     KARItemName.CHECKBOX_FILLER_AIR_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 1, _AR),
     KARItemName.CHECKBOX_FILLER_TOP_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 2, _TR),
     KARItemName.CHECKBOX_FILLER_CITY_TRIAL: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 3, _CT),
@@ -694,9 +677,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.BLUE_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 300, _CT),
     KARItemName.GREEN_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 301, _CT),
     KARItemName.RED_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 302, _CT),
-    # Stat patches (up). A single +1 patch is minor, so these are filler. They apply in both City
-    # Trial and Air Ride, so they carry _AR_CT - which also gives Air Ride its only repeatable filler
-    # source (food is CT, give-items are TR).
+    # Stat patches (up). A single +1 is minor, so filler. _AR_CT gives Air Ride its only repeatable
+    # filler source (food is CT, give-items are TR).
     KARItemName.BOOST_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 303, _AR_CT),
     KARItemName.TOP_SPEED_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 305, _AR_CT),
     KARItemName.OFFENSE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 307, _AR_CT),
@@ -1065,9 +1047,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     KARItemName.TR_REWARD_ENDING: KARItemData(KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 582, _TR),
     # Checklist Rewards: City Trial (600-643). The six legendary part rewards (Hydra X/Y/Z, Dragoon
-    # A/B/C) are progression, not useful: receiving one performs the in-game "unlock this part", and
-    # the Hydra/Dragoon checkboxes only complete once all three parts are unlocked. They must be
-    # progression so fill never strands a part behind its own checkbox.
+    # A/B/C) are progression, not useful: their checkboxes only complete once all three parts unlock,
+    # so fill must never strand a part behind its own checkbox.
     KARItemName.CT_REWARD_FILLER_BOX_1: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 600, _CT
     ),
@@ -1281,11 +1262,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ABILITY_WING: KARItemData(
         KARItemType.ABILITY_UNLOCK, ItemClassification.progression, 770, _AR_CT
     ),
-    # Base Ability Unlocks (771-773, BaseAbilityKind order). Inhale has no Top Ride half, but the
-    # Archipelago checklist holds City Trial boxes that need it (swallowing a Walky for Mic Kirby), and
-    # the gate ships to the mod as one category - so a seed with the AP checklist has to mint it even
-    # with no City Trial or Air Ride goal, else it gates a move whose unlock never exists. Quick spin
-    # and charge apply in every mode.
+    # Base Ability Unlocks (771-773, BaseAbilityKind order). Inhale has no Top Ride half, but the AP
+    # checklist holds City Trial boxes that need it (swallowing a Walky for Mic Kirby) and the gate
+    # ships as one category, so _AR_CT_AP keeps it minted for AP-checklist seeds.
     KARItemName.UNLOCK_BASE_ABILITY_INHALE: KARItemData(
         KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 771, _AR_CT_AP
     ),
@@ -1416,10 +1395,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ITEM_DRAGOON_PART_C: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 819, _CT
     ),
-    # Machine Unlocks (830-854). Gate whether specific Air Ride machines can be ridden. Excluded
-    # VCKINDs (not selectable player machines): 847 WINGKIRBY (Wing ability state), 849 WHEELIE
-    # (enemy form; the ridable machine is Wheelie Bike 851), 850 WHEELIEKIRBY (Wheel ability state),
-    # 855 WHEELVSDEDEDE (CPU-only stadium machine).
+    # Machine Unlocks (830-854). Gate whether a machine can be ridden. Excluded VCKINDs (not selectable
+    # player machines): 847 WINGKIRBY and 850 WHEELIEKIRBY (ability states), 849 WHEELIE (enemy form;
+    # the ridable machine is Wheelie Bike 851), 855 WHEELVSDEDEDE (CPU-only stadium machine).
     KARItemName.UNLOCK_MACHINE_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 830, _AR_CT
     ),
@@ -1465,9 +1443,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 844, _AR_CT
     ),
-    # Free Star and Steer Star are Top Ride control machines: they don't spawn in the City Trial city
-    # and gate the Top Ride lobby instead. Tagged _TR so they only land in Top Ride locations; a
-    # guaranteed Top Ride machine starter keeps those locations reachable.
+    # Free Star and Steer Star are Top Ride control machines: they gate the Top Ride lobby rather than
+    # spawning in the city, so _TR pins them to Top Ride locations.
     KARItemName.UNLOCK_MACHINE_FREE_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 845, _TR
     ),
@@ -1577,9 +1554,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_TR_COURSE_METAL: KARItemData(
         KARItemType.TR_COURSE_UNLOCK, ItemClassification.progression, 896, _TR
     ),
-    # Top Ride Item Unlocks (900-921, minus 912, which mirrors onto the visible Party Ball at 921).
-    # The four ability-themed items (909/911/913/916) are also enabled by their copy ability unlock,
-    # so holding either key makes the item spawn.
+    # Top Ride Item Unlocks (900-921, minus 912, mirrored onto the visible Party Ball at 921). The four
+    # ability-themed items (909/911/913/916) are also enabled by their copy ability unlock.
     KARItemName.UNLOCK_TR_ITEM_HAMMER: KARItemData(
         KARItemType.TR_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 900, _TR
     ),
@@ -1683,10 +1659,8 @@ STADIUM_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
     KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.CT_STADIUM_UNLOCK
 )
 
-# The six City Trial stadiums that vanilla unlocks via a checklist reward square (Drag Race 4, Kirby
-# Melee 2, Destruction Derby 3/4/5, Single Race 9 / Nebula Belt). The mod unlocks every stadium by the
-# stadium mask instead (each Unlock Stadium item when gated ON, all 24 at connect when OFF), so these
-# reward squares gate nothing and are always excluded from the pool like any other overlapping reward.
+# The six City Trial stadiums vanilla unlocks via a checklist reward square. The mod unlocks stadiums
+# by the stadium mask instead, so these reward squares gate nothing and stay out of the pool.
 STADIUM_CHECKLIST_REWARDS: frozenset[KARItemName] = frozenset(
     {
         KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM,
@@ -1698,8 +1672,7 @@ STADIUM_CHECKLIST_REWARDS: frozenset[KARItemName] = frozenset(
     }
 )
 
-# The three per-mode checklist reward item types. Every native checklist reward (the unique one-time
-# box unlocks plus the six progression Dragoon/Hydra part markers) is one of these.
+# The three per-mode checklist reward item types. Every native checklist reward is one of these.
 CHECKLIST_REWARD_TYPES: frozenset[KARItemType] = frozenset(
     {
         KARItemType.CT_CHECKLIST_REWARD,
@@ -1709,10 +1682,9 @@ CHECKLIST_REWARD_TYPES: frozenset[KARItemType] = frozenset(
 )
 
 
-# The six City Trial legendary piece-spawn unlocks (CT_ITEM_UNLOCK, gated by city_trial_items_gated).
-# Under item gating the Hydra/Dragoon pieces only spawn once these are received, so assembling both
-# machines in one match (the COMPLETE_DRAGOON_AND_HYDRA checkbox / hydra_and_dragoon goal) needs all
-# six. Distinct from the CT_REWARD_*_PART_* checklist markers behind the "Unlock Parts" cells.
+# The six City Trial legendary piece-spawn unlocks. Under city_trial_items_gated the Hydra/Dragoon
+# pieces only spawn once these arrive, so assembling both machines in one match needs all six.
+# Distinct from the CT_REWARD_*_PART_* checklist markers behind the "Unlock Parts" cells.
 LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_ITEM_HYDRA_PART_X,
     KARItemName.UNLOCK_ITEM_HYDRA_PART_Y,
@@ -1723,11 +1695,9 @@ LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
 )
 
 
-# Machines the Charge base ability makes usable at all: Hydra's top speed is low enough that it only
-# really moves on a charge boost, and Slick Star / Turbo Star turn so poorly that charge-drifting is
-# the only way to steer them. With base_abilities_gated on and Charge not yet received, one of these
-# as a player's only machine is a dead end, so they are held out of the machine starter pick and only
-# count toward "some machine to ride" rules once Charge is in.
+# Machines the Charge base ability makes usable at all: Hydra barely moves without a charge boost, and
+# Slick / Turbo Star can only be steered by charge-drifting. Held out of the machine starter pick and
+# out of "some machine to ride" rules until Charge is in.
 CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_HYDRA,
@@ -1737,19 +1707,17 @@ CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
 )
 
 
-# The two playable non-Kirby characters, by the machine unlock that makes each selectable (the Air
-# Ride and City Trial character grids both resolve a character through its machine). Each keeps its
-# own melee attack - Dedede's hammer, Meta Knight's sword - which no base-ability gate touches, so
-# either one is a damage source in the combat stadiums on its own.
+# The two playable non-Kirby characters, by the machine unlock that makes each selectable. Each keeps
+# its own melee attack (Dedede's hammer, Meta Knight's sword), which no base-ability gate touches, so
+# either is a damage source in the combat stadiums on its own.
 CHARACTER_MACHINE_UNLOCKS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE,
     KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT,
 )
 
 
-# Copy abilities that can KO. Sleep has no attack at all; Wheel and Wing turn Kirby into a ride-form
-# whose only offense is ramming, which an ordinary machine already does and which is not enough to
-# finish a derby or a Dedede fight.
+# Copy abilities that can KO. Sleep has no attack; Wheel and Wing only ram, which an ordinary machine
+# already does and which cannot finish a derby or a Dedede fight.
 DAMAGING_ABILITY_UNLOCKS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_ABILITY_FIRE,
     KARItemName.UNLOCK_ABILITY_SWORD,
@@ -1762,38 +1730,26 @@ DAMAGING_ABILITY_UNLOCKS: tuple[KARItemName, ...] = (
 )
 
 
-# Single source of truth for the optional "gating" mechanic. Each row maps a gating option to the
-# unlock item type it controls, the enabled-mode flags that make it relevant, and any vanilla
-# checklist rewards it overlaps with. Pool building, the fuzzer, and the gating tests all derive from
-# this table, so adding a gated category only needs a new row.
-#
-# required_modes holds KARWorld flag names ("city_trial_enabled", ...); the category is irrelevant
-# (its unlock items excluded) when none of those modes is enabled. Empty = never mode-excluded.
-#
-# overlapping_rewards are checklist rewards always excluded from the pool because the mod handles the
-# category directly: the UNLOCK items deliver it when the gate is ON, and the mod pre-unlocks the whole
-# category at connect when OFF. Either way the reward gates nothing.
-#
-# Stadiums are a normal entry, gated on city_trial_stadiums_gated; the mod gates every stadium by the
-# mask, so the six reward-overlap stadiums need no special handling.
+# Single source of truth for the optional "gating" mechanic. Pool building, the fuzzer, and the gating
+# tests all derive from this table, so adding a gated category only needs a new row.
 class GatingCategory(NamedTuple):
     option: str
     item_type: KARItemType
+    # KARWorld flag names; the unlock items drop out when no listed mode is on. Empty = never excluded.
     required_modes: frozenset[str]
+    # Rewards always excluded from the pool: the mod handles the category itself, gate ON or OFF.
     overlapping_rewards: frozenset[KARItemName] = frozenset()
 
 
 GATING_CATEGORIES: tuple[GatingCategory, ...] = (
     GatingCategory("city_trial_events_gated", KARItemType.CT_EVENT_UNLOCK, frozenset({"city_trial_enabled"})),
-    # TR is included because 4 TR locations (Fire/Bomb/Walky) gate behind ability unlocks when
-    # abilities_gated is on.
+    # TR included: 4 TR locations (Fire/Bomb/Walky) gate behind ability unlocks when abilities_gated is on.
     GatingCategory(
         "abilities_gated",
         KARItemType.ABILITY_UNLOCK,
         frozenset({"city_trial_enabled", "air_ride_enabled", "top_ride_enabled"}),
     ),
-    # Base abilities (inhale / quick spin / charge). Quick spin + charge apply in all modes; inhale has
-    # no Top Ride half, so its item drops out of a Top-Ride-only world via _AR_CT_AP source_modes.
+    # Quick spin and charge apply in all modes; inhale has no Top Ride half (see its _AR_CT_AP entry).
     GatingCategory(
         "base_abilities_gated",
         KARItemType.BASE_ABILITY_UNLOCK,
@@ -1870,9 +1826,8 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
             }
         ),
     ),
-    # Stadiums: gated ON = each Unlock Stadium item gates its stadium; OFF = mod unlocks all 24 at
-    # connect. The six reward-overlap stadiums gate by their own Unlock Stadium item like the other 18,
-    # and their checklist rewards are plain overlapping_rewards excluded from the pool.
+    # Stadiums: gated ON = each Unlock Stadium item gates its stadium; OFF = the mod unlocks all 24 at
+    # connect. The six reward-overlap stadiums behave like the other 18.
     GatingCategory(
         "city_trial_stadiums_gated",
         KARItemType.CT_STADIUM_UNLOCK,
@@ -1882,9 +1837,8 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
 )
 
 
-# Maps a trap category name (keys of the `traps` OptionSet) to its trap item names, used to build the
-# active trap pool from the player's selection. Every trap-classified item must appear in exactly one
-# category, or it could never be selected.
+# Maps a trap category name (keys of the `traps` OptionSet) to its trap items. Every trap-classified
+# item must appear in exactly one category, or it could never be selected.
 TRAP_CATEGORIES: dict[str, frozenset[str]] = {
     "Direct Damage": frozenset(
         {
@@ -1924,8 +1878,7 @@ TRAP_CATEGORIES: dict[str, frozenset[str]] = {
 }
 
 
-# Maps each KARItemType to its player-facing KARItemGroup (1:1). Groups are exposed in YAML configs
-# (e.g. exclude_locations, priority_locations).
+# Maps each KARItemType to its player-facing KARItemGroup (1:1). Groups are exposed in YAML configs.
 _TYPE_TO_GROUP: dict[KARItemType, KARItemGroup] = {
     KARItemType.CHECKBOX_FILLER: KARItemGroup.CHECKBOX_FILLERS,
     KARItemType.PATCH_CAP_INCREASE: KARItemGroup.PATCH_CAP_INCREASES,
@@ -1953,8 +1906,8 @@ _TYPE_TO_GROUP: dict[KARItemType, KARItemGroup] = {
     KARItemType.FILLER: KARItemGroup.FILLER_ITEMS,
 }
 
-# All item names bucketed by their KARItemType. The type-keyed view used by generation (pool building,
-# starters), kept separate from the player-facing group strings so generation never depends on them.
+# All item names bucketed by KARItemType - the view generation uses, kept separate from the
+# player-facing group strings so generation never depends on them.
 items_by_type: dict[KARItemType, set[str]] = {}
 for _name, _data in ITEM_TABLE.items():
     items_by_type.setdefault(_data.type, set()).add(_name)
@@ -1967,10 +1920,9 @@ item_name_groups: dict[str, set[str]] = {
 item_name_groups[KARItemGroup.TRAPS] = {n for n, d in ITEM_TABLE.items() if d.classification & ItemClassification.trap}
 
 
-# Maps an "allowed items" category name (keys of the `allowed_items` OptionSet) to the KARItemType
-# whose optional give items it governs. A category absent from the player's set removes all of that
-# type's NON-TRAP items; trap items stay governed solely by `traps`. Keys reuse the KARItemGroup
-# display strings so they match the player-facing groups.
+# Maps an "allowed items" category name (keys of the `allowed_items` OptionSet) to the KARItemType it
+# governs; keys reuse the KARItemGroup display strings. Dropping a category removes that type's
+# NON-TRAP items - trap membership stays governed solely by `traps`.
 ALLOWED_ITEM_CATEGORIES: dict[str, KARItemType] = {
     KARItemGroup.PERMANENT_PATCHES: KARItemType.PERMANENT_PATCH,
     KARItemGroup.CT_ITEM_GIVES: KARItemType.CT_ITEM_GIVE,
@@ -1979,8 +1931,7 @@ ALLOWED_ITEM_CATEGORIES: dict[str, KARItemType] = {
     KARItemGroup.TR_ITEM_GIVES: KARItemType.TR_ITEM_GIVE,
 }
 
-# The non-trap item names each allowed-items category governs. Trap-classified items are excluded
-# because `traps` is the sole governor of trap membership, so toggling a category never affects a trap.
+# The non-trap item names each allowed-items category governs; `traps` alone governs trap membership.
 ALLOWED_ITEM_CATEGORY_ITEMS: dict[str, frozenset[str]] = {
     category: frozenset(
         name
