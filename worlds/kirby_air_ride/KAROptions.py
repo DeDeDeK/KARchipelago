@@ -65,7 +65,7 @@ class SpawnRateMax(Range):
     """
     Item spawn rate ceiling percent, reached after collecting every "Spawn Rate Up" item; the pool
     contains (max - min) / 10 of them. Snapped to the nearest multiple of 10. Applies to City Trial
-    and Top Ride; Air Ride has no spawn-rate scaling.
+    and Top Ride.
     """
 
     display_name = "Spawn Rate Max"
@@ -105,14 +105,12 @@ class RevealChecklists(Toggle):
 
 class ChecklistRewardsGated(Toggle):
     """
-    Controls whether the game's non-progression checklist rewards (music tracks, sound test entries,
-    endings, a Top Ride rule, and so on) are gated behind the multiworld.
+    Controls whether the game's non-progression checklist rewards (red checkbox rewards) are gated.
 
-    When disabled (default), they are left out of the pool: the mod unlocks them all from the start,
-    freeing their checklist boxes to hold other items. When enabled, each must be found, and "Shuffle
-    Checklist Rewards" decides where it can land.
+    When disabled, they are left out of the pool: the mod unlocks them all from the start, and they will not appear
+    in the checklist in-game.
 
-    The Dragoon and Hydra parts are always in the pool (they are progression).
+    When enabled, each must be found, and "Shuffle Checklist Rewards" decides where it can land.
     """
 
     display_name = "Checklist Rewards Gated"
@@ -120,16 +118,11 @@ class ChecklistRewardsGated(Toggle):
 
 class ShuffleChecklistRewards(DefaultOnToggle):
     """
-    Controls where the game's native checklist reward items (a machine, a Kirby color, a music track,
-    the Dragoon/Hydra parts, and so on) are placed. Governs only those reward items.
+    Controls where the game's native checklist reward items (red checkbox items) are placed as AP items.
 
-    If on (default), each reward is shuffled into the multiworld and can be found anywhere your other
-    items can, across any enabled mode. If off, each is placed back on the box that awards it in the
-    base game.
+    If on (default), each reward is shuffled into the multiworld.
 
-    Boxes that award nothing, and content from other unlock items (extra machines, hidden stadiums,
-    spare colors), randomize regardless. When off, a reward whose native box is excluded or is needed
-    to keep progression placeable is shuffled instead of pinned.
+    If off, each is placed, locked, on the location that awards it in the base game.
     """
 
     display_name = "Shuffle Checklist Rewards"
@@ -224,8 +217,8 @@ class CityTrialProgressionBustVehicles(Toggle):
 
 class CityTrialCheckboxFillers(NamedRange):
     """
-    Number of "checkbox filler" items added to the City Trial pool.
-    These auto-complete checklist blocks when received. Set to 0 to disable.
+    Number of "checkbox filler" items added to pool for the City Trial Checklist.
+    Set to 0 to disable.
     """
 
     display_name = "City Trial Checkbox Fillers"
@@ -262,7 +255,7 @@ class CityTrialPatchCapMax(Range):
 
 class CityTrialStadiumsGated(DefaultOnToggle):
     """
-    When enabled (the default), City Trial stadiums are locked and must be unlocked by finding their
+    When enabled, City Trial stadiums are locked and must be unlocked by finding their
     corresponding Unlock Stadium items. The game starts with one random stadium already unlocked (any of
     the 24, except VS King Dedede when that is the goal).
 
@@ -337,8 +330,8 @@ class AirRideProgressionHighEffort(Toggle):
 
 class AirRideCheckboxFillers(NamedRange):
     """
-    Number of "checkbox filler" items added to the Air Ride pool.
-    These auto-complete checklist blocks when received. Set to 0 to disable.
+    Number of "checkbox filler" items added to the pool for the Air Ride Checklist.
+    Set to 0 to disable.
     """
 
     display_name = "Air Ride Checkbox Fillers"
@@ -423,8 +416,8 @@ class TopRideProgressionMultiplayer(Toggle):
 
 class TopRideCheckboxFillers(NamedRange):
     """
-    Number of "checkbox filler" items added to the Top Ride pool.
-    These auto-complete checklist blocks when received. Set to 0 to disable.
+    Number of "checkbox filler" items added to the pool for the Top Ride Checklist.
+    Set to 0 to disable.
     """
 
     display_name = "Top Ride Checkbox Fillers"
@@ -445,9 +438,6 @@ class ArchipelagoGoal(Choice):
     """
 
     display_name = "Archipelago Checklist Goal"
-    # No 100_checklist_blocks, unlike the other three modes: the AP checklist holds 50 boxes, so that
-    # target could only ever fail validation. The remaining values keep their numbering so the mod's goal
-    # switch is unaffected; add it back alongside the 100th box.
     option_n_checklist_blocks = 1
     option_none = 4
     option_checklist_list = 5
@@ -482,11 +472,8 @@ class ArchipelagoGoalLocations(LocationSet):
 
 class ArchipelagoCheckboxFillers(NamedRange):
     """
-    Number of "checkbox filler" items added to the pool for the Archipelago checklist. These
-    auto-complete an Archipelago checklist block when received. Set to 0 to disable.
-
-    Defaults to 0: the Archipelago checklist holds far fewer boxes than the other modes, so a large
-    filler count would have little to fill.
+    Number of "checkbox filler" items added to the pool for the Archipelago checklist.
+    Set to 0 to disable.
     """
 
     display_name = "Archipelago Checkbox Fillers"
@@ -522,11 +509,8 @@ class AbilitiesGated(DefaultOnToggle):
 
 class BaseAbilitiesGated(Toggle):
     """
-    When enabled, Kirby's base moves - inhale, quick spin, and machine charge - start locked and must
-    each be unlocked by finding their item. Until then the human player cannot swallow, quick spin, or
-    charge for a boost (CPUs are unaffected). Checkboxes that need a move gate behind its unlock, and so
-    does the content a move makes playable at all - Hydra, Slick Star and Turbo Star need Charge to be
-    driven, and the KO stadiums need some way to deal damage.
+    When enabled, base abilities - inhale, quick spin, and machine charge - start locked and must
+    each be unlocked by finding their item.
 
     When disabled, all three moves are available from the start and no base ability unlock items are
     added to the pool.
@@ -562,8 +546,8 @@ class CityTrialItemsGated(Toggle):
 class MachinesGated(Toggle):
     """
     When enabled, air ride machines are locked and must be unlocked by finding their
-    corresponding items. Applies to both City Trial and Air Ride. The game starts with one random
-    machine already unlocked (and, when Top Ride is enabled, one random Top Ride control machine).
+    corresponding items. Applies to all modes. The game starts with one random
+    machine already unlocked (and, when Top Ride is enabled, one random Top Ride machine).
 
     When disabled, all machines are available from the start and no machine unlock items are added
     to the pool.
@@ -623,8 +607,8 @@ class TopRideCoursesGated(DefaultOnToggle):
 class TopRideItemsGated(DefaultOnToggle):
     """
     When enabled, Top Ride items are locked and must be unlocked by finding their
-    corresponding items. The four items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) accept
-    either key: their own Top Ride item unlock, or the matching copy ability unlock.
+    corresponding items. The four items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky)
+    are additionally unlocked by the copy ability unlock item.
 
     When disabled, all Top Ride items are available from the start and no item unlock items are added
     to the pool.
