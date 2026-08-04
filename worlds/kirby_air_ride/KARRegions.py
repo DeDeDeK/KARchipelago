@@ -103,15 +103,13 @@ class KARRegion(StrEnum):
     TR_FR_WATER = "Top Ride: Free Run: WATER"
     TR_FR_METAL = "Top Ride: Free Run: METAL"
 
-    # Archipelago checklist. The mode-agnostic Archipelago boxes live here; boxes describing an
-    # activity in another mode live in that mode's region instead, so the AP checklist is a tab, not a
-    # place. No sub-regions.
+    # Archipelago checklist: a tab, not a place. Only mode-agnostic boxes live here - a box describing an
+    # activity in another mode sits in that mode's region instead. No sub-regions.
     ARCHIPELAGO = "Archipelago"
 
 
-# Ordered name-prefix table backing REGION_TO_MODE. First match wins, so the exact mode-root names come
-# before their short prefixes. "ARCHIPELAGO" leads defensively; it does not collide with "AR_" today
-# (str.startswith("AR_") is False for it) but the intent is clearer stated than inferred.
+# Ordered name-prefix table backing REGION_TO_MODE. First match wins, so exact mode-root names come
+# before their short prefixes. "ARCHIPELAGO" leads defensively - it does not collide with "AR_" today.
 _REGION_MODE_NAME_PREFIXES: tuple[tuple[str, GameMode], ...] = (
     ("ARCHIPELAGO", GameMode.ARCHIPELAGO),
     ("CITY_TRIAL", GameMode.CITYTRIAL),
@@ -125,12 +123,9 @@ _REGION_MODE_NAME_PREFIXES: tuple[tuple[str, GameMode], ...] = (
 
 
 def _build_region_to_mode() -> dict[str, GameMode]:
-    """Classify every KARRegion by the game mode it belongs to, keyed by region name.
-
-    Derived from the enum member names rather than hand-listed, and checked exhaustive here: a region
-    matching no prefix raises at import instead of silently going unclassified, which would strand an
-    Archipelago box in a tree that logic_modes never builds.
-    """
+    """Classify every KARRegion by the game mode it belongs to, keyed by region name. Derived from the
+    enum member names and checked exhaustive: a region matching no prefix raises at import instead of
+    silently stranding an Archipelago box in a tree that logic_modes never builds."""
     mapping: dict[str, GameMode] = {}
     for region in KARRegion:
         for prefix, mode in _REGION_MODE_NAME_PREFIXES:
@@ -145,9 +140,8 @@ def _build_region_to_mode() -> dict[str, GameMode]:
     return mapping
 
 
-# Which game mode each region belongs to. Static by construction and deliberately so: logic_modes
-# decides which region trees get built and derives itself from this table (via the AP location table's
-# regions), so this must never inspect built regions - that would be circular.
+# Which game mode each region belongs to. Static by construction and deliberately so: logic_modes derives
+# itself from this table, so inspecting built regions here would be circular.
 REGION_TO_MODE: dict[str, GameMode] = _build_region_to_mode()
 
 
@@ -205,12 +199,10 @@ def create_regions(world: "KARWorld"):
     menu_region = Region(world.origin_region_name, world.player, world.multiworld)
     world.multiworld.regions.append(menu_region)
 
-    # Two different questions, two different conditions. Whether a mode's tree is BUILT is
-    # `mode in logic_modes` - a mode has a tree if it has a goal or hosts an Archipelago box. Whether
-    # the mode's OWN checklist locations are assigned (below) is `*_enabled` - only a mode with a goal
-    # brings its own boxes. A goal-less City Trial hosting one AP box in a stadium gets all 28 CT
-    # regions with 27 of them empty; that is correct. Trees are built whole - the DD/KM/DR prerequisite
-    # chains need the structure, so there are no partial trees.
+    # Two questions, two conditions. A mode's tree is BUILT when `mode in logic_modes` (it has a goal or
+    # hosts an Archipelago box); its OWN checklist locations are assigned (below) only when `*_enabled`.
+    # So a goal-less City Trial hosting one AP box gets all 28 CT regions with 27 empty - correct, since
+    # the DD/KM/DR prerequisite chains need the whole structure and there are no partial trees.
     if GameMode.CITYTRIAL in world.logic_modes:
         city_trial_region = Region(KARRegion.CITY_TRIAL, world.player, world.multiworld)
         world.multiworld.regions.append(city_trial_region)
@@ -553,17 +545,16 @@ def create_n_blocks_rule(
     world: "KARWorld", mode: GameMode, required_blocks: int, exclude_location_name: str | None = None
 ) -> Callable[[CollectionState], bool]:
     """
-    Create a rule that passes when the player can reach N blocks in a mode, by counting reachable
-    locations belonging to that mode.
+    Create a rule that passes when the player can reach N blocks in a mode, by counting that mode's
+    reachable locations.
 
-    Mode membership is the location's code band (CT 1-120, AR 121-240, TR 241-360, AP 361-480), which is
-    the canonical mode identity. Not the region name: an Archipelago box lives in the region where its
-    activity happens, so an AP box in "Air Ride: MAGMA FLOWS" would otherwise count toward the Air Ride
-    goal and never toward its own.
+    Mode membership is the location's code band (CT 1-120, AR 121-240, TR 241-360, AP 361-480), not the
+    region name: an AP box lives in the region where its activity happens, so one in "Air Ride: MAGMA
+    FLOWS" would otherwise count toward the Air Ride goal and never toward its own.
 
-    `exclude_location_name` drops one location from the count: pass the gated cell's own name when this
-    rule gates a real checkbox (e.g. "Fill in over 100"), so the count means "N OTHER boxes" and the
-    cell isn't asked to reach itself, which would recurse infinitely.
+    `exclude_location_name` drops one location from the count - pass the gated cell's own name when this
+    rule gates a real checkbox, so the count means "N OTHER boxes" and the cell isn't asked to reach
+    itself, which would recurse infinitely.
     """
     player = world.player
 
@@ -592,14 +583,12 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     """
     Build the access rule for the Max Stats Insanity goal event.
 
-    Requires:
-      - All Patch Cap Increase items (only when cap max > cap min; otherwise the cap is fixed and no
-        cap items exist).
-      - A route to maxing all 9 stats: all 9 patch type unlocks (patches-gated path) or the All-Up
-        unlock (items-gated path). Only emitted when both gates are on, since ungated routes are open.
+    Requires all Patch Cap Increase items (only when cap max > cap min; otherwise the cap is fixed and
+    no cap items exist), plus a route to maxing all 9 stats - the 9 patch type unlocks (patches-gated
+    path) or the All-Up unlock (items-gated path), emitted only when both gates are on.
 
-    Returns None if every clause would be trivially satisfied; the caller then attaches the event
-    with no access rule.
+    Returns None if every clause would be trivially satisfied; the caller then attaches the event with
+    no access rule.
     """
     options = world.options
     rule_parts: list[Rule] = []
@@ -634,10 +623,8 @@ def _create_goal_events(
     victory_event_type: str,
 ) -> str | None:
     """
-    Create goal event locations for a single game mode.
-
-    `mode` identifies which locations count toward a block goal (by code band); `mode_prefix` is the
-    mode's root region name, where the victory event is hung.
+    Create goal event locations for a single game mode. `mode` identifies which locations count toward a
+    block goal (by code band); `mode_prefix` is the root region name where the victory event is hung.
 
     :return: The victory event item name if a goal was created, None otherwise.
     """
@@ -682,9 +669,8 @@ def _create_goal_events(
         if goal_option.value == goal_option.option_100_checklist_blocks:
             blocks_rule = create_n_blocks_rule(world, mode, 100)
         elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon and world.options.city_trial_items_gated:
-            # Assembling both legendary machines needs every piece to spawn; item gating locks that
-            # behind the six piece-spawn unlocks (the same requirement the COMPLETE_DRAGOON_AND_HYDRA
-            # cell carries when this is not the goal).
+            # Assembling both legendary machines needs every piece to spawn, which item gating locks
+            # behind the six piece-spawn unlocks - as the COMPLETE_DRAGOON_AND_HYDRA cell does otherwise.
             blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS)
 
         goal_region.add_event(
@@ -695,9 +681,8 @@ def _create_goal_events(
             item_type=KARItem,
         )
     elif goal_option.value == CityTrialGoal.option_max_stats_in_one_run:
-        # Synthetic goal event in the City Trial region. There is no checklist
-        # location to bind to; the mod sets max_stats_ct_achieved at runtime
-        # when the player's stats all hit the per-slot patch-cap target.
+        # Synthetic goal event in the City Trial region - no checklist location to bind to. The mod sets
+        # max_stats_ct_achieved when every stat hits the per-slot patch-cap target.
         region.add_event(
             f"{mode_prefix}: Max Stats (Insanity)",
             victory_event_type,
