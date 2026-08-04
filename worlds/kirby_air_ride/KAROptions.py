@@ -445,10 +445,9 @@ class ArchipelagoGoal(Choice):
     """
 
     display_name = "Archipelago Checklist Goal"
-    # No 100_checklist_blocks here, unlike the other three modes: the AP checklist holds 50 boxes, so
-    # that target could only ever fail validation. Offering a goal whose sole outcome is an OptionError
-    # is worse than not offering it. The remaining values keep their numbering so the mod's goal switch
-    # is unaffected; add it back alongside the 100th box.
+    # No 100_checklist_blocks, unlike the other three modes: the AP checklist holds 50 boxes, so that
+    # target could only ever fail validation. The remaining values keep their numbering so the mod's goal
+    # switch is unaffected; add it back alongside the 100th box.
     option_n_checklist_blocks = 1
     option_none = 4
     option_checklist_list = 5

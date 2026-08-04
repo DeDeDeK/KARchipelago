@@ -59,13 +59,10 @@ _DOLPHIN_STATUS_TEXT = {
 def log_color(ctx: CommonContext, text: str, color: str = "white") -> None:
     """Log `text` in `color` to the GUI log, the terminal, and the log file.
 
-    Plain `logger` calls cannot be colored - the Kivy GUI escapes markup in log records.
-    Routing through `on_print_json` hands the message to the parser trio instead, which
-    colors the GUI and terminal and leaves the log file plain. Display only; despite the
-    name this sends nothing to the server, and it works while disconnected.
-
-    `color` must be a name from `NetUtils.JSONtoTextParser.color_codes`. Prefer names
-    present in both palettes; `orange` is GUI-only and prints uncolored in a terminal.
+    Plain `logger` calls cannot be colored - the Kivy GUI escapes markup in log records - so this routes
+    through `on_print_json`, which colors GUI and terminal and leaves the log file plain. Display only:
+    it sends nothing to the server and works while disconnected. `color` must be a name from
+    `NetUtils.JSONtoTextParser.color_codes`; `orange` is GUI-only and prints uncolored in a terminal.
     """
     parts: list[JSONMessagePart] = []
     add_json_text(parts, text, type=JSONTypes.color, color=color)
@@ -81,11 +78,9 @@ def log_toggle(ctx: CommonContext, name: str, enabled: bool) -> None:
 def log_quiet(text: str) -> None:
     """Log `text` to the log file only, keeping it out of the terminal and the GUI.
 
-    For handshake bookkeeping that matters when reading a log after the fact but is
-    noise during play. `logger.debug` will not do this: `init_logging` leaves the root
-    logger at INFO with no flag to lower it, so debug records reach no handler at all.
-    `NoStream` is the filter on the stdout handler (`Utils.init_logging`); `skip_gui`
-    is checked by the Kivy log handler (`kvui.LogtoUI.handle`).
+    For handshake bookkeeping worth reading in a log after the fact but noise during play. `logger.debug`
+    will not do: `init_logging` leaves the root logger at INFO with no flag to lower it. `NoStream` is the
+    filter on the stdout handler; `skip_gui` is checked by `kvui.LogtoUI.handle`.
     """
     logger.info(text, extra={"NoStream": True, "skip_gui": True})
 
@@ -136,10 +131,9 @@ class KARContext(CommonContext):
         self.dolphin = DolphinInterface()
         self.dolphin_sync_task: asyncio.Task[None] | None = None
         self._dolphin_was_connected: bool | None = None
-        # Human-readable result of the most recent Dolphin connect attempt ("hooked, but the game id
-        # is wrong" vs "no process" vs "no emulation"). Surfaced by /dolphin and cleared once fully
-        # connected, so status never bottoms out at a bare "not hooked yet" when DME actually attached.
-        # _logged_attach_detail dedups the loop log so an unchanging failure is logged once, not each retry.
+        # Human-readable result of the most recent Dolphin connect attempt, surfaced by /dolphin and
+        # cleared once connected. _logged_attach_detail dedups the loop log so an unchanging failure is
+        # logged once, not on every retry.
         self.last_attach_detail: str | None = None
         self._logged_attach_detail: str | None = None
 
@@ -180,17 +174,14 @@ class KARContext(CommonContext):
         # Withdrawals map `{tag: expected_subtraction_joules}`, reconciled against
         # SetReply.original_value - value to detect server-clamped under-withdraws (pool too low).
         self.pending_energy_withdrawals: dict[str, int] = {}
-        # Watermark for the game-owned energy_sent_total cumulative counter. None means "needs
-        # (re)seeding" - set on connect and after any game restart so we diff forward from the current
-        # value rather than replaying history or misreading the boot reset as a giant withdrawal.
+        # Watermark for the game-owned energy_sent_total counter. None means "needs (re)seeding" - set on
+        # connect and after a restart so we diff forward instead of replaying history or misreading the
+        # boot reset as a giant withdrawal.
         self.energy_last_seen: int | None = None
 
     def _reset_dolphin_state(self) -> None:
-        """Reset state tied to the Dolphin connection/mod memory.
-
-        Safe to call whenever the Dolphin hook drops or the APData pointer
-        changes; this state is rebuilt from memory on the next handshake.
-        """
+        """Reset state tied to the Dolphin connection / mod memory. Safe to call whenever the hook drops
+        or the APData pointer changes; this state is rebuilt from memory on the next handshake."""
         self.ap_data_base = None
         self.game_ready = False
         self.options_written = False
@@ -200,12 +191,8 @@ class KARContext(CommonContext):
         self.energy_last_seen = None
 
     def _reset_server_state(self) -> None:
-        """Reset state tied to the AP server session (scouts, bounces).
-
-        Only call on actual server disconnect, not on Dolphin flapping,
-        since this state is populated by server packets that arrive once
-        per session (LocationInfo, RoomUpdate, bounces).
-        """
+        """Reset state tied to the AP server session (scouts, bounces). Only call on an actual server
+        disconnect, not on Dolphin flapping: server packets populate this once per session."""
         self.location_arrays = {m: [0xFFFF] * REWARDS_PER_MODE for m in GameMode}
         self.location_arrays_ready = False
         self.pending_scout_ids.clear()
@@ -244,10 +231,9 @@ class KARContext(CommonContext):
             self._handle_invalid_packet(args)
 
     def _handle_invalid_packet(self, args: dict[str, Any]) -> None:
-        """Server rejected a packet we sent. InvalidPacket doesn't echo the offending
-        packet's contents, so for tagged Set flows we can't pinpoint which tag failed.
-        Drop all pending_energy_withdrawals to prevent indefinite accounting leak; the cost is
-        losing under-subtraction warnings for any in-flight withdrawal at the time."""
+        """Server rejected a packet we sent. InvalidPacket doesn't echo the offending packet, so for
+        tagged Set flows we cannot pinpoint which tag failed. Drop all pending_energy_withdrawals to
+        prevent an indefinite accounting leak, at the cost of in-flight under-subtraction warnings."""
         logger.error(
             "[KAR] AP server rejected %s: %s",
             args.get("type"),
@@ -261,12 +247,9 @@ class KARContext(CommonContext):
             self.pending_energy_withdrawals.clear()
 
     def _handle_set_reply(self, args: dict[str, Any]) -> None:
-        """Reconcile tagged EnergyLink withdrawals against the server's actual subtraction.
-
-        For a withdrawal (negative add + max:0), `original_value - value` is the
-        amount the server actually subtracted from the pool. If less than what
-        the mod asked to withdraw, the pool ran out; log the discrepancy.
-        """
+        """Reconcile tagged EnergyLink withdrawals against the server's actual subtraction: for a
+        withdrawal (negative add + max:0), `original_value - value` is what the server really took.
+        Less than the mod asked for means the pool ran out; log the discrepancy."""
         tag = args.get("tag")
         if not tag or tag not in self.pending_energy_withdrawals:
             return
@@ -290,9 +273,8 @@ class KARContext(CommonContext):
         sd = args.get("slot_data", {})
         self.slot_options = sd
 
-        # Reset connection-dependent state so the handshake re-runs. `finished_game` is intentionally
-        # NOT reset: the base client re-sends StatusUpdate(CLIENT_GOAL) on reconnect while it stays
-        # True, which recovers a post-goal disconnect/reconnect.
+        # Reset connection-dependent state so the handshake re-runs. `finished_game` deliberately stays:
+        # the base client re-sends StatusUpdate(CLIENT_GOAL) on reconnect while it is True.
         self.options_written = False
         self.locations_written = False
         self.location_arrays = {m: [0xFFFF] * REWARDS_PER_MODE for m in GameMode}
@@ -354,10 +336,9 @@ class KARContext(CommonContext):
 
     def _handle_bounced(self, args: dict[str, Any]) -> None:
         tags = args.get("tags", [])
-        # Defensive: the AP server filters Bounced by tag, but double-check in case of a race during
-        # tag updates, and self-source filter so our own traps don't loop back. The incoming
-        # `trap_name` is ignored; KAR picks a random local trap since cross-world names have no clean
-        # 1:1 mapping to our kinds.
+        # Defensive: the AP server filters Bounced by tag, but re-check in case of a race during tag
+        # updates, and self-source filter so our own traps don't loop back. The incoming `trap_name` is
+        # ignored - cross-world names have no clean 1:1 mapping, so KAR rolls a local trap.
         if "TrapLink" in self.tags and "TrapLink" in tags:
             data = args.get("data", {})
             if self.slot is None or data.get("source") == self.player_names.get(self.slot, ""):
@@ -372,11 +353,8 @@ class KARContext(CommonContext):
             self.pending_trap_receives += 1
 
     def _handle_location_info(self, args: dict[str, Any]) -> None:
-        """Build location arrays from scout results.
-
-        For each of our checklist reward items placed at a location in our world,
-        record which checkbox it maps to. Everything else stays 0xFFFF (remote).
-        """
+        """Build location arrays from scout results: for each of our checklist reward items placed at a
+        location in our own world, record which checkbox it maps to. Everything else stays 0xFFFF."""
         for raw in args["locations"]:
             item = NetworkItem(*raw) if not isinstance(raw, NetworkItem) else raw
             # Drain outstanding scout IDs regardless of whether the item is a reward,
@@ -421,9 +399,8 @@ class KARContext(CommonContext):
         logger.info("Starting Dolphin connector. Use /dolphin for status information.")
         while not self.exit_event.is_set():
             # Poll game memory at a fixed 0.1s cadence. Game-initiated events (checks, energy sends,
-            # deathlink/traplink, goal) are found only by polling - nothing server-side wakes the loop -
-            # so the poll interval is their latency floor. watcher_event still early-wakes when items
-            # arrive from the server, so delivery isn't gated on the 0.1s tick.
+            # deathlink/traplink, goal) are only found by polling, so this is their latency floor.
+            # watcher_event still early-wakes on server items, so delivery isn't gated on the tick.
             try:
                 try:
                     async with asyncio.timeout(0.1):
@@ -456,9 +433,8 @@ class KARContext(CommonContext):
                     log_color(self, "Lost connection to Dolphin.", "red")
                 self._dolphin_was_connected = now_connected
             except Exception as e:  # noqa: BLE001
-                # Last-resort guard. This task has no supervisor, so an unhandled exception escaping
-                # the loop body would silently kill the connector until a full restart. Log and
-                # continue instead. CancelledError is a BaseException, so shutdown still propagates.
+                # Last-resort guard: this task has no supervisor, so an escaping exception would silently
+                # kill the connector. CancelledError is a BaseException, so shutdown still propagates.
                 logger.error(f"Unexpected error in Dolphin sync loop: {e}")
 
     async def _try_connect_dolphin(self) -> None:
@@ -473,10 +449,9 @@ class KARContext(CommonContext):
         # Not fully connected. Record an accurate reason *before* dropping any hook, so /dolphin and
         # the log reflect the real state instead of the bare "not hooked yet" that unhooking leaves.
         if self.dolphin.is_hooked():
-            # DME attached and found a MEM1-sized region, but GKYE01 wasn't at MEM1_START. The bytes
-            # there say why: all 0x00 -> no game booted yet (menu); another valid id like 'GKYP01'/
-            # 'GKYJ01' -> wrong-region disc (mod is NTSC-U only); arbitrary bytes -> DME attached to
-            # the wrong memory region (it picks a MEM1-sized mapping without checking contents).
+            # DME attached and found a MEM1-sized region, but GKYE01 wasn't at MEM1_START. The bytes there
+            # say why: all 0x00 -> no game booted; another valid id -> wrong-region disc (mod is NTSC-U
+            # only); arbitrary bytes -> DME picked the wrong MEM1-sized mapping.
             addr = int(MemoryAddress.MEM1_START)
             raw = self.dolphin.read_bytes(addr, 6)
             self._note_attach_failure(
@@ -521,9 +496,8 @@ class KARContext(CommonContext):
             self.ap_data_base = ptr
             log_color(self, f"Found APData at {ptr:#010x}", "yellow")
 
-        # Wait for game_ready, and detect restarts. The mod sets game_ready once in OnBoot and never
-        # clears it during play, so reading 0 after we've seen 1 means the game rebooted (APData
-        # re-zeroed). Re-run the handshake to re-seed and re-write options/locations.
+        # Wait for game_ready, and detect restarts. The mod sets it once in OnBoot and never clears it, so
+        # reading 0 after a 1 means the game rebooted (APData re-zeroed) and the handshake must re-run.
         game_ready_mem = self.dolphin.read_u32(self._addr(MemoryAddress.GAME_READY))
         if not self.game_ready:
             if game_ready_mem != 1:
@@ -552,11 +526,9 @@ class KARContext(CommonContext):
             self.locations_written = True
             log_color(self, "Location data written. Client fully operational.", "green")
 
-            # Re-arm backfill on every completed handshake, not just on an AP "Connected" packet. When
-            # the mod restarts with a fresh save while the AP session stays alive (Dolphin reboot, no
-            # new Connected), the server may know checks the fresh save lacks. Backfill then diffs
-            # checked_locations against the game's sent_checks and writes the missing bits. Without
-            # this, only re-delivered reward items mark their cells; non-reward locations stay lost.
+            # Re-arm backfill on every completed handshake, not just on an AP "Connected" packet: a mod
+            # restart with a fresh save leaves the AP session alive, so the server knows checks the save
+            # lacks. Without this, only re-delivered reward items mark their cells.
             self.backfill_pending = True
 
         # Normal operation
@@ -687,10 +659,8 @@ class KARContext(CommonContext):
 
         if new_checks:
             sent = await self.check_locations(new_checks)
-            # Location nodes rather than pre-formatted names, so the GUI colors them and attaches
-            # its hover info. check_locations intersects against missing_locations, which is empty
-            # until we're connected, so a non-empty `sent` already implies a slot; the explicit
-            # check just narrows the type.
+            # Location nodes rather than pre-formatted names, so the GUI colors them and attaches hover
+            # info. A non-empty `sent` already implies a slot; the explicit check just narrows the type.
             if sent and self.slot is not None:
                 parts: list[JSONMessagePart] = []
                 add_json_text(parts, "New checks sent: ")
@@ -710,12 +680,9 @@ class KARContext(CommonContext):
             Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
 
     async def _poll_menu_toggles(self) -> None:
-        """Read the mod's live in-game menu toggle mirrors and update AP server state if changed.
-
-        The OPTION_*_ENABLED fields only set initial values on first connect and are not
-        updated when the player toggles in-game. The *_MENU_ENABLED mirrors are
-        the authoritative live state, written by the mod on every menu change.
-        """
+        """Read the mod's live in-game menu toggle mirrors and update AP server state if changed. The
+        OPTION_*_ENABLED fields only set initial values on first connect; the *_MENU_ENABLED mirrors are
+        the authoritative live state, written by the mod on every menu change."""
         dl_enabled = self.dolphin.read_u32(self._addr(MemoryAddress.DEATHLINK_MENU_ENABLED)) != 0
         dl_currently_on = "DeathLink" in self.tags
         if dl_enabled != dl_currently_on:
@@ -752,9 +719,8 @@ class KARContext(CommonContext):
         if "TrapLink" not in self.tags:
             return
 
-        # forward trap to AP server. The mod writes a TrapLinkKind enum (>0) into TRAPLINK_SEND; we map
-        # it to a name for the Bounce so other worlds can translate. Bursts collapse mod-side: rapid
-        # triggers overwrite the same u32, and the ≥0.1s poll reads one final value per burst.
+        # Forward trap to AP server. The mod writes a TrapLinkKind enum (>0) into TRAPLINK_SEND; we map it
+        # to a name so other worlds can translate. Bursts collapse mod-side into one final u32 per poll.
         kind = self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_SEND))
         if kind != 0:
             self.dolphin.write_u32(self._addr(MemoryAddress.TRAPLINK_SEND), 0)
@@ -784,29 +750,22 @@ class KARContext(CommonContext):
         if not self.energy_link_enabled:
             return
 
-        # Process energy sends FIRST, then write the balance LAST. Order matters: the balance write
-        # seeds from current_energy_link_value (the last server-pushed pool), so running it before the
-        # diff would bounce the mod's local decrement back up to the stale pool, letting the
-        # affordability gate briefly overdraw across the server round-trip. Fold our delta in first.
-        #
-        # energy_sent_total is a game-owned CUMULATIVE counter (s64 signed raw MJ): the game only adds
-        # (deposits) / subtracts (withdrawals); we only read-and-diff, never write. Any number of
-        # game-side writes between polls collapse into one net delta.
+        # Process energy sends FIRST, balance write LAST. The balance write seeds from the last
+        # server-pushed pool, so running it before the diff would bounce the mod's local decrement back up
+        # to a stale value and let the affordability gate briefly overdraw across the round-trip.
+        # energy_sent_total is game-owned and cumulative (s64 raw MJ) - we read-and-diff, never write.
         raw = self.dolphin.read_u64(self._addr(MemoryAddress.ENERGY_SENT_TOTAL))
         cur = raw - (1 << 64) if raw >= (1 << 63) else raw
 
         if self.energy_last_seen is None:
-            # Seed on connect / after a game restart: record the current total without applying it, so
-            # we diff forward from here rather than replaying the session. Falls through to refresh the
-            # balance.
+            # Seed on connect / after a restart: record the total without applying it, so we diff forward
+            # rather than replaying the session. Falls through to refresh the balance.
             self.energy_last_seen = cur
         else:
             delta_mj = cur - self.energy_last_seen
             if delta_mj != 0:
-                # Advance the watermark now. A dropped send self-heals on the next diff (the counter is
-                # the source of truth), so we never replay this delta. Restarts are caught upstream by
-                # the game_ready 1->0 re-check, so we don't second-guess a backward delta with a
-                # magnitude heuristic here.
+                # Advance the watermark now: a dropped send self-heals on the next diff, since the counter
+                # is the source of truth. Restarts are caught upstream by the game_ready 1->0 re-check.
                 self.energy_last_seen = cur
 
                 joules = delta_mj * ENERGY_LINK_EXCHANGE_RATE
@@ -845,19 +804,16 @@ class KARContext(CommonContext):
                         ]
                     )
 
-                # Optimistically fold our delta into the cached pool value so the balance written below
-                # reflects this spend/deposit now, before the server's SetReply round-trips. This closes
-                # the self-induced overdraw window. The set_notify subscription later overwrites
-                # current_energy_link_value with the server's ABSOLUTE pool on every SetReply, so a
-                # concurrent change from another player self-corrects within one poll and we never
-                # double-count. max(0, ...) mirrors the server's max:0 withdrawal clamp.
+                # Optimistically fold our delta into the cached pool so the balance below reflects this
+                # spend before the server's SetReply round-trips, closing the self-induced overdraw window.
+                # set_notify later overwrites the cache with the server's ABSOLUTE pool, so a concurrent
+                # change self-corrects within a poll. max(0, ...) mirrors the server's withdrawal clamp.
                 if self.current_energy_link_value is not None:
                     self.current_energy_link_value = max(0, self.current_energy_link_value + joules)
 
-        # Write the (possibly optimistically-updated) pool balance to the game LAST, unconditionally
-        # each poll, so seed polls, no-delta polls, and other players' deposits all keep the mod's view
-        # fresh. Server stores Joules; the mod expects raw MJ. Floor division - sub-MJ isn't
-        # representable mod-side.
+        # Write the pool balance LAST and unconditionally each poll, so seed polls, no-delta polls and
+        # other players' deposits all keep the mod's view fresh. Server stores Joules, the mod raw MJ;
+        # floor division because sub-MJ isn't representable mod-side.
         if self.current_energy_link_value is not None:
             raw_mj = self.current_energy_link_value // ENERGY_LINK_EXCHANGE_RATE
             # The mod's field is s64; raw_mj is always non-negative (pool clamped at 0). write_u64 is
@@ -865,10 +821,8 @@ class KARContext(CommonContext):
             self.dolphin.write_u64(self._addr(MemoryAddress.ENERGY_BALANCE), raw_mj)
 
     def _handle_backfill(self) -> None:
-        """Write bits to client_backfill for checks the AP server knows about but the game doesn't.
-
-        This handles fresh saves, slot takeovers, and !collect from other players.
-        """
+        """Write bits to client_backfill for checks the AP server knows about but the game doesn't -
+        fresh saves, slot takeovers, and !collect from other players."""
         if not self.backfill_pending:
             return
 

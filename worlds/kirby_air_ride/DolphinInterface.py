@@ -7,8 +7,7 @@ from .KARData import MemoryAddress
 class DolphinInterface:
     """Low-level interface for reading/writing Dolphin emulator memory.
 
-    All read methods return a sensible zero-value on failure and log a warning.
-    All write methods return True on success, False on failure.
+    Reads return a sensible zero-value on failure and log a warning; writes return True/False.
     """
 
     def __init__(self) -> None:
@@ -32,12 +31,9 @@ class DolphinInterface:
             logger.warning(f"Error while unhooking from Dolphin: {e}")
 
     def is_hooked(self) -> bool:
-        """Check if currently connected to Dolphin memory.
-
-        Defensive: never raises. The sync loop calls this outside its inner error handler and the task
-        has no supervisor, so a raised exception would escape and permanently kill the connector. If the
-        underlying call ever fails, log it and treat it as not hooked.
-        """
+        """Check if currently connected to Dolphin memory. Defensive: never raises. The sync loop calls
+        this outside its inner error handler and the task has no supervisor, so an escaping exception
+        would permanently kill the connector; a failed call is logged and treated as not hooked."""
         try:
             return dolphin_memory_engine.is_hooked()
         except Exception as e:
@@ -48,9 +44,8 @@ class DolphinInterface:
         """Raw dolphin_memory_engine connection status name. Never raises.
 
         One of "hooked", "notRunning" (no Dolphin process), "noEmu" (running but no readable game),
-        "unHooked" (not yet attached), or "unknown" on error. is_hooked() collapses these to a bool;
-        this preserves the distinction so the client can tell "Dolphin closed" apart from "Dolphin open
-        but unreadable" (wrong version, no game booted, or a permission/sandbox mismatch).
+        "unHooked" (not yet attached), or "unknown" on error. is_hooked() collapses these to a bool; this
+        preserves the distinction between "Dolphin closed" and "Dolphin open but unreadable".
         """
         try:
             return dolphin_memory_engine.get_status().name
@@ -59,11 +54,8 @@ class DolphinInterface:
             return "unknown"
 
     def check_game_running(self) -> bool:
-        """Check whether Kirby Air Ride (NTSC-U) is the game running in Dolphin.
-
-        Reads through read_bytes so a failed read is logged, not silently swallowed; a wrong or empty
-        game id simply returns False.
-        """
+        """Check whether Kirby Air Ride (NTSC-U) is the game running in Dolphin. Reads through read_bytes
+        so a failed read is logged, not silently swallowed; a wrong or empty game id returns False."""
         return self.read_bytes(MemoryAddress.MEM1_START, 6) == self.kar_game_id
 
     # Resolve APData pointer
@@ -71,19 +63,15 @@ class DolphinInterface:
     def resolve_ap_data(self) -> int | None:
         """Read the APData struct pointer. Returns the base address, or None if not yet allocated.
 
-        Before the mod's OnBoot writes the real pointer, AP_DATA_POINTER holds zero or stale memory.
-        Reject anything outside MEM1 so the caller keeps waiting instead of latching a garbage address.
+        Before the mod's OnBoot writes it, AP_DATA_POINTER holds zero or stale memory, so anything
+        outside MEM1 is rejected and the caller keeps waiting rather than latching a garbage address.
         A failed read returns 0, which falls outside MEM1 -> None.
         """
         ptr = self.read_u32(MemoryAddress.AP_DATA_POINTER)
         return ptr if MemoryAddress.MEM1_START <= ptr < MemoryAddress.MEM1_END else None
 
-    # Primitive reads
-    #
-    # int(address): DME's native read/write reject an int subclass (our MemoryAddress IntEnum) on some
-    # builds with "expected int, got MemoryAddress". Every memory access funnels through this layer, so
-    # coercing to a plain int here makes every caller and DME build safe, whether the address arrives
-    # as an enum or an already-computed int.
+    # Primitive reads. int(address) because DME's native read/write reject an int subclass (our
+    # MemoryAddress IntEnum) on some builds; coercing here covers every caller and every DME build.
 
     def read_u8(self, address: int) -> int:
         """Read an unsigned 8-bit integer."""

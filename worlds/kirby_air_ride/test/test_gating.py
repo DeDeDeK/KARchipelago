@@ -86,13 +86,11 @@ for _gate, _group in _GATE_GROUPS.items():
 class TestEffectiveGateShipping(KARTestBase):
     """A gate ships to the mod as ON only when the seed actually holds that category's keys.
 
-    The mod applies gate flags goal-independently: no gate_*.c consults goal[]. So shipping a raw YAML
-    toggle for a category whose modes all lack a goal would lock that content behind unlock items that
-    were never minted, permanently. An AR-only seed is the sharpest case - City Trial's events, patches,
-    boxes and stadiums are DefaultOnToggles whose unlocks are dropped from an AR-only pool, so before
-    effective_gates they shipped locked with zero keys.
-
-    Derived from GATING_CATEGORIES so a new category is covered automatically.
+    The mod applies gate flags goal-independently (no gate_*.c consults goal[]), so shipping a raw YAML
+    toggle for a category whose modes all lack a goal would permanently lock that content behind unlock
+    items that were never minted. An AR-only seed is the sharpest case: City Trial's events, patches,
+    boxes and stadiums are DefaultOnToggles whose unlocks an AR-only pool drops. Derived from
+    GATING_CATEGORIES so a new category is covered automatically.
     """
 
     options = _all_modes_with(**_ALL_ON, **AR_ONLY)
@@ -128,10 +126,9 @@ class TestEffectiveGateShipping(KARTestBase):
 
 
 class TestColorsGateSurvivesModeAgnostic(KARTestBase):
-    """colors_gated has an empty required_modes, meaning mode-agnostic: always keyed, never
-    mode-excluded. The membership test must read `not required_modes or any(...)` - an intersection
-    against the enabled modes would treat "no required modes" as "no match" and silently drop colors
-    from every seed. Pinned in the mode combination least likely to keep them by accident."""
+    """colors_gated has an empty required_modes, meaning mode-agnostic: always keyed, never mode-excluded.
+    The membership test must read `not required_modes or any(...)` - an intersection would treat "no
+    required modes" as "no match" and silently drop colors. Pinned in the least forgiving mode combo."""
 
     options = _all_modes_with(**_ALL_ON, **AR_ONLY)
 

@@ -1,12 +1,10 @@
 """
 Item creation and classification tests.
 
-create_item must produce, for every ITEM_TABLE entry, a KARItem with the correct name, code,
-player slot, and a classification matching the table verbatim (no create-time override; every
-gated category, stadiums included, is handled by exclusion).
-
-Also pins the invariant that every UNLOCK-type item is progression: misclassified UNLOCK items
-could be placed at non-progression slots and soft-lock the player.
+create_item must produce, for every ITEM_TABLE entry, a KARItem with the correct name, code, player
+slot, and a classification matching the table verbatim - there is no create-time override, since every
+gated category is handled by exclusion. Also pins that every UNLOCK-type item is progression: a
+misclassified one could land at a non-progression slot and soft-lock the player.
 """
 
 from ..KARItems import GATING_CATEGORIES, ITEM_TABLE, KARItem, KARItemType
