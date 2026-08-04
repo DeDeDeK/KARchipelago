@@ -1,7 +1,7 @@
 # Fuzz meta for Kirby Air Ride.
 #
 # Pass to the fuzzer:
-#   uv run python fuzz/fuzz.py -g kirby_air_ride -m worlds/kirby_air_ride/fuzz_meta.yaml -r 200
+#   uv run python fuzz/fuzz.py -g kirby_air_ride -m worlds/kirby_air_ride/fuzz/fuzz_meta.yaml -r 200
 #
 # Each constraint here corresponds to an OptionError that the world's
 # _validate_options would always raise. Pruning these at YAML-generation time
@@ -19,12 +19,13 @@
 #     ~1% rejection rate is cheaper than that lost coverage.
 #   - checklist_list with wrong-mode locations. The fuzzer doesn't randomize
 #     LocationSet contents, so wrong-mode names can't appear in random YAMLs.
-#   - Archipelago 100_checklist_blocks. The AP checklist holds fewer than 100
-#     boxes, so that target always OptionErrors; the constraint language can't
-#     restrict a rolled option's own value, so it lands in "ignored" like the
-#     cases above. n_checklist_blocks needs no such pruning:
-#     ArchipelagoChecklistAmount's range_end tracks the real table size, so every
-#     rolled target is satisfiable.
+#
+# No Archipelago block-goal pruning is needed. ArchipelagoGoal does not offer
+# 100_checklist_blocks at all (the AP checklist holds 50 boxes, so that target could
+# only ever OptionError), and ArchipelagoChecklistAmount's range_end tracks the real
+# table size, so every rolled n_checklist_blocks target is satisfiable. This used to
+# be the single largest source of wasted cycles - ~29% of every batch, 95% of all
+# "ignored" - back when the option was still offered.
 
 Kirby Air Ride:
   fuzz_constraints:
@@ -76,4 +77,4 @@ Kirby Air Ride:
       if_value: "checklist_list"
       then_include:
         archipelago_goal_locations:
-          - "Archipelago: Go out of bounds in City Trial!"
+          - "Archipelago: City Trial: Go out of bounds!"

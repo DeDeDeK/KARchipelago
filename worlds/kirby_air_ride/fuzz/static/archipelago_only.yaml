@@ -1,0 +1,25 @@
+name: APOnlySlot
+description: Archipelago checklist as the ONLY goal — the seed where _compute_logic_modes pulls the City Trial, Air Ride and stadium region trees in for boxes that live in them while none of those modes has a goal, so none of their gates holds keys
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: none
+  air_ride_goal: none
+  top_ride_goal: none
+  archipelago_goal: checklist_list
+  # One box per region flavour the AP table reaches into: the flat City Trial region, a stadium
+  # sub-region, the Air Ride root, and a specific Air Ride course sub-region.
+  archipelago_goal_locations:
+    - "Archipelago: City Trial: Go out of bounds!"
+    - "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place!"
+    - "Archipelago: Air Ride: Finish a race as every Kirby color!"
+    - "Archipelago: Air Ride: NEBULA BELT Finish in 1st place!"
+  # The toggles are deliberately on. Only colors_gated has no required mode, so it is the one gate
+  # that still holds keys here; the rest must drop out of effective_gates because their modes have no
+  # goal, and ship to the mod as 0 rather than locking content behind keys that were never minted.
+  city_trial_stadiums_gated: true
+  machines_gated: true
+  air_ride_courses_gated: true
+  colors_gated: true
+  base_abilities_gated: true

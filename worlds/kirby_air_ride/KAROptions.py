@@ -436,19 +436,19 @@ class TopRideCheckboxFillers(NamedRange):
 
 class ArchipelagoGoal(Choice):
     """
-    Sets the goal for the Archipelago checklist - the synthetic in-game checklist tab of
-    Archipelago-specific objectives. If you have goals on multiple game modes, all must be achieved to
-    win. Select "None" to disable the Archipelago checklist: its locations are then left out of the
-    multiworld, though the tab still appears in-game.
+    EXPERIMENTAL - ONLY USE IF YOU WANT TO TEST - SOME CHECKS LIKELY BROKEN
+    The Archipelago checklist is incomplete and under active development.
+    Does not have all 120 checks yet, and logic for these may be incorrect.
 
-    EXPERIMENTAL: the Archipelago checklist is incomplete and under active development. It offers far
-    fewer objectives than the 120 its options allow, so a large "n_checklist_blocks" target (or the
-    "100_checklist_blocks" goal) cannot be satisfied. Objective names and thresholds may still change
-    in ways that break existing YAMLs. Enable it only if you want to try it.
+    Sets the goal for the Archipelago checklist. If you have goals on multiple game modes,
+    all must be achieved to win. Select "None" to disable the Archipelago checklist.
     """
 
     display_name = "Archipelago Checklist Goal"
-    option_100_checklist_blocks = 0
+    # No 100_checklist_blocks here, unlike the other three modes: the AP checklist holds 50 boxes, so
+    # that target could only ever fail validation. Offering a goal whose sole outcome is an OptionError
+    # is worse than not offering it. The remaining values keep their numbering so the mod's goal switch
+    # is unaffected; add it back alongside the 100th box.
     option_n_checklist_blocks = 1
     option_none = 4
     option_checklist_list = 5
@@ -465,13 +465,9 @@ class ArchipelagoChecklistAmount(Range):
     """
 
     display_name = "Number of Checklist Boxes for Archipelago"
-    # range_end tracks the real size of AP_CHECKLIST_LOCATION_TABLE - unlike City Trial / Air Ride /
-    # Top Ride, which each have a full 120 boxes, the Archipelago checklist is still being built out.
-    # Offering more than exists would only produce an OptionError at generation. A data-integrity test
-    # pins this to the table; raise it as boxes are added. Default is half the table, as elsewhere.
-    default = 16
+    default = 25
     range_start = 1
-    range_end = 33
+    range_end = 50
 
 
 class ArchipelagoGoalLocations(LocationSet):
@@ -529,7 +525,9 @@ class BaseAbilitiesGated(Toggle):
     """
     When enabled, Kirby's base moves - inhale, quick spin, and machine charge - start locked and must
     each be unlocked by finding their item. Until then the human player cannot swallow, quick spin, or
-    charge for a boost (CPUs are unaffected); swallow and quick-spin checkboxes gate behind the unlock.
+    charge for a boost (CPUs are unaffected). Checkboxes that need a move gate behind its unlock, and so
+    does the content a move makes playable at all - Hydra, Slick Star and Turbo Star need Charge to be
+    driven, and the KO stadiums need some way to deal damage.
 
     When disabled, all three moves are available from the start and no base ability unlock items are
     added to the pool.

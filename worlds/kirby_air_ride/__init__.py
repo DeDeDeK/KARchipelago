@@ -17,6 +17,7 @@ from worlds.LauncherComponents import (
 from .KARData import GameMode
 from .KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
+    CHARGE_DEPENDENT_MACHINES,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
@@ -336,7 +337,8 @@ class KARWorld(World):
         into without. Each is push_precollected in generate_early. Categories:
           - Stadiums (when city_trial_stadiums_gated + CT): any of the 24 stadium unlocks,
             excluding VS King Dedede when it's the goal.
-          - Machines (when machines_gated + CT or AR): excludes Hydra/Dragoon (legendary).
+          - Machines (when machines_gated + CT or AR): excludes Hydra/Dragoon (legendary), and
+            the machines Charge makes rideable while base abilities are gated.
           - Air Ride courses (when air_ride_courses_gated + AR).
           - Top Ride courses (when top_ride_courses_gated + TR).
           - Colors (when colors_gated): any of the 8 Kirby colors, Pink included - the mod
@@ -372,6 +374,10 @@ class KARWorld(World):
                 KARItemName.UNLOCK_MACHINE_FREE_STAR,
                 KARItemName.UNLOCK_MACHINE_STEER_STAR,
             }
+            if self.options.base_abilities_gated:
+                # Slick and Turbo Star only turn by charge-drifting, so either as the sole machine
+                # with Charge still locked leaves the player unable to steer. (Hydra is already out.)
+                machines -= CHARGE_DEPENDENT_MACHINES
             self.machine_starter_choice = self._pick_random_starter(machines)
 
         # Top Ride needs Free or Steer to start at all - the mod hard-gates the Top Ride lobby on one
@@ -500,7 +506,10 @@ class KARWorld(World):
 
             if goal_option.value == goal_option.option_n_checklist_blocks:
                 required = checklist_amount_option.value
-            elif goal_option.value == goal_option.option_100_checklist_blocks:
+            # getattr, not an attribute access: ArchipelagoGoal deliberately does not offer
+            # 100_checklist_blocks (its checklist is smaller than 100 boxes). A goal value is always an
+            # int, so the None default can never compare equal.
+            elif goal_option.value == getattr(goal_option, "option_100_checklist_blocks", None):
                 required = 100
             else:
                 continue
