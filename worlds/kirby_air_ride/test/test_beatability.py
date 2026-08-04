@@ -1,12 +1,10 @@
 """
 Beatability tests for KAR.
 
-`assertBeatable(bool)` checks whether `multiworld.state` can satisfy the completion condition (one victory per
-enabled mode). These tests verify which items are load-bearing for the goal, and which goal variants have no
-AP-side gate (the game itself enforces).
-
-`multiworld.state` starts with precollected items only (random starters per gated category);
-collect_all_but / collect_by_name extend it with itempool items.
+`assertBeatable(bool)` checks whether `multiworld.state` can satisfy the completion condition (one
+victory per enabled mode), so these verify which items are load-bearing for the goal and which goal
+variants have no AP-side gate. `multiworld.state` starts with precollected items only (the random
+starters); collect_all_but / collect_by_name extend it with itempool items.
 """
 
 from Options import Toggle
@@ -57,10 +55,8 @@ class TestALLMODES100BlocksNotBeatableFromPrecollected(KARTestBase):
 
 class TestCTBeatKingDededeRequiresStadiumUnlock(KARTestBase):
     """beat_king_dedede + stadiums gated on: UNLOCK_STADIUM_VS_KING_DEDEDE is required to reach the victory
-    event (placed in the VSKD stadium region).
-
-    collect_all_but iterates get_items(), which includes the filled victory event. CITY_TRIAL_VICTORY must be
-    excluded explicitly so the sweep, not the pre-population, decides whether it gets collected."""
+    event in the VSKD stadium region. collect_all_but iterates get_items(), which includes the filled
+    victory event, so CITY_TRIAL_VICTORY is excluded explicitly to let the sweep decide it."""
 
     options = {
         **CT_ONLY,
@@ -120,11 +116,9 @@ class TestCTNBlocksSmallGoalBeatableFromPrecollected(KARTestBase):
 
 
 class TestALLMODESNeedsCTVictory(KARTestBase):
-    """ALL_MODES + CT beat_king_dedede: removing the CT-binding item makes the overall multi-mode goal
-    unbeatable even with AR and TR fully collectible.
-
-    CITY_TRIAL_VICTORY is excluded because get_items() includes the filled victory event, which would otherwise
-    short-circuit the completion check."""
+    """ALL_MODES + CT beat_king_dedede: removing the CT-binding item makes the multi-mode goal unbeatable
+    even with AR and TR fully collectible. CITY_TRIAL_VICTORY is excluded because get_items() includes the
+    filled victory event, which would otherwise short-circuit the completion check."""
 
     options = {**ALL_MODES, "city_trial_goal": CityTrialGoal.option_beat_king_dedede}
 

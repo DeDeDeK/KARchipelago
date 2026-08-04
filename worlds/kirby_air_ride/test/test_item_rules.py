@@ -1,10 +1,9 @@
 """
 Item-rule tests.
 
-set_rules attaches an item_rule callable to each checklist_list goal location, restricting it to local
-items (item.player == self.player). This prevents other players' /collect from auto-completing the goal.
-
-Tested by invoking each location's item_rule callable directly with stub items - no full fill needed.
+set_rules attaches an item_rule callable to each checklist_list goal location restricting it to local
+items, so another player's /collect cannot auto-complete the goal. Tested by invoking each location's
+item_rule directly with stub items - no full fill needed.
 """
 
 from BaseClasses import Item, ItemClassification

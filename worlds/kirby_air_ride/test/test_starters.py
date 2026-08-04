@@ -180,9 +180,8 @@ class TestPresetUnlockNotDuplicatedInPool(KARTestBase):
 
 
 class TestPresetRewardNotDuplicatedInPool(KARTestBase):
-    # Checklist rewards are one-time too: a reward preset in start_inventory must be deduped out of the pool.
-    # CT_REWARD_MUSIC_CITY is a plain in-scope CT reward (shuffled into the pool under the default
-    # Shuffle Checklist Rewards), so presetting it exercises the reward_pool dedup.
+    # Checklist rewards are one-time too, so a reward preset in start_inventory must be deduped out of the
+    # pool. CT_REWARD_MUSIC_CITY is a plain in-scope CT reward, so presetting it exercises reward_pool.
     options = {
         **CT_ONLY,
         "start_inventory": {KARItemName.CT_REWARD_MUSIC_CITY: 1},
