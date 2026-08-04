@@ -6,8 +6,8 @@ matches the intent of the rolled options. Raising here causes the fuzzer to dump
 the seed's YAML + traceback under fuzz/output/error/.
 
 Invoke via:
-    uv run python fuzz/fuzz.py -g kirby_air_ride -m worlds/kirby_air_ride/fuzz_meta.yaml \
-        --hook worlds.kirby_air_ride.fuzz_hook:KARHook -r 200
+    uv run python fuzz/fuzz.py -g kirby_air_ride -m worlds/kirby_air_ride/fuzz/fuzz_meta.yaml \
+        --hook worlds.kirby_air_ride.fuzz.fuzz_hook:KARHook -r 200
 
 Note: this class deliberately does NOT inherit from fuzz.BaseHook. fuzz.find_hook
 has an inverted issubclass check that rejects real BaseHook subclasses.
@@ -22,6 +22,7 @@ from BaseClasses import ItemClassification
 
 from worlds.kirby_air_ride.KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
+    CHARGE_DEPENDENT_MACHINES,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
@@ -344,12 +345,16 @@ class KARHook:
         # Stadium starter: CT enabled + progressive_stadiums on
         if ct_on and opts.city_trial_stadiums_gated:
             stadium_pool = {str(s) for s in STADIUM_UNLOCK_ITEMS}
+            # Handing over the goal stadium for free would hand over the goal, so the world drops it
+            # from the pick when beat_king_dedede is the City Trial goal.
+            beat_dedede = opts.city_trial_goal.value == opts.city_trial_goal.option_beat_king_dedede
             self._check_one_starter(
                 tag,
                 "stadium",
                 stadium_pool,
                 opts.start_inventory.value,
                 precollected_counts,
+                ineligible={str(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)} if beat_dedede else frozenset(),
             )
 
         if (ct_on or ar_on) and opts.machines_gated:
@@ -360,7 +365,17 @@ class KARHook:
                 str(KARItemName.UNLOCK_MACHINE_FREE_STAR),
                 str(KARItemName.UNLOCK_MACHINE_STEER_STAR),
             }
-            self._check_one_starter(tag, "machine", machines, opts.start_inventory.value, precollected_counts)
+            # Slick and Turbo Star only turn by charge-drifting, so either as the sole machine with
+            # Charge still locked is a dead end. The world holds them out of the pick while base
+            # abilities are gated. (Hydra is charge-dependent too but is already excluded above.)
+            self._check_one_starter(
+                tag,
+                "machine",
+                machines,
+                opts.start_inventory.value,
+                precollected_counts,
+                ineligible={str(m) for m in CHARGE_DEPENDENT_MACHINES} if opts.base_abilities_gated else frozenset(),
+            )
 
         if tr_on and opts.machines_gated:
             tr_machines = {
@@ -397,7 +412,15 @@ class KARHook:
                 precollected_counts,
             )
 
-    def _check_one_starter(self, tag, label, category_set, start_inventory, precollected_counts):
+    def _check_one_starter(
+        self, tag, label, category_set, start_inventory, precollected_counts, ineligible=frozenset()
+    ):
+        """
+        `ineligible` names members the world holds out of the *random pick* for this seed. It narrows
+        only the pick assertion, never `category_set` itself: the world tests start_inventory against
+        the whole category, so shrinking the set here would make a preset ineligible item look like no
+        preset at all and demand a random starter the world correctly did not add.
+        """
         si_in_cat = {n: c for n, c in start_inventory.items() if n in category_set and c > 0}
         if si_in_cat:
             # Player preset items: those should all be precollected; no random starter added.
@@ -409,10 +432,16 @@ class KARHook:
                     )
             return
         # No start_inventory override: expect exactly one random pick from this category in precollected.
+        picked = [n for n, c in precollected_counts.items() if n in category_set and c > 0]
         precollected_in_cat = sum(c for n, c in precollected_counts.items() if n in category_set)
         if precollected_in_cat != 1:
             raise HookError(
                 f"{tag} expected exactly 1 random {label} starter in precollected, got {precollected_in_cat}"
+            )
+        if ineligible and picked[0] in ineligible:
+            raise HookError(
+                f"{tag} random {label} starter is {picked[0]!r}, which this seed's options make "
+                f"ineligible (unplayable as a sole starter)"
             )
 
     def _check_start_inventory(self, tag, opts, pool_counts, precollected_counts):

@@ -5,7 +5,7 @@ from typing import Any
 
 import Utils
 from CommonClient import ClientCommandProcessor, CommonContext, get_base_parser, logger, server_loop
-from NetUtils import ClientStatus, NetworkItem
+from NetUtils import ClientStatus, JSONMessagePart, JSONTypes, NetworkItem, add_json_location, add_json_text
 
 from .DolphinInterface import DolphinInterface
 from .KARData import (
@@ -56,13 +56,51 @@ _DOLPHIN_STATUS_TEXT = {
 }
 
 
+def log_color(ctx: CommonContext, text: str, color: str = "white") -> None:
+    """Log `text` in `color` to the GUI log, the terminal, and the log file.
+
+    Plain `logger` calls cannot be colored - the Kivy GUI escapes markup in log records.
+    Routing through `on_print_json` hands the message to the parser trio instead, which
+    colors the GUI and terminal and leaves the log file plain. Display only; despite the
+    name this sends nothing to the server, and it works while disconnected.
+
+    `color` must be a name from `NetUtils.JSONtoTextParser.color_codes`. Prefer names
+    present in both palettes; `orange` is GUI-only and prints uncolored in a terminal.
+    """
+    parts: list[JSONMessagePart] = []
+    add_json_text(parts, text, type=JSONTypes.color, color=color)
+    ctx.on_print_json({"data": parts, "cmd": "PrintJSON"})
+
+
+def log_toggle(ctx: CommonContext, name: str, enabled: bool) -> None:
+    """Log an in-game menu toggle: green once the feature is live, yellow once it isn't."""
+    color = "green" if enabled else "yellow"
+    log_color(ctx, f"{name} toggled {'on' if enabled else 'off'} from in-game menu.", color)
+
+
+def log_quiet(text: str) -> None:
+    """Log `text` to the log file only, keeping it out of the terminal and the GUI.
+
+    For handshake bookkeeping that matters when reading a log after the fact but is
+    noise during play. `logger.debug` will not do this: `init_logging` leaves the root
+    logger at INFO with no flag to lower it, so debug records reach no handler at all.
+    `NoStream` is the filter on the stdout handler (`Utils.init_logging`); `skip_gui`
+    is checked by the Kivy log handler (`kvui.LogtoUI.handle`).
+    """
+    logger.info(text, extra={"NoStream": True, "skip_gui": True})
+
+
 class KARCommandProcessor(ClientCommandProcessor):
     def _cmd_dolphin(self) -> None:
         """Display the current Dolphin emulator connection status."""
         if not isinstance(self.ctx, KARContext):
             return
         ctx = self.ctx
+        # Default yellow covers the middle band, where the hook is up but the handshake
+        # is still in progress. The two ends override it.
+        color = "yellow"
         if not ctx.dolphin.is_hooked():
+            color = "red"
             # Prefer the last attempt's real outcome (e.g. "hooked, but the game id was wrong") over
             # the bare DME status, which after an unhook is just "unHooked" and hides that we attached.
             if ctx.last_attach_detail:
@@ -72,6 +110,7 @@ class KARCommandProcessor(ClientCommandProcessor):
                 status = f"Not connected ({_DOLPHIN_STATUS_TEXT.get(name, name)})"
         elif not ctx.dolphin.check_game_running():
             status = "Hooked, game not running"
+            color = "red"
         elif ctx.ap_data_base is None:
             status = "Waiting for APData struct"
         elif not ctx.game_ready:
@@ -82,7 +121,8 @@ class KARCommandProcessor(ClientCommandProcessor):
             status = "Waiting for location data"
         else:
             status = "Connected"
-        logger.info(f"Dolphin Status: {status}")
+            color = "green"
+        log_color(ctx, f"Dolphin Status: {status}", color)
 
 
 class KARContext(CommonContext):
@@ -310,7 +350,7 @@ class KARContext(CommonContext):
                     goal_str += f" ({len(sd.get(goal_loc_key, []))} locations)"
                 goals.append(f"{mode_name}: {goal_str}")
         if goals:
-            logger.info(f"Goal(s): {', '.join(goals)}")
+            log_color(self, f"Goal(s): {', '.join(goals)}", "yellow")
 
     def _handle_bounced(self, args: dict[str, Any]) -> None:
         tags = args.get("tags", [])
@@ -356,7 +396,7 @@ class KARContext(CommonContext):
 
         if not self.pending_scout_ids:
             self.location_arrays_ready = True
-            logger.info("Location data built from scout results.")
+            log_quiet("Location data built from scout results.")
 
     async def _update_traplink_tags(self, enabled: bool) -> None:
         old = self.tags.copy()
@@ -407,13 +447,13 @@ class KARContext(CommonContext):
 
                 now_connected = self.dolphin.is_hooked() and self.dolphin.check_game_running()
                 if now_connected and not self._dolphin_was_connected:
-                    logger.info("Dolphin connected.")
+                    log_color(self, "Dolphin connected.", "green")
                     self.last_attach_detail = None
                     self._logged_attach_detail = None
                 elif not now_connected and self._dolphin_was_connected:
                     # The specific reason is logged by _note_attach_failure on the
                     # next connect attempt; this is just the state marker.
-                    logger.info("Lost connection to Dolphin.")
+                    log_color(self, "Lost connection to Dolphin.", "red")
                 self._dolphin_was_connected = now_connected
             except Exception as e:  # noqa: BLE001
                 # Last-resort guard. This task has no supervisor, so an unhandled exception escaping
@@ -464,22 +504,22 @@ class KARContext(CommonContext):
         self.last_attach_detail = detail
         if detail != self._logged_attach_detail:
             self._logged_attach_detail = detail
-            logger.info(f"Dolphin not fully connected: {detail}")
+            log_color(self, f"Dolphin not fully connected: {detail}", "red")
 
     async def _dolphin_tick(self) -> None:
         # Resolve / verify APData pointer
         ptr = self.dolphin.resolve_ap_data()
         if ptr is None:
             if self.ap_data_base is not None:
-                logger.info("APData pointer lost. Game may have restarted.")
+                log_color(self, "APData pointer lost. Game may have restarted.", "yellow")
                 self._reset_dolphin_state()
             return
         if ptr != self.ap_data_base:
             if self.ap_data_base is not None:
-                logger.info("APData pointer changed. Re-handshaking.")
+                log_color(self, "APData pointer changed. Re-handshaking.", "yellow")
                 self._reset_dolphin_state()
             self.ap_data_base = ptr
-            logger.info(f"Found APData at {ptr:#010x}")
+            log_color(self, f"Found APData at {ptr:#010x}", "yellow")
 
         # Wait for game_ready, and detect restarts. The mod sets game_ready once in OnBoot and never
         # clears it during play, so reading 0 after we've seen 1 means the game rebooted (APData
@@ -489,9 +529,9 @@ class KARContext(CommonContext):
             if game_ready_mem != 1:
                 return
             self.game_ready = True
-            logger.info("Game initialized and save loaded.")
+            log_color(self, "Game initialized and save loaded.", "yellow")
         elif game_ready_mem != 1:
-            logger.info("game_ready cleared - game restarted. Re-handshaking.")
+            log_color(self, "game_ready cleared - game restarted. Re-handshaking.", "yellow")
             self._reset_dolphin_state()
             return
 
@@ -502,7 +542,7 @@ class KARContext(CommonContext):
             self._write_options()
             self.options_written = True
             self.item_send_index = self.dolphin.read_u32(self._addr(MemoryAddress.ITEM_RECEIVED_INDEX))
-            logger.info(f"Options written. Game has received {self.item_send_index} items.")
+            log_color(self, f"Options written. Game has received {self.item_send_index} items.", "yellow")
 
         # Write location data (requires scout results)
         if not self.locations_written:
@@ -510,7 +550,7 @@ class KARContext(CommonContext):
                 return  # Waiting for LocationInfo scout response.
             self._write_location_data()
             self.locations_written = True
-            logger.info("Location data written. Client fully operational.")
+            log_color(self, "Location data written. Client fully operational.", "green")
 
             # Re-arm backfill on every completed handshake, not just on an AP "Connected" packet. When
             # the mod restarts with a fresh save while the AP session stays alive (Dolphin reboot, no
@@ -647,9 +687,18 @@ class KARContext(CommonContext):
 
         if new_checks:
             sent = await self.check_locations(new_checks)
-            if sent:
-                names = [self.location_names.lookup_in_game(loc) for loc in sent]
-                logger.info(f"New checks sent: {names}")
+            # Location nodes rather than pre-formatted names, so the GUI colors them and attaches
+            # its hover info. check_locations intersects against missing_locations, which is empty
+            # until we're connected, so a non-empty `sent` already implies a slot; the explicit
+            # check just narrows the type.
+            if sent and self.slot is not None:
+                parts: list[JSONMessagePart] = []
+                add_json_text(parts, "New checks sent: ")
+                for i, loc in enumerate(sorted(sent)):
+                    if i:
+                        add_json_text(parts, ", ")
+                    add_json_location(parts, loc, self.slot)
+                self.on_print_json({"data": parts, "cmd": "PrintJSON"})
 
     def _check_goal(self) -> None:
         """Forward the game's goal_complete flag to the AP server as a victory."""
@@ -657,7 +706,7 @@ class KARContext(CommonContext):
             return
         if self.dolphin.read_u8(self._addr(MemoryAddress.GOAL_COMPLETE)) == 1:
             self.finished_game = True
-            logger.info("Goal complete! Sending victory.")
+            log_color(self, "Goal complete! Sending victory.", "yellow")
             Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
 
     async def _poll_menu_toggles(self) -> None:
@@ -670,18 +719,18 @@ class KARContext(CommonContext):
         dl_enabled = self.dolphin.read_u32(self._addr(MemoryAddress.DEATHLINK_MENU_ENABLED)) != 0
         dl_currently_on = "DeathLink" in self.tags
         if dl_enabled != dl_currently_on:
-            logger.info(f"DeathLink toggled {'on' if dl_enabled else 'off'} from in-game menu.")
+            log_toggle(self, "DeathLink", dl_enabled)
             await self.update_death_link(dl_enabled)
 
         tl_enabled = self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_MENU_ENABLED)) != 0
         tl_currently_on = "TrapLink" in self.tags
         if tl_enabled != tl_currently_on:
-            logger.info(f"TrapLink toggled {'on' if tl_enabled else 'off'} from in-game menu.")
+            log_toggle(self, "TrapLink", tl_enabled)
             await self._update_traplink_tags(tl_enabled)
 
         el_enabled = self.dolphin.read_u32(self._addr(MemoryAddress.ENERGYLINK_MENU_ENABLED)) != 0
         if el_enabled != self.energy_link_enabled:
-            logger.info(f"EnergyLink toggled {'on' if el_enabled else 'off'} from in-game menu.")
+            log_toggle(self, "EnergyLink", el_enabled)
             self.energy_link_enabled = el_enabled
             if el_enabled:
                 self.set_notify(f"EnergyLink{self.team}")
