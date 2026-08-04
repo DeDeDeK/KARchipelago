@@ -89,11 +89,11 @@ Kirby Air Ride has three independent game modes: City Trial, Air Ride, and Top R
 
 A fourth checklist tab added by the mod. Its boxes are Archipelago-specific objectives you complete while playing the real modes - eat three of a food, break all the coral, finish 1st on a stadium - and it behaves like any other mode for goals, locations, and items.
 
-- **Fill in N Checklist Boxes** (1 to 33).
+- **Fill in N Checklist Boxes** (1 to 50).
 - **Complete a specific list of checklist boxes** (via "Archipelago Goal Locations").
 - **None.** Disables the Archipelago checklist (default).
 
-**EXPERIMENTAL:** this checklist is incomplete and under active development. It has 33 boxes rather than 120, so the "Fill in over 100 Checklist Boxes" goal is rejected at generation, and objective names and thresholds may still change in ways that break existing YAMLs.
+**EXPERIMENTAL:** this checklist is incomplete and under active development. It has 50 boxes rather than 120, so it does not offer the "Fill in over 100 Checklist Boxes" goal the other three modes do, and objective names and thresholds may still change in ways that break existing YAMLs.
 
 ## Access gating
 
@@ -104,7 +104,7 @@ The gateable categories are:
 - **City Trial stadiums.** 
 - **City Trial events** (Dyna Blade, Meteor, Tac, etc.)
 - **Copy abilities** (Fire, Sword, Bomb, etc.). Affects all modes.
-- **Base abilities** (inhale, quick spin, and machine charge). Affects all modes.
+- **Base abilities** (inhale, quick spin, and machine charge). Affects all modes. Two knock-on effects are in logic: Charge is what makes the Hydra, Slick Star and Turbo Star driveable at all - and what beats a level-5 Top Ride CPU - and the three KO stadiums (KIRBY MELEE, DESTRUCTION DERBY, VS. KING DEDEDE) need some way to deal damage, which means quick spin, a copy ability that hurts, King Dedede or Meta Knight, or - in melee only - inhale.
 - **City Trial patch types** (Boost, Top Speed, Offense, etc.)
 - **City Trial game items** (All Up, Speed Max, Candy, food, legendary parts, etc.)
 - **Air ride machines.** Across all modes.
@@ -117,7 +117,7 @@ The gateable categories are:
 Generation will choose one starting unlock item for the following categories. Each is picked at random and given to you for free before your run begins:
 
 - **City Trial stadiums.** One of the 24 stadiums (never VS. KING DEDEDE when that is your goal). Only when stadiums are gated and City Trial is enabled.
-- **Air Ride machines.** One machine you can ride in City Trial and Air Ride (never the Hydra or Dragoon). Only when machines are gated and City Trial or Air Ride is enabled.
+- **Air Ride machines.** One machine you can ride in City Trial and Air Ride (never the Hydra or Dragoon, and never the Slick or Turbo Star while base abilities are gated - neither can be steered until you find Charge). Only when machines are gated and City Trial or Air Ride is enabled.
 - **Top Ride machines.** Free Star or Steer Star, since Top Ride cannot be entered without one of them. Only when machines are gated and Top Ride is enabled.
 - **Air Ride courses.** One course. Only when courses are gated and Air Ride is enabled.
 - **Top Ride courses.** One course. Only when courses are gated and Top Ride is enabled.
