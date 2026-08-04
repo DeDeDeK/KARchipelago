@@ -1,18 +1,17 @@
 """
 Tests for the checklist_rewards_gated option.
 
-Off by default: the generator removes every non-progression checklist reward from the pool and the
-mod unlocks them all at connect. The 6 progression Dragoon/Hydra part markers stay in the pool but
-float as ordinary progression, so Shuffle Checklist Rewards is a true no-op when rewards are gated off.
+Off by default: the generator removes every non-progression checklist reward from the pool and the mod
+unlocks them all at connect. The 6 progression Dragoon/Hydra part markers stay but float as ordinary
+progression, so Shuffle Checklist Rewards is a true no-op when rewards are gated off.
 
 These tests pin:
   - on => non-progression rewards present (the opt-in behavior);
-  - off (default) => zero non-progression rewards in pool or precollected, reward_pool empty, the only
-    reward-typed items left are progression part markers, and the pool still exactly fills placeable
-    locations (the generic backfill absorbs the freed boxes);
-  - off => shuffle_checklist_rewards does nothing: nothing is pinned whether shuffle is on or off;
+  - off => none in pool or precollected, reward_pool empty, only part markers left, and the pool still
+    exactly fills placeable locations (the generic backfill absorbs the freed boxes);
+  - off => shuffle_checklist_rewards pins nothing, whether shuffle is on or off;
   - off relaxes capacity (a tight config that OptionErrors with rewards on generates with them off);
-  - a full distribute_items_restrictive places no non-progression reward anywhere and stays beatable.
+  - a full distribute_items_restrictive places no non-progression reward and stays beatable.
 """
 
 from typing import TYPE_CHECKING
@@ -151,10 +150,8 @@ class TestGatedOffFullFill(KARTestBase):
 
 
 # CT-only config tuned so the 7 useful City Trial checklist rewards decide the needs-default budget:
-# with rewards on they push the pool past City Trial's 90 default locations (raises); with rewards off
-# the same config fits. 75 base CT progression + 6 Patch Cap Increases (max 18 - min 12) = 81, + 5
-# checkbox fillers = 86 needs-default with rewards off (fits) vs 93 with the 7 useful rewards on
-# (overflows). CT-only isolates the reward-removal capacity relaxation.
+# 75 base CT progression + 6 Patch Cap Increases + 5 checkbox fillers = 86 with rewards off (fits under
+# City Trial's 90 default locations) vs 93 with the rewards on (overflows).
 _REWARD_RELAX_OPTIONS = {
     **CT_ONLY,
     "city_trial_patch_cap_min": 12,

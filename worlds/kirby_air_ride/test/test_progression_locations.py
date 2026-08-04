@@ -2,18 +2,15 @@
 Progress-type tests for the *_progression_* location-category toggles.
 
 Each mode exposes several toggles (high effort, multiplayer, free run, RNG, bust-vehicle, time attack)
-that decide whether a whole category of checklist locations counts toward progression. When a toggle is
-OFF (the default) every location in its group is EXCLUDED; when ON the group becomes DEFAULT
-(progression-eligible). The result lands in the per-mode {default,excluded}_locations name sets.
+deciding whether a whole category of checklist locations counts toward progression: OFF (the default)
+EXCLUDES the group, ON makes it DEFAULT. The result lands in the per-mode location name sets.
 
-These tests pin both directions of that contract:
-  - default (all toggles off): every category's locations are excluded, and the excluded set is exactly
-    the union of the categories (nothing else is excluded by this mechanism);
-  - per-toggle isolation (one toggle on, the rest off): only that category's locations leave the excluded
-    set, proving each option is wired to its own group and not a sibling's.
+These tests pin both directions:
+  - all toggles off: the excluded set is exactly the union of the categories, nothing more;
+  - one toggle on: only that category leaves the excluded set, proving each option is wired to its own
+    group and not a sibling's.
 
-run_default_tests is off: these assert the static categorization only, so a full fill / reachability sweep
-would be wasted generation here.
+run_default_tests is off: these assert static categorization only, so a full fill would be wasted here.
 """
 
 from Options import Toggle

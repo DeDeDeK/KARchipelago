@@ -69,11 +69,9 @@ class TestArchipelagoCodec(unittest.TestCase):
 
 
 class TestArchipelagoRewardWireEncoding(unittest.TestCase):
-    """An Archipelago box addresses itself as target_mode=ARCHIPELAGO on the wire.
-
-    The client writes locations[source_mode][reward_index] = (target_mode << 8) | clear_kind, so a
-    reward shuffled onto an AP box reaches the mod as target_mode=ARCHIPELAGO - a value the mod's
-    cross_mode_slots table must have a row for."""
+    """An Archipelago box addresses itself as target_mode=ARCHIPELAGO on the wire. The client writes
+    locations[source_mode][reward_index] = (target_mode << 8) | clear_kind, so a reward shuffled onto an
+    AP box reaches the mod as ARCHIPELAGO - a value its cross_mode_slots table must have a row for."""
 
     def test_ap_box_wire_encoding(self):
         for data in AP_CHECKLIST_LOCATION_TABLE.values():
@@ -85,10 +83,9 @@ class TestArchipelagoRewardWireEncoding(unittest.TestCase):
 
 
 class TestArchipelagoAcceptsChecklistRewards(KARTestBase):
-    """Archipelago boxes are eligible to host other modes' checklist rewards when the rewards are
-    shuffled. The AP checklist awards no *native* rewards, but create_items is mode-agnostic and AP
-    boxes are ordinary fill targets, so rewards can land there. Asserts eligibility directly rather
-    than sampling fill outcomes, which would depend on seed and pool ordering."""
+    """Archipelago boxes may host other modes' checklist rewards when rewards are shuffled: the AP
+    checklist awards no *native* rewards, but create_items is mode-agnostic and AP boxes are ordinary
+    fill targets. Asserts eligibility directly rather than sampling seed- and order-dependent fills."""
 
     options = {**AP_WITH_CT, "shuffle_checklist_rewards": True}
 
@@ -108,10 +105,9 @@ class TestArchipelagoAcceptsChecklistRewards(KARTestBase):
 
 
 class TestArchipelagoMemoryMaps(unittest.TestCase):
-    """Every per-mode memory map covers the Archipelago mode. These are dicts the client iterates, so
-    a missing entry is silent: _handle_backfill builds server_bits for every GameMode but only writes
-    the modes present in CLIENT_BACKFILL_PER_MODE, so an AP omission drops AP backfill on the floor
-    with no error."""
+    """Every per-mode memory map covers the Archipelago mode. These are dicts the client iterates, so a
+    missing entry is silent: _handle_backfill builds server_bits for every GameMode but writes only the
+    modes present in CLIENT_BACKFILL_PER_MODE, so an AP omission drops AP backfill with no error."""
 
     def test_sent_checks_covers_every_mode(self):
         self.assertEqual(set(SENT_CHECKS_PER_MODE), set(GameMode))
@@ -207,14 +203,10 @@ class TestArchipelagoChecklistListGoal(KARTestBase):
 
 
 class TestArchipelago100BlocksNotOffered(unittest.TestCase):
-    """The AP checklist holds well under 100 boxes, so a 100_checklist_blocks goal could only ever
-    fail validation. Rather than offer a goal whose sole outcome is an OptionError, ArchipelagoGoal
-    leaves it out - unlike the other three modes, which all have a real "Fill in 100" cell. Every
-    remaining AP block target fits by construction (see TestArchipelagoChecklistAmountRangeTracksTable).
-
-    Add the option back alongside the 100th box; until then this test is what keeps the option surface
-    honest about the table it sits on.
-    """
+    """The AP checklist holds well under 100 boxes, so a 100_checklist_blocks goal could only ever fail
+    validation. ArchipelagoGoal therefore leaves it out, unlike the other three modes, which all have a
+    real "Fill in 100" cell. Add it back alongside the 100th box; until then this test keeps the option
+    surface honest about the table it sits on."""
 
     def test_option_absent(self):
         self.assertFalse(hasattr(ArchipelagoGoal, "option_100_checklist_blocks"))
@@ -233,13 +225,10 @@ class TestArchipelago100BlocksNotOffered(unittest.TestCase):
 
 
 class TestArchipelagoChecklistAmountRangeTracksTable(unittest.TestCase):
-    """ArchipelagoChecklistAmount must never offer more boxes than the AP table actually holds.
-
-    City Trial / Air Ride / Top Ride each have a full 120 boxes, so their range_end is 120. The
-    Archipelago checklist is still being built out, so its range is capped at the real table size -
-    otherwise the option surface promises targets that can only fail at generation. Raise range_end as
-    boxes are added; this test is what keeps the two in step.
-    """
+    """ArchipelagoChecklistAmount must never offer more boxes than the AP table actually holds. The other
+    three modes have a full 120, but the AP checklist is still being built out, so its range is capped at
+    the real table size - otherwise the option promises targets that can only fail at generation. Raise
+    range_end as boxes are added; this test keeps the two in step."""
 
     def test_range_end_matches_table_size(self):
         self.assertEqual(ArchipelagoChecklistAmount.range_end, len(AP_CHECKLIST_LOCATION_TABLE))
@@ -324,11 +313,8 @@ class TestArchipelagoOnly(KARTestBase):
 
 
 class TestArchipelagoLocationTableIntegrity(unittest.TestCase):
-    """Static invariants of the AP location table.
-
-    The code<->clear_kind pairing is a cross-repo wire contract with the mod's ap_checks[] array, and
-    nothing mechanically catches a desync, so it is pinned here.
-    """
+    """Static invariants of the AP location table. The code<->clear_kind pairing is a cross-repo wire
+    contract with the mod's ap_checks[] array that nothing mechanically catches a desync in."""
 
     def test_codes_contiguous_from_361(self):
         codes = sorted(d.code for d in AP_CHECKLIST_LOCATION_TABLE.values())
@@ -384,11 +370,9 @@ class TestRegionToModeExhaustive(unittest.TestCase):
 
 class TestArchipelagoPullsModesIntoLogic(KARTestBase):
     """Enabling the AP checklist builds the trees of every mode its boxes name, even with no goal there.
-
     An AP box lives in the region of the activity it describes, so it inherits that region's entrance
-    chain. That requires the tree to exist. A mode pulled in this way stays free: no goal means no
-    unlock items, so none of its categories are effective and it ships ungated.
-    """
+    chain, which requires the tree to exist. Such a mode stays free: no goal means no unlock items, so
+    none of its categories are effective and it ships ungated."""
 
     options = {
         "city_trial_goal": CityTrialGoal.option_none,
@@ -442,12 +426,9 @@ class TestArchipelagoPullsModesIntoLogic(KARTestBase):
 
 
 class TestArchipelagoOnlyDefaultGates(KARTestBase):
-    """AP-only generates at default gate settings.
-
-    Colors are mode-agnostic, so an AP-only seed genuinely holds 7 color keys (8 minus the starter) and
-    they need default boxes to land on. The AP table has to stay large enough to absorb them, so this
-    test guards the box count and would fail if the table shrank far enough.
-    """
+    """AP-only generates at default gate settings. Colors are mode-agnostic, so an AP-only seed genuinely
+    holds 7 color keys (8 minus the starter) needing default boxes to land on. This guards the AP box
+    count and would fail if the table shrank far enough to stop absorbing them."""
 
     options = {
         "city_trial_goal": CityTrialGoal.option_none,

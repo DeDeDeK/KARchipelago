@@ -9,17 +9,12 @@ from .KARRegions import KARRegion
 
 
 class KARLocationData(NamedTuple):
-    """Data for a location in Kirby Air Ride.
-
-    code: Unique AP location code (sequential 1-360).
-    region: Name of the region this location belongs to.
-    native_reward: The checklist reward item this box awards in the base game, or None if the box
-        awards nothing. The complete documented vanilla map (in-scope and overlapping rewards alike);
-        shuffle_checklist_rewards uses it to pin in-pool rewards to their native box.
-    """
+    """Data for a location in Kirby Air Ride."""
 
     code: int
     region: str
+    # The checklist reward this box awards in the base game, or None. The complete vanilla map (in-scope
+    # and overlapping rewards alike); shuffle_checklist_rewards pins in-pool rewards with it.
     native_reward: KARItemName | None = None
 
 
@@ -969,21 +964,18 @@ TOP_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
 
 
 class APLocation(StrEnum):
-    """Archipelago checklist location names - the synthetic 4th checklist mode of Archipelago-specific
-    objectives, describing activities across City Trial, Air Ride and Top Ride.
+    """Archipelago checklist location names - the synthetic 4th checklist mode, describing objectives
+    across City Trial, Air Ride and Top Ride.
 
     The location code is 361 + clear_kind (AP band 361-480), and each clear_kind MUST match the mod's
-    ap_checks[] order: the pairing is a cross-repo wire contract, and nothing mechanically catches a
-    desync. Renumbering is allowed - players reinstall fresh - but only with both repos moved together.
+    ap_checks[] order: a cross-repo wire contract nothing mechanically catches a desync in. Renumbering
+    is allowed - players reinstall fresh - but only with both repos moved together.
 
-    Every name is prefixed "Archipelago: ". LOCATION_TABLE merges all four mode tables by name, so a
-    name colliding with a City Trial / Air Ride / Top Ride box would silently drop one of the two; the
-    prefix also keeps *_goal_locations validation able to tell the tabs apart.
-
-    After that prefix the name is the mod's in-game cell text verbatim, authored line break written as
-    a space - the same relationship the three vanilla tables have to their SIS entries, which is why a
-    name keeps the mode category ("City Trial: ", "Stadium: ", "Air Ride: ") the cell text carries. The
-    mod restates this text by hand in ap_checks[], so the two move together.
+    Every name is prefixed "Archipelago: ", since LOCATION_TABLE merges all four mode tables by name and
+    a collision would silently drop one; the prefix also lets *_goal_locations validation tell the tabs
+    apart. After it the name is the mod's in-game cell text verbatim, authored line break written as a
+    space, so it keeps the mode category ("City Trial: ", "Stadium: ", "Air Ride: ") the cell carries.
+    The mod restates this text by hand in ap_checks[], so the two move together.
     """
 
     # City Trial exploration
@@ -1034,9 +1026,8 @@ class APLocation(StrEnum):
         "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place 3 times as Purple Kirby!"  # 27
     )
 
-    # Photo finishes, one per mode instead of one per stadium/course: any DRAG RACE stadium
-    # counts for the first, any Air Ride course for the second. Solo-achievable: CPU racers
-    # count as players.
+    # Photo finishes, one per mode rather than per stadium/course: any DRAG RACE stadium counts for the
+    # first, any Air Ride course for the second. Solo-achievable - CPU racers count as players.
     DR_PHOTO_FINISH = "Archipelago: Stadium: In any DRAG RACE, have 2 players finish within 0.10 seconds!"  # 28
     AIR_RIDE_PHOTO_FINISH = "Archipelago: Air Ride: On any course, have 2 players finish within 0.10 seconds!"  # 29
 
@@ -1068,44 +1059,38 @@ class APLocation(StrEnum):
         "Archipelago: Air Ride: NEBULA BELT Fly 10 seconds on Dragoon, Flight or Winged Star!"  # 41
     )
 
-    # Destruction Derby. Vanilla gives DD 1/2/4/5 both a 5-KO and a 10-KO cell but leaves DD 3 with
-    # only the 5-KO one, so the first fills in the tier DD 3 is missing. The second asks for the
-    # KO'd rivals to be Kirbys, which is not free: a stadium CPU can itself be Meta Knight or King
-    # Dedede once those are unlocked.
+    # Destruction Derby. Vanilla gives DD 1/2/4/5 both a 5-KO and a 10-KO cell but leaves DD 3 with only
+    # the 5-KO, so the first fills that tier. The second asks the KO'd rivals to be Kirbys, which is not
+    # free: a stadium CPU can itself be Meta Knight or King Dedede once those are unlocked.
     DD3_KO_A_RIVAL_10 = "Archipelago: Stadium: DESTRUCTION DERBY 3 In one game, KO a rival 10 times or more!"  # 42
     DD_KO_10_KIRBYS_AS_KING_DEDEDE = (
         "Archipelago: Stadium: DESTRUCTION DERBY (All) As King Dedede, KO 10 Kirbys in one game!"  # 43
     )
 
-    # Mic is the one copy ability the vanilla checklist never writes a cell for. The first
-    # restates the Copy Chance Wheel cells vanilla gives Bomb and Sleep; the second takes the
-    # "(All)" heading vanilla gives a cell any stadium in a group satisfies.
+    # Mic is the one copy ability the vanilla checklist never writes a cell for. The first restates the
+    # Copy Chance Wheel cells vanilla gives Bomb and Sleep; the second takes vanilla's "(All)" heading.
     GET_MIC_FROM_COPY_CHANCE = "Archipelago: City Trial: Get the Mic ability from the Copy Chance Wheel!"  # 44
     KM_KO_10_ENEMIES_AS_MIC_KIRBY = (
         "Archipelago: Stadium: KIRBY MELEE (All) In one game, KO 10 enemies as Mic Kirby!"  # 45
     )
 
-    # Vanilla counts boxes only as an all-colors lifetime total ("break more than 500 / 1000 boxes!"),
-    # so a per-color count is open. The thresholds differ because the colors do not spawn equally
-    # often: City Trial's box table rolls blue 63% of the time against red 20% and green 17%.
+    # Vanilla counts boxes only as an all-colors lifetime total, so a per-color count is open. The
+    # thresholds differ with spawn odds: City Trial's box table rolls blue 63%, red 20%, green 17%.
     BREAK_20_BLUE_BOXES = "Archipelago: City Trial: In one game, break 20 or more blue boxes!"  # 46
     BREAK_10_GREEN_BOXES = "Archipelago: City Trial: In one game, break 10 or more green boxes!"  # 47
     BREAK_10_RED_BOXES = "Archipelago: City Trial: In one game, break 10 or more red boxes!"  # 48
 
-    # Fantasy Meadows' shortcut is an elevated arc over the normal racing line. The mod samples
-    # it in every Air Ride mode, since the label carries no mode prefix the way vanilla's TA and
-    # FR cells do.
+    # Fantasy Meadows' shortcut is an elevated arc over the normal racing line. The mod samples it in
+    # every Air Ride mode, since the label carries no mode prefix the way vanilla's TA and FR cells do.
     FANTASY_MEADOWS_TAKE_SHORTCUT = "Archipelago: Air Ride: FANTASY MEADOWS Take the shortcut!"  # 49
 
 
 # The Archipelago checklist awards no native rewards, so every entry has native_reward=None.
 #
-# Each box lives in the region where its activity actually happens, not in a flat Archipelago region:
-# that way it inherits the region's entrance chain (stadium unlocks, course unlocks, the DD/KM/DR
-# prerequisite chains) for free, instead of hand-copying those as Has(...) rules that drift out of sync.
-# Every box is an in-game achievement and so names a mode's region; the ARCHIPELAGO region itself holds
-# no boxes, only the victory event. Naming a mode's region here is what pulls that mode into
-# logic_modes, so its tree is built even when it has no goal.
+# Each box lives in the region where its activity happens, not in a flat Archipelago region, so it
+# inherits that region's entrance chain (stadium/course unlocks, DD/KM/DR prerequisites) instead of
+# hand-copied Has(...) rules that drift. The ARCHIPELAGO region itself holds only the victory event.
+# Naming a mode's region here is what pulls that mode into logic_modes, goal or no goal.
 AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.CASTLE_FLOWER_ON_FOOT: KARLocationData(361, KARRegion.CITY_TRIAL),
     APLocation.BREAK_ALL_CORAL: KARLocationData(362, KARRegion.CITY_TRIAL),
@@ -1136,9 +1121,8 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF: KARLocationData(386, KARRegion.STADIUM_KM2),
     APLocation.SR1_FINISH_1ST_ON_BULK_STAR: KARLocationData(387, KARRegion.STADIUM_SR1),
     APLocation.SR1_FINISH_1ST_3X_AS_PURPLE: KARLocationData(388, KARRegion.STADIUM_SR1),
-    # Any of the four DRAG RACE stadiums satisfies this box, but a location names a single region,
-    # so it takes DRAG RACE 1: sufficient on its own, and the cheapest of the four to reach - DR4
-    # additionally sits behind the CITY_TRIAL -> DR4 prerequisite chain.
+    # Any of the four DRAG RACE stadiums satisfies this box, but a location names one region, so it takes
+    # DRAG RACE 1: sufficient alone and the cheapest to reach (DR4 also sits behind a prerequisite chain).
     APLocation.DR_PHOTO_FINISH: KARLocationData(389, KARRegion.STADIUM_DR1),
     APLocation.AIR_RIDE_PHOTO_FINISH: KARLocationData(390, KARRegion.AIR_RIDE),
     APLocation.AIR_RIDE_RACE_AS_EVERY_COLOR: KARLocationData(391, KARRegion.AIR_RIDE),
@@ -1159,9 +1143,9 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     # entrance rule already asks for - the same region the vanilla "(All)" DD boxes take.
     APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE: KARLocationData(404, KARRegion.STADIUM_DD_ALL),
     APLocation.GET_MIC_FROM_COPY_CHANCE: KARLocationData(405, KARRegion.CITY_TRIAL),
-    # The mod counts this in either melee stadium, but only KIRBY MELEE 2 can supply the ability:
-    # neither melee stage ships an ItemNode, so no copy panels spawn, and Walky is in GrColosseum5's
-    # spawn table (as ACTORID_T1_WALKY) but absent from GrPasture1's. So the box names KM2, not KM_ALL.
+    # The mod counts this in either melee stadium, but only KIRBY MELEE 2 can supply the ability: neither
+    # stage ships an ItemNode, so no copy panels spawn, and Walky (ACTORID_T1_WALKY) is in GrColosseum5's
+    # spawn table but not GrPasture1's. Hence KM2, not KM_ALL.
     APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY: KARLocationData(406, KARRegion.STADIUM_KM2),
     APLocation.BREAK_20_BLUE_BOXES: KARLocationData(407, KARRegion.CITY_TRIAL),
     APLocation.BREAK_10_GREEN_BOXES: KARLocationData(408, KARRegion.CITY_TRIAL),
@@ -1177,9 +1161,8 @@ LOCATION_TABLE: dict[str, KARLocationData] = (
     CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE | AP_CHECKLIST_LOCATION_TABLE
 )
 
-# Inverse of the native_reward field: reward item name -> the location that awards it in the base game.
-# The vanilla checklist maps each reward to exactly one box, so this is injective. shuffle_checklist_rewards
-# uses it to pin an in-pool reward back onto its native box. Keys are plain str (the reward item names).
+# Inverse of the native_reward field: reward item name -> the box that awards it in the base game.
+# Injective, since vanilla maps each reward to exactly one box. shuffle_checklist_rewards pins with it.
 NATIVE_REWARD_TO_LOCATION: dict[str, str] = {
     str(data.native_reward): str(name) for name, data in LOCATION_TABLE.items() if data.native_reward is not None
 }
@@ -1709,9 +1692,8 @@ location_name_groups: dict[str, set[str]] = {
 }
 
 
-# Maps a goal option value to the location that represents that goal in the world.
-# Used both to exclude the underlying location from generation and to attach the
-# victory event to the goal location's region.
+# Maps a goal option value to the location representing that goal - used both to exclude that location
+# from generation and to attach the victory event to its region.
 CITY_TRIAL_GOAL_TO_LOCATION: dict[int, str] = {
     CityTrialGoal.option_100_checklist_blocks: CTLocation.FILL_IN_100_CHECKLIST_BLOCKS,
     CityTrialGoal.option_hydra_and_dragoon: CTLocation.COMPLETE_DRAGOON_AND_HYDRA,
@@ -1723,7 +1705,6 @@ AIR_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
 TOP_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
     TopRideGoal.option_100_checklist_blocks: TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
 }
-# The Archipelago checklist has no "Fill in 100" cell (it is a small custom-check tab), so no goal
-# maps to a fixed location - ArchipelagoGoal does not even offer 100_checklist_blocks. Its two real
+# The Archipelago checklist has no "Fill in 100" cell, so no goal maps to a fixed location. Its two real
 # goals, n_checklist_blocks and checklist_list, use their own event rules.
 ARCHIPELAGO_GOAL_TO_LOCATION: dict[int, str] = {}

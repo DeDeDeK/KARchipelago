@@ -1,15 +1,13 @@
 """
 shuffle_checklist_rewards tests.
 
-The option governs whether the native checklist reward items are shuffled into the multiworld (on,
-default) or pinned back onto the boxes that award them in the base game (off). Pinning is
-pre-placement: each in-scope reward is locked onto its native box and dropped from the pool, so the
-item/location counts self-balance.
+The option governs whether native checklist reward items are shuffled into the multiworld (on, default)
+or pinned back onto the boxes that award them in the base game (off). Pinning is pre-placement: each
+in-scope reward is locked onto its native box and dropped from the pool, so the counts self-balance.
 
-In scope are the non-progression rewards (reward_pool) plus the six progression Dragoon/Hydra part
-markers. Guard: a reward whose native box is excluded under the current flags is only pinned when it
-is filler (an excluded box accepts only filler during fill); a useful/progression reward on an
-excluded box floats and is placed by normal fill.
+In scope are the non-progression rewards (reward_pool) plus the six progression part markers. A reward
+whose native box is excluded is pinned only when it is filler, since an excluded box accepts only
+filler; a useful/progression reward there floats and is placed by normal fill.
 
 These tests set checklist_rewards_gated on (off by default), since the shuffle option only has the
 non-progression rewards to act on when they are gated into the pool.
@@ -24,9 +22,8 @@ from ..KARItems import CHECKLIST_REWARD_TYPES, ITEM_TABLE
 from ..KARLocations import LOCATION_TABLE, NATIVE_REWARD_TO_LOCATION
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
 
-# Runtime base is `object` so the mixin is not collected as a standalone test (it would run with
-# default shuffle-on options and fail its shuffle-off asserts). Under type checking it resolves as
-# KARTestBase so self.* type-checks.
+# Runtime base is `object` so the mixin is not collected as a standalone test (it would run shuffle-on
+# and fail its shuffle-off asserts). Under type checking it resolves as KARTestBase so self.* checks.
 _MixinBase = KARTestBase if TYPE_CHECKING else object
 
 _SHUFFLE_OFF = {"shuffle_checklist_rewards": Toggle.option_false}

@@ -1,12 +1,9 @@
 """Beatability + pool guards for the gate-off reward reconciliation.
 
-When a gating category's gate is OFF the mod pre-unlocks the whole category at connect, so the
-category's checklist rewards gate nothing and are excluded from the pool. This is uniform across every
-category (top_ride_items and stadiums included). A gated category's overlapping checklist rewards are
-excluded in every config, and its Unlock items are placed only when the gate is ON.
-
-These tests pin that the reconciled configs still generate a beatable seed, and that overlapping
-rewards drop while the gate's own Unlock items carry progression.
+When a gating category's gate is OFF the mod pre-unlocks the whole category at connect, so its checklist
+rewards gate nothing and leave the pool - uniformly, top_ride_items and stadiums included. These tests
+pin that the reconciled configs still generate a beatable seed, and that overlapping rewards drop while
+the gate's own Unlock items carry progression.
 """
 
 from Options import Toggle
