@@ -979,56 +979,123 @@ class APLocation(StrEnum):
     Every name is prefixed "Archipelago: ". LOCATION_TABLE merges all four mode tables by name, so a
     name colliding with a City Trial / Air Ride / Top Ride box would silently drop one of the two; the
     prefix also keeps *_goal_locations validation able to tell the tabs apart.
+
+    After that prefix the name is the mod's in-game cell text verbatim, authored line break written as
+    a space - the same relationship the three vanilla tables have to their SIS entries, which is why a
+    name keeps the mode category ("City Trial: ", "Stadium: ", "Air Ride: ") the cell text carries. The
+    mod restates this text by hand in ap_checks[], so the two move together.
     """
 
     # City Trial exploration
-    CASTLE_FLOWER_ON_FOOT = "Archipelago: Visit the flower on top of the castle on foot!"  # 0
-    BREAK_ALL_CORAL = "Archipelago: Break all the coral in one game!"  # 1
-    GO_OUT_OF_BOUNDS = "Archipelago: Go out of bounds in City Trial!"  # 2
+    CASTLE_FLOWER_ON_FOOT = "Archipelago: City Trial: Visit the flower on top of Castle Hall on foot!"  # 0
+    BREAK_ALL_CORAL = "Archipelago: City Trial: Break all the coral in one game!"  # 1
+    GO_OUT_OF_BOUNDS = "Archipelago: City Trial: Go out of bounds!"  # 2
 
     # City Trial patches / items
-    GET_10_HP_PATCHES = "Archipelago: In one game, get 10 or more HP Patches!"  # 3
-    COLLECT_10_ALL_UPS = "Archipelago: Collect 10 All Ups in total!"  # 4
+    GET_10_HP_PATCHES = "Archipelago: City Trial: In one game, get 10 or more HP Patches!"  # 3
+    COLLECT_5_ALL_UPS = "Archipelago: City Trial: Collect 5 All Ups in total!"  # 4
 
     # City Trial foods. The vanilla checklist already covers Hot Dog, Sushi, Maxim Tomato and Energy
     # Drink; these are the 8 it leaves out. Candy is deliberately absent - it is invincibility, not food.
-    EAT_3_ICE_CREAMS = "Archipelago: In one game, eat 3 or more Ice Creams!"  # 5
-    EAT_3_RICE_BALLS = "Archipelago: In one game, eat 3 or more Rice Balls!"  # 6
-    EAT_3_CHICKENS = "Archipelago: In one game, eat 3 or more Chickens!"  # 7
-    EAT_3_CURRIES = "Archipelago: In one game, eat 3 or more plates of Curry!"  # 8
-    EAT_3_RAMENS = "Archipelago: In one game, eat 3 or more bowls of Ramen!"  # 9
-    EAT_3_OMELETS = "Archipelago: In one game, eat 3 or more Omelets!"  # 10
-    EAT_3_HAMBURGERS = "Archipelago: In one game, eat 3 or more Hamburgers!"  # 11
-    EAT_3_APPLES = "Archipelago: In one game, eat 3 or more Apples!"  # 12
+    EAT_3_ICE_CREAMS = "Archipelago: City Trial: In one game, eat 3 or more Ice Creams!"  # 5
+    EAT_3_RICE_BALLS = "Archipelago: City Trial: In one game, eat 3 or more Rice Balls!"  # 6
+    EAT_3_CHICKENS = "Archipelago: City Trial: In one game, eat 3 or more Chickens!"  # 7
+    EAT_3_CURRIES = "Archipelago: City Trial: In one game, eat 3 or more plates of Curry!"  # 8
+    EAT_3_RAMENS = "Archipelago: City Trial: In one game, eat 3 or more bowls of Ramen!"  # 9
+    EAT_3_OMELETS = "Archipelago: City Trial: In one game, eat 3 or more Omelets!"  # 10
+    EAT_3_HAMBURGERS = "Archipelago: City Trial: In one game, eat 3 or more Hamburgers!"  # 11
+    EAT_3_APPLES = "Archipelago: City Trial: In one game, eat 3 or more Apples!"  # 12
 
     # City Trial single races. One box per Single Race stadium; each inherits its stadium unlock from
     # the region's entrance rule rather than restating it as a Has(...) rule.
-    SR1_FINISH_1ST = "Archipelago: SINGLE RACE 1 Finish in 1st place!"  # 13
-    SR2_FINISH_1ST = "Archipelago: SINGLE RACE 2 Finish in 1st place!"  # 14
-    SR3_FINISH_1ST = "Archipelago: SINGLE RACE 3 Finish in 1st place!"  # 15
-    SR4_FINISH_1ST = "Archipelago: SINGLE RACE 4 Finish in 1st place!"  # 16
-    SR5_FINISH_1ST = "Archipelago: SINGLE RACE 5 Finish in 1st place!"  # 17
-    SR6_FINISH_1ST = "Archipelago: SINGLE RACE 6 Finish in 1st place!"  # 18
-    SR7_FINISH_1ST = "Archipelago: SINGLE RACE 7 Finish in 1st place!"  # 19
-    SR8_FINISH_1ST = "Archipelago: SINGLE RACE 8 Finish in 1st place!"  # 20
-    SR9_FINISH_1ST = "Archipelago: SINGLE RACE 9 Finish in 1st place!"  # 21
+    SR1_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place!"  # 13
+    SR2_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 2 Finish in 1st place!"  # 14
+    SR3_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 3 Finish in 1st place!"  # 15
+    SR4_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 4 Finish in 1st place!"  # 16
+    SR5_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 5 Finish in 1st place!"  # 17
+    SR6_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 6 Finish in 1st place!"  # 18
+    SR7_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 7 Finish in 1st place!"  # 19
+    SR8_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 8 Finish in 1st place!"  # 20
+    SR9_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 9 Finish in 1st place!"  # 21
 
     # City Trial higher tiers - each threshold sits above the vanilla checklist's hardest.
-    HJ_JUMP_HIGHER_THAN_1500_FEET = "Archipelago: HIGH JUMP Jump higher than 1,500 feet!"  # 22
-    AG_FLY_2000_FEET = "Archipelago: AIR GLIDER fly more than 2,000 feet!"  # 23
-    KM1_KO_100_ENEMIES_BY_YOURSELF = "Archipelago: KIRBY MELEE 1 In one game, KO over 100 enemies by yourself!"  # 24
-    KM2_KO_60_ENEMIES_BY_YOURSELF = "Archipelago: KIRBY MELEE 2 In one game, KO over 60 enemies by yourself!"  # 25
+    HJ_JUMP_HIGHER_THAN_1500_FEET = "Archipelago: Stadium: HIGH JUMP Jump higher than 1,500 feet!"  # 22
+    AG_FLY_2000_FEET = "Archipelago: Stadium: AIR GLIDER fly more than 2,000 feet!"  # 23
+    KM1_KO_100_ENEMIES_BY_YOURSELF = (
+        "Archipelago: Stadium: KIRBY MELEE 1 In one game, KO over 100 enemies by yourself!"  # 24
+    )
+    KM2_KO_60_ENEMIES_BY_YOURSELF = (
+        "Archipelago: Stadium: KIRBY MELEE 2 In one game, KO over 60 enemies by yourself!"  # 25
+    )
 
     # "Useless progression" checks: give colors and off-meta machines a real reason to be progression.
-    SR1_FINISH_1ST_ON_BULK_STAR = "Archipelago: SINGLE RACE 1 Finish in 1st place on Bulk Star!"  # 26
-    SR1_FINISH_1ST_3X_AS_PURPLE = "Archipelago: SINGLE RACE 1 Finish in 1st place 3 times as Purple Kirby!"  # 27
+    SR1_FINISH_1ST_ON_BULK_STAR = "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place on Bulk Star!"  # 26
+    SR1_FINISH_1ST_3X_AS_PURPLE = (
+        "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place 3 times as Purple Kirby!"  # 27
+    )
 
-    # Photo finishes. Solo-achievable: CPU racers count as players.
-    DR1_PHOTO_FINISH = "Archipelago: DRAG RACE 1 Have 2 players finish within 0.10 seconds!"  # 28
-    DR2_PHOTO_FINISH = "Archipelago: DRAG RACE 2 Have 2 players finish within 0.10 seconds!"  # 29
-    DR3_PHOTO_FINISH = "Archipelago: DRAG RACE 3 Have 2 players finish within 0.10 seconds!"  # 30
-    DR4_PHOTO_FINISH = "Archipelago: DRAG RACE 4 Have 2 players finish within 0.10 seconds!"  # 31
-    AIR_RIDE_PHOTO_FINISH = "Archipelago: Air Ride Have 2 players finish within 0.10 seconds!"  # 32
+    # Photo finishes, one per mode instead of one per stadium/course: any DRAG RACE stadium
+    # counts for the first, any Air Ride course for the second. Solo-achievable: CPU racers
+    # count as players.
+    DR_PHOTO_FINISH = "Archipelago: Stadium: In any DRAG RACE, have 2 players finish within 0.10 seconds!"  # 28
+    AIR_RIDE_PHOTO_FINISH = "Archipelago: Air Ride: On any course, have 2 players finish within 0.10 seconds!"  # 29
+
+    # Colors as real progression, continued: this one needs all eight, one finished race each.
+    AIR_RIDE_RACE_AS_EVERY_COLOR = "Archipelago: Air Ride: Finish a race as every Kirby color!"  # 30
+
+    # City Trial landmarks reached on foot.
+    MODEL_CITY_ON_FOOT = "Archipelago: City Trial: Visit the model city on foot!"  # 31
+    VOLCANO_FLOWER_ON_FOOT = "Archipelago: City Trial: Visit the flower on top of the volcanic cliffs on foot!"  # 32
+    SKY_GARDEN_TOP_ON_FOOT = "Archipelago: City Trial: Visit the top of the garden in the sky on foot!"  # 33
+
+    # The city's ceiling: the mod wants a rider above Y 1000, twice the height of the sky garden.
+    FLY_TO_HIGHEST_POINT = "Archipelago: City Trial: Fly to the highest point possible!"  # 34
+
+    # Meta Knight and King Dedede are only ever checklist rewards in vanilla, never objectives.
+    # Any Air Ride course counts, and the win needs at least one opponent in the field.
+    AIR_RIDE_1ST_AS_META_KNIGHT = "Archipelago: Air Ride: Finish in 1st place as Meta Knight!"  # 35
+    AIR_RIDE_1ST_AS_KING_DEDEDE = "Archipelago: Air Ride: Finish in 1st place as King Dedede!"  # 36
+
+    # Nebula Belt, the one Air Ride course with no vanilla checklist cell of its own. It has no
+    # enemies, breakables, rails or animated props, so its boxes are about racing and flying it.
+    NEBULA_BELT_FINISH_1ST = "Archipelago: Air Ride: NEBULA BELT Finish in 1st place!"  # 37
+    NEBULA_BELT_RACE_5500_FEET = "Archipelago: Air Ride: NEBULA BELT Race over 5,500 feet in 2 minutes!"  # 38
+    NEBULA_BELT_2_LAPS_UNDER_230 = "Archipelago: Air Ride: NEBULA BELT Finish 2 laps in under 02:30:00!"  # 39
+    NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER = (
+        "Archipelago: Air Ride: NEBULA BELT Finish in 1st place on Wheelie Scooter!"  # 40
+    )
+    NEBULA_BELT_AIRBORNE_10_SECONDS = (
+        "Archipelago: Air Ride: NEBULA BELT Fly 10 seconds on Dragoon, Flight or Winged Star!"  # 41
+    )
+
+    # Destruction Derby. Vanilla gives DD 1/2/4/5 both a 5-KO and a 10-KO cell but leaves DD 3 with
+    # only the 5-KO one, so the first fills in the tier DD 3 is missing. The second asks for the
+    # KO'd rivals to be Kirbys, which is not free: a stadium CPU can itself be Meta Knight or King
+    # Dedede once those are unlocked.
+    DD3_KO_A_RIVAL_10 = "Archipelago: Stadium: DESTRUCTION DERBY 3 In one game, KO a rival 10 times or more!"  # 42
+    DD_KO_10_KIRBYS_AS_KING_DEDEDE = (
+        "Archipelago: Stadium: DESTRUCTION DERBY (All) As King Dedede, KO 10 Kirbys in one game!"  # 43
+    )
+
+    # Mic is the one copy ability the vanilla checklist never writes a cell for. The first
+    # restates the Copy Chance Wheel cells vanilla gives Bomb and Sleep; the second takes the
+    # "(All)" heading vanilla gives a cell any stadium in a group satisfies.
+    GET_MIC_FROM_COPY_CHANCE = "Archipelago: City Trial: Get the Mic ability from the Copy Chance Wheel!"  # 44
+    KM_KO_10_ENEMIES_AS_MIC_KIRBY = (
+        "Archipelago: Stadium: KIRBY MELEE (All) In one game, KO 10 enemies as Mic Kirby!"  # 45
+    )
+
+    # Vanilla counts boxes only as an all-colors lifetime total ("break more than 500 / 1000 boxes!"),
+    # so a per-color count is open. The thresholds differ because the colors do not spawn equally
+    # often: City Trial's box table rolls blue 63% of the time against red 20% and green 17%.
+    BREAK_20_BLUE_BOXES = "Archipelago: City Trial: In one game, break 20 or more blue boxes!"  # 46
+    BREAK_10_GREEN_BOXES = "Archipelago: City Trial: In one game, break 10 or more green boxes!"  # 47
+    BREAK_10_RED_BOXES = "Archipelago: City Trial: In one game, break 10 or more red boxes!"  # 48
+
+    # Fantasy Meadows' shortcut is an elevated arc over the normal racing line. The mod samples
+    # it in every Air Ride mode, since the label carries no mode prefix the way vanilla's TA and
+    # FR cells do.
+    FANTASY_MEADOWS_TAKE_SHORTCUT = "Archipelago: Air Ride: FANTASY MEADOWS Take the shortcut!"  # 49
 
 
 # The Archipelago checklist awards no native rewards, so every entry has native_reward=None.
@@ -1044,7 +1111,7 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.BREAK_ALL_CORAL: KARLocationData(362, KARRegion.CITY_TRIAL),
     APLocation.GO_OUT_OF_BOUNDS: KARLocationData(363, KARRegion.CITY_TRIAL),
     APLocation.GET_10_HP_PATCHES: KARLocationData(364, KARRegion.CITY_TRIAL),
-    APLocation.COLLECT_10_ALL_UPS: KARLocationData(365, KARRegion.CITY_TRIAL),
+    APLocation.COLLECT_5_ALL_UPS: KARLocationData(365, KARRegion.CITY_TRIAL),
     APLocation.EAT_3_ICE_CREAMS: KARLocationData(366, KARRegion.CITY_TRIAL),
     APLocation.EAT_3_RICE_BALLS: KARLocationData(367, KARRegion.CITY_TRIAL),
     APLocation.EAT_3_CHICKENS: KARLocationData(368, KARRegion.CITY_TRIAL),
@@ -1069,12 +1136,39 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF: KARLocationData(386, KARRegion.STADIUM_KM2),
     APLocation.SR1_FINISH_1ST_ON_BULK_STAR: KARLocationData(387, KARRegion.STADIUM_SR1),
     APLocation.SR1_FINISH_1ST_3X_AS_PURPLE: KARLocationData(388, KARRegion.STADIUM_SR1),
-    APLocation.DR1_PHOTO_FINISH: KARLocationData(389, KARRegion.STADIUM_DR1),
-    APLocation.DR2_PHOTO_FINISH: KARLocationData(390, KARRegion.STADIUM_DR2),
-    APLocation.DR3_PHOTO_FINISH: KARLocationData(391, KARRegion.STADIUM_DR3),
-    # STADIUM_DR4 sits behind the CITY_TRIAL -> DR4 prerequisite chain, which this box inherits.
-    APLocation.DR4_PHOTO_FINISH: KARLocationData(392, KARRegion.STADIUM_DR4),
-    APLocation.AIR_RIDE_PHOTO_FINISH: KARLocationData(393, KARRegion.AIR_RIDE),
+    # Any of the four DRAG RACE stadiums satisfies this box, but a location names a single region,
+    # so it takes DRAG RACE 1: sufficient on its own, and the cheapest of the four to reach - DR4
+    # additionally sits behind the CITY_TRIAL -> DR4 prerequisite chain.
+    APLocation.DR_PHOTO_FINISH: KARLocationData(389, KARRegion.STADIUM_DR1),
+    APLocation.AIR_RIDE_PHOTO_FINISH: KARLocationData(390, KARRegion.AIR_RIDE),
+    APLocation.AIR_RIDE_RACE_AS_EVERY_COLOR: KARLocationData(391, KARRegion.AIR_RIDE),
+    APLocation.MODEL_CITY_ON_FOOT: KARLocationData(392, KARRegion.CITY_TRIAL),
+    APLocation.VOLCANO_FLOWER_ON_FOOT: KARLocationData(393, KARRegion.CITY_TRIAL),
+    APLocation.SKY_GARDEN_TOP_ON_FOOT: KARLocationData(394, KARRegion.CITY_TRIAL),
+    APLocation.FLY_TO_HIGHEST_POINT: KARLocationData(395, KARRegion.CITY_TRIAL),
+    APLocation.AIR_RIDE_1ST_AS_META_KNIGHT: KARLocationData(396, KARRegion.AIR_RIDE),
+    APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE: KARLocationData(397, KARRegion.AIR_RIDE),
+    # AR_NEBULA_BELT's entrance rule already gates on the course unlock, so these inherit it.
+    APLocation.NEBULA_BELT_FINISH_1ST: KARLocationData(398, KARRegion.AR_NEBULA_BELT),
+    APLocation.NEBULA_BELT_RACE_5500_FEET: KARLocationData(399, KARRegion.AR_NEBULA_BELT),
+    APLocation.NEBULA_BELT_2_LAPS_UNDER_230: KARLocationData(400, KARRegion.AR_NEBULA_BELT),
+    APLocation.NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER: KARLocationData(401, KARRegion.AR_NEBULA_BELT),
+    APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS: KARLocationData(402, KARRegion.AR_NEBULA_BELT),
+    APLocation.DD3_KO_A_RIVAL_10: KARLocationData(403, KARRegion.STADIUM_DD3),
+    # Any Destruction Derby stadium satisfies this box, which is exactly what STADIUM_DD_ALL's
+    # entrance rule already asks for - the same region the vanilla "(All)" DD boxes take.
+    APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE: KARLocationData(404, KARRegion.STADIUM_DD_ALL),
+    APLocation.GET_MIC_FROM_COPY_CHANCE: KARLocationData(405, KARRegion.CITY_TRIAL),
+    # The mod counts this in either melee stadium, but only KIRBY MELEE 2 can supply the ability:
+    # neither melee stage ships an ItemNode, so no copy panels spawn, and Walky is in GrColosseum5's
+    # spawn table (as ACTORID_T1_WALKY) but absent from GrPasture1's. So the box names KM2, not KM_ALL.
+    APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY: KARLocationData(406, KARRegion.STADIUM_KM2),
+    APLocation.BREAK_20_BLUE_BOXES: KARLocationData(407, KARRegion.CITY_TRIAL),
+    APLocation.BREAK_10_GREEN_BOXES: KARLocationData(408, KARRegion.CITY_TRIAL),
+    APLocation.BREAK_10_RED_BOXES: KARLocationData(409, KARRegion.CITY_TRIAL),
+    # Time Attack and Free Run on the course satisfy this box too, but all three mode regions
+    # gate on the same course unlock, so the Race one is sufficient and is the cheapest to reach.
+    APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT: KARLocationData(410, KARRegion.AR_FANTASY_MEADOWS),
 }
 
 
@@ -1243,6 +1337,9 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.GET_10_ITEMS_IN_20S,
         CTLocation.GET_50_ITEMS,
         CTLocation.RACE_200_MILES,
+        # 150 KOs is a grind on any setup: the per-match KO count is capped by how fast rivals respawn,
+        # so no unlock shortens it enough to be worth counting on.
+        CTLocation.STADIUM_DD_ALL_KO_ENEMIES_150X,
     },
     KARLocationGroup.CT_RNG: {
         CTLocation.EAT_3_PLATES_OF_SUSHI,
@@ -1601,6 +1698,9 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.LIGHT_RIDE_GRIND_RAIL_50X,
         TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
         TRLocation.RACE_300_LAPS,
+        # Time Attack runs one course at a time with no lap-count rule to lean on, so 30 goal crossings
+        # is a straight grind (unlike the plain "cross the goal 20 times", which ticks over on its own).
+        TRLocation.TA_CROSS_GOAL_30,
     },
     KARLocationGroup.TR_MULTIPLAYER: {
         TRLocation.COMPETE_IN_50_MULTIPLAYER_RACES,
@@ -1624,6 +1724,6 @@ TOP_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
     TopRideGoal.option_100_checklist_blocks: TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
 }
 # The Archipelago checklist has no "Fill in 100" cell (it is a small custom-check tab), so no goal
-# maps to a fixed location. 100_checklist_blocks and large n_checklist_blocks targets are rejected at
-# generation (too few AP locations); n_checklist_blocks and checklist_list use their own event rules.
+# maps to a fixed location - ArchipelagoGoal does not even offer 100_checklist_blocks. Its two real
+# goals, n_checklist_blocks and checklist_list, use their own event rules.
 ARCHIPELAGO_GOAL_TO_LOCATION: dict[int, str] = {}

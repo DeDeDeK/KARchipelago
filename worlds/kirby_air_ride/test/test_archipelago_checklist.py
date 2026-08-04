@@ -23,7 +23,13 @@ from ..KARLocations import (
     APLocation,
     CTLocation,
 )
-from ..KAROptions import ArchipelagoChecklistAmount, ArchipelagoGoal, CityTrialGoal
+from ..KAROptions import (
+    AirRideGoal,
+    ArchipelagoChecklistAmount,
+    ArchipelagoGoal,
+    CityTrialGoal,
+    TopRideGoal,
+)
 from ..KARRegions import REGION_TO_MODE, KARRegion
 from . import CT_ONLY, KARTestBase
 
@@ -200,18 +206,30 @@ class TestArchipelagoChecklistListGoal(KARTestBase):
         self.assertIn(KARItemName.ARCHIPELAGO_VICTORY, self.placed_event_items())
 
 
-class TestArchipelago100BlocksRejected(KARTestBase):
-    """The AP checklist is still incomplete and holds well under 100 boxes, so a 100_checklist_blocks
-    goal is unsatisfiable and is rejected at generation. This is the only AP block goal that can be:
-    every in-range n_checklist_blocks target fits by construction (see
-    TestArchipelagoChecklistAmountRangeTracksTable)."""
+class TestArchipelago100BlocksNotOffered(unittest.TestCase):
+    """The AP checklist holds well under 100 boxes, so a 100_checklist_blocks goal could only ever
+    fail validation. Rather than offer a goal whose sole outcome is an OptionError, ArchipelagoGoal
+    leaves it out - unlike the other three modes, which all have a real "Fill in 100" cell. Every
+    remaining AP block target fits by construction (see TestArchipelagoChecklistAmountRangeTracksTable).
 
-    options = {**CT_ONLY, "archipelago_goal": ArchipelagoGoal.option_100_checklist_blocks}
-    auto_construct = False
+    Add the option back alongside the 100th box; until then this test is what keeps the option surface
+    honest about the table it sits on.
+    """
 
-    def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
-            self.world_setup()
+    def test_option_absent(self):
+        self.assertFalse(hasattr(ArchipelagoGoal, "option_100_checklist_blocks"))
+        self.assertNotIn("100_checklist_blocks", ArchipelagoGoal.options)
+
+    def test_other_modes_still_offer_it(self):
+        for goal in (CityTrialGoal, AirRideGoal, TopRideGoal):
+            with self.subTest(goal=goal.__name__):
+                self.assertIn("100_checklist_blocks", goal.options)
+
+    def test_remaining_values_keep_their_numbering(self):
+        # The mod switches on the raw goal value, so dropping one must not renumber the others.
+        self.assertEqual(ArchipelagoGoal.option_n_checklist_blocks, 1)
+        self.assertEqual(ArchipelagoGoal.option_none, 4)
+        self.assertEqual(ArchipelagoGoal.option_checklist_list, 5)
 
 
 class TestArchipelagoChecklistAmountRangeTracksTable(unittest.TestCase):

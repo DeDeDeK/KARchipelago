@@ -1,6 +1,7 @@
 from Options import Toggle
 
 from ..KARItems import (
+    CHARGE_DEPENDENT_MACHINES,
     STADIUM_UNLOCK_ITEMS,
     KARItemGroup,
     KARItemName,
@@ -75,6 +76,26 @@ class TestMachineStarter(KARTestBase):
         precollected = self.precollected_names()
         self.assertNotIn(KARItemName.UNLOCK_MACHINE_HYDRA, precollected)
         self.assertNotIn(KARItemName.UNLOCK_MACHINE_DRAGOON, precollected)
+
+
+class TestMachineStarterChargeGated(KARTestBase):
+    # machines + base abilities both gated: the starter has to be a machine the player can steer before
+    # Charge arrives, so Slick and Turbo Star join Hydra in being held out of the pick.
+    options = {**ALL_MODES, "machines_gated": Toggle.option_true, "base_abilities_gated": Toggle.option_true}
+
+    def test_starter_is_steerable_without_charge(self):
+        self.assertNotIn(self.world.machine_starter_choice, CHARGE_DEPENDENT_MACHINES)
+
+    def test_no_charge_dependent_machine_precollected(self):
+        precollected = self.precollected_names()
+        for machine in CHARGE_DEPENDENT_MACHINES:
+            self.assertNotIn(machine, precollected)
+
+    def test_charge_dependent_machines_still_in_pool(self):
+        # Held out of the starter pick only - they stay normal progression items.
+        pool = self.itempool_names()
+        for machine in CHARGE_DEPENDENT_MACHINES:
+            self.assertIn(machine, pool)
 
 
 class TestARCourseStarter(KARTestBase):

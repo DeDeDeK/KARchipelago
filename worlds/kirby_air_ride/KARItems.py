@@ -601,6 +601,7 @@ _TR = frozenset({GameMode.TOPRIDE})
 _CT = frozenset({GameMode.CITYTRIAL})
 _AP = frozenset({GameMode.ARCHIPELAGO})
 _AR_CT = frozenset({GameMode.AIRRIDE, GameMode.CITYTRIAL})
+_AR_CT_AP = frozenset({GameMode.AIRRIDE, GameMode.CITYTRIAL, GameMode.ARCHIPELAGO})
 _CT_TR = frozenset({GameMode.CITYTRIAL, GameMode.TOPRIDE})
 # Every mode, including the Archipelago checklist. Used for genuinely game-wide items (copy abilities,
 # Kirby colors, the always-available Big/Small Kirby cosmetic filler): they apply whenever the player
@@ -1280,10 +1281,13 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ABILITY_WING: KARItemData(
         KARItemType.ABILITY_UNLOCK, ItemClassification.progression, 770, _AR_CT
     ),
-    # Base Ability Unlocks (771-773, BaseAbilityKind order). Inhale is Air Ride / City Trial only (Top
-    # Ride has no inhale); quick spin and charge apply in all modes.
+    # Base Ability Unlocks (771-773, BaseAbilityKind order). Inhale has no Top Ride half, but the
+    # Archipelago checklist holds City Trial boxes that need it (swallowing a Walky for Mic Kirby), and
+    # the gate ships to the mod as one category - so a seed with the AP checklist has to mint it even
+    # with no City Trial or Air Ride goal, else it gates a move whose unlock never exists. Quick spin
+    # and charge apply in every mode.
     KARItemName.UNLOCK_BASE_ABILITY_INHALE: KARItemData(
-        KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 771, _AR_CT
+        KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 771, _AR_CT_AP
     ),
     KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN: KARItemData(
         KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 772, _ALL_MODES
@@ -1719,6 +1723,45 @@ LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
 )
 
 
+# Machines the Charge base ability makes usable at all: Hydra's top speed is low enough that it only
+# really moves on a charge boost, and Slick Star / Turbo Star turn so poorly that charge-drifting is
+# the only way to steer them. With base_abilities_gated on and Charge not yet received, one of these
+# as a player's only machine is a dead end, so they are held out of the machine starter pick and only
+# count toward "some machine to ride" rules once Charge is in.
+CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
+    {
+        KARItemName.UNLOCK_MACHINE_HYDRA,
+        KARItemName.UNLOCK_MACHINE_SLICK_STAR,
+        KARItemName.UNLOCK_MACHINE_TURBO_STAR,
+    }
+)
+
+
+# The two playable non-Kirby characters, by the machine unlock that makes each selectable (the Air
+# Ride and City Trial character grids both resolve a character through its machine). Each keeps its
+# own melee attack - Dedede's hammer, Meta Knight's sword - which no base-ability gate touches, so
+# either one is a damage source in the combat stadiums on its own.
+CHARACTER_MACHINE_UNLOCKS: tuple[KARItemName, ...] = (
+    KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE,
+    KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT,
+)
+
+
+# Copy abilities that can KO. Sleep has no attack at all; Wheel and Wing turn Kirby into a ride-form
+# whose only offense is ramming, which an ordinary machine already does and which is not enough to
+# finish a derby or a Dedede fight.
+DAMAGING_ABILITY_UNLOCKS: tuple[KARItemName, ...] = (
+    KARItemName.UNLOCK_ABILITY_FIRE,
+    KARItemName.UNLOCK_ABILITY_SWORD,
+    KARItemName.UNLOCK_ABILITY_BOMB,
+    KARItemName.UNLOCK_ABILITY_PLASMA,
+    KARItemName.UNLOCK_ABILITY_NEEDLE,
+    KARItemName.UNLOCK_ABILITY_MIC,
+    KARItemName.UNLOCK_ABILITY_FREEZE,
+    KARItemName.UNLOCK_ABILITY_TORNADO,
+)
+
+
 # Single source of truth for the optional "gating" mechanic. Each row maps a gating option to the
 # unlock item type it controls, the enabled-mode flags that make it relevant, and any vanilla
 # checklist rewards it overlaps with. Pool building, the fuzzer, and the gating tests all derive from
@@ -1749,8 +1792,8 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
         KARItemType.ABILITY_UNLOCK,
         frozenset({"city_trial_enabled", "air_ride_enabled", "top_ride_enabled"}),
     ),
-    # Base abilities (inhale / quick spin / charge). Quick spin + charge apply in all modes; inhale is
-    # AR/CT only, so its item drops out of a Top-Ride-only world via _AR_CT source_modes.
+    # Base abilities (inhale / quick spin / charge). Quick spin + charge apply in all modes; inhale has
+    # no Top Ride half, so its item drops out of a Top-Ride-only world via _AR_CT_AP source_modes.
     GatingCategory(
         "base_abilities_gated",
         KARItemType.BASE_ABILITY_UNLOCK,
