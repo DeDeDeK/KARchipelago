@@ -5,13 +5,10 @@ class GameMode(IntEnum):
     """Checklist modes the client tracks. 0-2 mirror the mod's GameMode enum; ARCHIPELAGO is the
     synthetic 4th "Archipelago checklist" mode.
 
-    These values are checklist-mode ROW indices, which is what every per-mode array on the wire is
-    indexed by (goal, checklist_amount, goal_checks, sent_checks, client_backfill) and what the mod
-    stores a reward placement's target as. The AP tab's *runtime* index in the game is assigned
-    dynamically by the custom_checklist framework and may be higher; the mod maps it back to this row.
-
-    The exception is the reward-placement array (LOCATIONS_*), which stays 3 wide: the AP checklist
-    awards no native rewards of its own."""
+    These are checklist-mode ROW indices - what every per-mode array on the wire is indexed by, and what
+    the mod stores a reward placement's target as. The AP tab's *runtime* index is assigned dynamically
+    by the custom_checklist framework and may be higher; the mod maps it back to this row. The exception
+    is LOCATIONS_*, which stays 3 wide: the AP checklist awards no native rewards of its own."""
 
     AIRRIDE = 0
     TOPRIDE = 1
@@ -40,9 +37,8 @@ class TrapLinkKind(IntEnum):
 
 
 class MemoryAddress(IntEnum):
-    # GameCube MEM1 cached address range (24 MB). The mod's heap-allocated APData struct always lands
-    # here; a pointer outside this window is stale or read before OnBoot wrote the real pointer.
-    # MEM1_START is also the read base for the game-id check (the disc's game id sits at MEM1's start).
+    # GameCube MEM1 cached address range (24 MB). The mod's APData struct always lands here, so a pointer
+    # outside it is stale. MEM1_START also bases the game-id check (the disc id sits at MEM1's start).
     MEM1_START = 0x80000000
     MEM1_END = 0x81800000
 
@@ -55,9 +51,8 @@ class MemoryAddress(IntEnum):
     # EnergyLink pool balance. Client writes, game reads. s64 raw units (1 unit = 1 MJ), widened to
     # s64 so multiworld pools exceeding u64 joules still fit at MJ scale.
     ENERGY_BALANCE = 0x000  # s64
-    # EnergyLink cumulative send counter. Game-owned: the game only adds (deposits) / subtracts
-    # (withdrawals); the client reads-and-diffs it (delta since last poll) and NEVER writes it. s64
-    # signed raw MJ. Resets to 0 on each mod boot; persists across scene loads.
+    # EnergyLink cumulative send counter, s64 signed raw MJ. Game-owned: only the game adds/subtracts,
+    # the client reads-and-diffs and NEVER writes. Resets on mod boot; persists across scene loads.
     ENERGY_SENT_TOTAL = 0x008  # s64
     # DeathLink receive flag. Client writes 1, game reads and clears to 0.
     DEATHLINK_RECEIVE = 0x010  # u32
@@ -100,9 +95,8 @@ class MemoryAddress(IntEnum):
     OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO = 0x05C  # u32, 1-120
     OPTION_CT_PATCH_CAP_MIN = 0x060  # u32, 1-30 - per-stat cap the player starts at
     OPTION_CT_PATCH_CAP_MAX = 0x064  # u32, 1-30 - per-stat cap ceiling / Max Stats goal threshold
-    # Spawn rate floor (percent). Applies to CT + TR items; AR has none to scale. 100 = vanilla, 300 =
-    # 3x (mod hard cap). World floors it at 10; sub-100 values suppress spawns below vanilla and must be
-    # honored (do not clamp to 100). Each Spawn Rate Up item adds +10% on top.
+    # Spawn rate floor (percent), CT + TR items only. 100 = vanilla, 300 = 3x (mod hard cap); sub-100
+    # values deliberately suppress spawns and must not be clamped up. Each Spawn Rate Up adds +10%.
     OPTION_SPAWN_RATE_MIN = 0x068  # u32, 10-100
     # 4 bytes of padding here (struct contains u64; next field needs 8-byte alignment).
 
@@ -141,10 +135,9 @@ class MemoryAddress(IntEnum):
     # Client writes 1 after all location arrays are written. Game reads and clears to 0.
     LOCATION_DATA_VALID = 0x0E8  # u32
 
-    # Location arrays: u16[3][46], locations[source_mode][source_reward_index], indexed by which
-    # vanilla checklist reward the entry refers to. Value: (target_mode << 8) | clear_kind for a local
-    # placement (the cell holding this reward), 0xFFFF for remote or unused slots. 92 bytes per mode.
-    # The AP checklist awards no native rewards, so there is no LOCATIONS_ARCHIPELAGO array.
+    # Location arrays: u16[3][46], locations[source_mode][source_reward_index], 92 bytes per mode. Value
+    # is (target_mode << 8) | clear_kind for a local placement, 0xFFFF for remote or unused slots. The AP
+    # checklist awards no native rewards, so it has no array.
     LOCATIONS_AIRRIDE = 0x0EC  # u16[46], 92 bytes (reward indices 0-45)
     LOCATIONS_TOPRIDE = 0x148  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
     LOCATIONS_CITYTRIAL = 0x1A4  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
@@ -158,9 +151,8 @@ class MemoryAddress(IntEnum):
     SENT_CHECKS_CITYTRIAL = 0x220  # u64[2], 16 bytes
     SENT_CHECKS_ARCHIPELAGO = 0x230  # u64[2], 16 bytes
 
-    # Backfill bitmask. Client writes bits for checks the AP server knows but the mod doesn't (fresh
-    # save / slot takeover / !collect). Game ORs into sent_checks, updates clear[], re-evaluates goal,
-    # then clears.
+    # Backfill bitmask. Client writes bits for checks the server knows but the mod doesn't (fresh save,
+    # slot takeover, !collect); the game ORs into sent_checks, updates clear[], re-checks goal, clears.
     CLIENT_BACKFILL_AIRRIDE = 0x240  # u64[2], 16 bytes
     CLIENT_BACKFILL_TOPRIDE = 0x250  # u64[2], 16 bytes
     CLIENT_BACKFILL_CITYTRIAL = 0x260  # u64[2], 16 bytes
@@ -169,18 +161,16 @@ class MemoryAddress(IntEnum):
     # Sticky goal completion flag. Game writes 1 when goal is satisfied. Client reads.
     GOAL_COMPLETE = 0x280  # u8
 
-    # Live menu toggle mirrors. Game writes (on boot, first-connect option transfer, and every menu
-    # change); client reads only. Authoritative current state of the in-game DeathLink/EnergyLink/
-    # TrapLink toggles; diff against last-seen to forward to the AP server (tags / pool membership).
-    # The OPTION_*_ENABLED slot fields set initial values on first connect only, not on later toggles.
+    # Live menu toggle mirrors, game-written and client-read-only: the authoritative state of the in-game
+    # DeathLink/EnergyLink/TrapLink toggles, diffed against last-seen to forward to the server. The
+    # OPTION_*_ENABLED slot fields set initial values on first connect only, not on later toggles.
     DEATHLINK_MENU_ENABLED = 0x284  # u32
     ENERGYLINK_MENU_ENABLED = 0x288  # u32
     TRAPLINK_MENU_ENABLED = 0x28C  # u32
 
 
-# AP item code layout for checklist rewards. Codes 500..649 split into 3 mode bands
-# of stride 50: 500-549 Air Ride, 550-599 Top Ride, 600-649 City Trial. Indices into
-# each band match GameMode (Air Ride=0, Top Ride=1, City Trial=2).
+# AP item code layout for checklist rewards: 500..649 in 3 mode bands of stride 50 (500-549 Air Ride,
+# 550-599 Top Ride, 600-649 City Trial), band order matching GameMode.
 REWARD_CODE_BASE = 500
 REWARD_CODE_STRIDE = 50
 
@@ -204,9 +194,8 @@ SENT_CHECKS_PER_MODE: dict[GameMode, MemoryAddress] = {
     GameMode.ARCHIPELAGO: MemoryAddress.SENT_CHECKS_ARCHIPELAGO,
 }
 
-# Per-mode base addresses for the client-writes-backfill-bits u64[2] bitmasks. Includes the AP
-# checklist, so its checks backfill like any mode's. Must stay key-for-key with SENT_CHECKS_PER_MODE:
-# _handle_backfill diffs one against the other.
+# Per-mode base addresses for the client-writes-backfill-bits u64[2] bitmasks, AP checklist included.
+# Must stay key-for-key with SENT_CHECKS_PER_MODE: _handle_backfill diffs one against the other.
 CLIENT_BACKFILL_PER_MODE: dict[GameMode, MemoryAddress] = {
     GameMode.AIRRIDE: MemoryAddress.CLIENT_BACKFILL_AIRRIDE,
     GameMode.TOPRIDE: MemoryAddress.CLIENT_BACKFILL_TOPRIDE,

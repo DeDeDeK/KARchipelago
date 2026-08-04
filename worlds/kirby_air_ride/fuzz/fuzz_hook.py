@@ -1,17 +1,15 @@
 """
 KAR-specific fuzzer hook.
 
-Runs after each successful generation and asserts that the populated MultiWorld
-matches the intent of the rolled options. Raising here causes the fuzzer to dump
-the seed's YAML + traceback under fuzz/output/error/.
+Runs after each successful generation and asserts that the populated MultiWorld matches the intent of
+the rolled options. Raising here makes the fuzzer dump the seed's YAML + traceback under
+fuzz/output/error/. Invoke via:
 
-Invoke via:
     uv run python fuzz/fuzz.py -g kirby_air_ride -m worlds/kirby_air_ride/fuzz/fuzz_meta.yaml \
         --hook worlds.kirby_air_ride.fuzz.fuzz_hook:KARHook -r 200
 
-Note: this class deliberately does NOT inherit from fuzz.BaseHook. fuzz.find_hook
-has an inverted issubclass check that rejects real BaseHook subclasses.
-Duck-typing avoids that and lets us drop the hook in without patching the fuzzer.
+Deliberately does NOT inherit from fuzz.BaseHook: fuzz.find_hook has an inverted issubclass check that
+rejects real BaseHook subclasses, so duck-typing drops the hook in without patching the fuzzer.
 """
 
 from __future__ import annotations
@@ -79,9 +77,8 @@ class KARHook:
         for player, world in kar_players:
             self._check_slot(mw, player, world)
 
-        # Cross-slot sanity: every KAR player's enabled-mode victory events were placed.
-        # (mw.completion_condition / has_beaten_game is enforced by fill; this is a
-        # second-line check that catches accidental rule changes.)
+        # Cross-slot sanity: every KAR player's enabled-mode victory events were placed. Fill already
+        # enforces the completion condition; this is a second line that catches accidental rule changes.
         for player, world in kar_players:
             self._check_victory_events_placed(mw, player, world)
 
@@ -116,12 +113,9 @@ class KARHook:
         ]
         items_we_own = [it for _, it in items_we_own_with_loc]
 
-        # Every distinct item this player owns, counted once, whether it is still loose in the itempool
-        # or has been placed on a location. _pin_native_rewards (shuffle off) place_locked_item's rewards
-        # onto their native boxes and removes them from the itempool, so they live only at locations; the
-        # ordinary fill likewise moves items from the pool onto locations. A pool-only Counter would miss
-        # them. Union by object identity so an item that is both in the pool and placed (the normal
-        # post-distribute case) is not double counted.
+        # Every distinct item this player owns, counted once, whether still loose in the itempool or
+        # already placed - fill and _pin_native_rewards both move items out of the pool, so a pool-only
+        # Counter would miss them. Union by object identity so a pool+placed item is not double counted.
         owned_by_id = {id(it): it for it in pool_items}
         for it in items_we_own:
             owned_by_id[id(it)] = it
@@ -156,10 +150,8 @@ class KARHook:
                 f"patch_cap_max={opts.city_trial_patch_cap_max.value})"
             )
 
-        # SPAWN_RATE_UP = (max - min) // 10, else 0.
-        # It is its own KARItemType.SPAWN_RATE with source_modes {CITYTRIAL, TOPRIDE}; spawn rate is
-        # only meaningful in those modes, so the world's source-mode backstop drops it entirely when
-        # neither City Trial nor Top Ride is enabled. Mirror that here.
+        # SPAWN_RATE_UP = (max - min) // 10, else 0. Its source_modes are {CITYTRIAL, TOPRIDE}, so the
+        # world's source-mode backstop drops it entirely when neither is enabled. Mirror that here.
         if ct_on or tr_on:
             expected = max(0, (opts.spawn_rate_max.value - opts.spawn_rate_min.value) // 10)
         else:
@@ -184,10 +176,9 @@ class KARHook:
                 raise HookError(f"{tag} {name} count={actual}, expected {expected} (enabled={enabled}, opt={amount})")
 
     def _check_generic_filler_present(self, tag, world):
-        # Big Kirby / Small Kirby are immune to allowed_items (FILLER type is not in ALLOWED_ITEM_CATEGORIES)
-        # and carry _ALL_MODES, so the source-mode backstop keeps them while any mode is enabled. Every KAR
-        # slot has >=1 mode enabled, so both must always be in filler_pool - this is the invariant that
-        # guarantees filler can never be starved, replacing the old allowed_items starvation OptionErrors.
+        # Big Kirby / Small Kirby are immune to allowed_items (FILLER is not a category) and carry
+        # _ALL_MODES, and every KAR slot has >=1 mode enabled, so both are always in filler_pool. This is
+        # the invariant that makes filler starvation impossible.
         for name in (KARItemName.BIG_KIRBY, KARItemName.SMALL_KIRBY):
             if str(name) not in world.filler_pool:
                 raise HookError(
@@ -196,12 +187,9 @@ class KARHook:
                 )
 
     def _check_reward_uniqueness(self, tag, world, owned_counts):
-        # Checklist rewards are unique one-time unlocks, not draw-with-replacement filler: each reward the
-        # world routes to reward_pool is minted exactly once and never re-enters the filler pool, so every
-        # one (useful or filler) must appear exactly once among the player's owned items. owned_counts spans
-        # both the itempool and placed locations, so it still catches each reward once the fill has moved it
-        # from the pool onto a location. Pinned rewards (shuffle off) are removed from reward_pool by
-        # _pin_native_rewards, so they are not seen here - see _check_pinned_native_rewards.
+        # Checklist rewards are unique one-time unlocks, not draw-with-replacement filler: each one routed
+        # to reward_pool is minted exactly once, so it must appear exactly once among the owned items.
+        # Pinned rewards (shuffle off) leave reward_pool, so see _check_pinned_native_rewards for those.
         for name in world.reward_pool:
             data = ITEM_TABLE.get(name)
             if data is None:
@@ -215,10 +203,8 @@ class KARHook:
                 )
 
     def _check_checklist_rewards_gated(self, tag, opts, pool_counts, precollected_counts):
-        # checklist_rewards_gated off: the world removes every non-progression checklist reward from
-        # the pool (the mod unlocks them all at connect). The 6 progression Dragoon/Hydra part markers
-        # are unaffected and stay in the pool. So neither the itempool nor precollected may contain a
-        # non-progression reward.
+        # checklist_rewards_gated off: the mod unlocks every non-progression reward at connect, so none
+        # may appear in the itempool or precollected. The 6 progression part markers are unaffected.
         if opts.checklist_rewards_gated:
             return
         offenders = []
@@ -265,9 +251,8 @@ class KARHook:
                 )
 
     def _check_unlock_classifications(self, tag, pool_items):
-        # All UNLOCK-type items in the pool must be progression-classified.
-        # Every gated unlock type comes from GATING_CATEGORIES (stadiums included, gated on
-        # city_trial_stadiums_gated).
+        # All UNLOCK-type items in the pool must be progression-classified. Every gated unlock type comes
+        # from GATING_CATEGORIES, stadiums included.
         unlock_types = {cat.item_type for cat in GATING_CATEGORIES}
         for it in pool_items:
             data = ITEM_TABLE.get(it.name)
@@ -280,9 +265,8 @@ class KARHook:
                 )
 
     def _check_excluded_items_absent(self, tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on):
-        # When a mode is disabled, its reward items must not appear in the pool or precollected.
-        # (They can show up in precollected only if the player force-added them via start_inventory,
-        # which is exotic; we still flag because it indicates a misconfigured YAML.)
+        # When a mode is disabled, its reward items must not appear in the pool or precollected. Only a
+        # start_inventory force-add could put one in precollected, which is a misconfigured YAML.
         mode_groups = [
             (ct_on, KARItemGroup.CT_REWARDS),
             (ar_on, KARItemGroup.AR_REWARDS),
@@ -303,9 +287,7 @@ class KARHook:
                     )
 
         # Overlapping checklist rewards are excluded whenever the mod handles their category directly:
-        # the UNLOCK items deliver the content when the gate is ON, and the mod pre-unlocks the whole
-        # category at connect when it is OFF. Either way the reward gates nothing, so it is never in the
-        # pool.
+        # UNLOCK items deliver it when the gate is ON, the mod pre-unlocks at connect when OFF.
         for cat in GATING_CATEGORIES:
             if not cat.overlapping_rewards:
                 continue
@@ -334,10 +316,8 @@ class KARHook:
                     )
 
     def _check_starter_precollected(self, tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on):
-        # For each gated category whose mode is enabled, expect either:
-        #   (a) at least one item from the start_inventory belonging to that category
-        #       (in which case no random starter is picked), OR
-        #   (b) exactly one random precollected starter from that category.
+        # For each gated category whose mode is enabled, expect either a start_inventory item from that
+        # category (in which case no random starter is picked), or exactly one random precollected starter.
 
         def category_members(group):
             return {str(n) for n in item_name_groups[group]}
@@ -365,9 +345,8 @@ class KARHook:
                 str(KARItemName.UNLOCK_MACHINE_FREE_STAR),
                 str(KARItemName.UNLOCK_MACHINE_STEER_STAR),
             }
-            # Slick and Turbo Star only turn by charge-drifting, so either as the sole machine with
-            # Charge still locked is a dead end. The world holds them out of the pick while base
-            # abilities are gated. (Hydra is charge-dependent too but is already excluded above.)
+            # Slick and Turbo Star only turn by charge-drifting, so either as the sole machine with Charge
+            # locked is a dead end. The world holds them out while base abilities are gated.
             self._check_one_starter(
                 tag,
                 "machine",
@@ -416,10 +395,9 @@ class KARHook:
         self, tag, label, category_set, start_inventory, precollected_counts, ineligible=frozenset()
     ):
         """
-        `ineligible` names members the world holds out of the *random pick* for this seed. It narrows
-        only the pick assertion, never `category_set` itself: the world tests start_inventory against
-        the whole category, so shrinking the set here would make a preset ineligible item look like no
-        preset at all and demand a random starter the world correctly did not add.
+        `ineligible` names members the world holds out of the *random pick* for this seed. It narrows only
+        the pick assertion, never `category_set`: the world tests start_inventory against the whole
+        category, so shrinking the set here would make a preset ineligible item look like no preset at all.
         """
         si_in_cat = {n: c for n, c in start_inventory.items() if n in category_set and c > 0}
         if si_in_cat:
@@ -445,10 +423,9 @@ class KARHook:
             )
 
     def _check_start_inventory(self, tag, opts, pool_counts, precollected_counts):
-        # Every item in start_inventory should appear in precollected with at least that count.
-        # Unlock items and checklist rewards are additionally one-time: KAR drops their pool copy in
-        # _build_item_pools when preset, so a preset one-time item must NOT remain loose in the itempool
-        # (a second findable copy would be redundant). Other items (filler, stackable counts) stay.
+        # Every start_inventory item should appear in precollected with at least that count. Unlock items
+        # and checklist rewards are one-time, so _build_item_pools drops their pool copy and they must not
+        # remain loose in the itempool. Filler and stackable counts stay.
         one_time_items = {str(n) for cat in GATING_CATEGORIES for n in items_by_type[cat.item_type]}
         one_time_items |= {str(n) for t in CHECKLIST_REWARD_TYPES for n in items_by_type[t]}
         for name, count in opts.start_inventory.value.items():

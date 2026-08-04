@@ -1,12 +1,9 @@
 """
 Data integrity tests for ITEM_TABLE and the per-mode location tables.
 
-Static-data invariants the rest of the code depends on:
-- Item codes are unique (or None).
-- Location codes are unique, contiguous within their mode partition, and round-trip to the expected GameMode.
-
-A duplicate code or a partition violation would otherwise surface at generation as a silent crash;
-pinning these directly gives a clear error message.
+Item codes must be unique (or None); location codes must be unique, contiguous within their mode
+partition, and round-trip to the expected GameMode. A duplicate code or a partition violation would
+otherwise surface at generation as a silent crash, so pinning them here gives a clear error message.
 """
 
 import unittest
