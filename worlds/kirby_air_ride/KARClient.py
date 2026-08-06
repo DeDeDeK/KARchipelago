@@ -12,6 +12,7 @@ from .KARData import (
     CLIENT_BACKFILL_PER_MODE,
     LOCATIONS_PER_MODE,
     OPTION_GOAL_CHECKS_PER_MODE,
+    OPTION_REVEAL_CHECKLIST_PER_MODE,
     REWARDS_PER_MODE,
     SENT_CHECKS_PER_MODE,
     GameMode,
@@ -543,7 +544,9 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_DEATH_LINK_ENABLED), int(bool(sd.get("death_link", 0))))
         d.write_u32(a(MemoryAddress.OPTION_ENERGY_LINK_ENABLED), int(bool(sd.get("energy_link", 0))))
         d.write_u32(a(MemoryAddress.OPTION_TRAP_LINK_ENABLED), int(bool(sd.get("trap_link", 0))))
-        d.write_u32(a(MemoryAddress.OPTION_REVEAL_CHECKLISTS), int(bool(sd.get("reveal_checklists", 0))))
+        # Start-revealed checklists, per mode.
+        for addr, key in OPTION_REVEAL_CHECKLIST_PER_MODE.values():
+            d.write_u32(a(addr), int(bool(sd.get(key, 0))))
 
         # Goals per mode: option values map directly to the GoalKind enum.
         d.write_u32(a(MemoryAddress.OPTION_GOAL_AIRRIDE), int(sd.get("air_ride_goal", 4)))

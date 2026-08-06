@@ -19,7 +19,6 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "death_link",
         "energy_link",
         "trap_link",
-        "reveal_checklists",
         # Goals
         "city_trial_goal",
         "city_trial_checklist_amount",
@@ -33,6 +32,11 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "archipelago_goal",
         "archipelago_checklist_amount",
         "archipelago_goal_locations",
+        # Per-checklist start-revealed toggles
+        "city_trial_reveal_checklist",
+        "air_ride_reveal_checklist",
+        "top_ride_reveal_checklist",
+        "archipelago_reveal_checklist",
         # City Trial specifics
         "city_trial_patch_cap_min",
         "city_trial_patch_cap_max",
