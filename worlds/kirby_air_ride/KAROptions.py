@@ -94,15 +94,6 @@ class TrapLink(Toggle):
     display_name = "Trap Link"
 
 
-class RevealChecklists(Toggle):
-    """
-    If this is enabled, the checklists for each of your enabled game modes will start off as completely revealed.
-    """
-
-    default = 0
-    display_name = "Reveal Checklists"
-
-
 class ChecklistRewardsGated(Toggle):
     """
     Controls whether the game's non-progression checklist rewards (red checkbox rewards) are gated.
@@ -228,6 +219,16 @@ class CityTrialCheckboxFillers(NamedRange):
     special_range_names = {"disabled": 0}  # noqa: RUF012
 
 
+class CityTrialRevealChecklist(Toggle):
+    """
+    If enabled, the City Trial checklist starts off completely revealed instead of filling in around
+    the squares you complete. Revealing is visual only: it does not complete or unlock anything.
+    """
+
+    default = 0
+    display_name = "City Trial Reveal Checklist"
+
+
 class CityTrialPatchCapMin(Range):
     """
     Per-stat patch cap the player starts with (18 = vanilla). The cap climbs from here as "Patch Cap
@@ -341,6 +342,16 @@ class AirRideCheckboxFillers(NamedRange):
     special_range_names = {"disabled": 0}  # noqa: RUF012
 
 
+class AirRideRevealChecklist(Toggle):
+    """
+    If enabled, the Air Ride checklist starts off completely revealed instead of filling in around
+    the squares you complete. Revealing is visual only: it does not complete or unlock anything.
+    """
+
+    default = 0
+    display_name = "Air Ride Reveal Checklist"
+
+
 class TopRideGoal(Choice):
     """
     Sets the goal for Top Ride. If you have goals on multiple game modes, all must be achieved to win.
@@ -427,6 +438,16 @@ class TopRideCheckboxFillers(NamedRange):
     special_range_names = {"disabled": 0}  # noqa: RUF012
 
 
+class TopRideRevealChecklist(Toggle):
+    """
+    If enabled, the Top Ride checklist starts off completely revealed instead of filling in around
+    the squares you complete. Revealing is visual only: it does not complete or unlock anything.
+    """
+
+    default = 0
+    display_name = "Top Ride Reveal Checklist"
+
+
 class ArchipelagoGoal(Choice):
     """
     EXPERIMENTAL - ONLY USE IF YOU WANT TO TEST - SOME CHECKS LIKELY BROKEN
@@ -481,6 +502,17 @@ class ArchipelagoCheckboxFillers(NamedRange):
     range_start = 0
     range_end = 20
     special_range_names = {"disabled": 0}  # noqa: RUF012
+
+
+class ArchipelagoRevealChecklist(Toggle):
+    """
+    If enabled, the Archipelago checklist starts off completely revealed instead of filling in around
+    the squares you complete. Only the squares that carry an objective are revealed, and revealing is
+    visual only: it does not complete or unlock anything.
+    """
+
+    default = 0
+    display_name = "Archipelago Reveal Checklist"
 
 
 class CityTrialEventsGated(DefaultOnToggle):
@@ -629,7 +661,6 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     spawn_rate_min: SpawnRateMin
     spawn_rate_max: SpawnRateMax
     energy_link: EnergyLink
-    reveal_checklists: RevealChecklists
     shuffle_checklist_rewards: ShuffleChecklistRewards
     checklist_rewards_gated: ChecklistRewardsGated
 
@@ -643,6 +674,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_progression_rng: CityTrialProgressionRNG
     city_trial_progression_bust_vehicles: CityTrialProgressionBustVehicles
     city_trial_checkbox_fillers: CityTrialCheckboxFillers
+    city_trial_reveal_checklist: CityTrialRevealChecklist
     city_trial_patch_cap_min: CityTrialPatchCapMin
     city_trial_patch_cap_max: CityTrialPatchCapMax
     city_trial_stadiums_gated: CityTrialStadiumsGated
@@ -655,6 +687,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     air_ride_progression_free_run: AirRideProgressionFreeRun
     air_ride_progression_time_attack: AirRideProgressionTimeAttack
     air_ride_checkbox_fillers: AirRideCheckboxFillers
+    air_ride_reveal_checklist: AirRideRevealChecklist
 
     # Top Ride
     top_ride_goal: TopRideGoal
@@ -665,12 +698,14 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     top_ride_progression_time_attack: TopRideProgressionTimeAttack
     top_ride_progression_multiplayer: TopRideProgressionMultiplayer
     top_ride_checkbox_fillers: TopRideCheckboxFillers
+    top_ride_reveal_checklist: TopRideRevealChecklist
 
     # Archipelago Checklist
     archipelago_goal: ArchipelagoGoal
     archipelago_checklist_amount: ArchipelagoChecklistAmount
     archipelago_goal_locations: ArchipelagoGoalLocations
     archipelago_checkbox_fillers: ArchipelagoCheckboxFillers
+    archipelago_reveal_checklist: ArchipelagoRevealChecklist
 
     # Access Gating
     city_trial_events_gated: CityTrialEventsGated
@@ -689,7 +724,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 kar_option_groups = [
     OptionGroup(
         "General Options",
-        [EnergyLink, TrapLink, RevealChecklists, ShuffleChecklistRewards, ChecklistRewardsGated],
+        [EnergyLink, TrapLink, ShuffleChecklistRewards, ChecklistRewardsGated],
     ),
     OptionGroup(
         "Item Options",
@@ -713,6 +748,7 @@ kar_option_groups = [
             CityTrialProgressionRNG,
             CityTrialProgressionBustVehicles,
             CityTrialCheckboxFillers,
+            CityTrialRevealChecklist,
             CityTrialPatchCapMin,
             CityTrialPatchCapMax,
             CityTrialStadiumsGated,
@@ -732,6 +768,7 @@ kar_option_groups = [
             AirRideProgressionTimeAttack,
             AirRideProgressionHighEffort,
             AirRideCheckboxFillers,
+            AirRideRevealChecklist,
             AirRideCoursesGated,
         ],
     ),
@@ -746,6 +783,7 @@ kar_option_groups = [
             TopRideProgressionHighEffort,
             TopRideProgressionMultiplayer,
             TopRideCheckboxFillers,
+            TopRideRevealChecklist,
             TopRideCoursesGated,
             TopRideItemsGated,
         ],
@@ -757,6 +795,7 @@ kar_option_groups = [
             ArchipelagoChecklistAmount,
             ArchipelagoGoalLocations,
             ArchipelagoCheckboxFillers,
+            ArchipelagoRevealChecklist,
         ],
     ),
     OptionGroup(
