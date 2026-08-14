@@ -55,7 +55,7 @@ Setting up the game and instructions on where to get the apworld file, yaml file
 
 ## Poptracker
 
-There is also a poptracker for this apworld, created by @lightning8282!
+There is also a poptracker for this apworld, created by @lighting8282!
 
 Get it [here!](https://github.com/lighting8282/KAR-Poptracker)
 
