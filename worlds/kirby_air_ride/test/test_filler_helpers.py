@@ -3,23 +3,59 @@ Tests for KARWorld._random_filler, _random_trap, and get_filler_item_name.
 
 The fallback path (filler_pool empty -> ITEM_TABLE) isn't exercised by happy-path generation, so it is
 driven directly here. None of these helpers are mode-aware; every item floats across enabled modes.
+
+Each helper ends in `self.random.choice(sorted(...))`, so what matters is the candidate list it built,
+not the entry that came back. These tests record the candidate list (`recording_random`) and assert on
+it exhaustively. Drawing N times instead would only sample it: a single non-filler item among fifteen
+survives 50 draws about 3% of the time, which is a test that passes on the seed rather than the code.
 """
 
 from BaseClasses import ItemClassification
 
 from ..KARItems import ITEM_TABLE, KARItemName
-from . import ALL_MODES, CT_ONLY, KARTestBase
+from . import ALL_MODES, CT_ONLY, KARTestBase, recording_random
 
 
 class TestGetFillerItemName(KARTestBase):
-    """get_filler_item_name returns a valid ITEM_TABLE filler (or a trap when traps are enabled).
-    It is not mode-aware: items float freely across enabled modes."""
+    """With traps off, get_filler_item_name always returns pure filler - the framework calls it to top
+    up a pool, so a progression or useful item coming back here would quietly inflate the pool. It is
+    not mode-aware: items float freely across enabled modes."""
 
-    options = ALL_MODES
+    options = {**ALL_MODES, "trap_chance": 0}
 
-    def test_returns_a_valid_item_name(self):
-        name = self.world.get_filler_item_name()
-        self.assertIn(name, ITEM_TABLE)
+    def test_draws_from_exactly_the_filler_pool(self):
+        with recording_random(self.world) as recorder:
+            name = self.world.get_filler_item_name()
+        self.assertEqual(recorder.offers, [sorted(self.world.filler_pool)])
+        self.assertIn(name, self.world.filler_pool)
+
+    def test_every_drawable_name_is_pure_filler(self):
+        self.assertTrue(self.world.filler_pool, "ALL_MODES should leave something to draw from")
+        for name in sorted(self.world.filler_pool):
+            with self.subTest(item=name):
+                self.assertIn(name, ITEM_TABLE)
+                self.assertEqual(
+                    ITEM_TABLE[name].classification,
+                    ItemClassification.filler,
+                    f"{name!r} is drawable as filler but is not pure filler",
+                )
+
+
+class TestGetFillerItemNameRollsTraps(KARTestBase):
+    """trap_chance 100 makes every roll a trap, which is the branch that turns filler slots into traps.
+    Pinned separately because the default trap_chance is 0, so the branch is dead in every other test."""
+
+    options = {**ALL_MODES, "trap_chance": 100}
+
+    def test_full_chance_draws_from_the_trap_pool_not_the_filler_pool(self):
+        self.assertTrue(self.world.trap_pool, "trap_chance 100 with all modes on should populate trap_pool")
+        with recording_random(self.world) as recorder:
+            name = self.world.get_filler_item_name()
+        # `random() * 100 < 100` can never be false, so the trap branch is taken on every call and the
+        # only candidate list offered is the trap pool.
+        self.assertEqual(recorder.offers, [sorted(self.world.trap_pool)])
+        self.assertNotIn(name, self.world.filler_pool)
+        self.assertTrue(ITEM_TABLE[name].classification & ItemClassification.trap)
 
 
 class TestRandomFillerFallbackWhenPoolNeverBuilt(KARTestBase):
@@ -28,16 +64,21 @@ class TestRandomFillerFallbackWhenPoolNeverBuilt(KARTestBase):
 
     options = CT_ONLY
 
-    def test_fallback_to_item_table_filler(self):
+    def test_fallback_offers_only_pure_filler(self):
         self.world.item_pools_built = False
         self.world.filler_pool = set()
-        name = self.world._random_filler()
-        self.assertIn(name, ITEM_TABLE)
-        self.assertEqual(
-            ITEM_TABLE[name].classification,
-            ItemClassification.filler,
-            f"Fallback returned {name!r} which is not classified as pure filler",
-        )
+        with recording_random(self.world) as recorder:
+            self.world._random_filler()
+        self.assertEqual(len(recorder.offers), 1)
+        offered = recorder.offers[0]
+        self.assertTrue(offered, "the fallback offered nothing to draw from")
+        for name in offered:
+            with self.subTest(item=name):
+                self.assertEqual(
+                    ITEM_TABLE[name].classification,
+                    ItemClassification.filler,
+                    f"fallback offers {name!r}, which is not classified as pure filler",
+                )
 
 
 class TestRandomFillerNoResurrectWhenBuilt(KARTestBase):
@@ -50,8 +91,14 @@ class TestRandomFillerNoResurrectWhenBuilt(KARTestBase):
     def test_draws_only_from_filler_pool(self):
         self.assertTrue(self.world.item_pools_built)
         self.world.filler_pool = {KARItemName.HOT_DOG}
-        for _ in range(20):
-            self.assertEqual(self.world._random_filler(), KARItemName.HOT_DOG)
+        with recording_random(self.world) as recorder:
+            name = self.world._random_filler()
+        self.assertEqual(
+            recorder.offers,
+            [[KARItemName.HOT_DOG]],
+            "a built pool is authoritative - nothing outside it may be offered",
+        )
+        self.assertEqual(name, KARItemName.HOT_DOG)
 
 
 class TestRandomTrap(KARTestBase):
@@ -64,10 +111,10 @@ class TestRandomTrap(KARTestBase):
         self.world.trap_pool = set()
         self.assertIsNone(self.world._random_trap())
 
-    def test_returns_an_active_trap(self):
+    def test_offers_exactly_the_active_trap_pool(self):
         # Assert the pool is populated rather than skipping, so this can never silently become a no-op.
         self.assertTrue(self.world.trap_pool, "trap_chance > 0 with CT enabled should populate trap_pool")
-        # Force a single known trap so the pick is deterministic.
-        name = next(iter(self.world.trap_pool))
-        self.world.trap_pool = {name}
-        self.assertEqual(self.world._random_trap(), name)
+        with recording_random(self.world) as recorder:
+            name = self.world._random_trap()
+        self.assertEqual(recorder.offers, [sorted(self.world.trap_pool)])
+        self.assertIn(name, self.world.trap_pool)

@@ -13,7 +13,13 @@ from ..KARData import (
     location_code_to_mode_clear,
     mode_clear_to_location_code,
 )
-from ..KARItems import ITEM_TABLE, KARItemName, KARItemType
+from ..KARItems import (
+    AP_STAR_PIECE_UNLOCK_ITEMS,
+    CHECKLIST_REWARD_TYPES,
+    ITEM_TABLE,
+    LEGENDARY_PIECE_UNLOCK_ITEMS,
+    KARItemName,
+)
 from ..KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     AP_CHECKLIST_LOCATION_TABLE,
@@ -31,13 +37,7 @@ from ..KAROptions import (
     TopRideGoal,
 )
 from ..KARRegions import REGION_TO_MODE, KARRegion
-from . import CT_ONLY, KARTestBase
-
-CHECKLIST_REWARD_TYPES = {
-    KARItemType.CT_CHECKLIST_REWARD,
-    KARItemType.AR_CHECKLIST_REWARD,
-    KARItemType.TR_CHECKLIST_REWARD,
-}
+from . import CT_ONLY, TR_ONLY, KARTestBase
 
 # City Trial (default goal) plus a small Archipelago n_checklist goal.
 AP_WITH_CT: dict = {
@@ -94,7 +94,7 @@ class TestArchipelagoAcceptsChecklistRewards(KARTestBase):
             name for name, data in ITEM_TABLE.items() if data.type in CHECKLIST_REWARD_TYPES and data.code is not None
         )
         item = self.world.create_item(reward_name)
-        state = self.multiworld.get_all_state(False)
+        state = self.multiworld.get_all_state()
         for name in AP_CHECKLIST_LOCATION_TABLE:
             with self.subTest(location=name):
                 location = self.world.get_location(name)
@@ -250,7 +250,7 @@ class TestArchipelagoFillerExceedsGoalAmount(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"Archipelago checkbox fillers"):
             self.world_setup()
 
 
@@ -261,7 +261,7 @@ class TestArchipelagoChecklistListEmptyRejected(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"archipelago_goal_locations is empty"):
             self.world_setup()
 
 
@@ -276,7 +276,9 @@ class TestArchipelagoChecklistListWrongModeRejected(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(
+            OptionError, r"Archipelago goal locations include names that are not Archipelago locations"
+        ):
             self.world_setup()
 
 
@@ -409,14 +411,14 @@ class TestArchipelagoPullsModesIntoLogic(KARTestBase):
         """A goal-less tree is reachable precisely BECAUSE its unlock items are absent: no keys means no
         effective gate, means set_rules hangs it off Menu ungated. The upstream reachability test
         requires this."""
-        state = self.multiworld.get_all_state(False)
+        state = self.multiworld.get_all_state()
         unreachable = [
             r.name for r in self.multiworld.get_regions(self.player) if not state.can_reach_region(r.name, self.player)
         ]
         self.assertEqual(unreachable, [])
 
     def test_all_ap_boxes_reachable(self):
-        state = self.multiworld.get_all_state(False)
+        state = self.multiworld.get_all_state()
         unreachable = [
             name
             for name in AP_CHECKLIST_LOCATION_TABLE
@@ -439,6 +441,145 @@ class TestArchipelagoOnlyDefaultGates(KARTestBase):
     def test_colors_are_effective_and_present(self):
         self.assertIn("colors_gated", self.world.effective_gates)
         self.assertEqual(self.world.fill_slot_data()["colors_gated"], 1)
+
+    def test_beatable(self):
+        self.collect_all_but_victories()
+        self.assertBeatable(True)
+
+
+class TestArchipelagoStarGoal(KARTestBase):
+    """assemble_archipelago_star: the goal box leaves the location table, its victory event needs all
+    six sphere items, and the machine unlock is not part of it."""
+
+    options = {
+        **CT_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_assemble_archipelago_star,
+    }
+
+    def test_goal_box_is_not_a_location(self):
+        self.assertNotIn(APLocation.ASSEMBLE_ARCHIPELAGO_STAR, self.real_location_names())
+
+    def test_spheres_are_in_the_pool(self):
+        for name in AP_STAR_PIECE_UNLOCK_ITEMS:
+            self.assertIn(name, self.world_item_names())
+
+    def test_victory_needs_every_sphere(self):
+        # The victory event item is excluded alongside the spheres: collecting it directly would
+        # satisfy the completion condition without the goal's keys.
+        self.collect_all_but([*AP_STAR_PIECE_UNLOCK_ITEMS, KARItemName.ARCHIPELAGO_VICTORY])
+        self.assertBeatable(False)
+        self.collect_by_name([*AP_STAR_PIECE_UNLOCK_ITEMS])
+        self.assertBeatable(True)
+
+    def test_beatable(self):
+        self.collect_all_but_victories()
+        self.assertBeatable(True)
+
+
+class TestArchipelagoStarGoalForcesSpheresIntoPool(KARTestBase):
+    """With City Trial items ungated the mod pre-fills the whole item mask at connect, so the six
+    sphere keys have to stay in the pool and be withheld from that pre-fill."""
+
+    options = {
+        **CT_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_assemble_archipelago_star,
+        "city_trial_items_gated": False,
+    }
+
+    def test_slot_data_flags_the_holdback(self):
+        data = self.world.fill_slot_data()
+        self.assertEqual(data["city_trial_items_gated"], 0)
+        self.assertEqual(data["ap_star_pieces_goal_gated"], 1)
+
+    def test_only_the_spheres_survive_the_ungated_category(self):
+        pool = self.world_item_names()
+        for name in AP_STAR_PIECE_UNLOCK_ITEMS:
+            self.assertIn(name, pool)
+        self.assertNotIn(KARItemName.UNLOCK_ITEM_GORDO, pool)
+
+
+class TestArchipelagoStarGoalWithoutCityTrial(KARTestBase):
+    """Regression: City Trial has no goal, so it holds no keys and city_trial_items_gated never reaches
+    effective_gates - but the Archipelago star goal is keyed on six City Trial sphere items. They have to
+    be minted anyway (the mod is told to withhold exactly those bits), or the goal is unreachable and the
+    seed fails to generate. The gate is left ON to pin the case the source-modes backstop used to eat."""
+
+    options = {
+        **TR_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_assemble_archipelago_star,
+        "city_trial_items_gated": True,
+    }
+
+    def test_gate_is_not_effective(self):
+        self.assertNotIn("city_trial_items_gated", self.world.effective_gates)
+
+    def test_spheres_are_forced_and_minted(self):
+        pool = self.world_item_names()
+        for name in AP_STAR_PIECE_UNLOCK_ITEMS:
+            self.assertIn(name, self.world.goal_forced_unlocks)
+            self.assertIn(name, pool)
+
+    def test_only_the_spheres_survive(self):
+        # The rest of the ungated, goal-less category stays out - only the goal's own keys are forced.
+        self.assertNotIn(KARItemName.UNLOCK_ITEM_GORDO, self.world_item_names())
+
+    def test_slot_data_flags_the_holdback(self):
+        data = self.world.fill_slot_data()
+        self.assertEqual(data["city_trial_items_gated"], 0)
+        self.assertEqual(data["ap_star_pieces_goal_gated"], 1)
+
+    def test_victory_needs_every_sphere(self):
+        self.collect_all_but([*AP_STAR_PIECE_UNLOCK_ITEMS, KARItemName.ARCHIPELAGO_VICTORY])
+        self.assertBeatable(False)
+        self.collect_by_name([*AP_STAR_PIECE_UNLOCK_ITEMS])
+        self.assertBeatable(True)
+
+    def test_beatable(self):
+        self.collect_all_but_victories()
+        self.assertBeatable(True)
+
+
+class TestAssembleBoxesFreeWhenPiecesUngatedWithoutCityTrial(KARTestBase):
+    """The same goal-less City Trial, but the Archipelago goal is a plain block count, so no sphere is a
+    goal key and none is minted. The mod ships city_trial_items_gated as 0 and hands the whole item mask
+    over at connect, so both "assemble" boxes are free - a rule read off the raw option would instead ask
+    for six items that do not exist and make them unreachable."""
+
+    options = {
+        **TR_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+        "archipelago_checklist_amount": 3,
+        "city_trial_items_gated": True,
+    }
+
+    def test_no_sphere_is_minted(self):
+        pool = self.world_item_names()
+        for name in AP_STAR_PIECE_UNLOCK_ITEMS:
+            self.assertNotIn(name, pool)
+
+    def test_assemble_boxes_reachable_with_nothing(self):
+        for location in (APLocation.ASSEMBLE_ARCHIPELAGO_STAR, APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES):
+            with self.subTest(location=location):
+                self.assertTrue(self.can_reach_location(location))
+
+
+class TestAllThreeLegendariesGoal(KARTestBase):
+    """all_three_legendaries_in_one_run needs twelve pieces: both vanilla sets plus all six spheres."""
+
+    options = {
+        **CT_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_all_three_legendaries_in_one_run,
+    }
+
+    def test_goal_box_is_not_a_location(self):
+        self.assertNotIn(APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES, self.real_location_names())
+
+    def test_victory_needs_all_twelve_pieces(self):
+        every_piece = [*LEGENDARY_PIECE_UNLOCK_ITEMS, *AP_STAR_PIECE_UNLOCK_ITEMS]
+        self.collect_all_but([*every_piece, KARItemName.ARCHIPELAGO_VICTORY])
+        self.assertBeatable(False)
+        self.collect_by_name(every_piece)
+        self.assertBeatable(True)
 
     def test_beatable(self):
         self.collect_all_but_victories()

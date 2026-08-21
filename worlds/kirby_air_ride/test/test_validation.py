@@ -18,7 +18,7 @@ class TestNoModesEnabled(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"No modes enabled"):
             self.world_setup()
 
 
@@ -32,7 +32,7 @@ class TestCTFillerExceedsGoalAmount(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"City Trial checkbox fillers"):
             self.world_setup()
 
 
@@ -46,7 +46,7 @@ class TestARFillerExceedsGoalAmount(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"Air Ride checkbox fillers"):
             self.world_setup()
 
 
@@ -60,7 +60,7 @@ class TestTRFillerExceedsGoalAmount(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"Top Ride checkbox fillers"):
             self.world_setup()
 
 
@@ -74,7 +74,9 @@ class TestCTChecklistListWrongMode(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(
+            OptionError, r"City Trial goal locations include names that are not City Trial locations"
+        ):
             self.world_setup()
 
 
@@ -88,7 +90,9 @@ class TestARChecklistListWrongMode(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(
+            OptionError, r"Air Ride goal locations include names that are not Air Ride locations"
+        ):
             self.world_setup()
 
 
@@ -101,7 +105,9 @@ class TestTRChecklistListWrongMode(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(
+            OptionError, r"Top Ride goal locations include names that are not Top Ride locations"
+        ):
             self.world_setup()
 
 
@@ -114,7 +120,7 @@ class TestCTChecklistListEmpty(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"city_trial_goal_locations is empty"):
             self.world_setup()
 
 
@@ -127,7 +133,7 @@ class TestARChecklistListEmpty(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"air_ride_goal_locations is empty"):
             self.world_setup()
 
 
@@ -140,7 +146,7 @@ class TestTRChecklistListEmpty(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"top_ride_goal_locations is empty"):
             self.world_setup()
 
 
@@ -157,7 +163,7 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"needing default locations"):
             self.world_setup()
 
 
@@ -201,7 +207,7 @@ class TestExcludeLocationsTipsValidatorOver(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"needing default locations"):
             self.world_setup()
 
 
@@ -215,7 +221,38 @@ class TestStadiumStarterDededeInInventoryRaises(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"starting inventory - this seed's goal is gated on it"):
+            self.world_setup()
+
+
+class TestDededeInInventoryRaisesWithStadiumsUngated(KARTestBase):
+    """Stadium gating off does not make the goal's own stadium a free starter - it is still the key."""
+
+    options = {
+        **CT_ONLY,
+        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
+        "city_trial_stadiums_gated": Toggle.option_false,
+        "start_inventory": {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: 1},
+    }
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaisesRegex(OptionError, r"starting inventory - this seed's goal is gated on it"):
+            self.world_setup()
+
+
+class TestLegendaryPieceInInventoryRaises(KARTestBase):
+    """Same for the hydra_and_dragoon goal: starting with any of its six pieces wins on the spot."""
+
+    options = {
+        **CT_ONLY,
+        "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon,
+        "start_inventory": {KARItemName.UNLOCK_ITEM_DRAGOON_PART_A: 1},
+    }
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaisesRegex(OptionError, r"starting inventory - this seed's goal is gated on it"):
             self.world_setup()
 
 

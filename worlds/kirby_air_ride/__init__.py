@@ -17,10 +17,12 @@ from worlds.LauncherComponents import (
 from .KARData import GameMode
 from .KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
+    AP_STAR_PIECE_UNLOCK_ITEMS,
     CHARGE_DEPENDENT_MACHINES,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
+    LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_UNLOCK_ITEMS,
     TRAP_CATEGORIES,
     GatingCategory,
@@ -93,8 +95,6 @@ class KARWeb(WebWorld):
     option_groups = kar_option_groups
     rich_text_options_doc = True
     options_presets = {  # noqa: RUF012
-        # Max Stats Insanity: hit the patch cap target (30) on every stat in one round. Heavy on Patch
-        # Cap Increase and Spawn Rate Up, most gating off and the target modest so they fit a CT-only pool.
         "Max Stats Insanity": {
             "city_trial_goal": "max_stats_in_one_run",
             "city_trial_patch_cap_min": 1,
@@ -191,6 +191,9 @@ class KARWorld(World):
         # The gating categories that really hold keys this seed (option names). Computed in
         # generate_early; see _compute_effective_gates for why this differs from the raw YAML toggles.
         self.effective_gates: set[str] = set()
+        # Unlock items the pool ships even though their category's gate is off, because this seed's
+        # goal is the thing they gate. Computed in generate_early; see _compute_goal_forced_unlocks.
+        self.goal_forced_unlocks: set[str] = set()
         # The modes whose region trees are built. A superset of the modes with a goal; see
         # _compute_logic_modes.
         self.logic_modes: set[GameMode] = set()
@@ -268,6 +271,7 @@ class KARWorld(World):
                     not self.options.air_ride_progression_time_attack,
                     location_name_groups[KARLocationGroup.AR_TIME_ATTACK],
                 ),
+                (not self.options.air_ride_progression_rng, location_name_groups[KARLocationGroup.AR_RNG]),
             ],
         )
 
@@ -332,18 +336,15 @@ class KARWorld(World):
 
         Deliberately skipped (playable without): events, abilities, boxes, CT items, TR items, patch types.
         """
+        beat_dedede = (
+            self.city_trial_enabled
+            and self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
+        )
         if self.city_trial_enabled and self.options.city_trial_stadiums_gated:
-            beat_dedede = self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
             player_stadium_unlocks = [
                 item_name for item_name in self.options.start_inventory if item_name in STADIUM_UNLOCK_ITEMS
             ]
-            if player_stadium_unlocks:
-                if beat_dedede and KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE in player_stadium_unlocks:
-                    raise OptionError(
-                        f"Cannot have {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE} "
-                        f"in starting inventory if the goal is Beat King Dedede"
-                    )
-            else:
+            if not player_stadium_unlocks:
                 stadiums: list[KARItemName] = list(STADIUM_UNLOCK_ITEMS)
                 if beat_dedede:
                     stadiums.remove(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
@@ -353,13 +354,16 @@ class KARWorld(World):
             machines = items_by_type[KARItemType.MACHINE_UNLOCK] - {
                 KARItemName.UNLOCK_MACHINE_HYDRA,
                 KARItemName.UNLOCK_MACHINE_DRAGOON,
+                # Assembled in City Trial from its six spheres, like the other two legendaries.
+                KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR,
                 # Exclude TR-only machines
                 KARItemName.UNLOCK_MACHINE_FREE_STAR,
                 KARItemName.UNLOCK_MACHINE_STEER_STAR,
             }
             if self.options.base_abilities_gated:
-                # Slick and Turbo Star only turn by charge-drifting, so either as the sole machine
-                # with Charge still locked leaves the player unable to steer. (Hydra is already out.)
+                # Slick and Turbo Star only turn by charge-drifting and Bulk Star has almost no speed
+                # of its own, so any of them as the sole machine with Charge still locked leaves the
+                # player unable to get around. (Hydra is already out.)
                 machines -= CHARGE_DEPENDENT_MACHINES
             self.machine_starter_choice = self._pick_random_starter(machines)
 
@@ -435,6 +439,52 @@ class KARWorld(World):
         guards, and fill_slot_data.
         """
         return {cat.option for cat in GATING_CATEGORIES if self._category_holds_keys(cat)}
+
+    def _goal_required_unlocks(self) -> set[str]:
+        """
+        The unlocks this seed's goal is gated on, by item name, whatever their category's gate says.
+
+        Four goals are a single in-game feat rather than a checklist count, and each needs specific
+        things to be reachable at all: a legendary set's pieces have to spawn to be assembled, and the
+        Vs. King Dedede stadium has to come up in the stadium rotation. Every other goal is a count of
+        checklist squares, which no single unlock hands over.
+        """
+        required: set[str] = set()
+
+        if self.city_trial_enabled:
+            goal = self.options.city_trial_goal.value
+            if goal == CityTrialGoal.option_hydra_and_dragoon:
+                required |= set(LEGENDARY_PIECE_UNLOCK_ITEMS)
+            elif goal == CityTrialGoal.option_beat_king_dedede:
+                required.add(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
+
+        if self.archipelago_enabled:
+            goal = self.options.archipelago_goal.value
+            if goal == ArchipelagoGoal.option_assemble_archipelago_star:
+                required |= set(AP_STAR_PIECE_UNLOCK_ITEMS)
+            elif goal == ArchipelagoGoal.option_all_three_legendaries_in_one_run:
+                required |= set(AP_STAR_PIECE_UNLOCK_ITEMS) | set(LEGENDARY_PIECE_UNLOCK_ITEMS)
+
+        return required
+
+    def _compute_goal_forced_unlocks(self) -> set[str]:
+        """
+        The goal's keys that the pool must ship even though their category's gate is off, by item name.
+
+        With the category ungated the mod hands its whole unlock mask over at connect, so a goal that is
+        one in-game feat is winnable in the first match before a single item arrives. Keeping just the
+        goal's own keys in the pool fixes that and leaves the rest of the category ungated, which is
+        what the player asked for; the mod withholds exactly these bits from the pre-fill.
+
+        Empty whenever the category is already gated - its own unlocks cover the goal then.
+        """
+        required = self._goal_required_unlocks()
+        forced: set[str] = set()
+        if "city_trial_items_gated" not in self.effective_gates:
+            forced |= required & (set(LEGENDARY_PIECE_UNLOCK_ITEMS) | set(AP_STAR_PIECE_UNLOCK_ITEMS))
+        if "city_trial_stadiums_gated" not in self.effective_gates:
+            forced |= required & {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE}
+        return forced
 
     def _validate_options(self) -> None:
         """Validate that option combinations are coherent: checklist goals achievable, filler amounts sane."""
@@ -553,6 +603,12 @@ class KARWorld(World):
         self.options.spawn_rate_min.value = ((self.options.spawn_rate_min.value + 5) // 10) * 10
         self.options.spawn_rate_max.value = ((self.options.spawn_rate_max.value + 5) // 10) * 10
 
+        # Starting with a goal's own key wins the seed on the spot. Those keys are in the pool whether
+        # their category is gated or forced there as the goal's, so the check does not care which.
+        for goal_key in sorted(self._goal_required_unlocks()):
+            if goal_key in self.options.start_inventory:
+                raise OptionError(f"Cannot have {goal_key} in starting inventory - this seed's goal is gated on it")
+
     def _get_item_quantity(self, item_name: str, item_data: KARItemData) -> int:
         """Determine how many copies of an item to add to the pool."""
         if item_data.type == KARItemType.CHECKBOX_FILLER:
@@ -655,6 +711,13 @@ class KARWorld(World):
             if data.source_modes and not (data.source_modes & enabled_modes):
                 excluded.add(name)
 
+        # A goal's own keys survive their category's gate being off - the goal is free otherwise. This
+        # sits AFTER the source-modes backstop, not with the gating exclusions above: the Archipelago
+        # checklist can own a goal keyed on another mode's items (the star's six spheres are City Trial
+        # items), and a goal-less City Trial would otherwise drop them straight back out. The mod is
+        # already told to withhold exactly these bits, so a pool missing them is an unwinnable seed.
+        excluded -= self.goal_forced_unlocks
+
         # One-time items the player preset in start_inventory: drop the pool copy. Plain start_inventory
         # precollects without removing from the pool, so without this a second findable copy gets minted.
         # Every gating-category unlock and checklist reward is placed once, so dedup them all. Stackables
@@ -738,6 +801,9 @@ class KARWorld(World):
         # and set_rules, which read it; logic_modes must precede create_regions, which it drives.
         self.effective_gates = self._compute_effective_gates()
         self.logic_modes = self._compute_logic_modes()
+        # Reads effective_gates; read in turn by _determine_starter_items, _build_item_pools and
+        # set_rules.
+        self.goal_forced_unlocks = self._compute_goal_forced_unlocks()
 
         self._determine_goal_locations_to_exclude()
         self._determine_locations_progress_type()
@@ -1144,5 +1210,15 @@ class KARWorld(World):
         # patches, boxes and stadiums permanently. checklist_rewards_gated is not a category; it ships raw.
         for cat in GATING_CATEGORIES:
             slot_data[cat.option] = int(cat.option in self.effective_gates)
+
+        # Goal keys held back from an ungated category's pre-fill, so the goal is not free at connect.
+        # Both are 0 when the category is gated - its own flag above already keeps the bits locked.
+        slot_data["legendary_pieces_goal_gated"] = int(
+            bool(self.goal_forced_unlocks & set(LEGENDARY_PIECE_UNLOCK_ITEMS))
+        )
+        slot_data["vs_king_dedede_goal_gated"] = int(
+            KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE in self.goal_forced_unlocks
+        )
+        slot_data["ap_star_pieces_goal_gated"] = int(bool(self.goal_forced_unlocks & set(AP_STAR_PIECE_UNLOCK_ITEMS)))
 
         return slot_data

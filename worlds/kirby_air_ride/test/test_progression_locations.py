@@ -17,11 +17,13 @@ from Options import Toggle
 
 from ..KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
+    AP_CHECKLIST_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     TOP_RIDE_LOCATION_TABLE,
     KARLocationGroup,
     location_name_groups,
 )
+from ..KAROptions import ArchipelagoGoal, CityTrialGoal
 from . import AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
 
 # (label, mode preset, default-set attr, excluded-set attr, location table, [(option, group), ...]).
@@ -50,6 +52,7 @@ _MODES: list[tuple[str, dict, str, str, dict, list[tuple[str, KARLocationGroup]]
             ("air_ride_progression_high_effort", KARLocationGroup.AR_HIGH_EFFORT),
             ("air_ride_progression_free_run", KARLocationGroup.AR_FREE_RUN),
             ("air_ride_progression_time_attack", KARLocationGroup.AR_TIME_ATTACK),
+            ("air_ride_progression_rng", KARLocationGroup.AR_RNG),
         ],
     ),
     (
@@ -129,3 +132,20 @@ for _label, _preset, _default_attr, _excluded_attr, _table, _toggles in _MODES:
             _label, _preset, _default_attr, _excluded_attr, _table, _toggles, _option, _group
         )
         globals()[_iso_cls.__name__] = _iso_cls
+
+
+class TestArchipelagoHasNoProgressionFlags(KARTestBase):
+    """The Archipelago checklist exposes no progression sub-toggles, so every AP box is DEFAULT and none
+    is ever excluded. That is what lets an AP-enabled seed absorb the cross-mode color keys, so if a
+    flag is ever added its excluded set has to be budgeted for in _compute_capacity."""
+
+    options = {
+        "city_trial_goal": CityTrialGoal.option_none,
+        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+        "archipelago_checklist_amount": 5,
+    }
+    run_default_tests = False
+
+    def test_every_ap_location_is_default(self):
+        self.assertEqual(self.world.archipelago_excluded_locations, set())
+        self.assertEqual(self.world.archipelago_default_locations, set(AP_CHECKLIST_LOCATION_TABLE))

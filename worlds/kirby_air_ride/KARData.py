@@ -26,6 +26,19 @@ class GoalKind(IntEnum):
     NONE = 4
     CHECKLIST_LIST = 5
     MAX_STATS_CT = 6
+    ASSEMBLE_AP_STAR = 7
+    ALL_LEGENDARIES_CT = 8
+
+
+class GoalForcedGate(IntEnum):
+    """Mirrors the mod's GOALGATE_* bits. Written as a bitmask to OPTION_GOAL_FORCED_GATES.
+
+    Each bit names unlocks that stay locked at connect even though their category's gate is off,
+    because the seed's goal is exactly what they gate."""
+
+    LEGENDARY_PIECES = 0x1
+    VS_KING_DEDEDE = 0x2
+    AP_STAR_PIECES = 0x4
 
 
 class TrapLinkKind(IntEnum):
@@ -130,6 +143,9 @@ class MemoryAddress(IntEnum):
     # Mirrors the `checklist_rewards_gated` toggle. Off => mod unlocks every non-progression checklist
     # reward at connect.
     OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0E8  # u32, 0 or 1
+    # Unlocks the pool ships even though their category's gate is off, because this seed's goal is the
+    # thing they gate. The mod withholds exactly these bits when it pre-fills that category's mask.
+    OPTION_GOAL_FORCED_GATES = 0x0EC  # u32 bitmask, GOAL_FORCED_GATE_*
     # APSlotOptions is 8-byte aligned (it holds u64s), so the block ends at 0x0F0 (192 bytes) with
     # LOCATION_DATA_VALID immediately after.
 

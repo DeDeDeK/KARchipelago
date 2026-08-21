@@ -260,7 +260,9 @@ class CityTrialStadiumsGated(DefaultOnToggle):
     corresponding Unlock Stadium items. The game starts with one random stadium already unlocked (any of
     the 24, except VS King Dedede when that is the goal).
 
-    When disabled, every stadium is available from the start and no Unlock Stadium items are added to the pool.
+    When disabled, every stadium is available from the start and no Unlock Stadium items are added to the
+    pool - except with the Beat King Dedede goal, which always keeps its own Unlock Stadium: VS. KING
+    DEDEDE in the pool so the goal is not winnable in the first match.
     """
 
     display_name = "City Trial Stadiums Gated"
@@ -327,6 +329,16 @@ class AirRideProgressionHighEffort(Toggle):
 
     default = 0
     display_name = "Air Ride Long/High effort checkboxes are progression"
+
+
+class AirRideProgressionRNG(Toggle):
+    """
+    This controls whether checkboxes that require RNG elements of the game are a part of progression.
+    This applies to Air Ride only.
+    """
+
+    default = 0
+    display_name = "Air Ride RNG checkboxes are progression"
 
 
 class AirRideCheckboxFillers(NamedRange):
@@ -455,13 +467,21 @@ class ArchipelagoGoal(Choice):
     Does not have all 120 checks yet, and logic for these may be incorrect.
 
     Sets the goal for the Archipelago checklist. If you have goals on multiple game modes,
-    all must be achieved to win. Select "None" to disable the Archipelago checklist.
+    all must be achieved to win. Select "None" to exclude archipelago checklist locations completely.
+
+    "assemble_archipelago_star" asks you to collect all six Archipelago spheres in one City Trial
+    round. Each sphere is its own item, so all six have to arrive before a round can deliver a set.
+
+    "all_three_legendaries_in_one_run" asks for Dragoon, Hydra and the Archipelago Star in the same
+    City Trial round - twelve pieces, so it needs the six Hydra/Dragoon part items as well.
     """
 
     display_name = "Archipelago Checklist Goal"
     option_n_checklist_blocks = 1
     option_none = 4
     option_checklist_list = 5
+    option_assemble_archipelago_star = 7
+    option_all_three_legendaries_in_one_run = 8
     default = 4
 
 
@@ -477,7 +497,7 @@ class ArchipelagoChecklistAmount(Range):
     display_name = "Number of Checklist Boxes for Archipelago"
     default = 25
     range_start = 1
-    range_end = 50
+    range_end = 52
 
 
 class ArchipelagoGoalLocations(LocationSet):
@@ -569,7 +589,8 @@ class CityTrialItemsGated(Toggle):
     are locked and must be unlocked by finding their corresponding items.
 
     When disabled, all game items are available from the start and no item unlock items are added to
-    the pool.
+    the pool - except with the Hydra and Dragoon goal, which always keeps the six legendary part
+    unlocks in the pool so the goal is not winnable in the first match.
     """
 
     display_name = "City Trial Items Gated"
@@ -686,6 +707,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     air_ride_progression_high_effort: AirRideProgressionHighEffort
     air_ride_progression_free_run: AirRideProgressionFreeRun
     air_ride_progression_time_attack: AirRideProgressionTimeAttack
+    air_ride_progression_rng: AirRideProgressionRNG
     air_ride_checkbox_fillers: AirRideCheckboxFillers
     air_ride_reveal_checklist: AirRideRevealChecklist
 
@@ -767,6 +789,7 @@ kar_option_groups = [
             AirRideProgressionFreeRun,
             AirRideProgressionTimeAttack,
             AirRideProgressionHighEffort,
+            AirRideProgressionRNG,
             AirRideCheckboxFillers,
             AirRideRevealChecklist,
             AirRideCoursesGated,
