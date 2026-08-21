@@ -19,6 +19,9 @@ Kirby Air Ride:
   # that still holds keys here; the rest must drop out of effective_gates because their modes have no
   # goal, and ship to the mod as 0 rather than locking content behind keys that were never minted.
   city_trial_stadiums_gated: true
+  # On for the same reason, and specifically to cover the two "assemble" boxes: their keys are City
+  # Trial item unlocks, so a goal-less City Trial mints none of them and the boxes must come out free.
+  city_trial_items_gated: true
   machines_gated: true
   air_ride_courses_gated: true
   colors_gated: true

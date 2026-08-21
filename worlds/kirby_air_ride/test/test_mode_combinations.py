@@ -1,3 +1,13 @@
+"""
+Mode-combination tests: the seven CT / AR / TR on-off combinations.
+
+Enabling a mode is enabling its goal, so `*_enabled` is derived from the goal option rather than set
+directly - these pin that derivation, and the two things that follow from it: a disabled mode
+contributes no locations, and its mode-specific checklist rewards leave the pool (the box that would
+award them does not exist). The Archipelago checklist is a fourth mode with its own semantics and is
+covered in test_archipelago_checklist.py; here it stays off, which every preset asserts.
+"""
+
 from ..KARItems import KARItemGroup, item_name_groups
 from ..KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
@@ -17,6 +27,7 @@ class TestCTOnly(KARTestBase):
         self.assertTrue(self.world.city_trial_enabled)
         self.assertFalse(self.world.air_ride_enabled)
         self.assertFalse(self.world.top_ride_enabled)
+        self.assertFalse(self.world.archipelago_enabled)
 
     def test_no_off_mode_locations(self):
         loc_names = self.real_location_names()
@@ -121,6 +132,10 @@ class TestAllModes(KARTestBase):
         self.assertTrue(self.world.city_trial_enabled)
         self.assertTrue(self.world.air_ride_enabled)
         self.assertTrue(self.world.top_ride_enabled)
+
+    def test_archipelago_stays_off(self):
+        # ALL_MODES means the three real modes; the Archipelago checklist is opt-in on top of them.
+        self.assertFalse(self.world.archipelago_enabled)
 
     def test_all_mode_locations_present(self):
         loc_names = self.real_location_names()

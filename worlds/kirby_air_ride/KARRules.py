@@ -4,6 +4,7 @@ from rule_builder.rules import Has, HasAll, HasAny, HasFromListUnique, Rule
 
 from .KARData import GameMode
 from .KARItems import (
+    AP_STAR_PIECE_UNLOCK_ITEMS,
     CHARACTER_MACHINE_UNLOCKS,
     CHARGE_DEPENDENT_MACHINES,
     DAMAGING_ABILITY_UNLOCKS,
@@ -78,17 +79,22 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     ARLocation.BP_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.FM_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
-    # Air Ride + Top Ride quick-spin cells
+    # Air Ride + Top Ride quick-spin cells. "Cross the finish line while spinning" names the spin by its
+    # animation rather than the move, but the spin it wants is the Quick Spin - Air Ride has no other way
+    # to be mid-spin on the line. (CHECKER KNIGHTS' spin panels are course furniture and need nothing.)
     ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
+    ARLocation.FINISH_SPINNING_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     TRLocation.QUICK_SPIN_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     TRLocation.FIRST_WHILE_DOING_A_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
-    # Cells ridden on a machine Charge makes usable: Slick and Turbo Star only turn by charge-drifting.
+    # Cells ridden on a machine Charge makes usable: Slick and Turbo Star only turn by charge-drifting,
+    # and Bulk Star has almost no speed of its own - a lap time on it is a chain of charge releases.
     # (Hydra is not named by any cell, so it only shows up in the "some machine" rules below.)
     ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     ARLocation.TA_FM_FINISH_01_05_00_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     ARLocation.FR_MF_LAP_01_02_00_ON_TURBO_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     ARLocation.TA_FH_FINISH_03_10_00_ON_TURBO_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
+    ARLocation.FR_SS_LAP_01_05_00_ON_BULK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     CTLocation.STADIUM_DR4_33_00_TURBO: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     CTLocation.BUST_ROCKET_STAR_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     # Top Ride cells naming level-5 CPUs: those outrun a Kirby who cannot boost, so 1st needs Charge.
@@ -272,26 +278,25 @@ _PATCH_LOCATION_RULES: dict[str, str] = {
     CTLocation.GET_10_DEFENSE_PATCHES: KARItemName.UNLOCK_PATCH_DEFENSE,
 }
 
-# Box-dependent CT locations (when city_trial_boxes_gated is ON): breaking boxes needs some box type
-# able to spawn.
+# Box-break CT locations: breaking boxes needs some box color able to spawn.
 _BOX_BREAK_LOCATIONS: tuple[str, ...] = (
     CTLocation.BREAK_500_BOXES,
     CTLocation.BREAK_1000_BOXES,
 )
 
-# The per-color Archipelago counts (when city_trial_boxes_gated is ON): a locked color never spawns,
-# so each needs its own box unlock rather than any of the three.
+# The per-color Archipelago counts: a locked color never spawns, so each needs its own color rather
+# than any of the three.
 _AP_BOX_COLOR_RULES: dict[str, str] = {
     APLocation.BREAK_20_BLUE_BOXES: KARItemName.UNLOCK_BOX_BLUE,
     APLocation.BREAK_10_GREEN_BOXES: KARItemName.UNLOCK_BOX_GREEN,
     APLocation.BREAK_10_RED_BOXES: KARItemName.UNLOCK_BOX_RED,
 }
 
-# A per-color box count needs a spawnable item of that color as well as the color itself: the three
-# colors draw from disjoint contents pools, and the mod drops a color whose whole pool is locked out.
-# Blue holds the patches (down/fake variants ride their patch's unlock) plus the 12 foods, so only the
-# patch and item gates together can empty it; green holds the special items (item gate alone); red the
-# 11 copy abilities (ability gate alone). Each guard below is nested under exactly those gates.
+# A box color spawns only when it is unlocked AND its contents pool still holds something: the three
+# colors draw from disjoint pools, and the mod drops a color whose whole pool is locked out. Blue holds
+# the patches (down/fake variants ride their patch's unlock) plus the 12 foods, so only the patch and
+# item gates together can empty it; green holds the special items (item gate alone); red the 11 copy
+# abilities (ability gate alone).
 #
 # Red has a second, ungated source: the legendary-piece carrier box spawns outside the color picker, so
 # any unlocked piece keeps red coming - hence the red guard names them only when the item gate is on.
@@ -324,6 +329,48 @@ _BLUE_BOX_FOOD_ITEMS: tuple[str, ...] = (
     KARItemName.UNLOCK_ITEM_HOT_DOG,
     KARItemName.UNLOCK_ITEM_APPLE,
 )
+
+
+def _box_color_requirements(gated: typing.Callable[[str], bool]) -> dict[str, list[Rule]]:
+    """
+    What each box color needs before one can spawn, as a list of rules to AND. `gated(option)` answers
+    whether that gating category holds keys in this seed.
+
+    Both halves are conditional, and either can be free: the color's own unlock only when the box gate is
+    on, and something left in its contents pool only when the gates that can empty that pool are on. An
+    empty list means that color spawns unconditionally.
+    """
+    requirements: dict[str, list[Rule]] = {
+        KARItemName.UNLOCK_BOX_BLUE: [],
+        KARItemName.UNLOCK_BOX_GREEN: [],
+        KARItemName.UNLOCK_BOX_RED: [],
+    }
+
+    if gated("city_trial_boxes_gated"):
+        for color, rules in requirements.items():
+            rules.append(Has(color))
+
+    if gated("city_trial_items_gated"):
+        requirements[KARItemName.UNLOCK_BOX_GREEN].append(HasAny(*_GREEN_BOX_ITEMS))
+        if gated("city_trial_patches_gated"):
+            requirements[KARItemName.UNLOCK_BOX_BLUE].append(
+                HasAny(*sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK]), *_BLUE_BOX_FOOD_ITEMS)
+            )
+        if gated("abilities_gated"):
+            requirements[KARItemName.UNLOCK_BOX_RED].append(
+                HasAny(*sorted(items_by_type[KARItemType.ABILITY_UNLOCK]), *LEGENDARY_PIECE_UNLOCK_ITEMS)
+            )
+
+    return requirements
+
+
+def _all_of(rules: list[Rule]) -> Rule:
+    """AND a non-empty list of rules together."""
+    combined = rules[0]
+    for rule in rules[1:]:
+        combined &= rule
+    return combined
+
 
 # TR item-dependent locations (when top_ride_items_gated is ON). The four ability-themed TR items accept
 # a second key and live in _TR_ABILITY_ITEM_LOCATION_RULES.
@@ -514,6 +561,10 @@ def set_rules(world: "KARWorld"):
             elif region.name in STADIUM_ALL_REGION_TO_UNLOCKS and region.entrances:
                 unlocks = STADIUM_ALL_REGION_TO_UNLOCKS[region.name]
                 add_entrance_rule(region.entrances[0].name, HasAny(*unlocks))
+    elif KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE in world.goal_forced_unlocks:
+        # Gating off, but the beat_king_dedede goal keeps this one unlock in the pool, so its stadium is
+        # the only one in the rotation that still needs a key. Every cell in there is behind it.
+        add_region_entrance_rule(KARRegion.STADIUM_VSKD, Has(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE))
 
     # Entrance rules: AR course unlocks (effective_gates guard - see above)
     if "air_ride_courses_gated" in world.effective_gates:
@@ -619,10 +670,17 @@ def set_rules(world: "KARWorld"):
         for loc, item in _PATCH_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    if world.options.city_trial_boxes_gated:
-        box_unlocks = sorted(items_by_type[KARItemType.CT_BOX_UNLOCK])
+    # Breaking boxes needs one color both unlocked and still holding contents. Guarded on effective_gates
+    # even though these are City Trial cells: the two readings agree once City Trial has a goal, which it
+    # must for the cells to exist at all, and sharing the helper keeps the per-color halves in one place.
+    box_requirements = _box_color_requirements(lambda option: option in world.effective_gates)
+    if all(box_requirements.values()):
+        colors = [_all_of(rules) for rules in box_requirements.values()]
+        any_box = colors[0]
+        for color in colors[1:]:
+            any_box |= color
         for loc in _BOX_BREAK_LOCATIONS:
-            add_location_rule(loc, HasAny(*box_unlocks))
+            add_location_rule(loc, any_box)
 
     if (
         world.options.city_trial_items_gated
@@ -722,6 +780,27 @@ def set_rules(world: "KARWorld"):
         for loc, item in _AP_ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
+    # The two "assemble" boxes need every piece of their set able to spawn. A piece is spawn-gated when
+    # its whole category is - or, with that gate off, when the piece is one of this seed's goal keys and
+    # the mod is withholding just those bits. Neither reading is the raw option: City Trial pieces are
+    # what an Archipelago goal keys off, so a goal-less City Trial with the gate on mints none of them
+    # and a raw-option rule would ask for items that do not exist.
+    ct_items_keyed = "city_trial_items_gated" in world.effective_gates
+    star_pieces_keyed = ct_items_keyed or set(AP_STAR_PIECE_UNLOCK_ITEMS) <= world.goal_forced_unlocks
+    legendary_pieces_keyed = ct_items_keyed or set(LEGENDARY_PIECE_UNLOCK_ITEMS) <= world.goal_forced_unlocks
+    if star_pieces_keyed:
+        # The machine item is not required: assembling the star mounts it, the same way assembling
+        # Hydra from parts hands over Hydra.
+        add_location_rule(APLocation.ASSEMBLE_ARCHIPELAGO_STAR, HasAll(*AP_STAR_PIECE_UNLOCK_ITEMS))
+    # Twelve pieces inside one round: both vanilla sets plus the whole Archipelago set. The two halves
+    # are gated independently - a City Trial goal can key the vanilla pieces while the spheres stay free.
+    all_three_keys = (
+        *(AP_STAR_PIECE_UNLOCK_ITEMS if star_pieces_keyed else ()),
+        *(LEGENDARY_PIECE_UNLOCK_ITEMS if legendary_pieces_keyed else ()),
+    )
+    if all_three_keys:
+        add_location_rule(APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES, HasAll(*all_three_keys))
+
     if "abilities_gated" in world.effective_gates:
         # Both Mic boxes need the ability itself. The wheel one does not need inhale - the Copy Chance
         # Wheel hands the ability over in the city.
@@ -731,26 +810,16 @@ def set_rules(world: "KARWorld"):
     if "base_abilities_gated" in world.effective_gates:
         # A melee stadium spawns no copy panels, so the only Mic there is a swallowed Walky.
         add_location_rule(APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY, Has(KARItemName.UNLOCK_BASE_ABILITY_INHALE))
+        # Bulk Star gets its speed from charge releases, so 1st place on it needs Charge. Independent of
+        # machines_gated, which only decides whether the machine itself is a key.
+        add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_BASE_ABILITY_CHARGE))
 
     if "city_trial_patches_gated" in world.effective_gates:
         add_location_rule(APLocation.GET_10_HP_PATCHES, Has(KARItemName.UNLOCK_PATCH_HP))
 
-    if "city_trial_boxes_gated" in world.effective_gates:
-        for loc, box_item in _AP_BOX_COLOR_RULES.items():
-            add_location_rule(loc, Has(box_item))
-
-    if "city_trial_items_gated" in world.effective_gates:
-        add_location_rule(APLocation.BREAK_10_GREEN_BOXES, HasAny(*_GREEN_BOX_ITEMS))
-        if "city_trial_patches_gated" in world.effective_gates:
-            add_location_rule(
-                APLocation.BREAK_20_BLUE_BOXES,
-                HasAny(*sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK]), *_BLUE_BOX_FOOD_ITEMS),
-            )
-        if "abilities_gated" in world.effective_gates:
-            add_location_rule(
-                APLocation.BREAK_10_RED_BOXES,
-                HasAny(*sorted(items_by_type[KARItemType.ABILITY_UNLOCK]), *LEGENDARY_PIECE_UNLOCK_ITEMS),
-            )
+    for loc, box_item in _AP_BOX_COLOR_RULES.items():
+        if box_requirements[box_item]:
+            add_location_rule(loc, _all_of(box_requirements[box_item]))
 
     if "machines_gated" in world.effective_gates:
         # Breaking the coral, leaving the map, riding up to the sky garden or Castle Hall's roof, and
@@ -758,8 +827,8 @@ def set_rules(world: "KARWorld"):
         # ask for a dismount up top, but only a machine gets there - low spots stay region-only.
         any_ct_machine = HasAny(*_CT_MACHINE_UNLOCKS)
         if "base_abilities_gated" in world.effective_gates:
-            # Hydra cannot move and Slick / Turbo Star cannot be steered until Charge is in, so those
-            # three only count as a ride alongside it.
+            # Hydra and Bulk Star cannot move and Slick / Turbo Star cannot be steered until Charge is
+            # in, so those only count as a ride alongside it.
             any_ct_machine = HasAny(*_STEERABLE_CT_MACHINES) | (
                 Has(KARItemName.UNLOCK_BASE_ABILITY_CHARGE) & HasAny(*_CHARGE_DEPENDENT_CT_MACHINES)
             )
