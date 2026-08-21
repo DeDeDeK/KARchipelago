@@ -12,6 +12,7 @@ import json
 
 from Options import Toggle
 
+from .. import UT_OPTIONS_KEY
 from ..KARLocations import CTLocation
 from ..KAROptions import CityTrialGoal
 from . import ALL_MODES, CT_ONLY, KARTestBase
@@ -63,6 +64,8 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "legendary_pieces_goal_gated",
         "vs_king_dedede_goal_gated",
         "ap_star_pieces_goal_gated",
+        # Universal Tracker's raw-option record; not consumed by the client or the mod.
+        UT_OPTIONS_KEY,
     }
 )
 
