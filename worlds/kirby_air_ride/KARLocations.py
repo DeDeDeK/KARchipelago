@@ -9,8 +9,6 @@ from .KARRegions import KARRegion
 
 
 class KARLocationData(NamedTuple):
-    """Data for a location in Kirby Air Ride."""
-
     code: int
     region: str
     # The checklist reward this box awards in the base game, or None. The complete vanilla map (in-scope
@@ -19,8 +17,6 @@ class KARLocationData(NamedTuple):
 
 
 class KARLocation(Location):
-    """An Archipelago location for Kirby Air Ride."""
-
     game: str = "Kirby Air Ride"
 
 
@@ -968,14 +964,12 @@ class APLocation(StrEnum):
     across City Trial, Air Ride and Top Ride.
 
     The location code is 361 + clear_kind (AP band 361-480), and each clear_kind MUST match the mod's
-    ap_checks[] order: a cross-repo wire contract nothing mechanically catches a desync in. Renumbering
-    is allowed - players reinstall fresh - but only with both repos moved together.
+    ap_checks[] order: a cross-repo wire contract nothing catches a desync in. Renumbering is allowed -
+    players reinstall fresh - but only with both repos moved together.
 
     Every name is prefixed "Archipelago: ", since LOCATION_TABLE merges all four mode tables by name and
-    a collision would silently drop one; the prefix also lets *_goal_locations validation tell the tabs
-    apart. After it the name is the mod's in-game cell text verbatim, authored line break written as a
-    space, so it keeps the mode category ("City Trial: ", "Stadium: ", "Air Ride: ") the cell carries.
-    The mod restates this text by hand in ap_checks[], so the two move together.
+    a collision would silently drop one. After the prefix the name is the mod's in-game cell text
+    verbatim (its line break written as a space), which the mod restates by hand in ap_checks[].
     """
 
     # City Trial exploration
@@ -1094,12 +1088,10 @@ class APLocation(StrEnum):
     )
 
 
-# The Archipelago checklist awards no native rewards, so every entry has native_reward=None.
-#
-# Each box lives in the region where its activity happens, not in a flat Archipelago region, so it
-# inherits that region's entrance chain (stadium/course unlocks, DD/KM/DR prerequisites) instead of
-# hand-copied Has(...) rules that drift. The ARCHIPELAGO region itself holds only the victory event.
-# Naming a mode's region here is what pulls that mode into logic_modes, goal or no goal.
+# Every entry has native_reward=None - the Archipelago checklist awards no native rewards. Each box
+# lives in the region where its activity happens, so it inherits that region's entrance chain instead
+# of hand-copied Has(...) rules that drift; naming a mode's region here is what pulls that mode into
+# logic_modes, goal or no goal. The ARCHIPELAGO region itself holds only the victory event.
 AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.CASTLE_FLOWER_ON_FOOT: KARLocationData(361, KARRegion.CITY_TRIAL),
     APLocation.BREAK_ALL_CORAL: KARLocationData(362, KARRegion.CITY_TRIAL),
@@ -1152,9 +1144,8 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     # entrance rule already asks for - the same region the vanilla "(All)" DD boxes take.
     APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE: KARLocationData(404, KARRegion.STADIUM_DD_ALL),
     APLocation.GET_MIC_FROM_COPY_CHANCE: KARLocationData(405, KARRegion.CITY_TRIAL),
-    # The mod counts this in either melee stadium, but only KIRBY MELEE 2 can supply the ability: neither
-    # stage ships an ItemNode, so no copy panels spawn, and Walky (ACTORID_T1_WALKY) is in GrColosseum5's
-    # spawn table but not GrPasture1's. Hence KM2, not KM_ALL.
+    # KM2, not KM_ALL: neither melee stage spawns copy panels, and Walky (ACTORID_T1_WALKY) is in
+    # GrColosseum5's spawn table but not GrPasture1's, so only KIRBY MELEE 2 can supply the ability.
     APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY: KARLocationData(406, KARRegion.STADIUM_KM2),
     APLocation.BREAK_20_BLUE_BOXES: KARLocationData(407, KARRegion.CITY_TRIAL),
     APLocation.BREAK_10_GREEN_BOXES: KARLocationData(408, KARRegion.CITY_TRIAL),
@@ -1184,9 +1175,8 @@ NATIVE_REWARD_TO_LOCATION: dict[str, str] = {
 
 
 class KARLocationGroup(StrEnum):
-    """Player-facing location-group names. Reference these members instead of hardcoding
-    the strings; YAML configs must match the values verbatim.
-    """
+    """Player-facing location-group names. Reference these members instead of hardcoding the strings;
+    YAML configs must match the values verbatim."""
 
     CT_STADIUMS = "City Trial: Stadiums"
     CT_FREE_RUN = "City Trial: Free Run"

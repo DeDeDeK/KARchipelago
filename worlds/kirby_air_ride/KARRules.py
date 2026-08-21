@@ -79,9 +79,8 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     ARLocation.BP_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.FM_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
-    # Air Ride + Top Ride quick-spin cells. "Cross the finish line while spinning" names the spin by its
-    # animation rather than the move, but the spin it wants is the Quick Spin - Air Ride has no other way
-    # to be mid-spin on the line. (CHECKER KNIGHTS' spin panels are course furniture and need nothing.)
+    # Air Ride + Top Ride quick-spin cells. "Cross the finish line while spinning" names the animation,
+    # but Quick Spin is the only way to be mid-spin on the line.
     ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     ARLocation.FINISH_SPINNING_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
@@ -89,7 +88,6 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     TRLocation.FIRST_WHILE_DOING_A_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     # Cells ridden on a machine Charge makes usable: Slick and Turbo Star only turn by charge-drifting,
     # and Bulk Star has almost no speed of its own - a lap time on it is a chain of charge releases.
-    # (Hydra is not named by any cell, so it only shows up in the "some machine" rules below.)
     ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     ARLocation.TA_FM_FINISH_01_05_00_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     ARLocation.FR_MF_LAP_01_02_00_ON_TURBO_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
@@ -211,9 +209,8 @@ _CHARGE_DEPENDENT_CT_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS
 _STEERABLE_CT_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in CHARGE_DEPENDENT_MACHINES]
 
 # Machines that cannot hold Fantasy Meadows' 20 mph floor for a whole lap. The cell polls per-frame
-# displacement and fails the lap the moment it drops below 1.303867 units/frame - sustained speed, not
-# a lap time. Shadow Star (19.9 mph), Compact Star (18.0) and Rocket Star (15.5) never reach it; Swerve
-# Star clears it (31.2) but stops dead to steer. Hydra sits under at rest (18.6) but charges over.
+# displacement, so it wants sustained speed, not a lap time. Shadow Star (19.9 mph), Compact Star (18.0)
+# and Rocket Star (15.5) never reach it; Swerve Star clears it (31.2) but stops dead to steer.
 _FM_20MPH_EXCLUDED_MACHINES: frozenset[str] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_SWERVE_STAR,
@@ -248,9 +245,8 @@ _FM_SHORTCUT_MACHINES: list[str] = sorted(
     if GameMode.AIRRIDE in ITEM_TABLE[name].source_modes and name not in _FM_SHORTCUT_EXCLUDED_MACHINES
 )
 
-# Item types Tac can carry off in the city: every City Trial item unlock except All Up, whose fall
-# chance here is zero so it never spawns to be stolen. The legendary pieces stay in - their carrier box
-# spawns outside the color picker, so a piece unlock is a real pickup.
+# Item types Tac can carry off in the city: every City Trial item unlock except All Up, whose city fall
+# chance is zero. The legendary pieces stay in - their carrier box is a real pickup.
 _TAC_STEALABLE_ITEM_UNLOCKS: list[str] = sorted(
     items_by_type[KARItemType.CT_ITEM_UNLOCK] - {KARItemName.UNLOCK_ITEM_ALL_UP}
 )
@@ -294,13 +290,10 @@ _AP_BOX_COLOR_RULES: dict[str, str] = {
 
 # A box color spawns only when it is unlocked AND its contents pool still holds something: the three
 # colors draw from disjoint pools, and the mod drops a color whose whole pool is locked out. Blue holds
-# the patches (down/fake variants ride their patch's unlock) plus the 12 foods, so only the patch and
-# item gates together can empty it; green holds the special items (item gate alone); red the 11 copy
-# abilities (ability gate alone).
-#
-# Red has a second, ungated source: the legendary-piece carrier box spawns outside the color picker, so
-# any unlocked piece keeps red coming - hence the red guard names them only when the item gate is on.
-# All Up is absent throughout: its City Trial fall chance is zero, so it never joins the blue pool.
+# the patches plus the 12 foods (only the patch and item gates together empty it), green the special
+# items (item gate), red the 11 copy abilities (ability gate) plus the ungated legendary-piece carrier
+# box, which keeps red coming while any piece is unlocked. All Up never joins blue - its fall chance
+# in the city is zero.
 _GREEN_BOX_ITEMS: tuple[str, ...] = (
     KARItemName.UNLOCK_ITEM_SPEED_MAX,
     KARItemName.UNLOCK_ITEM_SPEED_MIN,
@@ -333,12 +326,10 @@ _BLUE_BOX_FOOD_ITEMS: tuple[str, ...] = (
 
 def _box_color_requirements(gated: typing.Callable[[str], bool]) -> dict[str, list[Rule]]:
     """
-    What each box color needs before one can spawn, as a list of rules to AND. `gated(option)` answers
-    whether that gating category holds keys in this seed.
-
-    Both halves are conditional, and either can be free: the color's own unlock only when the box gate is
-    on, and something left in its contents pool only when the gates that can empty that pool are on. An
-    empty list means that color spawns unconditionally.
+    What each box color needs before one can spawn, as a list of rules to AND; `gated(option)` answers
+    whether that category holds keys this seed. Both halves are conditional - the color's own unlock only
+    while the box gate is on, its contents only while the gates that can empty the pool are - so an empty
+    list means the color spawns unconditionally.
     """
     requirements: dict[str, list[Rule]] = {
         KARItemName.UNLOCK_BOX_BLUE: [],
@@ -515,12 +506,7 @@ _TR_ABILITY_ITEM_KEYS: dict[str, str] = {
 
 
 def set_rules(world: "KARWorld"):
-    """
-    Define the logic rules for locations in Kirby Air Ride. Rules are only set for locations present in
-    the world.
-
-    :param world: Kirby Air Ride game world.
-    """
+    """Define the logic rules, skipping locations and regions absent from this world."""
 
     # Accumulate rules per entrance/location, then apply once at the end: world.set_rule() resolves a
     # Rule into a Rule.Resolved that is not a Rule, so composing afterwards would overwrite, not AND.
@@ -549,10 +535,9 @@ def set_rules(world: "KARWorld"):
         if region.entrances:
             add_entrance_rule(region.entrances[0].name, rule)
 
-    # Entrance rules: progressive stadiums. Gating OFF needs none -- the mod unlocks all 24 at connect.
-    # The guard is effective_gates, not `*_enabled and *_gated`: an entrance guard asks whether the
-    # category holds keys, and a goal-less logic mode holds none, so the raw option would leave an
-    # Archipelago box in that mode's tree unguarded for fill to hide progression behind.
+    # Entrance rules: progressive stadiums. Gating OFF needs none - the mod unlocks all 24 at connect.
+    # The guard is effective_gates, not the raw option: a goal-less logic mode holds no keys, so its
+    # Archipelago boxes would sit behind an unguarded entrance for fill to hide progression behind.
     if "city_trial_stadiums_gated" in world.effective_gates:
         for region in world.get_regions():
             if region.name in STADIUM_REGION_TO_UNLOCK and region.entrances:
@@ -578,10 +563,9 @@ def set_rules(world: "KARWorld"):
             if region.name in TR_COURSE_REGION_TO_UNLOCK and region.entrances:
                 add_entrance_rule(region.entrances[0].name, Has(TR_COURSE_REGION_TO_UNLOCK[region.name]))
 
-    # Entrance rules: the combat stadiums need some way to deal damage. Every cell there is a KO count,
-    # so the requirement belongs on the entrance. Only needed while both gates hold keys: machines OFF
-    # hands over Dedede and Meta Knight, base abilities OFF hands over quick spin - either alone covers
-    # all three stadiums. Ramming does not count; a machine is transport here, not a weapon.
+    # Entrance rules: the combat stadiums need some way to deal damage - every cell there is a KO count.
+    # Only while both gates hold keys: machines OFF hands over Dedede and Meta Knight, base abilities OFF
+    # hands over quick spin. Ramming does not count; a machine is transport here, not a weapon.
     if {"machines_gated", "base_abilities_gated"} <= world.effective_gates:
         combat_keys = (KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN, *CHARACTER_MACHINE_UNLOCKS)
 
@@ -627,7 +611,6 @@ def set_rules(world: "KARWorld"):
         ),
     )
 
-    # Location rules: gating categories (applied only when gating option is ON)
     if world.options.city_trial_events_gated:
         for loc, item in _EVENT_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
@@ -670,9 +653,9 @@ def set_rules(world: "KARWorld"):
         for loc, item in _PATCH_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    # Breaking boxes needs one color both unlocked and still holding contents. Guarded on effective_gates
-    # even though these are City Trial cells: the two readings agree once City Trial has a goal, which it
-    # must for the cells to exist at all, and sharing the helper keeps the per-color halves in one place.
+    # Breaking boxes needs one color both unlocked and still holding contents. effective_gates and the
+    # raw options agree here (the cells only exist with a City Trial goal); sharing the helper keeps the
+    # per-color halves in one place.
     box_requirements = _box_color_requirements(lambda option: option in world.effective_gates)
     if all(box_requirements.values()):
         colors = [_all_of(rules) for rules in box_requirements.values()]
@@ -756,8 +739,8 @@ def set_rules(world: "KARWorld"):
         tr_unlocks = sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK])
 
         # "Get over 18 different types of items!" needs 19 of the 21 distinct TR item types able to spawn.
-        # The ability-themed types' second key is left out: HasFromListUnique counts distinct held items,
-        # so listing both keys would score one type twice. Omitting it only makes the rule stricter.
+        # The ability-themed types' second key is left out - HasFromListUnique counts distinct held
+        # items, so listing both would score one type twice - which only makes the rule stricter.
         add_location_rule(
             TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
             HasFromListUnique(*tr_unlocks, count=19),
@@ -772,19 +755,16 @@ def set_rules(world: "KARWorld"):
         for loc in _TR_ANY_ITEM_LOCATIONS:
             add_location_rule(loc, any_tr_item)
 
-    # Archipelago checklist item rules, guarded on effective_gates rather than the raw *_gated options.
-    # The mode blocks above may read the raw option because a goal-less mode assigns none of its own
-    # boxes, but Archipelago boxes exist in every AP seed - the raw option would gate one on an unlock a
-    # goal-less mode never minted. Stadium/course requirements come from the region entrance rules.
+    # Archipelago checklist rules read effective_gates, not the raw options: the mode blocks above can
+    # use the raw option because a goal-less mode assigns none of its own boxes, but Archipelago boxes
+    # exist in every AP seed and the raw option would gate one on an unlock that was never minted.
     if "city_trial_items_gated" in world.effective_gates:
         for loc, item in _AP_ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    # The two "assemble" boxes need every piece of their set able to spawn. A piece is spawn-gated when
-    # its whole category is - or, with that gate off, when the piece is one of this seed's goal keys and
-    # the mod is withholding just those bits. Neither reading is the raw option: City Trial pieces are
-    # what an Archipelago goal keys off, so a goal-less City Trial with the gate on mints none of them
-    # and a raw-option rule would ask for items that do not exist.
+    # The two "assemble" boxes need every piece of their set able to spawn: a piece is spawn-gated when
+    # its whole category is, or - with that gate off - when it is one of this seed's goal keys and the
+    # mod is withholding just those bits.
     ct_items_keyed = "city_trial_items_gated" in world.effective_gates
     star_pieces_keyed = ct_items_keyed or set(AP_STAR_PIECE_UNLOCK_ITEMS) <= world.goal_forced_unlocks
     legendary_pieces_keyed = ct_items_keyed or set(LEGENDARY_PIECE_UNLOCK_ITEMS) <= world.goal_forced_unlocks
@@ -840,7 +820,7 @@ def set_rules(world: "KARWorld"):
         add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_MACHINE_BULK_STAR))
         # The AR character gate resolves a character through its machine, so Meta Knight's / Dedede's
         # machine unlock is what makes them selectable. The vanilla reward granting the same machine is
-        # not a second key: machines_gated lists those as overlapping_rewards, always out of the pool.
+        # not a second key - machines_gated lists those as overlapping_rewards.
         add_location_rule(APLocation.AIR_RIDE_1ST_AS_META_KNIGHT, Has(KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT))
         add_location_rule(APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE, Has(KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE))
         add_location_rule(
@@ -870,7 +850,6 @@ def set_rules(world: "KARWorld"):
             HasAll(*sorted(items_by_type[KARItemType.COLOR_UNLOCK])),
         )
 
-    # Single apply pass: write the composed rules out to the multiworld.
     for entrance_name, rule in entrance_rules.items():
         world.set_rule(world.get_entrance(entrance_name), rule)
     for location_name, rule in location_rules.items():
@@ -878,8 +857,7 @@ def set_rules(world: "KARWorld"):
 
     # "Fill in over 100 Checklist blocks!" auto-completes once 100 of that mode's OTHER boxes are filled;
     # without the rule, fill could strand an early item behind ~100 checks. The count excludes the cell
-    # itself, else it recurses; as a mode's goal, its victory event carries the equivalent rule instead.
-    # Raw callable, so it bypasses the compose pass above.
+    # itself, else it recurses. Raw callable, so it bypasses the compose pass above.
     for enabled, mode, fill_100_location in (
         (world.city_trial_enabled, GameMode.CITYTRIAL, CTLocation.FILL_IN_100_CHECKLIST_BLOCKS),
         (world.air_ride_enabled, GameMode.AIRRIDE, ARLocation.FILL_IN_100_CHECKLIST_BLOCKS),

@@ -157,9 +157,8 @@ class TestColorsGateSurvivesModeAgnostic(KARTestBase):
         self.assertTrue(items_of_type(KARItemType.COLOR_UNLOCK) & self.world_item_names())
 
 
-# Goal keys: a gate being OFF drops its whole group, except the unlocks this seed's goal is gated on.
-# Without them the goal is one in-game feat the player can pull off in the first match, with nothing
-# from the pool needed - so the pool keeps exactly those and the mod holds those bits back at connect.
+# Goal keys: a gate being OFF drops its whole group, except the unlocks this seed's goal is gated on -
+# without them the goal is one in-game feat winnable in the first match with nothing from the pool.
 
 
 class TestItemGateOffKeepsLegendaryPieces(KARTestBase):

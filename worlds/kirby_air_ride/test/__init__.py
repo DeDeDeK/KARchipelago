@@ -32,19 +32,15 @@ class KARTestBase(WorldTestBase):
                 self.multiworld.push_precollected(self.multiworld.worlds[self.player].create_item(item_name))
 
     def itempool_items(self) -> list:
-        """Items in the multiworld itempool belonging to this player."""
         return [item for item in self.multiworld.itempool if item.player == self.player]
 
     def itempool_names(self) -> list[str]:
-        """Names of items in the multiworld itempool belonging to this player."""
         return [item.name for item in self.itempool_items()]
 
     def precollected_items(self) -> list:
-        """Precollected items for this player."""
         return list(self.multiworld.precollected_items[self.player])
 
     def precollected_names(self) -> list[str]:
-        """Names of precollected items for this player."""
         return [item.name for item in self.precollected_items()]
 
     def world_item_names(self) -> set[str]:
@@ -57,11 +53,9 @@ class KARTestBase(WorldTestBase):
         return sum(1 for n in self.itempool_names() if n == name)
 
     def real_location_names(self) -> set[str]:
-        """Names of real (address-bearing) locations for this player."""
         return {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
 
     def event_location_names(self) -> set[str]:
-        """Names of event (no-address) locations for this player."""
         return {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is None}
 
     def placed_event_items(self) -> set[str]:
@@ -73,9 +67,8 @@ class KARTestBase(WorldTestBase):
         }
 
     def collect_all_but_victories(self) -> None:
-        """Like `collect_all_but([])` but excludes the three `*_VICTORY` event items. A bare
-        `collect_all_but([])` would auto-collect the victory events (they're already placed at event
-        locations), making any subsequent `assertBeatable(True)` tautological. Use this for beatability sweeps."""
+        """Like `collect_all_but([])` but excludes the `*_VICTORY` event items, which are already placed
+        at event locations and would make any subsequent `assertBeatable(True)` tautological."""
         self.collect_all_but(
             [
                 KARItemName.CITY_TRIAL_VICTORY,
@@ -124,15 +117,12 @@ class RecordingRandom(Random):
     """Stand-in for `world.random` that records what `choice` was offered and returns its first entry.
 
     A random draw can only be observed by sampling it, and sampling turns "is X barred from this pick?"
-    into a probability: one draw out of 24 catches a broken exclusion one time in 24, and even hundreds
-    of draws only make the answer likely. Recording the candidate list answers the same question
-    exactly, in one call - the test asserts on the set the world was willing to draw from rather than
-    on the value it happened to draw.
+    into a probability: one draw out of 24 catches a broken exclusion one time in 24. Recording the
+    candidate list answers the same question exactly, in one call.
 
     Subclasses Random (rather than wrapping one) so it is a drop-in for the typed `world.random`
-    attribute, and is seeded so the methods it does not override are reproducible too. The record
-    is `offers`, not `choices` - Random.choices() is a real method and shadowing it would break any
-    caller that reaches for it.
+    attribute, and is seeded so the methods it does not override are reproducible too. The record is
+    `offers`, not `choices` - Random.choices() is a real method and shadowing it would break callers.
     """
 
     def __init__(self, seed: int = 0) -> None:

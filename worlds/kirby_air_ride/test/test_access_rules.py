@@ -500,8 +500,7 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
 
     def test_tac_location_needs_something_to_steal(self):
         # "Steal over 8 items from Tac" needs some item type able to spawn for Tac to carry off - any CT
-        # item unlock except All Up, whose city fall chance is zero. The event gate is on by default, so
-        # collect_all_but leaves the Tac event unlock held and isolates the item rule.
+        # item unlock except All Up, whose city fall chance is zero.
         item_unlocks = items_of_type(KARItemType.CT_ITEM_UNLOCK)
         stealable = sorted(item_unlocks - {KARItemName.UNLOCK_ITEM_ALL_UP})
 
@@ -537,8 +536,7 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
 
     def test_item_pickup_locations_need_any_counting_item_unlock(self):
         # "Get/pick up N items" cells count every itemkind except the three boxes, so with items, patches
-        # and abilities all gated, one unlock from any of the three sets suffices and none leaves the cell
-        # unreachable. Boxes are deliberately not a source.
+        # and abilities all gated, one unlock from any of the three sets suffices.
         pickup_locations = [
             CTLocation.GET_50_ITEMS,
             CTLocation.GET_10_ITEMS_IN_20S,
@@ -1729,8 +1727,8 @@ class TestAPBoxColorGating(KARTestBase):
         )
 
     def test_all_up_alone_does_not_open_blue(self):
-        # All Up's City Trial fall chance is zero, so it never joins the blue pool on its own (the mod
-        # injects it only under Max Stats Insanity). Holding it must not make blue boxes spawn.
+        # All Up's City Trial fall chance is zero, so it never joins the blue pool on its own and must
+        # not make blue boxes spawn.
         withheld = [
             *items_of_type(KARItemType.CT_PATCH_UNLOCK),
             *_BLUE_BOX_FOOD_ITEMS,
@@ -2207,8 +2205,8 @@ class TestFill100NonGoalGating(KARTestBase):
         )
 
     def test_unreachable_at_start_below_threshold(self):
-        # Six of seven courses locked: well under 100 boxes reachable, so the cell is gated off.
-        # Evaluating its reachability also proves the self-excluding count rule terminates.
+        # Six of seven courses locked, so well under 100 boxes are reachable. Evaluating this also
+        # proves the self-excluding count rule terminates.
         self.assertLess(self._reachable_other_tr_boxes(), 100)
         self.assertFalse(self.can_reach_location(self._FILL_100))
 
