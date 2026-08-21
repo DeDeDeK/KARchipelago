@@ -16,6 +16,7 @@ from .KARData import (
     REWARDS_PER_MODE,
     SENT_CHECKS_PER_MODE,
     GameMode,
+    GoalForcedGate,
     GoalKind,
     MemoryAddress,
     TrapLinkKind,
@@ -597,6 +598,17 @@ class KARContext(CommonContext):
             a(MemoryAddress.OPTION_CHECKLIST_REWARDS_GATING_ENABLED),
             int(bool(sd.get("checklist_rewards_gated", 1))),
         )
+
+        # Goal keys: unlocks the pool ships even with their category ungated, so the mod's pre-fill has
+        # to leave them locked. Both default off - an older world ships neither key.
+        forced_gates = 0
+        if sd.get("legendary_pieces_goal_gated", 0):
+            forced_gates |= GoalForcedGate.LEGENDARY_PIECES
+        if sd.get("vs_king_dedede_goal_gated", 0):
+            forced_gates |= GoalForcedGate.VS_KING_DEDEDE
+        if sd.get("ap_star_pieces_goal_gated", 0):
+            forced_gates |= GoalForcedGate.AP_STAR_PIECES
+        d.write_u32(a(MemoryAddress.OPTION_GOAL_FORCED_GATES), forced_gates)
 
         d.write_u32(a(MemoryAddress.OPTIONS_VALID), 1)
 

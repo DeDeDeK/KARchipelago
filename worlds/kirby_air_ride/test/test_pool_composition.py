@@ -1,3 +1,13 @@
+"""
+Item-pool composition tests: what _build_item_pools and create_items mint, and how many.
+
+Covers the option-derived quantities (patch caps, spawn-rate ups, checkbox fillers), the exclusion
+paths (allowed_items, traps, the source-modes backstop, gate reconciliation), and the invariant that
+the minted pool exactly fills the placeable locations. Several options here default to a state that
+makes their pool empty - `checklist_rewards_gated` most of all - so a config that means to exercise
+one has to turn it on explicitly or the assertions pass over nothing.
+"""
+
 from collections import Counter
 
 from BaseClasses import ItemClassification
@@ -27,14 +37,6 @@ class TestPatchCapIncreaseCount(KARTestBase):
 
     def test_count_equals_range_span(self):
         self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 9)
-
-
-class TestPatchCapFlat(KARTestBase):
-    # min == max: a flat cap with no Patch Cap Increase items (replaces the old "progressive off").
-    options = {**CT_ONLY, "city_trial_patch_cap_min": 18, "city_trial_patch_cap_max": 18}
-
-    def test_no_patch_cap_items(self):
-        self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 0)
 
 
 class TestSpawnRateUpCount(KARTestBase):
@@ -187,7 +189,7 @@ class TestNoTrapsWhenChanceZero(KARTestBase):
 
 
 class TestPatchCapMinEqualsMax(KARTestBase):
-    """Boundary: min == max (here 18) means 0 Patch Cap Increase items."""
+    """Boundary: min == max (here the vanilla 18) means a flat cap and 0 Patch Cap Increase items."""
 
     options = {
         **CT_ONLY,
@@ -382,13 +384,16 @@ class TestChecklistRewardsUnique(KARTestBase):
 
 
 class TestChecklistRewardsUniqueSingleModes(KARTestBase):
-    """Same uniqueness contract holds in single-mode configs, including Air Ride (whose only repeatable filler
-    is the reclassified CT+AR patch-gives - rewards must still each appear, not be crowded out)."""
+    """Same uniqueness contract in a single-mode config. Air Ride is the tight one: its only repeatable
+    filler is the reclassified CT+AR patch-gives, so rewards must still each appear rather than be
+    crowded out. Rewards are off by default, so this gates them on too - without that reward_pool is
+    empty and every assertion below passes over nothing."""
 
-    options = AR_ONLY
+    options = {**AR_ONLY, "checklist_rewards_gated": Toggle.option_true}
 
     def test_ar_rewards_present_useful_exactly_once(self):
         counts = Counter(self.itempool_names())
+        self.assertTrue(self.world.reward_pool, "reward_pool should be populated for AR_ONLY + rewards gated on")
         for name in self.world.reward_pool:
             data = ITEM_TABLE[name]
             with self.subTest(reward=name):
@@ -397,12 +402,16 @@ class TestChecklistRewardsUniqueSingleModes(KARTestBase):
                 else:
                     self.assertGreaterEqual(counts[name], 1)
 
-    def test_no_off_mode_or_duplicated_useful_rewards(self):
-        counts = Counter(self.itempool_names())
+    def test_only_air_ride_rewards_are_in_scope(self):
+        # The single-mode half of the contract: reward_pool holds Air Ride rewards and nothing else, and
+        # no other mode's reward reaches the itempool.
+        in_scope_types = {ITEM_TABLE[name].type for name in self.world.reward_pool}
+        self.assertEqual(in_scope_types, {KARItemType.AR_CHECKLIST_REWARD})
+        pool = set(self.itempool_names())
         for name, data in ITEM_TABLE.items():
-            if data.type in CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.useful):
+            if data.type in (KARItemType.CT_CHECKLIST_REWARD, KARItemType.TR_CHECKLIST_REWARD):
                 with self.subTest(reward=name):
-                    self.assertLessEqual(counts[name], 1)
+                    self.assertNotIn(name, pool, f"{name} is an off-mode reward and must not be minted")
 
 
 class TestNoTrapCategoriesWithTrapChance(KARTestBase):

@@ -1,0 +1,29 @@
+name: APStarSlot
+description: The Archipelago all-three-legendaries goal with City Trial items UNGATED — the seed where goal_forced_unlocks has to mint twelve piece keys out of a category the mod otherwise hands over whole at connect, alongside a trap-heavy pool restricted to one trap category
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: n_checklist_blocks
+  city_trial_checklist_amount: 40
+  city_trial_checkbox_fillers: 0
+  air_ride_goal: none
+  top_ride_goal: none
+  archipelago_goal: all_three_legendaries_in_one_run
+  # Ungated, so the mod pre-fills the whole City Trial item mask at connect. The six Hydra/Dragoon
+  # pieces and the six Archipelago spheres must survive that as the goal's own keys, and slot_data must
+  # ship legendary_pieces_goal_gated = ap_star_pieces_goal_gated = 1 to hold those bits back.
+  city_trial_items_gated: false
+  city_trial_stadiums_gated: true
+  city_trial_events_gated: true
+  abilities_gated: true
+  base_abilities_gated: true
+  city_trial_patches_gated: true
+  machines_gated: true
+  city_trial_boxes_gated: true
+  colors_gated: true
+  # Traps narrowed to a single category: only Fake Patches items may be drawn, so any Direct Damage or
+  # Stat Debuff trap in the spoiler means `traps` stopped governing trap membership.
+  trap_chance: 40
+  traps:
+    - Fake Patches

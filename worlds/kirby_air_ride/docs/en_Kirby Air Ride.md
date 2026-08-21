@@ -74,7 +74,7 @@ When more than one mode has a goal, you only complete your game by completing ev
 - **Fill in over 100 Checklist Boxes** (default). The in-game checkbox for filling in over 100 checklist boxes.
 - **Fill in N Checklist Boxes.** Choose the number from 1 to 120.
 - **Complete both Dragoon and Hydra in one match.** The standard legendary-machine checkbox from the base game.
-- **Beat King Dedede.** KO King Dedede in under a minute in the VS. KING DEDEDE stadium.
+- **Beat King Dedede.** KO King Dedede in under a minute in the VS. KING DEDEDE stadium. Unlock Stadium: VS. KING DEDEDE is always in your item pool with this goal, even with "City Trial Stadiums Gated" off, so his stadium has to be found before it turns up in the rotation.
 - **Complete a specific list of checklist boxes.** (via "City Trial Goal Locations").
 - **Max stats in one run.** Reach the "Patch Cap Max" on every stat in a single City Trial round.
 - **None.** Disables City Trial.
@@ -100,6 +100,8 @@ not work properly.
 
 - **Fill in N Checklist Boxes**
 - **Complete a specific list of checklist boxes** (via "Archipelago Goal Locations").
+- **Assemble the Archipelago Star.** Collect all six Archipelago spheres in one City Trial round. Each sphere is its own unlock item and a locked sphere never spawns, so all six have to be found first. They are always in your item pool with this goal, even with "City Trial Items Gated" off.
+- **Assemble all three legendaries in one run.** Build Dragoon, Hydra and the Archipelago Star in the same City Trial round - twelve pieces, so this needs the six Hydra/Dragoon part unlocks as well as the six spheres. All twelve are always in your item pool with this goal.
 - **None.** Disables the Archipelago checklist (default).
 
 ## Access gating

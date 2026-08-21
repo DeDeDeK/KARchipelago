@@ -4,7 +4,7 @@ from typing import NamedTuple
 from BaseClasses import Location
 
 from .KARItems import KARItemName
-from .KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
+from .KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from .KARRegions import KARRegion
 
 
@@ -1084,6 +1084,15 @@ class APLocation(StrEnum):
     # every Air Ride mode, since the label carries no mode prefix the way vanilla's TA and FR cells do.
     FANTASY_MEADOWS_TAKE_SHORTCUT = "Archipelago: Air Ride: FANTASY MEADOWS Take the shortcut!"  # 49
 
+    ASSEMBLE_ARCHIPELAGO_STAR = (
+        "Archipelago: City Trial: Collect all 6 spheres and assemble the Archipelago Star!"  # 50
+    )
+
+    # The three-machine version of vanilla's "complete both Dragoon and Hydra in one match" box.
+    ASSEMBLE_ALL_THREE_LEGENDARIES = (
+        "Archipelago: City Trial: In one game, assemble Dragoon, Hydra and Archipelago Star!"  # 51
+    )
+
 
 # The Archipelago checklist awards no native rewards, so every entry has native_reward=None.
 #
@@ -1153,6 +1162,12 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     # Time Attack and Free Run on the course satisfy this box too, but all three mode regions
     # gate on the same course unlock, so the Race one is sufficient and is the cheapest to reach.
     APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT: KARLocationData(410, KARRegion.AR_FANTASY_MEADOWS),
+    # The six spheres are red-box drops in a City Trial round, scheduled against match progress the
+    # way the Hydra and Dragoon parts are, and each enters the pool only once its own item lands.
+    APLocation.ASSEMBLE_ARCHIPELAGO_STAR: KARLocationData(411, KARRegion.CITY_TRIAL),
+    # All twelve pieces have to be delivered and collected inside one round, so this needs every
+    # sphere item and every Hydra/Dragoon part item at once.
+    APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES: KARLocationData(412, KARRegion.CITY_TRIAL),
 }
 
 
@@ -1195,6 +1210,7 @@ class KARLocationGroup(StrEnum):
     AR_BEANSTALK_PARK = "Air Ride: BEANSTALK PARK"
     AR_CHECKER_KNIGHTS = "Air Ride: CHECKER KNIGHTS"
     AR_HIGH_EFFORT = "Air Ride: High Effort"
+    AR_RNG = "Air Ride: RNG"
     TR_TIME_ATTACK = "Top Ride: Time Attack"
     TR_FREE_RUN = "Top Ride: Free Run"
     TR_LIGHT = "Top Ride: LIGHT"
@@ -1541,6 +1557,11 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.DEFEAT_300_OF_YOUR_ENEMIES,
         ARLocation.RACE_100_LAPS,
     },
+    KARLocationGroup.AR_RNG: {
+        # Nothing in a race deals damage on demand: the hazards, the rivals and the falling debris all
+        # act on their own schedule, so being hit at the moment you cross the line in 1st is luck.
+        ARLocation.FIRST_WHILE_TAKING_DAMAGE,
+    },
     KARLocationGroup.TR_TIME_ATTACK: {
         TRLocation.TA_SAND_FINISH_00_35_00,
         TRLocation.TA_FIRE_FINISH_00_46_00,
@@ -1705,6 +1726,9 @@ AIR_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
 TOP_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
     TopRideGoal.option_100_checklist_blocks: TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
 }
-# The Archipelago checklist has no "Fill in 100" cell, so no goal maps to a fixed location. Its two real
-# goals, n_checklist_blocks and checklist_list, use their own event rules.
-ARCHIPELAGO_GOAL_TO_LOCATION: dict[int, str] = {}
+# The Archipelago checklist has no "Fill in 100" cell, so no goal maps to it. n_checklist_blocks and
+# checklist_list use their own event rules; the two assembly goals bind to their own box.
+ARCHIPELAGO_GOAL_TO_LOCATION: dict[int, str] = {
+    ArchipelagoGoal.option_assemble_archipelago_star: APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
+    ArchipelagoGoal.option_all_three_legendaries_in_one_run: APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+}

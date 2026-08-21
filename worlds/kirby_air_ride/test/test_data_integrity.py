@@ -1,16 +1,30 @@
 """
-Data integrity tests for ITEM_TABLE and the per-mode location tables.
+Data integrity tests for ITEM_TABLE, the per-mode location tables, and the derived lookup maps.
 
-Item codes must be unique (or None); location codes must be unique, contiguous within their mode
-partition, and round-trip to the expected GameMode. A duplicate code or a partition violation would
-otherwise surface at generation as a silent crash, so pinning them here gives a clear error message.
+These are all static structures generation reads without re-validating, so a mistake in one shows up
+as a silent behaviour change rather than an error: a duplicate code corrupts the wire contract with
+the mod, a trap item in no `traps` category can never be selected, and a second box claiming an
+existing native reward drops one of the two pins on the floor. Each is cheap to pin here and
+expensive to notice anywhere else.
+
+The Archipelago band (361-480) is checked for shape in test_archipelago_checklist.py; what it needs
+from this module is only that its codes do not collide with the three real modes'.
 """
 
 import unittest
 
+from BaseClasses import ItemClassification
+
 from ..KARData import GameMode, location_code_to_mode_clear
-from ..KARItems import ITEM_TABLE
-from ..KARLocations import AIR_RIDE_LOCATION_TABLE, CITY_TRIAL_LOCATION_TABLE, TOP_RIDE_LOCATION_TABLE
+from ..KARItems import ITEM_TABLE, TRAP_CATEGORIES
+from ..KARLocations import (
+    AIR_RIDE_LOCATION_TABLE,
+    AP_CHECKLIST_LOCATION_TABLE,
+    CITY_TRIAL_LOCATION_TABLE,
+    LOCATION_TABLE,
+    NATIVE_REWARD_TO_LOCATION,
+    TOP_RIDE_LOCATION_TABLE,
+)
 
 
 def location_code_to_mode(code: int | None) -> GameMode | None:
@@ -46,9 +60,11 @@ class TestLocationCodePartitioning(unittest.TestCase):
     ]
 
     def test_codes_unique_globally(self):
+        # Across all four tables, Archipelago included: LOCATION_TABLE merges them and the client
+        # decodes a bare code back to (mode, clear_kind), so one code may mean only one box.
         seen: dict[int, str] = {}
         duplicates: list[tuple[int, str, str]] = []
-        for table, _, _, _ in self._BANDS:
+        for table in (*(band[0] for band in self._BANDS), AP_CHECKLIST_LOCATION_TABLE):
             for name, data in table.items():
                 if data.code is None:
                     continue
@@ -106,3 +122,56 @@ class TestLocationCodeContiguity(unittest.TestCase):
         for table, lo, hi in self._BANDS:
             codes = sorted(d.code for d in table.values() if d.code is not None)
             self.assertEqual(codes, list(range(lo, hi + 1)), f"Codes not contiguous in [{lo},{hi}]: got {codes}")
+
+
+class TestNativeRewardMap(unittest.TestCase):
+    """NATIVE_REWARD_TO_LOCATION inverts the tables' `native_reward` field, and shuffle_checklist_rewards
+    pins through it. A dict comprehension silently keeps the last writer, so two boxes claiming the same
+    reward would drop one pin with no error anywhere."""
+
+    def test_every_native_reward_is_claimed_by_one_box(self):
+        claims: dict[str, list[str]] = {}
+        for name, data in LOCATION_TABLE.items():
+            if data.native_reward is not None:
+                claims.setdefault(str(data.native_reward), []).append(str(name))
+        contested = {reward: boxes for reward, boxes in claims.items() if len(boxes) > 1}
+        self.assertEqual(contested, {}, f"native rewards claimed by more than one box: {contested}")
+        self.assertEqual(len(NATIVE_REWARD_TO_LOCATION), len(claims), "the inverse map lost an entry")
+
+    def test_map_round_trips_through_the_tables(self):
+        self.assertTrue(NATIVE_REWARD_TO_LOCATION, "no box declares a native reward")
+        for reward, location in NATIVE_REWARD_TO_LOCATION.items():
+            with self.subTest(reward=reward):
+                self.assertIn(reward, ITEM_TABLE, "a native reward must be a real item")
+                self.assertIn(location, LOCATION_TABLE, "a native reward's box must be a real location")
+                self.assertEqual(str(LOCATION_TABLE[location].native_reward), reward)
+
+
+class TestTrapCategoriesPartitionTraps(unittest.TestCase):
+    """`traps` is the sole governor of which traps may be drawn, and its valid keys are TRAP_CATEGORIES.
+    A trap-classified item listed in no category can therefore never be selected, however high
+    trap_chance goes - and, since the pool just fills with something else, generation stays green."""
+
+    def test_every_trap_item_is_in_exactly_one_category(self):
+        trap_items = {str(name) for name, data in ITEM_TABLE.items() if data.classification & ItemClassification.trap}
+        self.assertTrue(trap_items, "ITEM_TABLE has no trap-classified items")
+
+        membership: dict[str, list[str]] = {}
+        for category, names in TRAP_CATEGORIES.items():
+            for name in names:
+                membership.setdefault(str(name), []).append(category)
+
+        unreachable = sorted(trap_items - set(membership))
+        self.assertEqual(unreachable, [], f"trap items in no `traps` category, so never selectable: {unreachable}")
+        duplicated = {name: cats for name, cats in membership.items() if len(cats) > 1}
+        self.assertEqual(duplicated, {}, f"trap items in more than one category: {duplicated}")
+
+    def test_categories_only_list_real_trap_items(self):
+        for category, names in TRAP_CATEGORIES.items():
+            for name in names:
+                with self.subTest(category=category, item=name):
+                    self.assertIn(str(name), ITEM_TABLE, "category lists an item that does not exist")
+                    self.assertTrue(
+                        ITEM_TABLE[name].classification & ItemClassification.trap,
+                        "category lists a non-trap item, which `traps` would then wrongly govern",
+                    )

@@ -1,3 +1,6 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
+from random import Random
 from typing import TYPE_CHECKING
 
 from test.bases import WorldTestBase
@@ -115,3 +118,40 @@ ALL_MODES: dict = {
     "air_ride_goal": AirRideGoal.option_100_checklist_blocks,
     "top_ride_goal": TopRideGoal.option_100_checklist_blocks,
 }
+
+
+class RecordingRandom(Random):
+    """Stand-in for `world.random` that records what `choice` was offered and returns its first entry.
+
+    A random draw can only be observed by sampling it, and sampling turns "is X barred from this pick?"
+    into a probability: one draw out of 24 catches a broken exclusion one time in 24, and even hundreds
+    of draws only make the answer likely. Recording the candidate list answers the same question
+    exactly, in one call - the test asserts on the set the world was willing to draw from rather than
+    on the value it happened to draw.
+
+    Subclasses Random (rather than wrapping one) so it is a drop-in for the typed `world.random`
+    attribute, and is seeded so the methods it does not override are reproducible too. The record
+    is `offers`, not `choices` - Random.choices() is a real method and shadowing it would break any
+    caller that reaches for it.
+    """
+
+    def __init__(self, seed: int = 0) -> None:
+        super().__init__(seed)
+        self.offers: list[list] = []
+
+    def choice(self, seq):
+        offered = list(seq)
+        self.offers.append(offered)
+        return offered[0]
+
+
+@contextmanager
+def recording_random(world: "KARWorld") -> Iterator[RecordingRandom]:
+    """Swap `world.random` for a RecordingRandom for the duration of the block, then put it back."""
+    original = world.random
+    recorder = RecordingRandom()
+    world.random = recorder
+    try:
+        yield recorder
+    finally:
+        world.random = original

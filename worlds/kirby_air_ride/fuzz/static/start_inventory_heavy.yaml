@@ -19,9 +19,8 @@ Kirby Air Ride:
   colors_gated: true
   top_ride_items_gated: true
   city_trial_stadiums_gated: true
-  city_trial_progressive_patch_caps: true
-  city_trial_patch_cap_amount: 25
-  spawn_rate_progressive: true
+  city_trial_patch_cap_min: 10
+  city_trial_patch_cap_max: 18
   spawn_rate_min: 100
   spawn_rate_max: 250
   start_inventory:

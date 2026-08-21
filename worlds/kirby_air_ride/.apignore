@@ -4,10 +4,10 @@
 .pytest_cache
 .mypy_cache
 
-# Dev-only. Nothing in the world imports these, and AP's own suite collects tests
-# from the source tree (pytest.ini testpaths), never from a packaged .apworld.
+# Dev-only
 /test/
 /fuzz/
 /ruff.toml
 
+# assets 
 /assets/karchipelago-logo.png
