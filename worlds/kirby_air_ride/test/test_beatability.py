@@ -5,33 +5,18 @@ Beatability tests for KAR.
 victory per enabled mode), so these verify which items are load-bearing for the goal and which goal
 variants have no AP-side gate. `multiworld.state` starts with precollected items only (the random
 starters); collect_all_but / collect_by_name extend it with itempool items.
+
+Deliberately absent: "collect everything, assert beatable" sanity classes. WorldTestBase auto-runs
+`test_all_state_can_reach_everything` for every class with options, which asserts beatable from
+all-state *and* that every location is reachable - strictly stronger. What is worth pinning here is
+the other direction: unbeatable from the precollected starters alone, and which single item flips it.
 """
 
 from Options import Toggle
 
-from ..KARItems import KARItemName
+from ..KARItems import LEGENDARY_PIECE_UNLOCK_ITEMS, KARItemName
 from ..KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
-
-
-class TestCTBeatableWithAllItems(KARTestBase):
-    """Sanity check: CT default goal is beatable after collecting every itempool item."""
-
-    options = CT_ONLY
-
-    def test_beatable_after_collect_all(self):
-        self.collect_all_but_victories()
-        self.assertBeatable(True)
-
-
-class TestALLMODESBeatableWithAllItems(KARTestBase):
-    """Sanity check: 3-mode 100-blocks-each goal is beatable after collecting every item."""
-
-    options = ALL_MODES
-
-    def test_beatable_after_collect_all(self):
-        self.collect_all_but_victories()
-        self.assertBeatable(True)
 
 
 class TestCT100BlocksNotBeatableFromPrecollected(KARTestBase):
@@ -76,9 +61,9 @@ class TestCTBeatKingDededeRequiresStadiumUnlock(KARTestBase):
         self.assertBeatable(True)
 
 
-class TestCTBeatKingDededeNoGateWithoutProgressiveStadiums(KARTestBase):
-    """beat_king_dedede + stadiums gated off: the victory event sits in the VSKD region but no AP-side rule
-    guards the entrance; the game enforces stadium unlock via its vanilla path. Pins current behavior."""
+class TestCTBeatKingDededeUngatedStadiumsStillRequiresUnlock(KARTestBase):
+    """beat_king_dedede + stadiums gated off: the other 23 stadiums are handed over at connect, but the
+    goal's own stadium unlock stays in the pool, so the victory event is still behind it."""
 
     options = {
         **CT_ONLY,
@@ -86,17 +71,37 @@ class TestCTBeatKingDededeNoGateWithoutProgressiveStadiums(KARTestBase):
         "city_trial_stadiums_gated": Toggle.option_false,
     }
 
-    def test_beatable_from_precollected(self):
+    def test_not_beatable_from_precollected(self):
+        self.assertBeatable(False)
+
+    def test_unlock_required(self):
+        self.collect_all_but(
+            [
+                KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE,
+                KARItemName.CITY_TRIAL_VICTORY,
+            ]
+        )
+        self.assertBeatable(False)
+        self.collect_by_name(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
         self.assertBeatable(True)
 
 
 class TestCTHydraAndDragoonNoItemGate(KARTestBase):
-    """hydra_and_dragoon goal: the victory event sits in the CITY_TRIAL root region with no AP-side access rule,
-    so it is beatable from precollected state. Pins current behavior."""
+    """hydra_and_dragoon goal + item gating off: every other City Trial item is handed over at connect,
+    but the six legendary piece unlocks stay in the pool, so the victory event is still behind them."""
 
     options = {**CT_ONLY, "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon}
 
-    def test_beatable_from_precollected(self):
+    def test_not_beatable_from_precollected(self):
+        self.assertBeatable(False)
+
+    def test_all_six_pieces_required(self):
+        self.collect_all_but([*LEGENDARY_PIECE_UNLOCK_ITEMS, KARItemName.CITY_TRIAL_VICTORY])
+        self.assertBeatable(False)
+        for piece in LEGENDARY_PIECE_UNLOCK_ITEMS[:-1]:
+            self.collect_by_name(piece)
+            self.assertBeatable(False)
+        self.collect_by_name(LEGENDARY_PIECE_UNLOCK_ITEMS[-1])
         self.assertBeatable(True)
 
 
@@ -131,26 +136,6 @@ class TestALLMODESNeedsCTVictory(KARTestBase):
         )
         self.assertBeatable(False)
         self.collect_by_name(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
-        self.assertBeatable(True)
-
-
-class TestARBeatableWithAllItems(KARTestBase):
-    """Sanity check: AR-only default goal is beatable after collecting every itempool item."""
-
-    options = AR_ONLY
-
-    def test_beatable_after_collect_all(self):
-        self.collect_all_but_victories()
-        self.assertBeatable(True)
-
-
-class TestTRBeatableWithAllItems(KARTestBase):
-    """Sanity check: TR-only default goal is beatable after collecting every itempool item."""
-
-    options = TR_ONLY
-
-    def test_beatable_after_collect_all(self):
-        self.collect_all_but_victories()
         self.assertBeatable(True)
 
 

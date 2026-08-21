@@ -453,7 +453,18 @@ class KARItemName(StrEnum):
     UNLOCK_ITEM_DRAGOON_PART_B = "Unlock Item: Dragoon Part B"
     UNLOCK_ITEM_DRAGOON_PART_C = "Unlock Item: Dragoon Part C"
 
-    # Machine Unlocks (830-854). 855 VCKIND_WHEELVSDEDEDE excluded: CPU-only, not player-rideable.
+    # Archipelago Star sphere unlocks (820-825). The six assembly pieces of the Archipelago Star,
+    # gated one per item the way the Hydra and Dragoon parts are. Separate from the machine unlock
+    # at 856, which only decides whether the assembled star spawns loose in the city.
+    UNLOCK_ITEM_AP_SPHERE_ROSE = "Unlock Item: Archipelago Sphere (Rose)"
+    UNLOCK_ITEM_AP_SPHERE_GREEN = "Unlock Item: Archipelago Sphere (Green)"
+    UNLOCK_ITEM_AP_SPHERE_VIOLET = "Unlock Item: Archipelago Sphere (Violet)"
+    UNLOCK_ITEM_AP_SPHERE_TAN = "Unlock Item: Archipelago Sphere (Tan)"
+    UNLOCK_ITEM_AP_SPHERE_BLUE = "Unlock Item: Archipelago Sphere (Blue)"
+    UNLOCK_ITEM_AP_SPHERE_YELLOW = "Unlock Item: Archipelago Sphere (Yellow)"
+
+    # Machine Unlocks (830-854, plus the appended 856). 855 VCKIND_WHEELVSDEDEDE excluded: CPU-only,
+    # not player-rideable.
     UNLOCK_MACHINE_WARP_STAR = "Unlock Machine: Warp Star"
     UNLOCK_MACHINE_COMPACT_STAR = "Unlock Machine: Compact Star"
     UNLOCK_MACHINE_WINGED_STAR = "Unlock Machine: Winged Star"
@@ -476,6 +487,7 @@ class KARItemName(StrEnum):
     UNLOCK_MACHINE_REX_WHEELIE = "Unlock Machine: Rex Wheelie"
     UNLOCK_MACHINE_WHEELIE_SCOOTER = "Unlock Machine: Wheelie Scooter"
     UNLOCK_MACHINE_WHEELIE_DEDEDE = "Unlock Machine: King Dedede"
+    UNLOCK_MACHINE_ARCHIPELAGO_STAR = "Unlock Machine: Archipelago Star"
 
     # Box Unlocks (860-862)
     UNLOCK_BOX_BLUE = "Unlock Box: Blue"
@@ -1395,9 +1407,32 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ITEM_DRAGOON_PART_C: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 819, _CT
     ),
-    # Machine Unlocks (830-854). Gate whether a machine can be ridden. Excluded VCKINDs (not selectable
-    # player machines): 847 WINGKIRBY and 850 WHEELIEKIRBY (ability states), 849 WHEELIE (enemy form;
-    # the ridable machine is Wheelie Bike 851), 855 WHEELVSDEDEDE (CPU-only stadium machine).
+    # Archipelago Star sphere unlocks (820-825). One per sphere, in the logo's ring order. A sphere
+    # is held out of City Trial's item registry until its own item arrives, so all six are needed to
+    # assemble the star.
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_ROSE: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 820, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_GREEN: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 821, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_VIOLET: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 822, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_TAN: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 823, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_BLUE: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 824, _CT
+    ),
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_YELLOW: KARItemData(
+        KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 825, _CT
+    ),
+    # Machine Unlocks (830-854, plus the appended 856). Gate whether a machine can be ridden. Excluded
+    # VCKINDs (not selectable player machines): 847 WINGKIRBY and 850 WHEELIEKIRBY (ability states),
+    # 849 WHEELIE (enemy form; the ridable machine is Wheelie Bike 851), 855 WHEELVSDEDEDE (CPU-only
+    # stadium machine). 856 is the Archipelago Star, the machine the mod appends past the vanilla
+    # roster; it is also what puts its six assembly spheres into City Trial's item pool.
     KARItemName.UNLOCK_MACHINE_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 830, _AR_CT
     ),
@@ -1467,6 +1502,9 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 854, _AR_CT
+    ),
+    KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR: KARItemData(
+        KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 856, _AR_CT
     ),
     # Box Unlocks (860-862)
     # Gate whether specific box colors can appear in-game.
@@ -1685,6 +1723,16 @@ CHECKLIST_REWARD_TYPES: frozenset[KARItemType] = frozenset(
 # The six City Trial legendary piece-spawn unlocks. Under city_trial_items_gated the Hydra/Dragoon
 # pieces only spawn once these arrive, so assembling both machines in one match needs all six.
 # Distinct from the CT_REWARD_*_PART_* checklist markers behind the "Unlock Parts" cells.
+AP_STAR_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_ROSE,
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_GREEN,
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_VIOLET,
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_TAN,
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_BLUE,
+    KARItemName.UNLOCK_ITEM_AP_SPHERE_YELLOW,
+)
+
+
 LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_ITEM_HYDRA_PART_X,
     KARItemName.UNLOCK_ITEM_HYDRA_PART_Y,
@@ -1695,14 +1743,17 @@ LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
 )
 
 
-# Machines the Charge base ability makes usable at all: Hydra barely moves without a charge boost, and
-# Slick / Turbo Star can only be steered by charge-drifting. Held out of the machine starter pick and
-# out of "some machine to ride" rules until Charge is in.
+# Machines the Charge base ability makes usable at all: Hydra and Bulk Star barely move without a
+# charge boost, and Slick / Turbo Star can only be steered by charge-drifting. Held out of the machine
+# starter pick and out of "some machine to ride" rules until Charge is in.
 CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_HYDRA,
+        KARItemName.UNLOCK_MACHINE_BULK_STAR,
         KARItemName.UNLOCK_MACHINE_SLICK_STAR,
         KARItemName.UNLOCK_MACHINE_TURBO_STAR,
+        # The Archipelago Star inherits the Slick Star's handling attributes.
+        KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR,
     }
 )
 

@@ -1,6 +1,23 @@
+"""
+Gating-category tests: which unlock items a seed mints, and which gate flags it ships to the mod.
+
+Every case is derived from GATING_CATEGORIES rather than hand-listed, so adding a row to that table
+brings its coverage along. The two halves that matter:
+
+  - pool membership. A gate ON mints its whole unlock group; OFF mints none of it. Rewards a category
+    overlaps are excluded either way, since the mod handles that category itself.
+  - what ships. The mod applies gate flags goal-independently, so what reaches slot_data is the
+    category's *effective* state - gate on AND some mode that gives its unlocks meaning has a goal.
+    Shipping the raw toggle would lock content behind keys that were never minted.
+
+A goal that is one in-game feat is the exception to both: its own keys stay in the pool even with the
+category ungated, and the mod is told to withhold exactly those bits.
+"""
+
 from Options import Toggle
 
-from ..KARItems import GATING_CATEGORIES, KARItemType
+from ..KARItems import GATING_CATEGORIES, LEGENDARY_PIECE_UNLOCK_ITEMS, KARItemName, KARItemType
+from ..KAROptions import CityTrialGoal
 from . import ALL_MODES, AR_ONLY, KARTestBase, items_of_type
 
 
@@ -138,3 +155,61 @@ class TestColorsGateSurvivesModeAgnostic(KARTestBase):
 
     def test_color_unlocks_in_pool(self):
         self.assertTrue(items_of_type(KARItemType.COLOR_UNLOCK) & self.world_item_names())
+
+
+# Goal keys: a gate being OFF drops its whole group, except the unlocks this seed's goal is gated on.
+# Without them the goal is one in-game feat the player can pull off in the first match, with nothing
+# from the pool needed - so the pool keeps exactly those and the mod holds those bits back at connect.
+
+
+class TestItemGateOffKeepsLegendaryPieces(KARTestBase):
+    """hydra_and_dragoon + city_trial_items_gated OFF: only the six piece unlocks survive the drop."""
+
+    options = _all_modes_with(
+        city_trial_items_gated=Toggle.option_false,
+        city_trial_goal=CityTrialGoal.option_hydra_and_dragoon,
+    )
+
+    def test_only_the_six_pieces_ship(self):
+        shipped = self.world_item_names() & _GATE_GROUPS["city_trial_items_gated"]
+        self.assertEqual(shipped, set(LEGENDARY_PIECE_UNLOCK_ITEMS))
+
+    def test_category_still_ships_ungated(self):
+        """Only the six bits are held back - the rest of the category is still handed over at connect."""
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(slot_data["city_trial_items_gated"], 0)
+        self.assertEqual(slot_data["legendary_pieces_goal_gated"], 1)
+
+
+class TestStadiumGateOffKeepsDededeStadium(KARTestBase):
+    """beat_king_dedede + city_trial_stadiums_gated OFF: only the Vs. King Dedede unlock survives."""
+
+    options = _all_modes_with(
+        city_trial_stadiums_gated=Toggle.option_false,
+        city_trial_goal=CityTrialGoal.option_beat_king_dedede,
+    )
+
+    def test_only_the_dedede_stadium_ships(self):
+        shipped = self.world_item_names() & _GATE_GROUPS["city_trial_stadiums_gated"]
+        self.assertEqual(shipped, {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE})
+
+    def test_category_still_ships_ungated(self):
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(slot_data["city_trial_stadiums_gated"], 0)
+        self.assertEqual(slot_data["vs_king_dedede_goal_gated"], 1)
+
+
+class TestGoalKeysUnaffectedWhenGateOn(KARTestBase):
+    """The gate being ON already ships the goal's keys, so nothing is forced and the whole group is in."""
+
+    options = _all_modes_with(
+        city_trial_items_gated=Toggle.option_true,
+        city_trial_goal=CityTrialGoal.option_hydra_and_dragoon,
+    )
+
+    def test_whole_group_ships(self):
+        group = _GATE_GROUPS["city_trial_items_gated"]
+        self.assertEqual(self.world_item_names() & group, group)
+
+    def test_nothing_forced(self):
+        self.assertFalse(self.world.goal_forced_unlocks)

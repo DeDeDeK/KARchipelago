@@ -20,10 +20,12 @@ from BaseClasses import ItemClassification
 
 from worlds.kirby_air_ride.KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
+    AP_STAR_PIECE_UNLOCK_ITEMS,
     CHARGE_DEPENDENT_MACHINES,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
+    LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_UNLOCK_ITEMS,
     KARItemGroup,
     KARItemName,
@@ -128,6 +130,8 @@ class KARHook:
         self._check_reward_uniqueness(tag, world, owned_counts)
         self._check_checklist_rewards_gated(tag, opts, pool_counts, precollected_counts)
         self._check_pinned_native_rewards(tag, mw, player, world, pool_counts)
+        self._check_effective_gates_shipped(tag, world, owned_counts, precollected_counts)
+        self._check_goal_forced_unlocks(tag, world, owned_counts, precollected_counts)
         self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
         self._check_start_inventory(tag, opts, pool_counts, precollected_counts)
         self._check_checklist_list_goal_locations(tag, mw, player, opts, ct_on, ar_on, tr_on, ap_on)
@@ -250,6 +254,65 @@ class KARHook:
                     f"(pinned rewards must be unique)"
                 )
 
+    def _check_effective_gates_shipped(self, tag, world, owned_counts, precollected_counts):
+        # A gate ships to the mod as its *effective* state, and the mod applies gate flags
+        # goal-independently. So a category that ships ON with none of its unlocks obtainable locks that
+        # content behind keys that were never minted - permanently. The unit tests pin this for a couple
+        # of mode combos; here it holds across the whole random option space.
+        slot_data = world.fill_slot_data()
+        for cat in GATING_CATEGORIES:
+            shipped = slot_data.get(cat.option)
+            expected = int(cat.option in world.effective_gates)
+            if shipped != expected:
+                raise HookError(
+                    f"{tag} {cat.option} ships as {shipped} but effective_gates says {expected}; "
+                    f"the mod reads the shipped flag, so the two must agree"
+                )
+            if not shipped:
+                continue
+            keys = {str(n) for n in items_by_type[cat.item_type]}
+            obtainable = {n for n in keys if owned_counts.get(n, 0) or precollected_counts.get(n, 0)}
+            if not obtainable:
+                raise HookError(
+                    f"{tag} {cat.option} ships ON but none of its {len(keys)} unlock items exist in the "
+                    f"seed, so that content could never be unlocked"
+                )
+
+    def _check_goal_forced_unlocks(self, tag, world, owned_counts, precollected_counts):
+        # goal_forced_unlocks are the keys the pool must ship even though their category's gate is off,
+        # because this seed's goal is the thing they gate. The mod is told to withhold exactly these bits
+        # at connect, so one missing from the seed is an unwinnable seed and nothing else notices.
+        for name in sorted(world.goal_forced_unlocks):
+            if not (owned_counts.get(str(name), 0) or precollected_counts.get(str(name), 0)):
+                raise HookError(
+                    f"{tag} goal-forced unlock {str(name)!r} is absent from the seed; the mod withholds "
+                    f"its bit at connect, so the goal is unreachable"
+                )
+
+        # The three holdback flags are how the mod learns which bits to withhold, so they have to track
+        # goal_forced_unlocks exactly - a stale 0 hands the goal over at connect.
+        slot_data = world.fill_slot_data()
+        for flag, keys in (
+            ("legendary_pieces_goal_gated", LEGENDARY_PIECE_UNLOCK_ITEMS),
+            ("ap_star_pieces_goal_gated", AP_STAR_PIECE_UNLOCK_ITEMS),
+            ("vs_king_dedede_goal_gated", (KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE,)),
+        ):
+            expected = int(bool(world.goal_forced_unlocks & set(keys)))
+            if slot_data.get(flag) != expected:
+                raise HookError(
+                    f"{tag} {flag} ships as {slot_data.get(flag)}, expected {expected} from "
+                    f"goal_forced_unlocks={sorted(str(n) for n in world.goal_forced_unlocks)}"
+                )
+
+        # Handing a goal's own key over for free wins the seed at connect. start_inventory is rejected in
+        # _validate_options; this covers the other route in, a random starter pick.
+        for name in sorted(world._goal_required_unlocks()):
+            if precollected_counts.get(str(name), 0):
+                raise HookError(
+                    f"{tag} goal key {str(name)!r} is precollected; this seed's goal is gated on it, so "
+                    f"the player would start already able to win"
+                )
+
     def _check_unlock_classifications(self, tag, pool_items):
         # All UNLOCK-type items in the pool must be progression-classified. Every gated unlock type comes
         # from GATING_CATEGORIES, stadiums included.
@@ -328,32 +391,43 @@ class KARHook:
             # Handing over the goal stadium for free would hand over the goal, so the world drops it
             # from the pick when beat_king_dedede is the City Trial goal.
             beat_dedede = opts.city_trial_goal.value == opts.city_trial_goal.option_beat_king_dedede
+            held_out = {str(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)} if beat_dedede else frozenset()
             self._check_one_starter(
                 tag,
                 "stadium",
-                stadium_pool,
+                stadium_pool - held_out,
                 opts.start_inventory.value,
                 precollected_counts,
-                ineligible={str(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)} if beat_dedede else frozenset(),
+                held_out=held_out,
+                # The stadium branch does not go through _pick_random_starter: it tests start_inventory
+                # against all 24 unlocks, VS King Dedede included, while picking from the other 23.
+                suppression_set=stadium_pool,
             )
 
         if (ct_on or ar_on) and opts.machines_gated:
+            # Hydra, Dragoon and the Archipelago Star are assembled in City Trial from their pieces, so
+            # none is ever a starting machine. Free/Steer are Top Ride controls and get their own pick.
             machines = category_members(KARItemGroup.MACHINE_UNLOCKS) - {
-                str(KARItemName.UNLOCK_MACHINE_HYDRA),
-                str(KARItemName.UNLOCK_MACHINE_DRAGOON),
-                # Free/Steer are Top Ride machines, never an AR/CT starter (see _determine_starter_items).
                 str(KARItemName.UNLOCK_MACHINE_FREE_STAR),
                 str(KARItemName.UNLOCK_MACHINE_STEER_STAR),
             }
-            # Slick and Turbo Star only turn by charge-drifting, so either as the sole machine with Charge
-            # locked is a dead end. The world holds them out while base abilities are gated.
+            held_out = {
+                str(KARItemName.UNLOCK_MACHINE_HYDRA),
+                str(KARItemName.UNLOCK_MACHINE_DRAGOON),
+                str(KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR),
+            }
+            # Slick and Turbo Star only turn by charge-drifting and Hydra / Bulk Star barely move, so any
+            # of them as the sole machine with Charge locked is a dead end. The world holds them out
+            # while base abilities are gated.
+            if opts.base_abilities_gated:
+                held_out |= {str(m) for m in CHARGE_DEPENDENT_MACHINES}
             self._check_one_starter(
                 tag,
                 "machine",
-                machines,
+                machines - held_out,
                 opts.start_inventory.value,
                 precollected_counts,
-                ineligible={str(m) for m in CHARGE_DEPENDENT_MACHINES} if opts.base_abilities_gated else frozenset(),
+                held_out=held_out,
             )
 
         if tr_on and opts.machines_gated:
@@ -392,14 +466,38 @@ class KARHook:
             )
 
     def _check_one_starter(
-        self, tag, label, category_set, start_inventory, precollected_counts, ineligible=frozenset()
+        self,
+        tag,
+        label,
+        eligible,
+        start_inventory,
+        precollected_counts,
+        held_out=frozenset(),
+        suppression_set=None,
     ):
         """
-        `ineligible` names members the world holds out of the *random pick* for this seed. It narrows only
-        the pick assertion, never `category_set`: the world tests start_inventory against the whole
-        category, so shrinking the set here would make a preset ineligible item look like no preset at all.
+        `eligible` is exactly the set the world's random pick draws from, so precollected must hold one
+        of its members and nothing more.
+
+        `held_out` names category members this seed's options bar from the pick (unplayable as a sole
+        starter, or the goal's own key). They may still reach precollected through start_inventory, so the
+        check subtracts the player's presets before complaining.
+
+        `suppression_set` is the set the world tests start_inventory against when deciding to skip the
+        pick, which is not always `eligible`: _pick_random_starter tests the narrowed eligible set, while
+        the stadium branch tests the whole category. Defaults to `eligible`.
         """
-        si_in_cat = {n: c for n, c in start_inventory.items() if n in category_set and c > 0}
+        suppression = eligible if suppression_set is None else suppression_set
+
+        for name in sorted(held_out):
+            unexplained = precollected_counts.get(name, 0) - start_inventory.get(name, 0)
+            if unexplained > 0:
+                raise HookError(
+                    f"{tag} {label} starter {name!r} is held out of the pick for this seed (unplayable "
+                    f"as a sole starter, or the goal's own key) but was precollected anyway"
+                )
+
+        si_in_cat = {n: c for n, c in start_inventory.items() if n in suppression and c > 0}
         if si_in_cat:
             # Player preset items: those should all be precollected; no random starter added.
             for n, c in si_in_cat.items():
@@ -410,16 +508,10 @@ class KARHook:
                     )
             return
         # No start_inventory override: expect exactly one random pick from this category in precollected.
-        picked = [n for n, c in precollected_counts.items() if n in category_set and c > 0]
-        precollected_in_cat = sum(c for n, c in precollected_counts.items() if n in category_set)
+        precollected_in_cat = sum(c for n, c in precollected_counts.items() if n in eligible)
         if precollected_in_cat != 1:
             raise HookError(
                 f"{tag} expected exactly 1 random {label} starter in precollected, got {precollected_in_cat}"
-            )
-        if ineligible and picked[0] in ineligible:
-            raise HookError(
-                f"{tag} random {label} starter is {picked[0]!r}, which this seed's options make "
-                f"ineligible (unplayable as a sole starter)"
             )
 
     def _check_start_inventory(self, tag, opts, pool_counts, precollected_counts):

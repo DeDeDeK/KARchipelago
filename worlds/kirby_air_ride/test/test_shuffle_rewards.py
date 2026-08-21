@@ -53,14 +53,18 @@ class _ShuffleOffInvariantMixin(_MixinBase):
         return in_scope
 
     def _default_location_names(self) -> set[str]:
+        # Mirrors create_items' own union, Archipelago included: an AP box hosts other modes' shuffled
+        # rewards, so leaving it out would understate the default budget in an AP-enabled seed.
         world = self.world
         names: set[str] = set()
-        if world.city_trial_enabled:
-            names |= world.city_trial_default_locations
-        if world.air_ride_enabled:
-            names |= world.air_ride_default_locations
-        if world.top_ride_enabled:
-            names |= world.top_ride_default_locations
+        for enabled, default_locations in (
+            (world.city_trial_enabled, world.city_trial_default_locations),
+            (world.air_ride_enabled, world.air_ride_default_locations),
+            (world.top_ride_enabled, world.top_ride_default_locations),
+            (world.archipelago_enabled, world.archipelago_default_locations),
+        ):
+            if enabled:
+                names |= default_locations
         return names - set(world.goal_locations_to_exclude) - set(world.options.exclude_locations)
 
     def test_pins_are_locked_local_and_correct(self):
@@ -97,12 +101,14 @@ class _ShuffleOffInvariantMixin(_MixinBase):
         default_names = self._default_location_names()
         excluded_names = set()
         world = self.world
-        if world.city_trial_enabled:
-            excluded_names |= world.city_trial_excluded_locations
-        if world.air_ride_enabled:
-            excluded_names |= world.air_ride_excluded_locations
-        if world.top_ride_enabled:
-            excluded_names |= world.top_ride_excluded_locations
+        for enabled, excluded_locations in (
+            (world.city_trial_enabled, world.city_trial_excluded_locations),
+            (world.air_ride_enabled, world.air_ride_excluded_locations),
+            (world.top_ride_enabled, world.top_ride_excluded_locations),
+            (world.archipelago_enabled, world.archipelago_excluded_locations),
+        ):
+            if enabled:
+                excluded_names |= excluded_locations
         excluded_names |= set(world.options.exclude_locations)
         excluded_names -= set(world.goal_locations_to_exclude)
         for reward in self._in_scope_rewards():
