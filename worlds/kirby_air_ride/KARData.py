@@ -5,10 +5,9 @@ class GameMode(IntEnum):
     """Checklist modes the client tracks. 0-2 mirror the mod's GameMode enum; ARCHIPELAGO is the
     synthetic 4th "Archipelago checklist" mode.
 
-    These are checklist-mode ROW indices - what every per-mode array on the wire is indexed by, and what
-    the mod stores a reward placement's target as. The AP tab's *runtime* index is assigned dynamically
-    by the custom_checklist framework and may be higher; the mod maps it back to this row. The exception
-    is LOCATIONS_*, which stays 3 wide: the AP checklist awards no native rewards of its own."""
+    These are ROW indices - what every per-mode array on the wire is indexed by. The AP tab's *runtime*
+    index is assigned dynamically by the custom_checklist framework and may be higher; the mod maps it
+    back to this row. LOCATIONS_* stays 3 wide: the AP checklist awards no native rewards of its own."""
 
     AIRRIDE = 0
     TOPRIDE = 1
@@ -55,8 +54,7 @@ class MemoryAddress(IntEnum):
     MEM1_START = 0x80000000
     MEM1_END = 0x81800000
 
-    # Static pointer to the APData struct, written by the mod in OnBoot().
-    # Read this to get the struct base address; poll until non-zero.
+    # Static pointer to the APData struct, written by the mod in OnBoot(); poll until non-zero.
     AP_DATA_POINTER = 0x805D52D4
 
     # Communication fields (offsets relative to APData struct base)
@@ -73,14 +71,11 @@ class MemoryAddress(IntEnum):
     DEATHLINK_SEND = 0x014  # u32
     # TrapLink receive flag. Client writes 1, game reads and clears to 0.
     TRAPLINK_RECEIVE = 0x018  # u32
-    # TrapLink send flag. Game writes 1, client reads and clears to 0.
-    # Game may set rapidly; client must debounce.
+    # TrapLink send flag. Game writes 1 (rapidly, so the client debounces), client reads and clears to 0.
     TRAPLINK_SEND = 0x01C  # u32
-    # Item delivery mailbox. Client writes AP item ID, game reads and clears to 0.
-    # ID 0 is reserved as the "empty" sentinel.
+    # Item delivery mailbox. Client writes AP item ID, game reads and clears to 0; 0 means empty.
     INCOMING_ITEM_ID = 0x020  # u32
-    # Number of items the game has received from the mailbox.
-    # Game increments on receipt (before application). Client reads only.
+    # Items the game has received from the mailbox. Game increments on receipt; client reads only.
     ITEM_RECEIVED_INDEX = 0x024  # u32
 
     # Handshake fields
@@ -163,8 +158,8 @@ class MemoryAddress(IntEnum):
 
     # Check detection fields
 
-    # Bitmask of completed checkboxes per mode. Game writes, client reads.
-    # 2 x u64 per mode (128 bits). Bit (k % 64) of word (k / 64) for clear_kind k.
+    # Bitmask of completed checkboxes per mode, game-written: bit (k % 64) of word (k / 64) for
+    # clear_kind k.
     SENT_CHECKS_AIRRIDE = 0x208  # u64[2], 16 bytes
     SENT_CHECKS_TOPRIDE = 0x218  # u64[2], 16 bytes
     SENT_CHECKS_CITYTRIAL = 0x228  # u64[2], 16 bytes
@@ -180,9 +175,8 @@ class MemoryAddress(IntEnum):
     # Sticky goal completion flag. Game writes 1 when goal is satisfied. Client reads.
     GOAL_COMPLETE = 0x288  # u8
 
-    # Live menu toggle mirrors, game-written and client-read-only: the authoritative state of the in-game
-    # DeathLink/EnergyLink/TrapLink toggles, diffed against last-seen to forward to the server. The
-    # OPTION_*_ENABLED slot fields set initial values on first connect only, not on later toggles.
+    # Live state of the in-game DeathLink/EnergyLink/TrapLink toggles, game-written and diffed against
+    # last-seen to forward to the server. The OPTION_*_ENABLED fields only seed the initial values.
     DEATHLINK_MENU_ENABLED = 0x28C  # u32
     ENERGYLINK_MENU_ENABLED = 0x290  # u32
     TRAPLINK_MENU_ENABLED = 0x294  # u32

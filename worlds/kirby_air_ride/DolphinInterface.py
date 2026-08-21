@@ -7,14 +7,15 @@ from .KARData import MemoryAddress
 class DolphinInterface:
     """Low-level interface for reading/writing Dolphin emulator memory.
 
-    Reads return a sensible zero-value on failure and log a warning; writes return True/False.
+    Every multi-byte primitive (u16/u32/u64/float) is big-endian, matching the GameCube's PowerPC;
+    read_bytes/write_bytes pass raw bytes through untouched. Reads return a zero-value on failure
+    and log a warning; writes return True/False.
     """
 
     def __init__(self) -> None:
         self.kar_game_id = b"GKYE01"
 
     def hook(self) -> bool:
-        """Establish a connection to Dolphin memory."""
         try:
             dolphin_memory_engine.hook()
             return dolphin_memory_engine.is_hooked()
@@ -23,7 +24,6 @@ class DolphinInterface:
             return False
 
     def unhook(self) -> None:
-        """Disconnect from Dolphin memory."""
         try:
             if dolphin_memory_engine.is_hooked():
                 dolphin_memory_engine.un_hook()
@@ -31,9 +31,8 @@ class DolphinInterface:
             logger.warning(f"Error while unhooking from Dolphin: {e}")
 
     def is_hooked(self) -> bool:
-        """Check if currently connected to Dolphin memory. Defensive: never raises. The sync loop calls
-        this outside its inner error handler and the task has no supervisor, so an escaping exception
-        would permanently kill the connector; a failed call is logged and treated as not hooked."""
+        """Never raises: the sync loop calls this outside its inner error handler and the task has no
+        supervisor, so a failed call is logged and treated as not hooked."""
         try:
             return dolphin_memory_engine.is_hooked()
         except Exception as e:
@@ -41,12 +40,9 @@ class DolphinInterface:
             return False
 
     def status_name(self) -> str:
-        """Raw dolphin_memory_engine connection status name. Never raises.
-
-        One of "hooked", "notRunning" (no Dolphin process), "noEmu" (running but no readable game),
-        "unHooked" (not yet attached), or "unknown" on error. is_hooked() collapses these to a bool; this
-        preserves the distinction between "Dolphin closed" and "Dolphin open but unreadable".
-        """
+        """Raw dolphin_memory_engine connection status name; never raises. One of "hooked", "notRunning"
+        (no Dolphin process), "noEmu" (running but no readable game), "unHooked" (not yet attached), or
+        "unknown" on error - the distinction is_hooked() collapses into a bool."""
         try:
             return dolphin_memory_engine.get_status().name
         except Exception as e:
@@ -59,17 +55,13 @@ class DolphinInterface:
         return self.read_bytes(MemoryAddress.MEM1_START, 6) == self.kar_game_id
 
     def resolve_ap_data(self) -> int | None:
-        """Read the APData struct pointer. Returns the base address, or None if not yet allocated.
-
-        Before the mod's OnBoot writes it, AP_DATA_POINTER holds zero or stale memory, so anything
-        outside MEM1 is rejected and the caller keeps waiting rather than latching a garbage address.
-        A failed read returns 0, which falls outside MEM1 -> None.
-        """
+        """Read the APData struct pointer, or None if not yet allocated. Before the mod's OnBoot writes
+        it, AP_DATA_POINTER holds zero or stale memory, so anything outside MEM1 is rejected rather than
+        latched as a garbage address (a failed read returns 0, also outside MEM1)."""
         ptr = self.read_u32(MemoryAddress.AP_DATA_POINTER)
         return ptr if MemoryAddress.MEM1_START <= ptr < MemoryAddress.MEM1_END else None
 
     def read_u8(self, address: int) -> int:
-        """Read an unsigned 8-bit integer."""
         try:
             return dolphin_memory_engine.read_byte(int(address))
         except Exception as e:
@@ -77,7 +69,6 @@ class DolphinInterface:
             return 0
 
     def read_u16(self, address: int) -> int:
-        """Read an unsigned 16-bit big-endian integer."""
         try:
             return int.from_bytes(dolphin_memory_engine.read_bytes(int(address), 2), byteorder="big")
         except Exception as e:
@@ -85,7 +76,6 @@ class DolphinInterface:
             return 0
 
     def read_u32(self, address: int) -> int:
-        """Read an unsigned 32-bit big-endian integer."""
         try:
             return dolphin_memory_engine.read_word(int(address))
         except Exception as e:
@@ -93,7 +83,6 @@ class DolphinInterface:
             return 0
 
     def read_u64(self, address: int) -> int:
-        """Read an unsigned 64-bit big-endian integer."""
         try:
             return int.from_bytes(dolphin_memory_engine.read_bytes(int(address), 8), byteorder="big")
         except Exception as e:
@@ -101,7 +90,6 @@ class DolphinInterface:
             return 0
 
     def read_float(self, address: int) -> float:
-        """Read a 32-bit big-endian float."""
         try:
             return dolphin_memory_engine.read_float(int(address))
         except Exception as e:
@@ -109,7 +97,6 @@ class DolphinInterface:
             return 0.0
 
     def read_bytes(self, address: int, length: int) -> bytes:
-        """Read `length` raw bytes."""
         try:
             return dolphin_memory_engine.read_bytes(int(address), length)
         except Exception as e:
@@ -117,7 +104,6 @@ class DolphinInterface:
             return b""
 
     def write_u8(self, address: int, value: int) -> bool:
-        """Write an unsigned 8-bit integer."""
         try:
             dolphin_memory_engine.write_byte(int(address), value)
             return True
@@ -126,7 +112,6 @@ class DolphinInterface:
             return False
 
     def write_u16(self, address: int, value: int) -> bool:
-        """Write an unsigned 16-bit big-endian integer."""
         try:
             dolphin_memory_engine.write_bytes(int(address), value.to_bytes(2, byteorder="big"))
             return True
@@ -135,7 +120,6 @@ class DolphinInterface:
             return False
 
     def write_u32(self, address: int, value: int) -> bool:
-        """Write an unsigned 32-bit big-endian integer."""
         try:
             dolphin_memory_engine.write_word(int(address), value)
             return True
@@ -144,7 +128,6 @@ class DolphinInterface:
             return False
 
     def write_u64(self, address: int, value: int) -> bool:
-        """Write an unsigned 64-bit big-endian integer."""
         try:
             dolphin_memory_engine.write_bytes(int(address), value.to_bytes(8, byteorder="big"))
             return True
@@ -153,7 +136,6 @@ class DolphinInterface:
             return False
 
     def write_float(self, address: int, value: float) -> bool:
-        """Write a 32-bit big-endian float."""
         try:
             dolphin_memory_engine.write_float(int(address), value)
             return True
@@ -162,7 +144,6 @@ class DolphinInterface:
             return False
 
     def write_bytes(self, address: int, data: bytes) -> bool:
-        """Write raw bytes."""
         try:
             dolphin_memory_engine.write_bytes(int(address), data)
             return True

@@ -167,12 +167,10 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
             self.world_setup()
 
 
-# A config tuned to fit by exactly 1 location, with the patch cap span (16 -> 18) kept small to land the
-# budget right at the edge:
-#   75 CT progression with all gates on + 2 PATCH_CAP_INCREASE + 5 checkbox fillers + 7 useful checklist
-#   rewards = 89 needing default locations, 1 under the 90 CT default locations.
-# Without exclude_locations it fits; with the paired test's 3 excludes it does not, pinning that the fit
-# validator subtracts exclude_locations. Filler rewards aren't counted - they may sit on excluded boxes.
+# A config tuned to fit by exactly 1 location: 75 CT progression with all gates on + 2 PATCH_CAP_INCREASE
+# + 5 checkbox fillers + 7 useful checklist rewards = 89 needing default locations, 1 under the 90 CT
+# default locations. Filler rewards aren't counted - they may sit on excluded boxes. Without
+# exclude_locations it fits; with the paired test's 3 excludes it does not.
 _TIGHT_POOL = {
     **CT_ONLY,
     "checklist_rewards_gated": Toggle.option_true,
