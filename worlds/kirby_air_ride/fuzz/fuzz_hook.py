@@ -115,9 +115,8 @@ class KARHook:
         ]
         items_we_own = [it for _, it in items_we_own_with_loc]
 
-        # Every distinct item this player owns, counted once, whether still loose in the itempool or
-        # already placed - fill and _pin_native_rewards both move items out of the pool, so a pool-only
-        # Counter would miss them. Union by object identity so a pool+placed item is not double counted.
+        # Every distinct item this player owns, loose in the itempool or already placed - fill and
+        # _pin_native_rewards both move items out of the pool. Unioned by identity, so no double count.
         owned_by_id = {id(it): it for it in pool_items}
         for it in items_we_own:
             owned_by_id[id(it)] = it
@@ -181,8 +180,7 @@ class KARHook:
 
     def _check_generic_filler_present(self, tag, world):
         # Big Kirby / Small Kirby are immune to allowed_items (FILLER is not a category) and carry
-        # _ALL_MODES, and every KAR slot has >=1 mode enabled, so both are always in filler_pool. This is
-        # the invariant that makes filler starvation impossible.
+        # _ALL_MODES, so both are always in filler_pool - the invariant that rules out filler starvation.
         for name in (KARItemName.BIG_KIRBY, KARItemName.SMALL_KIRBY):
             if str(name) not in world.filler_pool:
                 raise HookError(
@@ -191,9 +189,8 @@ class KARHook:
                 )
 
     def _check_reward_uniqueness(self, tag, world, owned_counts):
-        # Checklist rewards are unique one-time unlocks, not draw-with-replacement filler: each one routed
-        # to reward_pool is minted exactly once, so it must appear exactly once among the owned items.
-        # Pinned rewards (shuffle off) leave reward_pool, so see _check_pinned_native_rewards for those.
+        # Checklist rewards are unique one-time unlocks, so each one in reward_pool must appear exactly
+        # once among the owned items. Pinned rewards leave reward_pool; see _check_pinned_native_rewards.
         for name in world.reward_pool:
             data = ITEM_TABLE.get(name)
             if data is None:
@@ -255,10 +252,9 @@ class KARHook:
                 )
 
     def _check_effective_gates_shipped(self, tag, world, owned_counts, precollected_counts):
-        # A gate ships to the mod as its *effective* state, and the mod applies gate flags
-        # goal-independently. So a category that ships ON with none of its unlocks obtainable locks that
-        # content behind keys that were never minted - permanently. The unit tests pin this for a couple
-        # of mode combos; here it holds across the whole random option space.
+        # A gate ships as its *effective* state and the mod applies gate flags goal-independently, so a
+        # category shipping ON with none of its unlocks obtainable locks that content permanently. The
+        # unit tests pin a couple of mode combos; this holds across the whole random option space.
         slot_data = world.fill_slot_data()
         for cat in GATING_CATEGORIES:
             shipped = slot_data.get(cat.option)
@@ -279,9 +275,8 @@ class KARHook:
                 )
 
     def _check_goal_forced_unlocks(self, tag, world, owned_counts, precollected_counts):
-        # goal_forced_unlocks are the keys the pool must ship even though their category's gate is off,
-        # because this seed's goal is the thing they gate. The mod is told to withhold exactly these bits
-        # at connect, so one missing from the seed is an unwinnable seed and nothing else notices.
+        # The keys the pool must ship even with their category's gate off. The mod withholds exactly
+        # these bits at connect, so one missing is an unwinnable seed that nothing else notices.
         for name in sorted(world.goal_forced_unlocks):
             if not (owned_counts.get(str(name), 0) or precollected_counts.get(str(name), 0)):
                 raise HookError(
@@ -416,9 +411,8 @@ class KARHook:
                 str(KARItemName.UNLOCK_MACHINE_DRAGOON),
                 str(KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR),
             }
-            # Slick and Turbo Star only turn by charge-drifting and Hydra / Bulk Star barely move, so any
-            # of them as the sole machine with Charge locked is a dead end. The world holds them out
-            # while base abilities are gated.
+            # Slick and Turbo Star only turn by charge-drifting and Hydra / Bulk Star barely move, so the
+            # world holds them out of the pick while base abilities are gated.
             if opts.base_abilities_gated:
                 held_out |= {str(m) for m in CHARGE_DEPENDENT_MACHINES}
             self._check_one_starter(
@@ -515,9 +509,8 @@ class KARHook:
             )
 
     def _check_start_inventory(self, tag, opts, pool_counts, precollected_counts):
-        # Every start_inventory item should appear in precollected with at least that count. Unlock items
-        # and checklist rewards are one-time, so _build_item_pools drops their pool copy and they must not
-        # remain loose in the itempool. Filler and stackable counts stay.
+        # Every start_inventory item should appear in precollected with at least that count. One-time
+        # items lose their pool copy in _build_item_pools; filler and stackable counts stay.
         one_time_items = {str(n) for cat in GATING_CATEGORIES for n in items_by_type[cat.item_type]}
         one_time_items |= {str(n) for t in CHECKLIST_REWARD_TYPES for n in items_by_type[t]}
         for name, count in opts.start_inventory.value.items():

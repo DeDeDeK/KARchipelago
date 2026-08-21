@@ -307,9 +307,8 @@ class TestAllModesVictoryRequiresAll(KARTestBase):
             self.assertIn(victory, placed)
 
     def test_completion_needs_every_victory(self):
-        # Drive the completion rule directly with hand-built states rather than collecting items: a
-        # sweep would re-derive any victory event whose location is already reachable, so an "all but
-        # one" state is not otherwise constructible.
+        # Hand-built states rather than collected items: a sweep would re-derive any victory event whose
+        # location is already reachable, so an "all but one" state is not otherwise constructible.
         rule = self.multiworld.completion_condition[self.player]
         for withheld in self._VICTORIES:
             with self.subTest(withheld=withheld):
