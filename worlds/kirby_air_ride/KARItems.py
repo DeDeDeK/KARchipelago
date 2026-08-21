@@ -86,7 +86,7 @@ class KARItemGroup(StrEnum):
 class KARItemName(StrEnum):
     """Canonical item names for Kirby Air Ride. Single source of truth for all item name strings."""
 
-    # Standalone Items (1-13)
+    # Standalone Items (1-14)
     CHECKBOX_FILLER_AIR_RIDE = "Checkbox Filler (Air Ride)"
     CHECKBOX_FILLER_TOP_RIDE = "Checkbox Filler (Top Ride)"
     CHECKBOX_FILLER_CITY_TRIAL = "Checkbox Filler (City Trial)"
@@ -100,6 +100,7 @@ class KARItemName(StrEnum):
     GIVE_HYDRA = "Give Hydra"
     SPAWN_RATE_UP = "Spawn Rate Up"
     DROP_PATCHES_TRAP = "Drop Patches Trap"
+    GIVE_ARCHIPELAGO_STAR = "Give Archipelago Star"
 
     # Permanent +1 Patches (100-108)
     PERMANENT_WEIGHT_UP = "Permanent Weight Up"
@@ -574,6 +575,14 @@ class KARItemName(StrEnum):
     BIG_KIRBY = "Big Kirby"
     SMALL_KIRBY = "Small Kirby"
 
+    # Archipelago Star sphere gives (980-985), in the same ring order as the unlocks.
+    GIVE_AP_SPHERE_ROSE = "Give Archipelago Sphere (Rose)"
+    GIVE_AP_SPHERE_GREEN = "Give Archipelago Sphere (Green)"
+    GIVE_AP_SPHERE_VIOLET = "Give Archipelago Sphere (Violet)"
+    GIVE_AP_SPHERE_TAN = "Give Archipelago Sphere (Tan)"
+    GIVE_AP_SPHERE_BLUE = "Give Archipelago Sphere (Blue)"
+    GIVE_AP_SPHERE_YELLOW = "Give Archipelago Sphere (Yellow)"
+
     # Goal Events (no network code, internal AP events only)
     CITY_TRIAL_VICTORY = "City Trial Victory"
     AIR_RIDE_VICTORY = "Air Ride Victory"
@@ -624,7 +633,7 @@ class KARItem(Item):
 # Dolphin memory). Pool quantities are determined by options and pool-building logic.
 
 ITEM_TABLE: dict[str, KARItemData] = {
-    # Standalone Items (1-13). The 4 checkbox fillers lead, one per checklist mode, in row order.
+    # Standalone Items (1-14). The 4 checkbox fillers lead, one per checklist mode, in row order.
     KARItemName.CHECKBOX_FILLER_AIR_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 1, _AR),
     KARItemName.CHECKBOX_FILLER_TOP_RIDE: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 2, _TR),
     KARItemName.CHECKBOX_FILLER_CITY_TRIAL: KARItemData(KARItemType.CHECKBOX_FILLER, ItemClassification.useful, 3, _CT),
@@ -642,6 +651,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.GIVE_HYDRA: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 11, _CT),
     KARItemName.SPAWN_RATE_UP: KARItemData(KARItemType.SPAWN_RATE, ItemClassification.useful, 12, _CT_TR),
     KARItemName.DROP_PATCHES_TRAP: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 13, _CT),
+    KARItemName.GIVE_ARCHIPELAGO_STAR: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 14, _CT),
     # Permanent +1 Patches (100-108)
     KARItemName.PERMANENT_WEIGHT_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 100, _CT),
     KARItemName.PERMANENT_BOOST_UP: KARItemData(KARItemType.PERMANENT_PATCH, ItemClassification.useful, 101, _CT),
@@ -1661,6 +1671,15 @@ ITEM_TABLE: dict[str, KARItemData] = {
     # Cosmetic all-mode filler.
     KARItemName.BIG_KIRBY: KARItemData(KARItemType.FILLER, ItemClassification.filler, 972, _ALL_MODES),
     KARItemName.SMALL_KIRBY: KARItemData(KARItemType.FILLER, ItemClassification.filler, 973, _ALL_MODES),
+    # Archipelago Star sphere gives (980-985). Collect the sphere into the round's set, the way 355-360
+    # hand over a Hydra or Dragoon part, and assemble the star on the sixth. Like those, the give ignores
+    # the matching unlock (820-825) - it does not spawn the sphere, so it needs no item registry slot.
+    KARItemName.GIVE_AP_SPHERE_ROSE: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 980, _CT),
+    KARItemName.GIVE_AP_SPHERE_GREEN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 981, _CT),
+    KARItemName.GIVE_AP_SPHERE_VIOLET: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 982, _CT),
+    KARItemName.GIVE_AP_SPHERE_TAN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 983, _CT),
+    KARItemName.GIVE_AP_SPHERE_BLUE: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 984, _CT),
+    KARItemName.GIVE_AP_SPHERE_YELLOW: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 985, _CT),
     # Goal Events (no network code, internal AP events only)
     KARItemName.CITY_TRIAL_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.AIR_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
