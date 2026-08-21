@@ -58,8 +58,6 @@ class DolphinInterface:
         so a failed read is logged, not silently swallowed; a wrong or empty game id returns False."""
         return self.read_bytes(MemoryAddress.MEM1_START, 6) == self.kar_game_id
 
-    # Resolve APData pointer
-
     def resolve_ap_data(self) -> int | None:
         """Read the APData struct pointer. Returns the base address, or None if not yet allocated.
 
@@ -69,9 +67,6 @@ class DolphinInterface:
         """
         ptr = self.read_u32(MemoryAddress.AP_DATA_POINTER)
         return ptr if MemoryAddress.MEM1_START <= ptr < MemoryAddress.MEM1_END else None
-
-    # Primitive reads. int(address) because DME's native read/write reject an int subclass (our
-    # MemoryAddress IntEnum) on some builds; coercing here covers every caller and every DME build.
 
     def read_u8(self, address: int) -> int:
         """Read an unsigned 8-bit integer."""
@@ -120,8 +115,6 @@ class DolphinInterface:
         except Exception as e:
             logger.warning(f"Failed to read {length} bytes at {address:#x}: {e}")
             return b""
-
-    # Primitive writes
 
     def write_u8(self, address: int, value: int) -> bool:
         """Write an unsigned 8-bit integer."""

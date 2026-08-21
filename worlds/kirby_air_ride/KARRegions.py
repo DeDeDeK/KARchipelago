@@ -6,8 +6,15 @@ from BaseClasses import CollectionState, LocationProgressType, Region
 from rule_builder.rules import CanReachLocation, Has, HasAll, Rule
 
 from .KARData import GameMode, location_code_to_mode_clear
-from .KARItems import LEGENDARY_PIECE_UNLOCK_ITEMS, KARItem, KARItemName, KARItemType, items_by_type
-from .KAROptions import CityTrialGoal
+from .KARItems import (
+    AP_STAR_PIECE_UNLOCK_ITEMS,
+    LEGENDARY_PIECE_UNLOCK_ITEMS,
+    KARItem,
+    KARItemName,
+    KARItemType,
+    items_by_type,
+)
+from .KAROptions import ArchipelagoGoal, CityTrialGoal
 
 
 class KARRegion(StrEnum):
@@ -666,12 +673,26 @@ def _create_goal_events(
         goal_region = world.get_region(goal_location_data.region)
 
         blocks_rule = None
-        if goal_option.value == goal_option.option_100_checklist_blocks:
+        # getattr, not attribute access: ArchipelagoGoal has no 100_checklist_blocks (its checklist is
+        # under 100 boxes). Goal values are ints, so the None default can never compare equal.
+        if goal_option.value == getattr(goal_option, "option_100_checklist_blocks", None):
             blocks_rule = create_n_blocks_rule(world, mode, 100)
-        elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon and world.options.city_trial_items_gated:
-            # Assembling both legendary machines needs every piece to spawn, which item gating locks
-            # behind the six piece-spawn unlocks - as the COMPLETE_DRAGOON_AND_HYDRA cell does otherwise.
+        elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon:
+            # Assembling both legendary machines needs every piece to spawn, which the six piece-spawn
+            # unlocks control - as the COMPLETE_DRAGOON_AND_HYDRA cell does otherwise. They are in the
+            # pool either way: item gating on ships the whole category, off still ships these six as
+            # the goal's keys.
             blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS)
+        elif goal_option.value == CityTrialGoal.option_beat_king_dedede:
+            # Dedede has to come up in the stadium rotation, which his stadium's unlock controls. Also
+            # in the pool either way - stadium gating on ships all 24, off still ships this one.
+            blocks_rule = Has(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
+        elif goal_option.value == ArchipelagoGoal.option_assemble_archipelago_star:
+            # Every sphere has to spawn, which the six sphere unlocks control. The machine unlock is
+            # not among them: assembling the star mounts it either way.
+            blocks_rule = HasAll(*AP_STAR_PIECE_UNLOCK_ITEMS)
+        elif goal_option.value == ArchipelagoGoal.option_all_three_legendaries_in_one_run:
+            blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS, *AP_STAR_PIECE_UNLOCK_ITEMS)
 
         goal_region.add_event(
             f"{goal_location_name} (Victory)",
