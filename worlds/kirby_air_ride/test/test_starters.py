@@ -148,9 +148,8 @@ class TestMachineStarter(KARTestBase):
         self.assertEqual(len(arct_starters), 1)
 
     def test_arct_eligible_set_excludes_tr_and_assembled_machines(self):
-        # The AR/CT machine starter must never be a Top Ride control machine (they don't spawn in City
-        # Trial and can't be ridden in Air Ride) nor one of the three legendaries, which are assembled
-        # from pieces in City Trial rather than selected. Everything else is fair game.
+        # The AR/CT machine starter must never be a Top Ride control machine (unrideable in AR and CT)
+        # nor one of the three legendaries, which are assembled from pieces rather than selected.
         candidates = starter_candidates(self.world, "machine_starter_choice")
         assembled = {
             str(KARItemName.UNLOCK_MACHINE_HYDRA),
@@ -171,8 +170,7 @@ class TestMachineStarterChargeGated(KARTestBase):
     options = {**ALL_MODES, "machines_gated": Toggle.option_true, "base_abilities_gated": Toggle.option_true}
 
     def test_eligible_set_holds_out_every_charge_dependent_machine(self):
-        # Set equality rather than a disjointness check: it pins both halves at once - no machine that
-        # needs Charge is offered, and every machine that does not is still there. A "no overlap"
+        # Set equality rather than disjointness: it pins both halves at once, and a "no overlap"
         # assertion alone would also pass on an empty candidate list.
         candidates = starter_candidates(self.world, "machine_starter_choice")
         assembled = {
