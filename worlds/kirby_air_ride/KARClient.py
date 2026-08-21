@@ -1,10 +1,11 @@
 import asyncio
 import time
 import uuid
-from typing import Any
+from typing import Any, ClassVar
 
 import Utils
-from CommonClient import ClientCommandProcessor, CommonContext, get_base_parser, logger, server_loop
+from CommonClient import CommonContext as APCommonContext
+from CommonClient import get_base_parser, logger, server_loop
 from NetUtils import ClientStatus, JSONMessagePart, JSONTypes, NetworkItem, add_json_location, add_json_text
 
 from .DolphinInterface import DolphinInterface
@@ -25,6 +26,21 @@ from .KARData import (
     reward_code_to_mode_index,
 )
 from .KARLocations import LOCATION_TABLE
+
+# Universal Tracker integration: subclass UT's context when installed, gaining its tracker tab and commands.
+try:
+    from worlds.tracker import TrackerClient  # ty: ignore[unresolved-import]
+
+    ClientCommandProcessor = TrackerClient.TrackerCommandProcessor
+    CommonContext = TrackerClient.TrackerGameContext
+    tracker_version = getattr(TrackerClient, "UT_VERSION", "of unknown version")
+    tracker_loaded = True
+except ImportError:
+    from CommonClient import ClientCommandProcessor
+
+    CommonContext = APCommonContext
+    tracker_version = ""
+    tracker_loaded = False
 
 # 1 raw KAR energy unit = 1 MJ in the multiworld pool (AP stores integer Joules).
 ENERGY_LINK_EXCHANGE_RATE = 1_000_000
@@ -93,8 +109,7 @@ class KARCommandProcessor(ClientCommandProcessor):
         if not isinstance(self.ctx, KARContext):
             return
         ctx = self.ctx
-        # Default yellow covers the middle band, where the hook is up but the handshake
-        # is still in progress. The two ends override it.
+        # Yellow means hooked but mid-handshake; the red and green branches below override it.
         color = "yellow"
         if not ctx.dolphin.is_hooked():
             color = "red"
@@ -124,6 +139,9 @@ class KARCommandProcessor(ClientCommandProcessor):
 
 class KARContext(CommonContext):
     game = "Kirby Air Ride"
+    # UT tags its own context "Tracker", which makes it connect as a spectator with no game. This
+    # client is the real game client, so reset the tag set to the plain one.
+    tags: ClassVar[set[str]] = {"AP"}
     items_handling = 0b111
     want_slot_data = True
     command_processor = KARCommandProcessor
@@ -133,9 +151,7 @@ class KARContext(CommonContext):
         self.dolphin = DolphinInterface()
         self.dolphin_sync_task: asyncio.Task[None] | None = None
         self._dolphin_was_connected: bool | None = None
-        # Human-readable result of the most recent Dolphin connect attempt, surfaced by /dolphin and
-        # cleared once connected. _logged_attach_detail dedups the loop log so an unchanging failure is
-        # logged once, not on every retry.
+        # Last Dolphin connect result, shown by /dolphin; the _logged copy keeps the retry loop from repeating it.
         self.last_attach_detail: str | None = None
         self._logged_attach_detail: str | None = None
 
@@ -173,12 +189,9 @@ class KARContext(CommonContext):
 
         # EnergyLink.
         self.energy_link_enabled = False
-        # Withdrawals map `{tag: expected_subtraction_joules}`, reconciled against
-        # SetReply.original_value - value to detect server-clamped under-withdraws (pool too low).
+        # `{tag: expected_subtraction_joules}`, reconciled against SetReply to catch server-clamped withdrawals.
         self.pending_energy_withdrawals: dict[str, int] = {}
-        # Watermark for the game-owned energy_sent_total counter. None means "needs (re)seeding" - set on
-        # connect and after a restart so we diff forward instead of replaying history or misreading the
-        # boot reset as a giant withdrawal.
+        # Watermark on the game's energy_sent_total, so we diff forward. None means "needs (re)seeding".
         self.energy_last_seen: int | None = None
 
     def _reset_dolphin_state(self) -> None:
@@ -208,7 +221,9 @@ class KARContext(CommonContext):
 
     async def server_auth(self, password_requested: bool = False) -> None:
         if password_requested and not self.password:
-            await super().server_auth(password_requested)
+            # Not super(): under the UT swap that is TrackerGameContext.server_auth, which sends its
+            # own Connect, and we would then send a second one below.
+            await APCommonContext.server_auth(self, password_requested)
         await self.get_username()
         await self.send_connect()
 
@@ -218,6 +233,8 @@ class KARContext(CommonContext):
         await super().disconnect(allow_autoreconnect)
 
     def on_package(self, cmd: str, args: dict[str, Any]) -> None:
+        # UT drives its tracker off network packets, so it has to see them first. A no-op otherwise.
+        super().on_package(cmd, args)
         if cmd == "Connected":
             self._handle_connected(args)
         elif cmd == "RoomUpdate":
@@ -881,6 +898,9 @@ class KARContext(CommonContext):
 
 async def async_main(connect: str | None, password: str | None) -> None:
     ctx = KARContext(connect, password)
+    if tracker_loaded:
+        logger.info(f"Universal Tracker {tracker_version} found.")
+    # No ctx.run_generator(): KARWorld is yaml-less, so UT rebuilds the slot from slot_data on connect.
     if Utils.gui_enabled:
         ctx.run_gui()
     ctx.run_cli()
