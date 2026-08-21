@@ -453,9 +453,8 @@ class KARItemName(StrEnum):
     UNLOCK_ITEM_DRAGOON_PART_B = "Unlock Item: Dragoon Part B"
     UNLOCK_ITEM_DRAGOON_PART_C = "Unlock Item: Dragoon Part C"
 
-    # Archipelago Star sphere unlocks (820-825). The six assembly pieces of the Archipelago Star,
-    # gated one per item the way the Hydra and Dragoon parts are. Separate from the machine unlock
-    # at 856, which only decides whether the assembled star spawns loose in the city.
+    # Archipelago Star sphere unlocks (820-825). The six assembly pieces, gated one per item like the
+    # Hydra and Dragoon parts. The machine unlock at 856 is separate.
     UNLOCK_ITEM_AP_SPHERE_ROSE = "Unlock Item: Archipelago Sphere (Rose)"
     UNLOCK_ITEM_AP_SPHERE_GREEN = "Unlock Item: Archipelago Sphere (Green)"
     UNLOCK_ITEM_AP_SPHERE_VIOLET = "Unlock Item: Archipelago Sphere (Violet)"
@@ -583,8 +582,6 @@ class KARItemName(StrEnum):
 
 
 class KARItemData(NamedTuple):
-    """Data for an item in Kirby Air Ride."""
-
     type: KARItemType
     classification: ItemClassification
     # Matches the mod's APItemId enum. None for event-only items.
@@ -608,11 +605,8 @@ _ALL_MODES = frozenset({GameMode.AIRRIDE, GameMode.TOPRIDE, GameMode.CITYTRIAL, 
 
 
 class KARItem(Item):
-    """An Archipelago item for Kirby Air Ride.
-
-    Uses the base Item constructor signature so it composes with helpers like Region.add_event.
-    Table-driven items should be created via KARItem.from_data instead.
-    """
+    """An Archipelago item for Kirby Air Ride. Keeps the base Item constructor signature so it composes
+    with helpers like Region.add_event; table-driven items should use KARItem.from_data instead."""
 
     game: str = "Kirby Air Ride"
     type: KARItemType | None = None  # None for event items (no ITEM_TABLE entry)
@@ -685,7 +679,6 @@ ITEM_TABLE: dict[str, KARItemData] = {
         KARItemType.CT_EVENT_GIVE, ItemClassification.useful, 215, _CT
     ),
     # Direct Game Items (300-368). The mod spawns/applies the actual in-game item when received.
-    # Boxes
     KARItemName.BLUE_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 300, _CT),
     KARItemName.GREEN_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 301, _CT),
     KARItemName.RED_BOX: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 302, _CT),
@@ -701,7 +694,6 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.WEIGHT_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 317, _AR_CT),
     KARItemName.HP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 319, _AR_CT),
     KARItemName.ALL_UP_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 320, _CT),
-    # Stat patches (down)
     KARItemName.BOOST_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 304, _CT),
     KARItemName.TOP_SPEED_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 306, _CT),
     KARItemName.OFFENSE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 308, _CT),
@@ -710,14 +702,12 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.GLIDE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 314, _CT),
     KARItemName.CHARGE_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 316, _CT),
     KARItemName.WEIGHT_DOWN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 318, _CT),
-    # Extreme stat patches
     KARItemName.SPEED_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 321, _CT),
     KARItemName.SPEED_MIN_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 322, _CT),
     KARItemName.OFFENSE_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 323, _CT),
     KARItemName.DEFENSE_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 324, _CT),
     KARItemName.CHARGE_MAX_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 325, _CT),
     KARItemName.CHARGE_NONE_PATCH: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.trap, 326, _CT),
-    # Special items
     KARItemName.CANDY: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 327, _CT),
     # Copy abilities (in-game item form)
     KARItemName.COPY_ABILITY_BOMB: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 328, _ALL_MODES),
@@ -731,7 +721,6 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.COPY_ABILITY_SWORD: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 336, _AR_CT),
     KARItemName.COPY_ABILITY_NEEDLE: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 337, _AR_CT),
     KARItemName.COPY_ABILITY_MIC: KARItemData(KARItemType.ABILITY_GIVE, ItemClassification.useful, 338, _ALL_MODES),
-    # Food
     KARItemName.MAXIM_TOMATO: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 339, _CT),
     KARItemName.ENERGY_DRINK: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 340, _CT),
     KARItemName.ICE_CREAM: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 341, _CT),
@@ -744,12 +733,10 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.SUSHI: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 348, _CT),
     KARItemName.HOT_DOG: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 349, _CT),
     KARItemName.APPLE: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.filler, 350, _CT),
-    # Miscellaneous game items
     KARItemName.FIREWORKS: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 351, _CT),
     KARItemName.PANIC_SPIN: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 352, _CT),
     KARItemName.SENSOR_BOMB: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 353, _CT),
     KARItemName.GORDO: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 354, _CT),
-    # Legendary machine parts
     KARItemName.HYDRA_PART_X: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 355, _CT),
     KARItemName.HYDRA_PART_Y: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 356, _CT),
     KARItemName.HYDRA_PART_Z: KARItemData(KARItemType.CT_ITEM_GIVE, ItemClassification.useful, 357, _CT),
@@ -838,8 +825,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: KARItemData(
         KARItemType.CT_STADIUM_UNLOCK, ItemClassification.progression, 423, _CT
     ),
-    # Checklist Rewards: Air Ride (500-545)
-    # Receiving one performs the actual vanilla unlock (machine, music, etc.).
+    # Checklist Rewards: Air Ride (500-545). Receiving one performs the vanilla unlock (machine, music).
     KARItemName.AR_REWARD_NEBULA_BELT_COURSE: KARItemData(
         KARItemType.AR_CHECKLIST_REWARD, ItemClassification.useful, 500, _AR
     ),
@@ -1058,9 +1044,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
         KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 581, _TR
     ),
     KARItemName.TR_REWARD_ENDING: KARItemData(KARItemType.TR_CHECKLIST_REWARD, ItemClassification.useful, 582, _TR),
-    # Checklist Rewards: City Trial (600-643). The six legendary part rewards (Hydra X/Y/Z, Dragoon
-    # A/B/C) are progression, not useful: their checkboxes only complete once all three parts unlock,
-    # so fill must never strand a part behind its own checkbox.
+    # Checklist Rewards: City Trial (600-643). The six legendary part rewards are progression, not
+    # useful: their checkboxes complete only once all three parts unlock.
     KARItemName.CT_REWARD_FILLER_BOX_1: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.useful, 600, _CT
     ),
@@ -1189,8 +1174,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.CT_REWARD_WHITE_KIRBY: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 643, _CT
     ),
-    # Event Unlocks (700-715)
-    # Gate whether City Trial events can occur naturally during gameplay.
+    # Event Unlocks (700-715). Gate whether City Trial events occur naturally.
     KARItemName.UNLOCK_EVENT_DYNA_BLADE: KARItemData(
         KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 700, _CT
     ),
@@ -1239,8 +1223,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_EVENT_FAKE_POWERUPS: KARItemData(
         KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 715, _CT
     ),
-    # Copy Ability Unlocks (760-770)
-    # Gate whether copy abilities can appear in the game world.
+    # Copy Ability Unlocks (760-770). Gate whether copy abilities appear in the game world.
     KARItemName.UNLOCK_ABILITY_FIRE: KARItemData(
         KARItemType.ABILITY_UNLOCK, ItemClassification.progression, 760, _ALL_MODES
     ),
@@ -1274,9 +1257,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ABILITY_WING: KARItemData(
         KARItemType.ABILITY_UNLOCK, ItemClassification.progression, 770, _AR_CT
     ),
-    # Base Ability Unlocks (771-773, BaseAbilityKind order). Inhale has no Top Ride half, but the AP
-    # checklist holds City Trial boxes that need it (swallowing a Walky for Mic Kirby) and the gate
-    # ships as one category, so _AR_CT_AP keeps it minted for AP-checklist seeds.
+    # Base Ability Unlocks (771-773, BaseAbilityKind order). Inhale has no Top Ride half, but AP boxes
+    # need it (swallowing a Walky for Mic Kirby), so _AR_CT_AP keeps it minted for AP-checklist seeds.
     KARItemName.UNLOCK_BASE_ABILITY_INHALE: KARItemData(
         KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 771, _AR_CT_AP
     ),
@@ -1286,8 +1268,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_BASE_ABILITY_CHARGE: KARItemData(
         KARItemType.BASE_ABILITY_UNLOCK, ItemClassification.progression, 773, _ALL_MODES
     ),
-    # Patch Type Unlocks (780-788)
-    # Gate whether specific patch stat types can appear as in-game items.
+    # Patch Type Unlocks (780-788). Gate whether a patch stat type appears as an in-game item.
     KARItemName.UNLOCK_PATCH_WEIGHT: KARItemData(
         KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 780, _CT
     ),
@@ -1315,8 +1296,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_PATCH_HP: KARItemData(
         KARItemType.CT_PATCH_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 788, _CT
     ),
-    # Item Unlocks (790-819)
-    # Gate whether specific items can appear in the game world.
+    # Item Unlocks (790-819). Gate whether an item appears in the game world.
     KARItemName.UNLOCK_ITEM_ALL_UP: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 790, _CT
     ),
@@ -1407,9 +1387,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_ITEM_DRAGOON_PART_C: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 819, _CT
     ),
-    # Archipelago Star sphere unlocks (820-825). One per sphere, in the logo's ring order. A sphere
-    # is held out of City Trial's item registry until its own item arrives, so all six are needed to
-    # assemble the star.
+    # Archipelago Star sphere unlocks (820-825), in the logo's ring order. A sphere stays out of City
+    # Trial's item registry until its own item arrives, so all six are needed to assemble the star.
     KARItemName.UNLOCK_ITEM_AP_SPHERE_ROSE: KARItemData(
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 820, _CT
     ),
@@ -1430,9 +1409,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
     ),
     # Machine Unlocks (830-854, plus the appended 856). Gate whether a machine can be ridden. Excluded
     # VCKINDs (not selectable player machines): 847 WINGKIRBY and 850 WHEELIEKIRBY (ability states),
-    # 849 WHEELIE (enemy form; the ridable machine is Wheelie Bike 851), 855 WHEELVSDEDEDE (CPU-only
-    # stadium machine). 856 is the Archipelago Star, the machine the mod appends past the vanilla
-    # roster; it is also what puts its six assembly spheres into City Trial's item pool.
+    # 849 WHEELIE (enemy form; the ridable machine is Wheelie Bike 851), 855 WHEELVSDEDEDE (CPU-only).
+    # 856 is the Archipelago Star, which also puts its six spheres into City Trial's item pool.
     KARItemName.UNLOCK_MACHINE_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 830, _AR_CT
     ),
@@ -1506,8 +1484,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 856, _AR_CT
     ),
-    # Box Unlocks (860-862)
-    # Gate whether specific box colors can appear in-game.
+    # Box Unlocks (860-862). Gate whether a box color appears in-game.
     KARItemName.UNLOCK_BOX_BLUE: KARItemData(
         KARItemType.CT_BOX_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 860, _CT
     ),
@@ -1720,9 +1697,8 @@ CHECKLIST_REWARD_TYPES: frozenset[KARItemType] = frozenset(
 )
 
 
-# The six City Trial legendary piece-spawn unlocks. Under city_trial_items_gated the Hydra/Dragoon
-# pieces only spawn once these arrive, so assembling both machines in one match needs all six.
-# Distinct from the CT_REWARD_*_PART_* checklist markers behind the "Unlock Parts" cells.
+# The six Archipelago Star spheres. Under city_trial_items_gated a sphere only spawns once its own
+# unlock arrives, so assembling the star needs all six.
 AP_STAR_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_ITEM_AP_SPHERE_ROSE,
     KARItemName.UNLOCK_ITEM_AP_SPHERE_GREEN,
@@ -1733,6 +1709,8 @@ AP_STAR_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
 )
 
 
+# The same deal for the six vanilla Hydra/Dragoon pieces. Distinct from the CT_REWARD_*_PART_*
+# checklist markers behind the "Unlock Parts" cells.
 LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_ITEM_HYDRA_PART_X,
     KARItemName.UNLOCK_ITEM_HYDRA_PART_Y,
@@ -1744,8 +1722,7 @@ LEGENDARY_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
 
 
 # Machines the Charge base ability makes usable at all: Hydra and Bulk Star barely move without a
-# charge boost, and Slick / Turbo Star can only be steered by charge-drifting. Held out of the machine
-# starter pick and out of "some machine to ride" rules until Charge is in.
+# charge boost, and Slick / Turbo Star can only be steered by charge-drifting.
 CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_HYDRA,
@@ -1759,8 +1736,7 @@ CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
 
 
 # The two playable non-Kirby characters, by the machine unlock that makes each selectable. Each keeps
-# its own melee attack (Dedede's hammer, Meta Knight's sword), which no base-ability gate touches, so
-# either is a damage source in the combat stadiums on its own.
+# its own melee attack, which no base-ability gate touches, so either is a damage source on its own.
 CHARACTER_MACHINE_UNLOCKS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE,
     KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT,
@@ -1972,8 +1948,7 @@ item_name_groups[KARItemGroup.TRAPS] = {n for n, d in ITEM_TABLE.items() if d.cl
 
 
 # Maps an "allowed items" category name (keys of the `allowed_items` OptionSet) to the KARItemType it
-# governs; keys reuse the KARItemGroup display strings. Dropping a category removes that type's
-# NON-TRAP items - trap membership stays governed solely by `traps`.
+# governs; keys reuse the KARItemGroup display strings.
 ALLOWED_ITEM_CATEGORIES: dict[str, KARItemType] = {
     KARItemGroup.PERMANENT_PATCHES: KARItemType.PERMANENT_PATCH,
     KARItemGroup.CT_ITEM_GIVES: KARItemType.CT_ITEM_GIVE,

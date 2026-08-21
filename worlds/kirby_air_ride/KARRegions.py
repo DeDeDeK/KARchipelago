@@ -18,8 +18,6 @@ from .KAROptions import ArchipelagoGoal, CityTrialGoal
 
 
 class KARRegion(StrEnum):
-    """Region names for Kirby Air Ride."""
-
     # City Trial
     CITY_TRIAL = "City Trial"
     CT_FREE_RUN = "City Trial: Free Run"
@@ -152,8 +150,7 @@ def _build_region_to_mode() -> dict[str, GameMode]:
 REGION_TO_MODE: dict[str, GameMode] = _build_region_to_mode()
 
 
-# KARLocations imports are deferred into function bodies to break the circular
-# dependency: KARLocations imports KARRegion from this module.
+# KARLocations imports KARRegion from this module, so its imports are deferred into function bodies.
 if typing.TYPE_CHECKING:
     from . import KARWorld
 
@@ -172,9 +169,7 @@ def assign_locations_to_regions(
     excluded_locations: Iterable[str],
     goal_locations_to_exclude: set[str],
 ) -> None:
-    """
-    Assign locations to their regions with the appropriate progress type.
-    """
+    """Assign locations to their regions with the appropriate progress type."""
     from .KARLocations import KARLocation
 
     for locations, progress_type in [
@@ -192,9 +187,7 @@ def assign_locations_to_regions(
 
 
 def create_regions(world: "KARWorld"):
-    """
-    Create regions, place locations in regions, and connect regions for the Kirby Air Ride world.
-    """
+    """Create regions, place locations in them, and connect them up."""
     from .KARLocations import (
         AIR_RIDE_LOCATION_TABLE,
         AP_CHECKLIST_LOCATION_TABLE,
@@ -206,10 +199,9 @@ def create_regions(world: "KARWorld"):
     menu_region = Region(world.origin_region_name, world.player, world.multiworld)
     world.multiworld.regions.append(menu_region)
 
-    # Two questions, two conditions. A mode's tree is BUILT when `mode in logic_modes` (it has a goal or
-    # hosts an Archipelago box); its OWN checklist locations are assigned (below) only when `*_enabled`.
-    # So a goal-less City Trial hosting one AP box gets all 28 CT regions with 27 empty - correct, since
-    # the DD/KM/DR prerequisite chains need the whole structure and there are no partial trees.
+    # A mode's tree is BUILT when `mode in logic_modes` (it has a goal or hosts an Archipelago box); its
+    # OWN checklist locations are assigned (below) only when `*_enabled`. So a goal-less City Trial
+    # hosting one AP box gets all 28 CT regions with 27 empty - there are no partial trees.
     if GameMode.CITYTRIAL in world.logic_modes:
         city_trial_region = Region(KARRegion.CITY_TRIAL, world.player, world.multiworld)
         world.multiworld.regions.append(city_trial_region)
@@ -552,23 +544,17 @@ def create_n_blocks_rule(
     world: "KARWorld", mode: GameMode, required_blocks: int, exclude_location_name: str | None = None
 ) -> Callable[[CollectionState], bool]:
     """
-    Create a rule that passes when the player can reach N blocks in a mode, by counting that mode's
-    reachable locations.
-
-    Mode membership is the location's code band (CT 1-120, AR 121-240, TR 241-360, AP 361-480), not the
-    region name: an AP box lives in the region where its activity happens, so one in "Air Ride: MAGMA
-    FLOWS" would otherwise count toward the Air Ride goal and never toward its own.
-
-    `exclude_location_name` drops one location from the count - pass the gated cell's own name when this
-    rule gates a real checkbox, so the count means "N OTHER boxes" and the cell isn't asked to reach
-    itself, which would recurse infinitely.
+    A rule that passes once N of a mode's locations are reachable. Mode membership is the location's
+    code band (CT 1-120, AR 121-240, TR 241-360, AP 361-480), not the region name: an AP box lives in
+    the region where its activity happens, so one in "Air Ride: MAGMA FLOWS" would otherwise count
+    toward the Air Ride goal. `exclude_location_name` drops one location, so a cell gated on this rule
+    is not asked to reach itself and recurse.
     """
     player = world.player
 
     def can_access_n_blocks(state: CollectionState) -> bool:
         count = 0
-        # Skip event locations (address is None), notably the victory event whose
-        # access rule is this very function; iterating it would recurse infinitely.
+        # Skip event locations (address is None) - the victory event's rule is this function.
         for loc in state.multiworld.get_locations(player):
             if loc.address is None:
                 continue
@@ -588,14 +574,9 @@ def create_n_blocks_rule(
 
 def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     """
-    Build the access rule for the Max Stats Insanity goal event.
-
-    Requires all Patch Cap Increase items (only when cap max > cap min; otherwise the cap is fixed and
-    no cap items exist), plus a route to maxing all 9 stats - the 9 patch type unlocks (patches-gated
-    path) or the All-Up unlock (items-gated path), emitted only when both gates are on.
-
-    Returns None if every clause would be trivially satisfied; the caller then attaches the event with
-    no access rule.
+    Build the access rule for the Max Stats Insanity goal event: all Patch Cap Increase items (only when
+    cap max > cap min, else none exist), plus a route to maxing all 9 stats - the 9 patch type unlocks or
+    the All-Up unlock, emitted only when both gates are on. None when every clause is trivial.
     """
     options = world.options
     rule_parts: list[Rule] = []
@@ -632,14 +613,12 @@ def _create_goal_events(
     """
     Create goal event locations for a single game mode. `mode` identifies which locations count toward a
     block goal (by code band); `mode_prefix` is the root region name where the victory event is hung.
-
-    :return: The victory event item name if a goal was created, None otherwise.
+    Returns the victory event item name, or None when the mode has no goal.
     """
     if goal_option.value == goal_option.option_none:
         return None
 
-    # Local import: KARLocations imports KARRegion from this module, so a top-level
-    # import would cycle. Only needed here for the add_event item_type/location_type.
+    # Deferred to break the import cycle; only needed for the add_event item_type/location_type.
     from .KARLocations import KARLocation
 
     region = world.get_region(mode_prefix)
@@ -679,9 +658,8 @@ def _create_goal_events(
             blocks_rule = create_n_blocks_rule(world, mode, 100)
         elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon:
             # Assembling both legendary machines needs every piece to spawn, which the six piece-spawn
-            # unlocks control - as the COMPLETE_DRAGOON_AND_HYDRA cell does otherwise. They are in the
-            # pool either way: item gating on ships the whole category, off still ships these six as
-            # the goal's keys.
+            # unlocks control. They are in the pool either way - gated ships the whole category, ungated
+            # still ships these six as the goal's keys.
             blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS)
         elif goal_option.value == CityTrialGoal.option_beat_king_dedede:
             # Dedede has to come up in the stadium rotation, which his stadium's unlock controls. Also
@@ -716,10 +694,8 @@ def _create_goal_events(
 
 
 def determine_goal(world: "KARWorld") -> None:
-    """
-    Determine the goal for the world and create event locations for each enabled mode's goal.
-    """
-    # Imports are deferred because KARLocations imports KARRegion from this module.
+    """Create the victory event for each enabled mode's goal and set the completion rule."""
+    # Deferred to break the import cycle.
     from .KARLocations import (
         AIR_RIDE_GOAL_TO_LOCATION,
         AIR_RIDE_LOCATION_TABLE,

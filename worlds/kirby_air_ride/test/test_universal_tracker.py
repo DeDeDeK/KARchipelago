@@ -26,9 +26,8 @@ from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, KAROptions
 from . import ALL_MODES, CT_ONLY, KARTestBase
 
 # A deliberately un-default seed: every mode on with a different goal shape, gates flipped away from
-# their defaults, and the progression sub-flags on so the EXCLUDED split moves too. Regenerating this
-# from slot_data alone is the whole contract, so it has to differ from defaults in every axis that
-# touches the graph.
+# their defaults, and the progression sub-flags on so the EXCLUDED split moves too. Regenerating it
+# from slot_data alone is the whole contract, so it differs from the defaults on every axis.
 DISTINCTIVE_OPTIONS: dict = {
     "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon,
     "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
