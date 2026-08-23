@@ -302,7 +302,7 @@ class TestArchipelagoOnly(KARTestBase):
         "top_ride_courses_gated": False,
         "top_ride_items_gated": False,
         "city_trial_stadiums_gated": False,
-        "checklist_rewards_gated": False,
+        "checklist_rewards": 0,
     }
 
     def test_only_ap_locations(self):

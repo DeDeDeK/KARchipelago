@@ -14,11 +14,14 @@ from worlds.LauncherComponents import (
     launch_subprocess,
 )
 
-from .KARData import GameMode
+from .KARData import GameMode, checklist_reward_placed_bit
 from .KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
     CHARGE_DEPENDENT_MACHINES,
+    CHECKLIST_REWARD_CATEGORIES,
+    CHECKLIST_REWARD_ITEM_TYPES,
+    CHECKLIST_REWARD_TYPE_MODES,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
@@ -617,12 +620,12 @@ class KARWorld(World):
         if not self.city_trial_enabled:
             excluded |= items_by_type[KARItemType.CT_CHECKLIST_REWARD]
 
-        # Non-progression checklist rewards leave the pool when checklist_rewards_gated is off: the mod
-        # unlocks them at connect. The 6 Dragoon/Hydra part markers are progression and stay.
-        if not self.options.checklist_rewards_gated:
-            for name, data in ITEM_TABLE.items():
-                if data.type in CHECKLIST_REWARD_TYPES and not (data.classification & ItemClassification.progression):
-                    excluded.add(name)
+        # A checklist reward category left out of `checklist_rewards` drops its rewards: the mod unlocks
+        # them at connect. Rewards belonging to no category - the 6 progression Dragoon/Hydra part markers,
+        # and the overlapping rewards already dropped above - are unaffected.
+        for category, names in CHECKLIST_REWARD_CATEGORIES.items():
+            if category not in self.options.checklist_rewards.value:
+                excluded |= names
 
         # A category absent from `allowed_items` drops its optional non-trap items (traps are governed
         # solely by `traps`). The source-modes backstop below covers mode-disabled ones on top.
@@ -1010,6 +1013,16 @@ class KARWorld(World):
                 return trap
         return self._random_filler()
 
+    def _checklist_reward_placed_types(self) -> int:
+        """Bitmask of the (mode, RewardType) pairs this seed placed as AP items. Read off the built pool
+        rather than the option, so every path that drops a reward - an unselected category, a disabled
+        mode - leaves its bit clear and the mod unlocks that content at connect."""
+        mask = 0
+        for name in self.reward_pool:
+            mode = CHECKLIST_REWARD_TYPE_MODES[ITEM_TABLE[name].type]
+            mask |= 1 << checklist_reward_placed_bit(mode, CHECKLIST_REWARD_ITEM_TYPES[name])
+        return mask
+
     def fill_slot_data(self) -> Mapping[str, Any]:
         """
         Only options the client or mod actually consume are shipped; generation-only ones (`trap_chance`,
@@ -1051,13 +1064,15 @@ class KARWorld(World):
                 "colors_gated",
                 "top_ride_courses_gated",
                 "top_ride_items_gated",
-                "checklist_rewards_gated",
             )
         )
 
+        # The reward types this seed placed, as the mod's RewardType bits; it unlocks every unset type at
+        # connect.
+        slot_data["checklist_rewards"] = self._checklist_reward_placed_types()
+
         # Effective state, not the raw toggle: the mod applies gate flags goal-independently, so a
         # category whose keys never entered the pool would ship locked with nothing able to unlock it.
-        # checklist_rewards_gated is not a category and ships raw above.
         for cat in GATING_CATEGORIES:
             slot_data[cat.option] = int(cat.option in self.effective_gates)
 

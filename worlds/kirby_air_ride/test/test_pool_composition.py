@@ -4,8 +4,8 @@ Item-pool composition tests: what _build_item_pools and create_items mint, and h
 Covers the option-derived quantities (patch caps, spawn-rate ups, checkbox fillers), the exclusion
 paths (allowed_items, traps, the source-modes backstop, gate reconciliation), and the invariant that
 the minted pool exactly fills the placeable locations. Several options here default to a state that
-makes their pool empty - `checklist_rewards_gated` most of all - so a config that means to exercise
-one has to turn it on explicitly or the assertions pass over nothing.
+makes their pool empty - `checklist_rewards` most of all - so a config that means to exercise one has
+to select its categories explicitly or the assertions pass over nothing.
 """
 
 from collections import Counter
@@ -351,9 +351,9 @@ class TestChecklistRewardsUnique(KARTestBase):
     """Checklist rewards are unique one-time unlocks, not draw-with-replacement filler. Regression pin for
     the old 'reward soup' bug, where ~half were absent while others repeated. Now: useful rewards appear
     exactly once (they consume scarce default locations); filler rewards appear at least once and may
-    repeat as junk-box filler. Rewards are off by default, so this gates them on."""
+    repeat as junk-box filler. No reward category is selected by default, so this selects them all."""
 
-    options = {**ALL_MODES, "checklist_rewards_gated": Toggle.option_true}
+    options = {**ALL_MODES, "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"]}
 
     def test_in_scope_rewards_present_useful_exactly_once(self):
         counts = Counter(self.itempool_names())
@@ -386,14 +386,14 @@ class TestChecklistRewardsUnique(KARTestBase):
 class TestChecklistRewardsUniqueSingleModes(KARTestBase):
     """Same uniqueness contract in a single-mode config. Air Ride is the tight one: its only repeatable
     filler is the reclassified CT+AR patch-gives, so rewards must still each appear rather than be
-    crowded out. Rewards are off by default, so this gates them on too - without that reward_pool is
-    empty and every assertion below passes over nothing."""
+    crowded out. No reward category is selected by default, so this selects them all too - without that
+    reward_pool is empty and every assertion below passes over nothing."""
 
-    options = {**AR_ONLY, "checklist_rewards_gated": Toggle.option_true}
+    options = {**AR_ONLY, "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"]}
 
     def test_ar_rewards_present_useful_exactly_once(self):
         counts = Counter(self.itempool_names())
-        self.assertTrue(self.world.reward_pool, "reward_pool should be populated for AR_ONLY + rewards gated on")
+        self.assertTrue(self.world.reward_pool, "reward_pool should be populated for AR_ONLY + every reward category")
         for name in self.world.reward_pool:
             data = ITEM_TABLE[name]
             with self.subTest(reward=name):
