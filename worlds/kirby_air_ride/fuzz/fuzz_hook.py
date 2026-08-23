@@ -36,7 +36,6 @@ from worlds.kirby_air_ride.KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     AP_CHECKLIST_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
-    NATIVE_REWARD_TO_LOCATION,
     TOP_RIDE_LOCATION_TABLE,
 )
 from worlds.kirby_air_ride.KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
@@ -115,8 +114,8 @@ class KARHook:
         ]
         items_we_own = [it for _, it in items_we_own_with_loc]
 
-        # Every distinct item this player owns, loose in the itempool or already placed - fill and
-        # _pin_native_rewards both move items out of the pool. Unioned by identity, so no double count.
+        # Every distinct item this player owns, loose in the itempool or already placed - fill moves
+        # items out of the pool. Unioned by identity, so no double count.
         owned_by_id = {id(it): it for it in pool_items}
         for it in items_we_own:
             owned_by_id[id(it)] = it
@@ -128,7 +127,6 @@ class KARHook:
         self._check_excluded_items_absent(tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on)
         self._check_reward_uniqueness(tag, world, owned_counts)
         self._check_checklist_rewards_gated(tag, opts, pool_counts, precollected_counts)
-        self._check_pinned_native_rewards(tag, mw, player, world, pool_counts)
         self._check_effective_gates_shipped(tag, world, owned_counts, precollected_counts)
         self._check_goal_forced_unlocks(tag, world, owned_counts, precollected_counts)
         self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
@@ -190,7 +188,7 @@ class KARHook:
 
     def _check_reward_uniqueness(self, tag, world, owned_counts):
         # Checklist rewards are unique one-time unlocks, so each one in reward_pool must appear exactly
-        # once among the owned items. Pinned rewards leave reward_pool; see _check_pinned_native_rewards.
+        # once among the owned items.
         for name in world.reward_pool:
             data = ITEM_TABLE.get(name)
             if data is None:
@@ -222,34 +220,6 @@ class KARHook:
                 f"{tag} checklist_rewards_gated off but {len(offenders)} non-progression checklist "
                 f"reward(s) still present (e.g. {offenders[:5]})"
             )
-
-    def _check_pinned_native_rewards(self, tag, mw, player, world, pool_counts):
-        # shuffle_checklist_rewards off pins each in-scope reward onto the box that awards it in the base
-        # game (place_locked_item) and drops it from the pool. With shuffle on, nothing is pinned.
-        pins = getattr(world, "pinned_native_rewards", {})
-        shuffle_off = not world.options.shuffle_checklist_rewards
-        if not shuffle_off:
-            if pins:
-                raise HookError(f"{tag} shuffle_checklist_rewards on but {len(pins)} rewards were pinned")
-            return
-
-        for loc_name, reward in pins.items():
-            if NATIVE_REWARD_TO_LOCATION.get(str(reward)) != loc_name:
-                raise HookError(f"{tag} pin {str(reward)!r} on {loc_name!r} is not that reward's native box")
-            loc = mw.get_location(loc_name, player)
-            if not loc.locked:
-                raise HookError(f"{tag} pinned reward location {loc_name!r} is not locked")
-            if loc.item is None or loc.item.player != player or loc.item.name != str(reward):
-                placed = None if loc.item is None else (loc.item.player, loc.item.name)
-                raise HookError(f"{tag} pinned box {loc_name!r} should hold local {str(reward)!r}, holds {placed}")
-            # A pinned reward is the unique copy: _pin_native_rewards removed it from reward_pool and
-            # rewards never enter the filler pool, so it must not also be minted into the itempool.
-            extra = pool_counts.get(str(reward), 0)
-            if extra:
-                raise HookError(
-                    f"{tag} pinned reward {str(reward)!r} also appears {extra}x in the pool "
-                    f"(pinned rewards must be unique)"
-                )
 
     def _check_effective_gates_shipped(self, tag, world, owned_counts, precollected_counts):
         # A gate ships as its *effective* state and the mod applies gate flags goal-independently, so a
