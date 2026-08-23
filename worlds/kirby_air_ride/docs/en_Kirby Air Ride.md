@@ -241,7 +241,17 @@ You can enable or disable this in the in-game settings menu, or in your yaml.
 
 The mod includes a built-in scrolling textbox that lets you know what items your receiving and other information in real time!
 
-Configure it in the in-game settings menu.
+Configure how it looks - position, size, colors, how long a message stays - in the in-game settings menu under "Text Box".
+
+Which Archipelago messages appear is separate, under "Archipelago Settings -> Messages":
+
+- **Checks** - what a completed checkbox sent, and to whom ("Check: sent Progressive Sword to Kirby64", or "Check: Dylan found their Warp Star" when the item was your own).
+- **Items** - items arriving for you, and who found them ("Warp Star received from Kirby64").
+- **Hints** - hints for your items, and hints telling someone else that your world holds theirs. Colored by hint status, the same colors the Archipelago client uses.
+- **Status** - goal, release and collect announcements, plus a line when the client connects or drops.
+- **Chat** - player and server chat. Off by default.
+
+These lines come from the client, so they only appear while it is connected to both the server and Dolphin. With no client attached, a completed checkbox just reports "Check: recorded".
 
 ### Reveal checklists
 
