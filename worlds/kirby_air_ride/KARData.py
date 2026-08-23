@@ -15,6 +15,31 @@ class GameMode(IntEnum):
     ARCHIPELAGO = 3
 
 
+class RewardType(IntEnum):
+    """Mirrors the mod's RewardType enum (`RewardEntry.reward_type`). Only the types no gating category
+    owns are listed - machines, colors, stadiums, courses and Top Ride items are unlocked by their own
+    category's item, and the Dragoon/Hydra part markers are progression."""
+
+    FILLER = 0x00
+    BONUS_MOVIE = 0x01
+    EXTRA_RULE = 0x02
+    SOUND_TEST = 0x04
+    MUSIC = 0x05
+    ENDING = 0x06
+    PAUSE_POWERUPS = 0x08
+
+
+# Bits per checklist mode in OPTION_CHECKLIST_REWARD_PLACED_TYPES. RewardType tops out at
+# PAUSE_POWERUPS (8), so the three reward-bearing modes pack into 27 bits of the u32.
+CHECKLIST_REWARD_MODE_BITS = 9
+
+
+def checklist_reward_placed_bit(mode: GameMode, reward_type: RewardType) -> int:
+    """Bit index of (mode, reward_type) in OPTION_CHECKLIST_REWARD_PLACED_TYPES. Only AIRRIDE, TOPRIDE
+    and CITYTRIAL are addressable - the Archipelago checklist awards no native rewards."""
+    return mode * CHECKLIST_REWARD_MODE_BITS + reward_type
+
+
 class GoalKind(IntEnum):
     """Mirrors the mod's GoalKind enum. Value written to OPTION_GOAL_<MODE>."""
 
@@ -188,9 +213,9 @@ class MemoryAddress(IntEnum):
     # Mirrors the KAROptions `base_abilities_gated` toggle. Gates Kirby's inhale / quick spin / machine
     # charge behind AP unlock items.
     OPTION_BASE_ABILITY_GATING_ENABLED = 0x0E4  # u32, 0 or 1
-    # Mirrors the `checklist_rewards_gated` toggle. Off => mod unlocks every non-progression checklist
-    # reward at connect.
-    OPTION_CHECKLIST_REWARDS_GATING_ENABLED = 0x0E8  # u32, 0 or 1
+    # Which checklist reward types the world placed as AP items, from the `checklist_rewards` option.
+    # The mod unlocks every unset type at connect; bit N = RewardType N.
+    OPTION_CHECKLIST_REWARD_PLACED_TYPES = 0x0E8  # u32 bitmask, 1 << RewardType
     # Unlocks the pool ships even though their category's gate is off, because this seed's goal is the
     # thing they gate. The mod withholds exactly these bits when it pre-fills that category's mask.
     OPTION_GOAL_FORCED_GATES = 0x0EC  # u32 bitmask, GOAL_FORCED_GATE_*

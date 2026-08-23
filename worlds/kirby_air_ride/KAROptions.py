@@ -13,7 +13,7 @@ from Options import (
     Toggle,
 )
 
-from .KARItems import ALLOWED_ITEM_CATEGORIES, TRAP_CATEGORIES
+from .KARItems import ALLOWED_ITEM_CATEGORIES, CHECKLIST_REWARD_CATEGORIES, TRAP_CATEGORIES
 
 
 class TrapChance(Range):
@@ -94,16 +94,24 @@ class TrapLink(Toggle):
     display_name = "Trap Link"
 
 
-class ChecklistRewardsGated(Toggle):
+class ChecklistRewards(OptionSet):
     """
-    Controls whether the game's vanilla checklist rewards (red boxes) are placed as items into the multiworld.
+    Which categories of the game's vanilla checklist rewards (red boxes) are placed as items into the
+    multiworld.
 
-    When disabled, they are left out of the pool. They are automatically unlocked in-game upon connecting.
-    In-game checklists will no longer hold them.
+    A category you leave out is kept out of the pool and unlocked in-game the moment you connect, and its
+    in-game checklists no longer hold it. A category you include is shuffled into the multiworld like any
+    other item, so you'll have to find it to unlock it. A mode you disable takes its rewards with it, and
+    they are unlocked at connect too.
 
-    When enabled, each is shuffled into the multiworld like any other item. You'll have to find them to unlock them.
+    - Sound Test: sound test entries, 34 of them
+    - Music: course and stadium music tracks
+    - Filler Boxes: boxes awarding a checkbox filler
+    - Endings: the ending movie for each mode
+    - Gameplay Extras: Top Ride extra rules, Air Ride's Special Machine Intros, City Trial's pause-screen
+      power-up display
 
-    This excludes several categories of rewards:
+    Rewards another option already owns are never placed here, whatever you pick:
     - Dragoon and Hydra parts: progression, so always in the pool
     - Machine unlocks: governed by machines_gated
     - Kirby color unlocks: governed by colors_gated
@@ -112,7 +120,9 @@ class ChecklistRewardsGated(Toggle):
     - Top ride items: governed by top_ride_items_gated
     """
 
-    display_name = "Checklist Rewards Gated"
+    display_name = "Checklist Rewards"
+    valid_keys = frozenset(CHECKLIST_REWARD_CATEGORIES)
+    default = frozenset()
 
 
 class CityTrialGoal(Choice):
@@ -678,7 +688,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     spawn_rate_min: SpawnRateMin
     spawn_rate_max: SpawnRateMax
     energy_link: EnergyLink
-    checklist_rewards_gated: ChecklistRewardsGated
+    checklist_rewards: ChecklistRewards
 
     # City Trial
     city_trial_goal: CityTrialGoal
@@ -741,7 +751,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 kar_option_groups = [
     OptionGroup(
         "General Options",
-        [EnergyLink, TrapLink, ChecklistRewardsGated],
+        [EnergyLink, TrapLink, ChecklistRewards],
     ),
     OptionGroup(
         "Item Options",
