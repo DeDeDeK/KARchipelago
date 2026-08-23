@@ -656,10 +656,7 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_COLOR_GATING_ENABLED), int(bool(sd.get("colors_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_STADIUM_GATING_ENABLED), int(bool(sd.get("city_trial_stadiums_gated", 1))))
         d.write_u32(a(MemoryAddress.OPTION_BASE_ABILITY_GATING_ENABLED), int(bool(sd.get("base_abilities_gated", 0))))
-        d.write_u32(
-            a(MemoryAddress.OPTION_CHECKLIST_REWARDS_GATING_ENABLED),
-            int(bool(sd.get("checklist_rewards_gated", 1))),
-        )
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_REWARD_PLACED_TYPES), int(sd.get("checklist_rewards", 0)))
 
         # Goal keys: unlocks the pool ships even with their category ungated, so the mod's pre-fill has
         # to leave them locked. Both default off - an older world ships neither key.

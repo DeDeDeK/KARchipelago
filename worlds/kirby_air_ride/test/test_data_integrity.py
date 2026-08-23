@@ -16,7 +16,16 @@ import unittest
 from BaseClasses import ItemClassification
 
 from ..KARData import GameMode, location_code_to_mode_clear
-from ..KARItems import ITEM_TABLE, TRAP_CATEGORIES
+from ..KARItems import (
+    CHECKLIST_REWARD_CATEGORIES,
+    CHECKLIST_REWARD_CATEGORY_TYPES,
+    CHECKLIST_REWARD_TYPE_ITEMS,
+    CHECKLIST_REWARD_TYPE_MODES,
+    CHECKLIST_REWARD_TYPES,
+    GATING_CATEGORIES,
+    ITEM_TABLE,
+    TRAP_CATEGORIES,
+)
 from ..KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     AP_CHECKLIST_LOCATION_TABLE,
@@ -145,6 +154,74 @@ class TestNativeRewardMap(unittest.TestCase):
                 self.assertIn(reward, ITEM_TABLE, "a native reward must be a real item")
                 self.assertIn(location, LOCATION_TABLE, "a native reward's box must be a real location")
                 self.assertEqual(str(LOCATION_TABLE[location].native_reward), reward)
+
+
+class TestChecklistRewardTypesPartitionRewards(unittest.TestCase):
+    """CHECKLIST_REWARD_TYPE_ITEMS is what `checklist_rewards` resolves to and what the placed-types mask
+    is built from. A reward listed under no type is dropped from the pool whatever the player picks, and
+    its bit never reaches the mod, so the mod unlocks it at connect - the content is still reachable but
+    can never be a check."""
+
+    def in_scope_rewards(self) -> set[str]:
+        owned_by_a_gate = {str(name) for cat in GATING_CATEGORIES for name in cat.overlapping_rewards}
+        return {
+            str(name)
+            for name, data in ITEM_TABLE.items()
+            if data.type in CHECKLIST_REWARD_TYPES
+            and not (data.classification & ItemClassification.progression)
+            and str(name) not in owned_by_a_gate
+        }
+
+    def test_every_in_scope_reward_is_under_exactly_one_type(self):
+        rewards = self.in_scope_rewards()
+        self.assertTrue(rewards, "ITEM_TABLE has no in-scope checklist rewards")
+
+        membership: dict[str, list[str]] = {}
+        for reward_type, names in CHECKLIST_REWARD_TYPE_ITEMS.items():
+            for name in names:
+                membership.setdefault(str(name), []).append(str(reward_type))
+
+        unplaceable = sorted(rewards - set(membership))
+        self.assertEqual(unplaceable, [], f"rewards under no reward type: {unplaceable}")
+        duplicated = {name: types for name, types in membership.items() if len(types) > 1}
+        self.assertEqual(duplicated, {}, f"rewards under more than one reward type: {duplicated}")
+
+    def test_types_only_list_in_scope_rewards(self):
+        rewards = self.in_scope_rewards()
+        for reward_type, names in CHECKLIST_REWARD_TYPE_ITEMS.items():
+            for name in names:
+                with self.subTest(reward_type=reward_type, item=name):
+                    self.assertIn(str(name), ITEM_TABLE, "reward type lists an item that does not exist")
+                    self.assertIn(
+                        str(name),
+                        rewards,
+                        "reward type lists a reward another option owns, which would double-govern it",
+                    )
+
+    def test_every_reward_item_type_maps_to_a_mode(self):
+        # The mask packs one bit per (mode, reward type), so a reward whose item type has no mode has
+        # nowhere to be recorded.
+        self.assertEqual(set(CHECKLIST_REWARD_TYPE_MODES), set(CHECKLIST_REWARD_TYPES))
+        modes = set(CHECKLIST_REWARD_TYPE_MODES.values())
+        self.assertEqual(len(modes), len(CHECKLIST_REWARD_TYPE_MODES), "two item types share a mode")
+
+    def test_every_category_maps_to_reward_types(self):
+        self.assertEqual(set(CHECKLIST_REWARD_CATEGORY_TYPES), set(CHECKLIST_REWARD_CATEGORIES))
+        self.assertEqual(
+            {t for types in CHECKLIST_REWARD_CATEGORY_TYPES.values() for t in types},
+            set(CHECKLIST_REWARD_TYPE_ITEMS),
+            "a reward type no category claims can never be placed",
+        )
+        seen: dict[int, str] = {}
+        for category, types in CHECKLIST_REWARD_CATEGORY_TYPES.items():
+            self.assertTrue(types, f"category {category!r} maps to no reward type, so the mod would ungate it")
+            for reward_type in types:
+                self.assertNotIn(
+                    int(reward_type),
+                    seen,
+                    f"reward type {reward_type!r} claimed by both {seen.get(int(reward_type))!r} and {category!r}",
+                )
+                seen[int(reward_type)] = category
 
 
 class TestTrapCategoriesPartitionTraps(unittest.TestCase):

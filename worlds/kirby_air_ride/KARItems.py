@@ -3,7 +3,7 @@ from typing import NamedTuple
 
 from BaseClasses import Item, ItemClassification
 
-from .KARData import GameMode
+from .KARData import GameMode, RewardType
 
 
 class KARItemType(StrEnum):
@@ -1706,14 +1706,14 @@ STADIUM_CHECKLIST_REWARDS: frozenset[KARItemName] = frozenset(
     }
 )
 
-# The three per-mode checklist reward item types. Every native checklist reward is one of these.
-CHECKLIST_REWARD_TYPES: frozenset[KARItemType] = frozenset(
-    {
-        KARItemType.CT_CHECKLIST_REWARD,
-        KARItemType.AR_CHECKLIST_REWARD,
-        KARItemType.TR_CHECKLIST_REWARD,
-    }
-)
+# The three per-mode checklist reward item types, and the checklist mode each belongs to. Every native
+# checklist reward is one of these.
+CHECKLIST_REWARD_TYPE_MODES: dict[KARItemType, GameMode] = {
+    KARItemType.CT_CHECKLIST_REWARD: GameMode.CITYTRIAL,
+    KARItemType.AR_CHECKLIST_REWARD: GameMode.AIRRIDE,
+    KARItemType.TR_CHECKLIST_REWARD: GameMode.TOPRIDE,
+}
+CHECKLIST_REWARD_TYPES: frozenset[KARItemType] = frozenset(CHECKLIST_REWARD_TYPE_MODES)
 
 
 # The six Archipelago Star spheres. Under city_trial_items_gated a sphere only spawns once its own
@@ -1881,6 +1881,140 @@ GATING_CATEGORIES: tuple[GatingCategory, ...] = (
         STADIUM_CHECKLIST_REWARDS,
     ),
 )
+
+
+# The reward items behind each of the mod's placeable reward types. Only rewards no gating category
+# owns appear - the overlapping_rewards above and the progression Dragoon/Hydra part markers are placed
+# regardless of this option, so they belong to no type here.
+CHECKLIST_REWARD_TYPE_ITEMS: dict[RewardType, frozenset[str]] = {
+    RewardType.FILLER: frozenset(
+        {
+            KARItemName.AR_REWARD_FILLER_BOX_1,
+            KARItemName.AR_REWARD_FILLER_BOX_2,
+            KARItemName.AR_REWARD_FILLER_BOX_3,
+            KARItemName.AR_REWARD_FILLER_BOX_4,
+            KARItemName.AR_REWARD_FILLER_BOX_5,
+            KARItemName.TR_REWARD_FILLER_BOX_1,
+            KARItemName.TR_REWARD_FILLER_BOX_2,
+            KARItemName.TR_REWARD_FILLER_BOX_3,
+            KARItemName.TR_REWARD_FILLER_BOX_4,
+            KARItemName.TR_REWARD_FILLER_BOX_5,
+            KARItemName.CT_REWARD_FILLER_BOX_1,
+            KARItemName.CT_REWARD_FILLER_BOX_2,
+            KARItemName.CT_REWARD_FILLER_BOX_3,
+            KARItemName.CT_REWARD_FILLER_BOX_4,
+            KARItemName.CT_REWARD_FILLER_BOX_5,
+        }
+    ),
+    RewardType.BONUS_MOVIE: frozenset(
+        {
+            KARItemName.AR_REWARD_SPECIAL_MACHINE_INTROS,
+        }
+    ),
+    RewardType.EXTRA_RULE: frozenset(
+        {
+            KARItemName.TR_REWARD_DIAGONAL_CAMERA_RULE,
+            KARItemName.TR_REWARD_MYSTERY_ITEM_SET_RULE,
+            KARItemName.TR_REWARD_DEVICE_QUANTITY_RULE,
+            KARItemName.TR_REWARD_ATTACK_ITEM_SET_RULE,
+            KARItemName.TR_REWARD_SIDE_CAMERA_RULE,
+        }
+    ),
+    RewardType.SOUND_TEST: frozenset(
+        {
+            KARItemName.AR_REWARD_SOUND_TEST_MAGMA_FLOWS,
+            KARItemName.AR_REWARD_SOUND_TEST_CHECKER_KNIGHTS,
+            KARItemName.AR_REWARD_SOUND_TEST_SKY_SANDS,
+            KARItemName.AR_REWARD_SOUND_TEST_MACHINE_PASSAGE,
+            KARItemName.AR_REWARD_SOUND_TEST_FANTASY_MEADOWS,
+            KARItemName.AR_REWARD_SOUND_TEST_CELESTIAL_VALLEY,
+            KARItemName.AR_REWARD_SOUND_TEST_FROZEN_HILLSIDE,
+            KARItemName.AR_REWARD_SOUND_TEST_BEANSTALK_PARK,
+            KARItemName.AR_REWARD_SOUND_TEST_RESULTS_SCREEN,
+            KARItemName.AR_REWARD_SOUND_TEST_NEBULA_BELT,
+            KARItemName.TR_REWARD_SOUND_TEST_GRASS,
+            KARItemName.TR_REWARD_SOUND_TEST_SAND,
+            KARItemName.TR_REWARD_SOUND_TEST_SKY,
+            KARItemName.TR_REWARD_SOUND_TEST_FIRE,
+            KARItemName.TR_REWARD_SOUND_TEST_WATER,
+            KARItemName.TR_REWARD_SOUND_TEST_LIGHT,
+            KARItemName.TR_REWARD_SOUND_TEST_METAL,
+            KARItemName.TR_REWARD_SOUND_TEST_RESULTS_SCREEN,
+            KARItemName.CT_REWARD_SOUND_TEST_ITEM_BOUNCE,
+            KARItemName.CT_REWARD_SOUND_TEST_LEGENDARY_MACHINE,
+            KARItemName.CT_REWARD_SOUND_TEST_DENSE_FOG,
+            KARItemName.CT_REWARD_SOUND_TEST_CITY_TRIAL,
+            KARItemName.CT_REWARD_SOUND_TEST_ROWDY_CHARGE_TANK,
+            KARItemName.CT_REWARD_SOUND_TEST_DRAG_RACE,
+            KARItemName.CT_REWARD_SOUND_TEST_TARGET_FLIGHT,
+            KARItemName.CT_REWARD_SOUND_TEST_AIR_GLIDER,
+            KARItemName.CT_REWARD_SOUND_TEST_WHATS_IN_THE_BOX,
+            KARItemName.CT_REWARD_SOUND_TEST_DYNA_BLADE_INTRO,
+            KARItemName.CT_REWARD_SOUND_TEST_HUGE_PILLAR,
+            KARItemName.CT_REWARD_SOUND_TEST_TAC_CHALLENGE,
+            KARItemName.CT_REWARD_SOUND_TEST_FLYING_METEOR,
+            KARItemName.CT_REWARD_SOUND_TEST_KIRBY_MELEE,
+            KARItemName.CT_REWARD_SOUND_TEST_LIGHTHOUSE,
+            KARItemName.CT_REWARD_SOUND_TEST_STATION_FIRE,
+        }
+    ),
+    RewardType.MUSIC: frozenset(
+        {
+            KARItemName.AR_REWARD_MUSIC_NEBULA,
+            KARItemName.AR_REWARD_MUSIC_HILLSIDE,
+            KARItemName.AR_REWARD_MUSIC_MEADOWS,
+            KARItemName.AR_REWARD_MUSIC_MAGMA,
+            KARItemName.AR_REWARD_MUSIC_BEANSTALK,
+            KARItemName.AR_REWARD_MUSIC_CHECKER,
+            KARItemName.AR_REWARD_MUSIC_SKY_SANDS,
+            KARItemName.AR_REWARD_MUSIC_MACHINE,
+            KARItemName.AR_REWARD_MUSIC_CELESTIAL,
+            KARItemName.TR_REWARD_MUSIC_GRASS,
+            KARItemName.TR_REWARD_MUSIC_FIRE,
+            KARItemName.TR_REWARD_MUSIC_WATER,
+            KARItemName.TR_REWARD_MUSIC_METAL,
+            KARItemName.TR_REWARD_MUSIC_SAND,
+            KARItemName.TR_REWARD_MUSIC_LIGHT,
+            KARItemName.TR_REWARD_MUSIC_SKY,
+            KARItemName.CT_REWARD_MUSIC_CITY,
+        }
+    ),
+    RewardType.ENDING: frozenset(
+        {
+            KARItemName.AR_REWARD_ENDING,
+            KARItemName.TR_REWARD_ENDING,
+            KARItemName.CT_REWARD_ENDING,
+        }
+    ),
+    RewardType.PAUSE_POWERUPS: frozenset(
+        {
+            KARItemName.CT_REWARD_PAUSE_SCREEN_POWERUPS,
+        }
+    ),
+}
+
+
+# The reward types each `checklist_rewards` category covers. A category the player selects has its
+# types placed as AP items; the rest are unlocked by the mod at connect.
+CHECKLIST_REWARD_CATEGORY_TYPES: dict[str, frozenset[RewardType]] = {
+    "Sound Test": frozenset({RewardType.SOUND_TEST}),
+    "Music": frozenset({RewardType.MUSIC}),
+    "Filler Boxes": frozenset({RewardType.FILLER}),
+    "Endings": frozenset({RewardType.ENDING}),
+    "Gameplay Extras": frozenset({RewardType.EXTRA_RULE, RewardType.BONUS_MOVIE, RewardType.PAUSE_POWERUPS}),
+}
+
+
+# Keys of the `checklist_rewards` OptionSet, mapped to the reward items each selects.
+CHECKLIST_REWARD_CATEGORIES: dict[str, frozenset[str]] = {
+    category: frozenset().union(*(CHECKLIST_REWARD_TYPE_ITEMS[t] for t in types))
+    for category, types in CHECKLIST_REWARD_CATEGORY_TYPES.items()
+}
+
+# The reward type each in-scope checklist reward belongs to, for building the placed-types mask.
+CHECKLIST_REWARD_ITEM_TYPES: dict[str, RewardType] = {
+    name: reward_type for reward_type, names in CHECKLIST_REWARD_TYPE_ITEMS.items() for name in names
+}
 
 
 # Maps a trap category name (keys of the `traps` OptionSet) to its trap items. Every trap-classified

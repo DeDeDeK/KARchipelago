@@ -153,10 +153,10 @@ class TestTRChecklistListEmpty(KARTestBase):
 class TestGuaranteedPoolExceedsLocations(KARTestBase):
     # CT-only with the patch cap spanning 1 -> 30 (29 Patch Cap Increases) needs 116 default locations
     # (104 progression + 5 counted-useful + 7 useful rewards) against 90, tripping the fit validator.
-    # Rewards are gated on here (off by default) so the 7 useful ones count toward the budget.
+    # Every reward category is selected here (none by default) so the 7 useful ones count toward the budget.
     options = {
         **CT_ONLY,
-        "checklist_rewards_gated": Toggle.option_true,
+        "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"],
         "city_trial_patch_cap_min": 1,
         "city_trial_patch_cap_max": 30,
     }
@@ -173,7 +173,7 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
 # exclude_locations it fits; with the paired test's 3 excludes it does not.
 _TIGHT_POOL = {
     **CT_ONLY,
-    "checklist_rewards_gated": Toggle.option_true,
+    "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"],
     "city_trial_patch_cap_min": 16,
     "city_trial_patch_cap_max": 18,
 }

@@ -1,11 +1,16 @@
 name: ChecklistRewardSlot
-description: Checklist rewards gated into the pool, spread across excluded and default boxes in three modes at once, so the useful/filler reward split that drives the needs-default budget is exercised end to end
+description: Every checklist reward category placed into the pool, spread across excluded and default boxes in three modes at once, so the useful/filler reward split that drives the needs-default budget is exercised end to end
 game: Kirby Air Ride
 requires:
   version: 0.5.0
 Kirby Air Ride:
-  # Off by default, so it has to be set for any reward to reach the pool at all.
-  checklist_rewards_gated: true
+  # Empty by default, so a category has to be named for any reward to reach the pool at all.
+  checklist_rewards:
+    - Sound Test
+    - Music
+    - Filler Boxes
+    - Endings
+    - Gameplay Extras
   city_trial_goal: 100_checklist_blocks
   air_ride_goal: 100_checklist_blocks
   top_ride_goal: n_checklist_blocks

@@ -12,7 +12,7 @@
     - [Top Ride](#top-ride)
     - [Archipelago checklist](#archipelago-checklist)
   - [Access gating](#access-gating)
-  - [Checklist rewards gated](#checklist-rewards-gated)
+  - [Checklist rewards](#checklist-rewards)
   - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
   - [What happens when the player receives an item?](#what-happens-when-the-player-receives-an-item)
@@ -133,17 +133,30 @@ Generation will choose one starting unlock item for the following categories. Ea
 
 If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, base abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
 
-## Checklist rewards gated
+## Checklist rewards
 
-Many checklist boxes (red boxes) award something when ticked in the base game. "Checklist Rewards Gated" covers the minor extras among them: music tracks, sound test entries, endings, filler boxes, Top Ride extra rules, City Trial's pause-screen power-ups, and Air Ride's Special Machine Intros.
+Many checklist boxes (red boxes) award something when ticked in the base game. "Checklist Rewards" picks which of the minor extras among them get placed into the multiworld, one category at a time:
 
-- **Off (default):** none of these are placed. The mod unlocks them all the instant you connect, the boxes that award them in the base game carry ordinary multiworld items instead, and no reward shows on a checklist cell.
-- **On:** each one is an item shuffled into the multiworld like any other, so it can turn up anywhere your items can, across any of your enabled modes.
+- **Sound Test** - sound test entries, 34 of them
+- **Music** - course and stadium music tracks
+- **Filler Boxes** - boxes awarding a checkbox filler
+- **Endings** - the ending movie for each mode
+- **Gameplay Extras** - Top Ride's extra rules, Air Ride's Special Machine Intros, City Trial's pause-screen power-up display
 
-Two kinds of checklist reward are never affected:
+A category you pick is shuffled into the multiworld like any other item, so it can turn up anywhere your items can, across any of your enabled modes. A category you leave out is not placed at all: the mod unlocks it the instant you connect, the boxes that award it in the base game carry ordinary multiworld items instead, and no reward shows on those checklist cells. The default is an empty list, so nothing is placed unless you ask for it.
 
-- **Dragoon and Hydra parts.** They are progression (they build the legendary machines), so they always stay in the multiworld.
-- **Rewards another option already owns** - machines, Kirby colors, stadiums, the Nebula Belt course, Top Ride items. Whether you have to find those is decided by their own access-gating option, so the reward version of the item is never placed either way.
+A mode you turn off takes its rewards with it, since the boxes that award them are no longer locations. Those rewards are unlocked automatically at connect, exactly like a category you left out - picking a category never strands content in a mode you aren't playing.
+
+Every other checklist reward ignores this option entirely:
+
+- **Dragoon and Hydra parts**
+- **Machines and free-run unlocks**
+- **Kirby colors**
+- **City Trial stadiums**
+- **Top Ride items**
+- **Nebula Belt course**
+
+Those five gating options each hand out one unlock item for the content itself, so the reward version of the item is never placed either way.
 
 ## What does randomization do to this game?
 
