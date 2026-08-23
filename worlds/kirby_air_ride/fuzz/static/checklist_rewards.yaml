@@ -1,22 +1,20 @@
-name: RewardPinSlot
-description: Checklist rewards gated into the pool with shuffling off — every in-scope native reward is pinned back onto its vanilla box, which is the one generation path where locations are pre-filled before create_items counts them
+name: ChecklistRewardSlot
+description: Checklist rewards gated into the pool, spread across excluded and default boxes in three modes at once, so the useful/filler reward split that drives the needs-default budget is exercised end to end
 game: Kirby Air Ride
 requires:
   version: 0.5.0
 Kirby Air Ride:
-  # checklist_rewards_gated is off by default, and shuffle_checklist_rewards is inert while it is, so
-  # both have to be set for _pin_native_rewards to do anything at all.
+  # Off by default, so it has to be set for any reward to reach the pool at all.
   checklist_rewards_gated: true
-  shuffle_checklist_rewards: false
   city_trial_goal: 100_checklist_blocks
   air_ride_goal: 100_checklist_blocks
   top_ride_goal: n_checklist_blocks
   top_ride_checklist_amount: 60
   top_ride_checkbox_fillers: 0
   # Progression flags deliberately split: high-effort/free-run boxes stay EXCLUDED in City Trial and
-  # Top Ride but become DEFAULT in Air Ride, so the pin budgeter sees all three cases at once - a
-  # filler reward on an excluded box (always pinned), a useful reward on a default box (always pinned),
-  # and a filler reward on a default box (pinned only while global headroom remains).
+  # Top Ride but become DEFAULT in Air Ride, so one seed carries filler rewards on excluded boxes
+  # (which offset the generic filler minted there) and useful rewards on default boxes (which compete
+  # with progression for the needs-default budget).
   city_trial_progression_high_effort: false
   city_trial_progression_free_run: false
   air_ride_progression_high_effort: true
@@ -24,7 +22,7 @@ Kirby Air Ride:
   air_ride_progression_time_attack: true
   top_ride_progression_high_effort: false
   # Gates that own an overlapping reward, one on and one off, so both reconciliation paths run while
-  # the rest of the rewards are being pinned.
+  # the rest of the rewards are in the pool.
   machines_gated: true
   top_ride_items_gated: false
   city_trial_stadiums_gated: true
@@ -35,8 +33,7 @@ Kirby Air Ride:
   air_ride_courses_gated: true
   top_ride_courses_gated: true
   colors_gated: true
-  # A user exclude on the box that natively awards Filler Box 1, a *useful* reward. An excluded box
-  # takes filler only, so that reward must refuse the pin and float back into the pool - the one pin
-  # branch the mode-level progression flags above cannot reach on their own.
+  # A user exclude on a box whose native reward is *useful*, so a user exclude and a mode-level
+  # progression flag both land on the excluded-box accounting in the same seed.
   exclude_locations:
     - "City Trial: race over 60 miles!"

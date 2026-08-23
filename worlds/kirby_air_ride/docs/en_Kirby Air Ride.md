@@ -12,7 +12,6 @@
     - [Top Ride](#top-ride)
     - [Archipelago checklist](#archipelago-checklist)
   - [Access gating](#access-gating)
-  - [Shuffle checklist rewards](#shuffle-checklist-rewards)
   - [Checklist rewards gated](#checklist-rewards-gated)
   - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
   - [What does another world's item look like in Kirby Air Ride?](#what-does-another-worlds-item-look-like-in-kirby-air-ride)
@@ -134,21 +133,17 @@ Generation will choose one starting unlock item for the following categories. Ea
 
 If you already preset an unlock from one of these categories in your start inventory, generation keeps your choice and skips the random pick for that category. The remaining gateable categories - events, copy abilities, base abilities, patch types, game items, box types, and Top Ride items - are playable without any unlock, so they get no starting item.
 
-## Shuffle checklist rewards
-
-Many checklist boxes (red boxes) award a specific reward when ticked in the base game: a machine, a Kirby color, a music track, a sound test, a Dragoon or Hydra part, and so on. "Shuffle Checklist Rewards" controls only those reward items.
-
-- **On (default):** each reward is shuffled into the multiworld like any other item, so it can turn up anywhere your items can, across any of your enabled modes.
-- **Off:** every reward is placed back on the box that awards it in the base game, so ticking that box gives what it gave in the original game.
-
 ## Checklist rewards gated
 
-Some checklist boxes award a minor extra when ticked: a music track, a sound test entry, an ending, a Top Ride rule, and so on. "Checklist Rewards Gated" controls whether those non-progression rewards are part of the multiworld at all.
+Many checklist boxes (red boxes) award something when ticked in the base game. "Checklist Rewards Gated" covers the minor extras among them: music tracks, sound test entries, endings, filler boxes, Top Ride extra rules, City Trial's pause-screen power-ups, and Air Ride's Special Machine Intros.
 
-- **Off (default):** none of these rewards are placed; the mod unlocks them all the instant you connect, and the checklist boxes that would have awarded them carry ordinary multiworld items instead. The unlocked rewards are not in the pool or the in-game checklist.
-- **On:** each such reward is an item you find in the multiworld, and "Shuffle Checklist Rewards" decides where it can land.
+- **Off (default):** none of these are placed. The mod unlocks them all the instant you connect, the boxes that award them in the base game carry ordinary multiworld items instead, and no reward shows on a checklist cell.
+- **On:** each one is an item shuffled into the multiworld like any other, so it can turn up anywhere your items can, across any of your enabled modes.
 
-The Dragoon and Hydra parts are never affected - they are progression (they build the legendary machines), so they always stay in the multiworld regardless of this option.
+Two kinds of checklist reward are never affected:
+
+- **Dragoon and Hydra parts.** They are progression (they build the legendary machines), so they always stay in the multiworld.
+- **Rewards another option already owns** - machines, Kirby colors, stadiums, the Nebula Belt course, Top Ride items. Whether you have to find those is decided by their own access-gating option, so the reward version of the item is never placed either way.
 
 ## What does randomization do to this game?
 

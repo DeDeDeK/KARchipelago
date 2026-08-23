@@ -11,8 +11,8 @@ from .KARRegions import KARRegion
 class KARLocationData(NamedTuple):
     code: int
     region: str
-    # The checklist reward this box awards in the base game, or None. The complete vanilla map (in-scope
-    # and overlapping rewards alike); shuffle_checklist_rewards pins in-pool rewards with it.
+    # The checklist reward this box awards in the base game, or None. Reference data covering the
+    # complete vanilla map, in-scope and overlapping rewards alike; placement never consults it.
     native_reward: KARItemName | None = None
 
 
@@ -1168,7 +1168,7 @@ LOCATION_TABLE: dict[str, KARLocationData] = (
 )
 
 # Inverse of the native_reward field: reward item name -> the box that awards it in the base game.
-# Injective, since vanilla maps each reward to exactly one box. shuffle_checklist_rewards pins with it.
+# Injective, since vanilla maps each reward to exactly one box.
 NATIVE_REWARD_TO_LOCATION: dict[str, str] = {
     str(data.native_reward): str(name) for name, data in LOCATION_TABLE.items() if data.native_reward is not None
 }

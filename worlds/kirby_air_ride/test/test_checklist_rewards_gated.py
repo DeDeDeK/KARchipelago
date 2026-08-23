@@ -2,14 +2,13 @@
 Tests for the checklist_rewards_gated option.
 
 Off by default: the generator removes every non-progression checklist reward from the pool and the mod
-unlocks them all at connect. The 6 progression Dragoon/Hydra part markers stay but float as ordinary
-progression, so Shuffle Checklist Rewards is a true no-op when rewards are gated off.
+unlocks them all at connect. The 6 progression Dragoon/Hydra part markers stay and float as ordinary
+progression.
 
 These tests pin:
   - on => non-progression rewards present (the opt-in behavior);
   - off => none in pool or precollected, reward_pool empty, only part markers left, and the pool still
     exactly fills placeable locations (the generic backfill absorbs the freed boxes);
-  - off => shuffle_checklist_rewards pins nothing, whether shuffle is on or off;
   - off relaxes capacity (a tight config that OptionErrors with rewards on generates with them off);
   - a full distribute_items_restrictive places no non-progression reward and stays beatable.
 """
@@ -96,36 +95,6 @@ class TestGatedOffAROnly(_GatedOffInvariantMixin, KARTestBase):
 
 class TestGatedOffTROnly(_GatedOffInvariantMixin, KARTestBase):
     options = {**TR_ONLY, **_GATED_OFF}
-
-
-class TestGatedOffShuffleOff(_GatedOffInvariantMixin, KARTestBase):
-    """With rewards gated off, shuffle_checklist_rewards does nothing: reward_pool is empty so there is
-    nothing to shuffle, and the 6 progression part markers float rather than pin. So nothing is pinned."""
-
-    options = {
-        **ALL_MODES,
-        **_GATED_OFF,
-        "shuffle_checklist_rewards": Toggle.option_false,
-    }
-
-    def test_nothing_pinned_when_gated_off(self):
-        pins = getattr(self.world, "pinned_native_rewards", {})
-        self.assertEqual(pins, {}, "gated off + shuffle off should pin nothing (shuffle is inert)")
-
-
-class TestGatedOffShuffleOn(_GatedOffInvariantMixin, KARTestBase):
-    """Gated off + shuffle on also pins nothing, so the two shuffle settings are indistinguishable when
-    rewards are gated off - shuffle_checklist_rewards is a true no-op."""
-
-    options = {
-        **ALL_MODES,
-        **_GATED_OFF,
-        "shuffle_checklist_rewards": Toggle.option_true,
-    }
-
-    def test_nothing_pinned_when_gated_off(self):
-        pins = getattr(self.world, "pinned_native_rewards", {})
-        self.assertEqual(pins, {}, "gated off + shuffle on should pin nothing")
 
 
 class TestGatedOffFullFill(KARTestBase):

@@ -96,27 +96,23 @@ class TrapLink(Toggle):
 
 class ChecklistRewardsGated(Toggle):
     """
-    Controls whether the game's non-progression checklist rewards (red checkbox rewards) are gated.
+    Controls whether the game's vanilla checklist rewards (red boxes) are placed as items into the multiworld.
 
-    When disabled, they are left out of the pool: the mod unlocks them all from the start, and they will not appear
-    in the checklist in-game.
+    When disabled, they are left out of the pool. They are automatically unlocked in-game upon connecting.
+    In-game checklists will no longer hold them.
 
-    When enabled, each must be found, and "Shuffle Checklist Rewards" decides where it can land.
+    When enabled, each is shuffled into the multiworld like any other item. You'll have to find them to unlock them.
+
+    This excludes several categories of rewards:
+    - Dragoon and Hydra parts: progression, so always in the pool
+    - Machine unlocks: governed by machines_gated
+    - Kirby color unlocks: governed by colors_gated
+    - Stadium unlocks: governed by city_trial_stadiums_gated
+    - Air ride courses: governed by air_ride_courses_gated
+    - Top ride items: governed by top_ride_items_gated
     """
 
     display_name = "Checklist Rewards Gated"
-
-
-class ShuffleChecklistRewards(DefaultOnToggle):
-    """
-    Controls where the game's native checklist reward items (red checkbox items) are placed as AP items.
-
-    If on (default), each reward is shuffled into the multiworld.
-
-    If off, each is placed, locked, on the location that awards it in the base game.
-    """
-
-    display_name = "Shuffle Checklist Rewards"
 
 
 class CityTrialGoal(Choice):
@@ -682,7 +678,6 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     spawn_rate_min: SpawnRateMin
     spawn_rate_max: SpawnRateMax
     energy_link: EnergyLink
-    shuffle_checklist_rewards: ShuffleChecklistRewards
     checklist_rewards_gated: ChecklistRewardsGated
 
     # City Trial
@@ -746,7 +741,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 kar_option_groups = [
     OptionGroup(
         "General Options",
-        [EnergyLink, TrapLink, ShuffleChecklistRewards, ChecklistRewardsGated],
+        [EnergyLink, TrapLink, ChecklistRewardsGated],
     ),
     OptionGroup(
         "Item Options",

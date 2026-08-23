@@ -53,7 +53,6 @@ DISTINCTIVE_OPTIONS: dict = {
     "city_trial_progression_rng": True,
     "air_ride_progression_time_attack": True,
     "top_ride_progression_multiplayer": True,
-    "shuffle_checklist_rewards": False,
 }
 
 
