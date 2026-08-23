@@ -59,7 +59,7 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "colors_gated",
         "top_ride_courses_gated",
         "top_ride_items_gated",
-        "checklist_rewards_gated",
+        "checklist_rewards",
         # Goal keys held back from an ungated category's pre-fill
         "legendary_pieces_goal_gated",
         "vs_king_dedede_goal_gated",
