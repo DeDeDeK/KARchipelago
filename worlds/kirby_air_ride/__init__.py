@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar, NamedTuple
 
-from BaseClasses import ItemClassification, Location, Tutorial
+from BaseClasses import ItemClassification, Tutorial
 from Options import OptionError, PerGameCommonOptions
 
 from worlds.AutoWorld import WebWorld, World
@@ -41,7 +41,6 @@ from .KARLocations import (
     CITY_TRIAL_GOAL_TO_LOCATION,
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_TABLE,
-    NATIVE_REWARD_TO_LOCATION,
     TOP_RIDE_GOAL_TO_LOCATION,
     TOP_RIDE_LOCATION_TABLE,
     KARLocationGroup,
@@ -134,15 +133,14 @@ UT_PASSTHROUGH_OPTIONS: tuple[str, ...] = tuple(
 
 
 class _CapacityModel(NamedTuple):
-    """Location budget and reward demand, shared by the capacity validators and the reward-pin budgeter.
-    Items float freely across the enabled modes, so only global totals matter."""
+    """Location budget and reward demand, as the capacity validator sees it. Items float freely across
+    the enabled modes, so only global totals matter."""
 
     # Real, non-goal boxes across all enabled modes: default (non-user-excluded) and excluded (filler-only).
     total_default: int
     total_excluded: int
-    # In-pool checklist rewards, split by classification.
+    # In-pool checklist rewards needing a default box; the filler-classified rest may sit on excluded ones.
     useful_rewards: int
-    filler_rewards: int
 
 
 class KARWorld(World):
@@ -204,11 +202,6 @@ class KARWorld(World):
         self.useful_pool: set[str] = set()
         self.filler_pool: set[str] = set()
         self.reward_pool: list[str] = []
-        # Built once in generate_early, after the pools.
-        self._capacity_model: _CapacityModel | None = None
-        # Location name -> reward item name, for rewards pinned to their vanilla boxes
-        # (shuffle_checklist_rewards off).
-        self.pinned_native_rewards: dict[str, str] = {}
         self.trap_pool: set[str] = set()
         self.item_pools_built: bool = False
         self.progression_pool: list[str] = []
@@ -804,19 +797,11 @@ class KARWorld(World):
                 self.push_precollected(self.create_item(choice))
 
         self._build_item_pools()
-        self._capacity_model = self._compute_capacity()
         self._validate_allowed_items_filler()
-        self._validate_pool_fits_locations()
-
-    @property
-    def _capacity(self) -> _CapacityModel:
-        """The shared capacity model built in generate_early."""
-        assert self._capacity_model is not None, "capacity model accessed before generate_early built it"
-        return self._capacity_model
+        self._validate_pool_fits_locations(self._compute_capacity())
 
     def _compute_capacity(self) -> _CapacityModel:
-        """Build the shared capacity model. Valid from the end of generate_early through create_items'
-        pin step."""
+        """Build the capacity model. Only valid once the pools are built."""
         total_default = 0
         total_excluded = 0
         for enabled, default_locs, excluded_locs in [
@@ -842,13 +827,10 @@ class KARWorld(World):
         useful_rewards = sum(
             1 for name in self.reward_pool if ITEM_TABLE[name].classification & ItemClassification.useful
         )
-        filler_rewards = len(self.reward_pool) - useful_rewards
-
         return _CapacityModel(
             total_default=total_default,
             total_excluded=total_excluded,
             useful_rewards=useful_rewards,
-            filler_rewards=filler_rewards,
         )
 
     def _validate_allowed_items_filler(self) -> None:
@@ -863,13 +845,12 @@ class KARWorld(World):
                 "pool construction, not a user configuration error."
             )
 
-    def _validate_pool_fits_locations(self) -> None:
+    def _validate_pool_fits_locations(self, cap: _CapacityModel) -> None:
         """
         Verify the guaranteed item pool fits the available locations, on two budgets:
           - needs-default: progression + counted-useful + useful rewards, which need non-excluded boxes.
           - total: those plus filler-classified rewards, which may sit on excluded boxes.
         """
-        cap = self._capacity
         default_count = cap.total_default
         total_count = default_count + cap.total_excluded
         reward_useful = cap.useful_rewards
@@ -937,87 +918,6 @@ class KARWorld(World):
             return KARItem.from_data(str(name), self.player, data)
         raise KeyError(f"Invalid item name: {name}")
 
-    def _reward_pin_filler_headroom(self) -> int:
-        """Headroom for pinning *filler* rewards onto default boxes without starving progression of the
-        boxes it needs: (all default boxes) - (all needs-default items). >= 0 per _validate_pool_fits_locations."""
-        cap = self._capacity
-        needs_default = len(self.progression_pool) + len(self.counted_useful_pool) + cap.useful_rewards
-        return cap.total_default - needs_default
-
-    def _pin_native_rewards(self, excluded_locations: set[str]) -> None:
-        """
-        When shuffle_checklist_rewards is off, pin each in-pool checklist reward back onto its vanilla
-        box and drop it from its pool so create_items mints no duplicate. In scope: reward_pool plus the
-        six progression Dragoon/Hydra part markers. Runs before create_items counts locations, so the
-        locked boxes self-balance the mint.
-
-        Default boxes are the only home for progression / counted-useful / useful rewards, so default-box
-        pins are rationed: capacity-neutral pins (a part marker on a default box, a filler reward on an
-        excluded one) always happen, a useful reward takes its native default box unconditionally, and a
-        filler reward takes one only while global headroom remains. The rest float back into the pool.
-        """
-        if self.options.shuffle_checklist_rewards:
-            return
-
-        # Rewards gated off: reward_pool is empty and the part markers float, so this is inert.
-        if not self.options.checklist_rewards_gated:
-            return
-
-        in_scope = list(self.reward_pool) + [
-            name for name in self.progression_pool if ITEM_TABLE[name].type in CHECKLIST_REWARD_TYPES
-        ]
-        # Bucket each in-scope reward by whether its native box costs default-box capacity.
-        always_pin: list[tuple[str, Location]] = []
-        budgeted: list[tuple[str, Location, bool]] = []
-        for reward in sorted(in_scope):
-            location_name = NATIVE_REWARD_TO_LOCATION.get(reward)
-            if location_name is None or location_name in self.goal_locations_to_exclude:
-                continue
-            try:
-                location = self.get_location(location_name)
-            except KeyError:
-                continue  # box belongs to a disabled mode, so no real location exists
-            if location.locked or location.address is None:
-                continue
-            classification = ITEM_TABLE[reward].classification
-            is_progression = bool(classification & ItemClassification.progression)
-            is_filler = not (classification & (ItemClassification.useful | ItemClassification.progression))
-            is_excluded_box = location_name in excluded_locations
-            if is_progression:
-                if not is_excluded_box:
-                    always_pin.append((reward, location))  # part on default box: counted in demand already
-            elif is_filler and is_excluded_box:
-                always_pin.append((reward, location))  # filler on its proper home (excluded box)
-            elif not is_filler and is_excluded_box:
-                continue  # useful reward can't sit on a filler-only excluded box; float
-            else:
-                budgeted.append((reward, location, is_filler))
-
-        pinned: list[tuple[str, Location]] = list(always_pin)
-        global_spare = self._reward_pin_filler_headroom()
-        # Useful rewards before filler so they claim scarce default slots first.
-        for reward, location, is_filler in sorted(budgeted, key=lambda b: (b[2], b[0])):
-            if is_filler and global_spare <= 0:
-                continue
-            if is_filler:
-                global_spare -= 1
-            pinned.append((reward, location))
-
-        pinned_rewards: list[str] = []
-        pinned_parts: list[str] = []
-        for reward, location in pinned:
-            location.place_locked_item(self.create_item(reward))
-            self.pinned_native_rewards[location.name] = reward
-            if ITEM_TABLE[reward].classification & ItemClassification.progression:
-                pinned_parts.append(reward)
-            else:
-                pinned_rewards.append(reward)
-
-        for reward in pinned_rewards:
-            self.reward_pool.remove(reward)
-        for part in pinned_parts:
-            self.progression_pool.remove(part)
-
     def create_items(self) -> None:
         # Everything floats freely across the enabled modes, so this mints with no mode awareness.
         pool: list[str] = []
@@ -1035,9 +935,6 @@ class KARWorld(World):
 
         # Remove goal locations from excluded_locations since they don't actually exist as real locations
         excluded_locations -= self.goal_locations_to_exclude
-
-        # Pin native rewards before counting, so the locked boxes drop out of the tallies that follow.
-        self._pin_native_rewards(excluded_locations)
 
         nonexcluded_locations = [
             location
