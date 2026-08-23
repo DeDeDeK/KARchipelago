@@ -48,6 +48,59 @@ class TrapLinkKind(IntEnum):
     SPEED_DOWN = 3
 
 
+class APTextColor(IntEnum):
+    """Mirrors the mod's APTextColor enum. DEFAULT follows the textbox's own default color;
+    the rest are Archipelago's CommonClient GUI palette, by name."""
+
+    DEFAULT = 0
+    BLACK = 1
+    RED = 2
+    GREEN = 3
+    YELLOW = 4
+    BLUE = 5
+    MAGENTA = 6
+    CYAN = 7
+    WHITE = 8
+    ORANGE = 9
+    SLATEBLUE = 10
+    PLUM = 11
+    SALMON = 12
+
+
+class APTextKind(IntEnum):
+    """Mirrors the mod's APTextKind enum. Each kind has its own in-game Settings toggle,
+    mirrored back to the client as a bit of TEXT_MENU_MASK."""
+
+    CHECK = 0
+    ITEM = 1
+    HINT = 2
+    STATUS = 3
+    CHAT = 4
+
+
+# AP color name -> the mod's palette index. Keys are the CommonClient GUI color names; anything
+# outside this set (bold/underline, the *_bg terminal codes) has no in-game equivalent.
+AP_TEXT_COLOR_BY_NAME: dict[str, APTextColor] = {
+    "black": APTextColor.BLACK,
+    "red": APTextColor.RED,
+    "green": APTextColor.GREEN,
+    "yellow": APTextColor.YELLOW,
+    "blue": APTextColor.BLUE,
+    "magenta": APTextColor.MAGENTA,
+    "cyan": APTextColor.CYAN,
+    "white": APTextColor.WHITE,
+    "orange": APTextColor.ORANGE,
+    "slateblue": APTextColor.SLATEBLUE,
+    "plum": APTextColor.PLUM,
+    "salmon": APTextColor.SALMON,
+}
+
+# Fixed by the mod's APTextMessage layout.
+AP_TEXT_SEG_NUM = 8
+AP_TEXT_BLOB_LEN = 244
+AP_TEXT_MESSAGE_SIZE = 256
+
+
 class MemoryAddress(IntEnum):
     # GameCube MEM1 cached address range (24 MB). The mod's APData struct always lands here, so a pointer
     # outside it is stale. MEM1_START also bases the game-id check (the disc id sits at MEM1's start).
@@ -180,6 +233,20 @@ class MemoryAddress(IntEnum):
     DEATHLINK_MENU_ENABLED = 0x28C  # u32
     ENERGYLINK_MENU_ENABLED = 0x290  # u32
     TRAPLINK_MENU_ENABLED = 0x294  # u32
+
+    # Text queue fields
+
+    # Client heartbeat, bumped every poll. The mod treats no change for 180 frames as "no client"
+    # and falls back to its own generic check message; 0 means the client has never run.
+    CLIENT_ALIVE = 0x298  # u32
+    # Text mailbox, the same handshake as INCOMING_ITEM_ID: fill TEXT_MSG, then set TEXT_PENDING.
+    # The game clears it once the message is on screen, and holds it while the text box has no
+    # canvas, so a scene load backpressures instead of losing the message.
+    TEXT_PENDING = 0x29C  # u32
+    # Live state of the in-game per-kind message toggles, bit (1 << APTextKind). Game-written; the
+    # client reads it to skip composing messages the player has turned off.
+    TEXT_MENU_MASK = 0x2A0  # u32
+    TEXT_MSG = 0x2A4  # APTextMessage, 256 bytes; see KARText.pack_message for the layout
 
 
 # AP item code layout for checklist rewards: 500..649 in 3 mode bands of stride 50 (500-549 Air Ride,

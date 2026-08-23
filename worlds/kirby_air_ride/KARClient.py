@@ -1,12 +1,22 @@
 import asyncio
+import re
 import time
 import uuid
+from collections import deque
 from typing import Any, ClassVar
 
 import Utils
 from CommonClient import CommonContext as APCommonContext
 from CommonClient import get_base_parser, logger, server_loop
-from NetUtils import ClientStatus, JSONMessagePart, JSONTypes, NetworkItem, add_json_location, add_json_text
+from NetUtils import (
+    ClientStatus,
+    JSONMessagePart,
+    JSONTypes,
+    NetworkItem,
+    add_json_item,
+    add_json_location,
+    add_json_text,
+)
 
 from .DolphinInterface import DolphinInterface
 from .KARData import (
@@ -16,6 +26,8 @@ from .KARData import (
     OPTION_REVEAL_CHECKLIST_PER_MODE,
     REWARDS_PER_MODE,
     SENT_CHECKS_PER_MODE,
+    APTextColor,
+    APTextKind,
     GameMode,
     GoalForcedGate,
     GoalKind,
@@ -26,6 +38,7 @@ from .KARData import (
     reward_code_to_mode_index,
 )
 from .KARLocations import LOCATION_TABLE
+from .KARText import Segment, SegmentCollector, hint_prefix, hint_status_of, pack_message
 
 # Universal Tracker integration: subclass UT's context when installed, gaining its tracker tab and commands.
 try:
@@ -51,6 +64,37 @@ TRAPLINK_NAMES: dict[TrapLinkKind, str] = {
     TrapLinkKind.SLEEP: "Sleep",
     TrapLinkKind.SPEED_DOWN: "Speed Down",
 }
+
+# In-game messages the client composes but does not pace: the deque absorbs a burst (a `!hint`
+# listing, a stack of items on reconnect) while the game takes one message per poll.
+TEXT_OUT_MAX = 32
+
+# Above this many checks in one poll, one summary line replaces the per-check lines. A real
+# session sends checks one at a time; a burst means a fresh save catching up with the server.
+TEXT_CHECK_BURST = 3
+
+# Menu labels for the per-kind message toggles, for the log line when one is flipped in-game.
+TEXT_KIND_LABELS: dict[APTextKind, str] = {
+    APTextKind.CHECK: "Check",
+    APTextKind.ITEM: "Item",
+    APTextKind.HINT: "Hint",
+    APTextKind.STATUS: "Status",
+    APTextKind.CHAT: "Chat",
+}
+
+# Server-authored PrintJSON lines worth relaying in-game, with the kind that gates them and the
+# color they get: they arrive as one uncolored text run, so the line carries the meaning.
+RELAYED_PRINT_JSON: dict[str, tuple[APTextKind, APTextColor]] = {
+    "Goal": (APTextKind.STATUS, APTextColor.GREEN),
+    "Release": (APTextKind.STATUS, APTextColor.YELLOW),
+    "Collect": (APTextKind.STATUS, APTextColor.YELLOW),
+    "Chat": (APTextKind.CHAT, APTextColor.DEFAULT),
+    "ServerChat": (APTextKind.CHAT, APTextColor.ORANGE),
+}
+
+# The server stamps a team number onto its broadcast lines; it is noise on one line of screen.
+TEAM_SUFFIX = re.compile(r"\s*\(Team #\d+\)")
+
 
 GOAL_NAMES: dict[GoalKind, str] = {
     GoalKind.CHECKLIST_100: "100 Checklist Blocks",
@@ -193,6 +237,17 @@ class KARContext(CommonContext):
         # Watermark on the game's energy_sent_total, so we diff forward. None means "needs (re)seeding".
         self.energy_last_seen: int | None = None
 
+        # In-game text. Composed wherever the event happens, packed immediately, and handed to the
+        # mod's mailbox one per poll, so Dolphin access stays in one place.
+        self.text_out: deque[bytes] = deque(maxlen=TEXT_OUT_MAX)
+        self.text_overflow = False
+        self.to_segments = SegmentCollector(self)
+        # Mirrors the in-game Messages menu. Chat starts off, matching the mod's defaults, until
+        # the first _poll_menu_toggles read replaces these with the real state.
+        self.text_enabled: dict[APTextKind, bool] = {k: k is not APTextKind.CHAT for k in APTextKind}
+        # Non-zero and always changing while the client polls; the mod watches it for a heartbeat.
+        self.client_alive_counter = 0
+
     def _reset_dolphin_state(self) -> None:
         """Reset state tied to the Dolphin connection / mod memory. Safe to call whenever the hook drops
         or the APData pointer changes; this state is rebuilt from memory on the next handshake."""
@@ -203,6 +258,9 @@ class KARContext(CommonContext):
         self.item_send_index = 0
         self.last_sent_checks = {m: [0, 0] for m in GameMode}
         self.energy_last_seen = None
+        self.text_out.clear()
+        self.text_overflow = False
+        self.client_alive_counter = 0
 
     def _reset_server_state(self) -> None:
         """Reset state tied to the AP server session (scouts, bounces). Only call on an actual server
@@ -642,6 +700,7 @@ class KARContext(CommonContext):
     async def _poll_game(self) -> None:
         if self.slot is None:
             return
+        self._beat()
         self._deliver_items()
         await self._check_locations()
         self._check_goal()
@@ -650,6 +709,13 @@ class KARContext(CommonContext):
         await self._handle_traplink()
         await self._handle_energylink()
         self._handle_backfill()
+        self._flush_text()
+
+    def _beat(self) -> None:
+        """Bump the heartbeat the mod uses to tell "client attached" from "playing offline". It
+        never lands on 0, which is the mod's "no client has ever run" value."""
+        self.client_alive_counter = self.client_alive_counter % 0xFFFFFFFF + 1
+        self.dolphin.write_u32(self._addr(MemoryAddress.CLIENT_ALIVE), self.client_alive_counter)
 
     def _deliver_items(self) -> None:
         """Deliver pending items to the game one at a time via the incoming_item_id mailbox."""
@@ -659,6 +725,7 @@ class KARContext(CommonContext):
             item = self.items_received[self.item_send_index]
             self.dolphin.write_u32(self._addr(MemoryAddress.INCOMING_ITEM_ID), item.item)
             logger.debug(f"Delivered item #{self.item_send_index}: {self.item_names.lookup_in_game(item.item)}")
+            self._push_item_text(item)
             self.item_send_index += 1
 
     async def _check_locations(self) -> None:
@@ -688,6 +755,151 @@ class KARContext(CommonContext):
                         add_json_text(parts, ", ")
                     add_json_location(parts, loc, self.slot)
                 self.on_print_json({"data": parts, "cmd": "PrintJSON"})
+                self._push_check_text(sorted(sent))
+
+    def _push_text(self, kind: APTextKind, segments: list[Segment]) -> None:
+        """Queue one in-game message. Composition happens at the event; the write happens on the
+        next poll, so this is safe to call from the network task and before Dolphin is attached."""
+        if not self.text_enabled.get(kind, True):
+            return
+        payload = pack_message(kind, segments)
+        if payload is None:
+            return
+        if len(self.text_out) == TEXT_OUT_MAX:
+            if not self.text_overflow:
+                self.text_overflow = True
+                logger.warning("[KAR] In-game message backlog full; dropping the oldest messages.")
+        else:
+            self.text_overflow = False
+        self.text_out.append(payload)
+
+    def _flush_text(self) -> None:
+        """Hand the next queued message to the mod's mailbox, the same handshake as items.
+
+        A message still pending means the game has not shown it yet - during a scene load it holds
+        one for as long as the text box has no canvas - so a full mailbox is backpressure, and the
+        deque keeps the backlog until it clears.
+        """
+        if not self.text_out:
+            return
+        if self.dolphin.read_u32(self._addr(MemoryAddress.TEXT_PENDING)) != 0:
+            return
+        # The body has to land before the flag that publishes it.
+        if not self.dolphin.write_bytes(self._addr(MemoryAddress.TEXT_MSG), self.text_out[0]):
+            return
+        self.dolphin.write_u32(self._addr(MemoryAddress.TEXT_PENDING), 1)
+        self.text_out.popleft()
+
+    def _push_check_text(self, locations: list[int]) -> None:
+        """Compose "Check: sent <item> to <player>" for each location just reported to the server.
+
+        `locations_info` holds a scout result for every location this slot owns, so the item and
+        its owner are known locally and the line does not wait on a server round trip.
+        """
+        if self.slot is None:
+            return
+        if len(locations) > TEXT_CHECK_BURST:
+            self._push_text(
+                APTextKind.CHECK,
+                [Segment("Check: "), Segment(f"{len(locations)} sent", APTextColor.GREEN)],
+            )
+            return
+        for loc in locations:
+            info = self.locations_info.get(loc)
+            if info is None:
+                self._push_text(APTextKind.CHECK, [Segment("Check: "), Segment("sent", APTextColor.GREEN)])
+                continue
+            parts: list[JSONMessagePart] = []
+            add_json_text(parts, "Check: ")
+            # In a LocationInfo result NetworkItem.player is the *receiving* player, not the finder.
+            if self.slot_concerns_self(info.player):
+                add_json_text(parts, info.player, type=JSONTypes.player_id)
+                add_json_text(parts, " found their ")
+                add_json_item(parts, info.item, info.player, info.flags)
+            else:
+                add_json_text(parts, "sent ")
+                add_json_item(parts, info.item, info.player, info.flags)
+                add_json_text(parts, " to ")
+                add_json_text(parts, info.player, type=JSONTypes.player_id)
+            self._push_text(APTextKind.CHECK, self.to_segments(parts))
+
+    def _push_item_text(self, item: NetworkItem) -> None:
+        """Compose "<item> received from <player>" as the item goes into the mailbox. The mod
+        suppresses its own announce for these, so this is the only line the player sees."""
+        parts: list[JSONMessagePart] = []
+        add_json_item(parts, item.item, self.slot, item.flags)
+        # player 0 is the server (starting inventory); our own slot means we found it ourselves,
+        # and the check line already said so.
+        if item.player and not self.slot_concerns_self(item.player):
+            add_json_text(parts, " received from ")
+            add_json_text(parts, item.player, type=JSONTypes.player_id)
+        else:
+            add_json_text(parts, " received")
+        self._push_text(APTextKind.ITEM, self.to_segments(parts))
+
+    def on_print_json(self, args: dict[str, Any]) -> None:
+        super().on_print_json(args)
+        try:
+            self._relay_print_json(args)
+        except Exception:  # noqa: BLE001
+            # This runs inside the server-packet loop; a malformed line must not take it down.
+            logger.exception("[KAR] Failed to relay a server message to the game")
+
+    def _relay_print_json(self, args: dict[str, Any]) -> None:
+        """Forward the server-authored lines worth seeing in-game. ItemSend is deliberately absent:
+        the team gets one for every check anyone makes, and this slot's own are already covered by
+        _push_check_text and _push_item_text.
+
+        Relaying keys off `args["type"]`, which only server packets carry - that is what keeps the
+        client's own `log_color` lines, which reach `on_print_json` untyped, from looping back in.
+        """
+        msg_type = args.get("type")
+        if msg_type == "Hint":
+            self._push_hint_text(args)
+            return
+        relayed = RELAYED_PRINT_JSON.get(str(msg_type))
+        if relayed is None:
+            return
+        kind, color = relayed
+        segments = self.to_segments(args.get("data", []))
+        if not segments:
+            return
+        # These arrive as a single uncolored run, so the line takes its color from its kind.
+        segments = [
+            Segment(TEAM_SUFFIX.sub("", seg.text), color if seg.color == APTextColor.DEFAULT else seg.color)
+            for seg in segments
+        ]
+        self._push_text(kind, segments)
+
+    def _push_hint_text(self, args: dict[str, Any]) -> None:
+        """A compact hint line: the status rides in the "Hint:" prefix, and the half of the hint
+        this slot already knows is dropped.
+
+        The server only sends a hint to the two slots it concerns, so exactly one of "who receives
+        the item" and "whose world holds it" is always us, and spelling both out costs the room the
+        location name needs.
+        """
+        raw = args.get("item")
+        if raw is None:
+            return
+        info = raw if isinstance(raw, NetworkItem) else NetworkItem(*raw)
+        receiving = int(args.get("receiving", -1))
+        finding = info.player  # in a Hint the NetworkItem carries the finding player
+
+        # Naming the half that is this slot would be redundant, and naming both would need a
+        # sixth colored run. At most one name is ever shown.
+        parts: list[JSONMessagePart] = []
+        if not self.slot_concerns_self(receiving):
+            add_json_text(parts, f"{self.player_names.get(receiving, receiving)}'s ", type=JSONTypes.player_name)
+        add_json_item(parts, info.item, receiving, info.flags)
+        add_json_text(parts, " is at ")
+        add_json_location(parts, info.location, finding)
+        if self.slot_concerns_self(receiving) and not self.slot_concerns_self(finding):
+            add_json_text(parts, f" ({self.player_names.get(finding, finding)})", type=JSONTypes.player_name)
+
+        segments = [hint_prefix(hint_status_of(args.get("data", [])))]
+        segments.extend(self.to_segments(parts))
+        self._push_text(APTextKind.HINT, segments)
 
     def _check_goal(self) -> None:
         """Forward the game's goal_complete flag to the AP server as a victory."""
@@ -721,6 +933,15 @@ class KARContext(CommonContext):
                 self.set_notify(f"EnergyLink{self.team}")
                 if self.ui:
                     self.ui.enable_energy_link()
+
+        # The mod filters on render and is the authority; reading the mask just keeps messages the
+        # player turned off from being composed and occupying the mailbox.
+        mask = self.dolphin.read_u32(self._addr(MemoryAddress.TEXT_MENU_MASK))
+        for kind in APTextKind:
+            enabled = mask & (1 << int(kind)) != 0
+            if enabled != self.text_enabled[kind]:
+                log_toggle(self, f"{TEXT_KIND_LABELS[kind]} messages", enabled)
+                self.text_enabled[kind] = enabled
 
     async def _handle_deathlink(self) -> None:
         if "DeathLink" not in self.tags:
