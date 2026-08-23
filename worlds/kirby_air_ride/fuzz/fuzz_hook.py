@@ -18,10 +18,14 @@ from collections import Counter
 
 from BaseClasses import ItemClassification
 
+from worlds.kirby_air_ride.KARData import checklist_reward_placed_bit
 from worlds.kirby_air_ride.KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
     CHARGE_DEPENDENT_MACHINES,
+    CHECKLIST_REWARD_CATEGORIES,
+    CHECKLIST_REWARD_ITEM_TYPES,
+    CHECKLIST_REWARD_TYPE_MODES,
     CHECKLIST_REWARD_TYPES,
     GATING_CATEGORIES,
     ITEM_TABLE,
@@ -126,7 +130,7 @@ class KARHook:
         self._check_unlock_classifications(tag, pool_items)
         self._check_excluded_items_absent(tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on)
         self._check_reward_uniqueness(tag, world, owned_counts)
-        self._check_checklist_rewards_gated(tag, opts, pool_counts, precollected_counts)
+        self._check_checklist_rewards(tag, world, opts, pool_counts, precollected_counts)
         self._check_effective_gates_shipped(tag, world, owned_counts, precollected_counts)
         self._check_goal_forced_unlocks(tag, world, owned_counts, precollected_counts)
         self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
@@ -201,24 +205,38 @@ class KARHook:
                     f"(rewards must be unique one-time items)"
                 )
 
-    def _check_checklist_rewards_gated(self, tag, opts, pool_counts, precollected_counts):
-        # checklist_rewards_gated off: the mod unlocks every non-progression reward at connect, so none
-        # may appear in the itempool or precollected. The 6 progression part markers are unaffected.
-        if opts.checklist_rewards_gated:
-            return
+    def _check_checklist_rewards(self, tag, world, opts, pool_counts, precollected_counts):
+        # A category left out of checklist_rewards is unlocked by the mod at connect, so none of its
+        # rewards may appear in the itempool or precollected. Rewards in no category - the 6 progression
+        # part markers, and the ones a gating category owns - are unaffected.
+        chosen = set(opts.checklist_rewards.value)
+        dropped = sorted(set(CHECKLIST_REWARD_CATEGORIES) - chosen)
         offenders = []
-        for name, data in ITEM_TABLE.items():
-            if data.type not in CHECKLIST_REWARD_TYPES:
-                continue
-            if data.classification & ItemClassification.progression:
-                continue
-            n = pool_counts.get(str(name), 0) + precollected_counts.get(str(name), 0)
-            if n:
-                offenders.append((str(name), n))
+        for category in dropped:
+            for name in CHECKLIST_REWARD_CATEGORIES[category]:
+                n = pool_counts.get(str(name), 0) + precollected_counts.get(str(name), 0)
+                if n:
+                    offenders.append((category, str(name), n))
         if offenders:
             raise HookError(
-                f"{tag} checklist_rewards_gated off but {len(offenders)} non-progression checklist "
-                f"reward(s) still present (e.g. {offenders[:5]})"
+                f"{tag} checklist_rewards excludes {dropped} but {len(offenders)} of their reward(s) "
+                f"still present (e.g. {offenders[:5]})"
+            )
+
+        # The shipped mask must name exactly the (mode, reward type) pairs that reached the pool. A pair
+        # the mask claims but the pool never got - a disabled mode's rewards, most of all - is content no
+        # item can unlock and the mod will not grant at connect.
+        placed = {
+            checklist_reward_placed_bit(CHECKLIST_REWARD_TYPE_MODES[ITEM_TABLE[name].type], reward_type)
+            for name, reward_type in CHECKLIST_REWARD_ITEM_TYPES.items()
+            if pool_counts.get(str(name), 0) or precollected_counts.get(str(name), 0)
+        }
+        mask = world.fill_slot_data()["checklist_rewards"]
+        shipped = {bit for bit in range(32) if mask >> bit & 1}
+        if shipped != placed:
+            raise HookError(
+                f"{tag} checklist_rewards mask {mask:#x} claims bits {sorted(shipped - placed)} with "
+                f"nothing in the pool and misses {sorted(placed - shipped)} that is"
             )
 
     def _check_effective_gates_shipped(self, tag, world, owned_counts, precollected_counts):
