@@ -4,8 +4,8 @@ Data integrity tests for ITEM_TABLE, the per-mode location tables, and the deriv
 These are all static structures generation reads without re-validating, so a mistake in one shows up
 as a silent behaviour change rather than an error: a duplicate code corrupts the wire contract with
 the mod, a trap item in no `traps` category can never be selected, and a second box claiming an
-existing native reward drops one of the two pins on the floor. Each is cheap to pin here and
-expensive to notice anywhere else.
+existing native reward silently drops one of the two from the derived map. Each is cheap to pin here
+and expensive to notice anywhere else.
 
 The Archipelago band (361-480) is checked for shape in test_archipelago_checklist.py; what it needs
 from this module is only that its codes do not collide with the three real modes'.
@@ -125,9 +125,9 @@ class TestLocationCodeContiguity(unittest.TestCase):
 
 
 class TestNativeRewardMap(unittest.TestCase):
-    """NATIVE_REWARD_TO_LOCATION inverts the tables' `native_reward` field, and shuffle_checklist_rewards
-    pins through it. A dict comprehension silently keeps the last writer, so two boxes claiming the same
-    reward would drop one pin with no error anywhere."""
+    """NATIVE_REWARD_TO_LOCATION inverts the tables' `native_reward` field. A dict comprehension
+    silently keeps the last writer, so two boxes claiming the same reward would drop one entry with no
+    error anywhere."""
 
     def test_every_native_reward_is_claimed_by_one_box(self):
         claims: dict[str, list[str]] = {}

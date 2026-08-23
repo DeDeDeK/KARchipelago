@@ -83,11 +83,11 @@ class TestArchipelagoRewardWireEncoding(unittest.TestCase):
 
 
 class TestArchipelagoAcceptsChecklistRewards(KARTestBase):
-    """Archipelago boxes may host other modes' checklist rewards when rewards are shuffled: the AP
-    checklist awards no *native* rewards, but create_items is mode-agnostic and AP boxes are ordinary
-    fill targets. Asserts eligibility directly rather than sampling seed- and order-dependent fills."""
+    """Archipelago boxes may host other modes' checklist rewards: the AP checklist awards no *native*
+    rewards, but create_items is mode-agnostic and AP boxes are ordinary fill targets. Asserts
+    eligibility directly rather than sampling seed- and order-dependent fills."""
 
-    options = {**AP_WITH_CT, "shuffle_checklist_rewards": True}
+    options = AP_WITH_CT
 
     def test_ap_boxes_accept_a_checklist_reward(self):
         reward_name = next(
