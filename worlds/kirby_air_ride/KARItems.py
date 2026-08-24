@@ -1754,6 +1754,43 @@ CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
 )
 
 
+# Assembled in City Trial from their spheres rather than selected, so none is ever a starting machine.
+ASSEMBLED_MACHINE_UNLOCKS: frozenset[KARItemName] = frozenset(
+    {
+        KARItemName.UNLOCK_MACHINE_HYDRA,
+        KARItemName.UNLOCK_MACHINE_DRAGOON,
+        KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR,
+    }
+)
+
+# Top Ride controls: the mod hard-gates the Top Ride lobby on these two, and neither is rideable in
+# City Trial or Air Ride.
+TR_MACHINE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
+    KARItemName.UNLOCK_MACHINE_FREE_STAR,
+    KARItemName.UNLOCK_MACHINE_STEER_STAR,
+)
+
+AR_CT_MACHINE_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
+    KARItemName(name)
+    for name, data in ITEM_TABLE.items()
+    if data.type == KARItemType.MACHINE_UNLOCK
+    and KARItemName(name) not in ASSEMBLED_MACHINE_UNLOCKS
+    and KARItemName(name) not in TR_MACHINE_UNLOCK_ITEMS
+)
+
+AR_COURSE_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
+    KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.AR_COURSE_UNLOCK
+)
+
+TR_COURSE_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
+    KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.TR_COURSE_UNLOCK
+)
+
+COLOR_UNLOCK_ITEMS: tuple[KARItemName, ...] = tuple(
+    KARItemName(name) for name, data in ITEM_TABLE.items() if data.type == KARItemType.COLOR_UNLOCK
+)
+
+
 # The two playable non-Kirby characters, by the machine unlock that makes each selectable. Each keeps
 # its own melee attack, which no base-ability gate touches, so either is a damage source on its own.
 CHARACTER_MACHINE_UNLOCKS: tuple[KARItemName, ...] = (
