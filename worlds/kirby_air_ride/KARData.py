@@ -160,7 +160,9 @@ class MemoryAddress(IntEnum):
 
     # 1 when mod is fully initialized and save data is loaded. Client polls until 1.
     GAME_READY = 0x028  # u32
-    # Client writes 1 after all option fields are written. Game reads.
+    # Client writes 1 after all option fields are written. The game takes the options in, republishes
+    # the live menu mirrors below, and clears it back to 0 - so this doubles as the transfer ack, and
+    # the client must not diff those mirrors until it reads 0 here.
     OPTIONS_VALID = 0x02C  # u32
 
     # APSlotOptions block (starts at 0x030)
@@ -261,17 +263,14 @@ class MemoryAddress(IntEnum):
 
     # Text queue fields
 
-    # Client heartbeat, bumped every poll. The mod treats no change for 180 frames as "no client"
-    # and falls back to its own generic check message; 0 means the client has never run.
-    CLIENT_ALIVE = 0x298  # u32
     # Text mailbox, the same handshake as INCOMING_ITEM_ID: fill TEXT_MSG, then set TEXT_PENDING.
     # The game clears it once the message is on screen, and holds it while the text box has no
     # canvas, so a scene load backpressures instead of losing the message.
-    TEXT_PENDING = 0x29C  # u32
+    TEXT_PENDING = 0x298  # u32
     # Live state of the in-game per-kind message toggles, bit (1 << APTextKind). Game-written; the
     # client reads it to skip composing messages the player has turned off.
-    TEXT_MENU_MASK = 0x2A0  # u32
-    TEXT_MSG = 0x2A4  # APTextMessage, 256 bytes; see KARText.pack_message for the layout
+    TEXT_MENU_MASK = 0x29C  # u32
+    TEXT_MSG = 0x2A0  # APTextMessage, 256 bytes; see KARText.pack_message for the layout
 
 
 # AP item code layout for checklist rewards: 500..649 in 3 mode bands of stride 50 (500-549 Air Ride,

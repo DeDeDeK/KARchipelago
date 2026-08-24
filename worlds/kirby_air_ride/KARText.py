@@ -13,11 +13,12 @@ three lines and truncates what is left over.
 
 from __future__ import annotations
 
+import re
 import string
 import unicodedata
 from typing import Any, NamedTuple
 
-from NetUtils import HintStatus, JSONMessagePart, JSONtoTextParser
+from NetUtils import HintStatus, JSONMessagePart, JSONtoTextParser, add_json_hint_status, status_names
 
 from .KARData import (
     AP_TEXT_BLOB_LEN,
@@ -33,21 +34,25 @@ from .KARData import (
 # else would emit an undefined code, so it is dropped.
 RENDERABLE = frozenset(string.ascii_letters + string.digits + " !\"#$%&'()*+,-./:;<=>?@[]_")
 
-# Short in-game labels for a hint's status. Unspecified carries no information, so it prints as a
-# bare "Hint: " - the colors match Archipelago's own status colors.
+# Derived from Archipelago's own table so a status added upstream is carried through. The labels
+# lose their parentheses because they are printed inside the "Hint (x): " prefix, and unspecified
+# is dropped: it carries no information, so that hint prints a bare "Hint: ".
 HINT_STATUS_LABELS: dict[int, str] = {
-    HintStatus.HINT_FOUND: "found",
-    HintStatus.HINT_NO_PRIORITY: "no priority",
-    HintStatus.HINT_AVOID: "avoid",
-    HintStatus.HINT_PRIORITY: "priority",
+    status: name.strip("()") for status, name in status_names.items() if status != HintStatus.HINT_UNSPECIFIED
 }
-HINT_STATUS_COLORS: dict[int, APTextColor] = {
-    HintStatus.HINT_FOUND: APTextColor.GREEN,
-    HintStatus.HINT_UNSPECIFIED: APTextColor.WHITE,
-    HintStatus.HINT_NO_PRIORITY: APTextColor.SLATEBLUE,
-    HintStatus.HINT_AVOID: APTextColor.SALMON,
-    HintStatus.HINT_PRIORITY: APTextColor.PLUM,
+
+# Server-authored PrintJSON lines worth relaying in-game, with the kind that gates them and the
+# color they get: they arrive as one uncolored text run, so the line carries the meaning.
+RELAYED_PRINT_JSON: dict[str, tuple[APTextKind, APTextColor]] = {
+    "Goal": (APTextKind.STATUS, APTextColor.GREEN),
+    "Release": (APTextKind.STATUS, APTextColor.YELLOW),
+    "Collect": (APTextKind.STATUS, APTextColor.YELLOW),
+    "Chat": (APTextKind.CHAT, APTextColor.DEFAULT),
+    "ServerChat": (APTextKind.CHAT, APTextColor.ORANGE),
 }
+
+# The server stamps a team number onto its broadcast lines; it is noise on one line of screen.
+_TEAM_SUFFIX = re.compile(r"\s*\(Team #\d+\)")
 
 
 class Segment(NamedTuple):
@@ -57,7 +62,7 @@ class Segment(NamedTuple):
     color: APTextColor = APTextColor.DEFAULT
 
 
-def sanitize(text: str) -> str:
+def _sanitize(text: str) -> str:
     """Fold `text` to the glyphs the game font can render.
 
     NFKD decomposition turns accented letters into a base letter plus a combining mark, and the
@@ -94,14 +99,15 @@ class SegmentCollector(JSONtoTextParser):
         super().__init__(ctx)
         self.segments: list[Segment] = []
 
-    def __call__(self, input_object: list[JSONMessagePart]) -> list[Segment]:  # type: ignore[override]
+    def collect(self, parts: list[JSONMessagePart]) -> list[Segment]:
+        """Resolve `parts` to colored segments; the base walk's joined string is discarded."""
         self.segments = []
-        super().__call__(input_object)
+        super().__call__(parts)
         return self.segments
 
     def _emit(self, node: JSONMessagePart, color: APTextColor) -> str:
         raw = node.get("text", "")
-        text = sanitize(raw)
+        text = _sanitize(raw)
         # A name written entirely in glyphs the font lacks would otherwise disappear mid-sentence.
         if raw.strip() and not text.strip():
             text = "?"
@@ -121,7 +127,7 @@ class SegmentCollector(JSONtoTextParser):
         return self._emit(node, APTextColor.DEFAULT)
 
 
-def coalesce(segments: list[Segment]) -> list[Segment]:
+def _coalesce(segments: list[Segment]) -> list[Segment]:
     """Merge adjacent runs sharing a color, then fold any overflow past AP_TEXT_SEG_NUM into the
     last run - a colored run costs a subtext object in the renderer, so the cap is hard."""
     merged: list[Segment] = []
@@ -147,7 +153,7 @@ def _truncate(text: str, keep: int) -> str:
     return text[: keep - 2].rstrip() + ".."
 
 
-def fit(segments: list[Segment]) -> list[Segment]:
+def _fit(segments: list[Segment]) -> list[Segment]:
     """Trim segments until the whole message fits the blob, always cutting the longest run first
     so a long location name gives way before the words around it. This is a transport limit, not
     a display one - the mod does the wrapping and the on-screen truncation."""
@@ -172,7 +178,7 @@ def pack_message(kind: APTextKind, segments: list[Segment]) -> bytes | None:
     Layout: u8 kind, u8 seg_count, u8 colors[AP_TEXT_SEG_NUM], u8 pad[2], then the segment
     strings NUL-terminated back to back in a AP_TEXT_BLOB_LEN byte blob.
     """
-    segs = fit(coalesce(segments))
+    segs = _fit(_coalesce(segments))
     if not segs:
         return None
 
@@ -185,22 +191,35 @@ def pack_message(kind: APTextKind, segments: list[Segment]) -> bytes | None:
     return payload
 
 
-def hint_status_of(parts: list[JSONMessagePart]) -> int:
-    """The hint status carried by a Hint packet's parts. The status only appears inside the
-    message parts - the packet's own fields are receiving/item/found."""
-    for node in parts:
-        if node.get("type") == "hint_status":
-            return int(node.get("hint_status", HintStatus.HINT_UNSPECIFIED))
-    return int(HintStatus.HINT_UNSPECIFIED)
-
-
-def hint_prefix(status: int) -> Segment:
-    """The "Hint: " lead-in, carrying the status as both a word and a color.
+def add_hint_prefix(parts: list[JSONMessagePart], data: list[JSONMessagePart]) -> None:
+    """Open a hint line with the "Hint (status): " lead-in, reading the status out of the server's
+    own `data` parts - the Hint packet's other fields are receiving/item/found.
 
     Archipelago's own wording repeats what the reader already knows - one side of every hint is
-    always this slot - and would not fit one line. Folding the status into the prefix keeps the
-    whole hint inside the five-run cap with the location name intact.
+    always this slot - and would not fit one line. Folding the status into the prefix leaves the
+    room the location name needs. It goes in as a real `hint_status` part, so the color comes from
+    Archipelago's status table rather than a second table here.
     """
+    status = HintStatus.HINT_UNSPECIFIED
+    for node in data:
+        if node.get("type") == "hint_status":
+            try:
+                status = HintStatus(int(node.get("hint_status", HintStatus.HINT_UNSPECIFIED)))
+            except ValueError:
+                # A status this client's NetUtils does not know: print the bare "Hint: " prefix.
+                status = HintStatus.HINT_UNSPECIFIED
+            break
     label = HINT_STATUS_LABELS.get(status)
-    color = HINT_STATUS_COLORS.get(status, APTextColor.RED)
-    return Segment(f"Hint ({label}): " if label else "Hint: ", color)
+    add_json_hint_status(parts, status, text=f"Hint ({label}): " if label else "Hint: ")
+
+
+def relay_segments(segments: list[Segment], color: APTextColor) -> list[Segment]:
+    """Strip the server's team stamp and give the line its kind's color.
+
+    A relayed line arrives as one uncolored run, so the color is the only thing marking what it
+    is; any run the server did color keeps it.
+    """
+    return [
+        Segment(_TEAM_SUFFIX.sub("", seg.text), color if seg.color == APTextColor.DEFAULT else seg.color)
+        for seg in segments
+    ]
