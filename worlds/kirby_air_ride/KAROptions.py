@@ -97,27 +97,19 @@ class TrapLink(Toggle):
 class ChecklistRewards(OptionSet):
     """
     Which categories of the game's vanilla checklist rewards (red boxes) are placed as items into the
-    multiworld.
+    multiworld. Valid categories are:
 
-    A category you leave out is kept out of the pool and unlocked in-game the moment you connect, and its
-    in-game checklists no longer hold it. A category you include is shuffled into the multiworld like any
-    other item, so you'll have to find it to unlock it. A mode you disable takes its rewards with it, and
-    they are unlocked at connect too.
-
-    - Sound Test: sound test entries, 34 of them
-    - Music: course and stadium music tracks
-    - Filler Boxes: boxes awarding a checkbox filler
-    - Endings: the ending movie for each mode
-    - Gameplay Extras: Top Ride extra rules, Air Ride's Special Machine Intros, City Trial's pause-screen
+    - "Sound Test": sound test entries
+    - "Music": course and stadium music tracks
+    - "Filler Boxes": boxes awarding a checkbox filler
+    - "Endings": the ending movie for each mode
+    - "Gameplay Extras": Top Ride extra rules, Air Ride's Special Machine Intros, City Trial's pause-screen
       power-up display
 
-    Rewards another option already owns are never placed here, whatever you pick:
-    - Dragoon and Hydra parts: progression, so always in the pool
-    - Machine unlocks: governed by machines_gated
-    - Kirby color unlocks: governed by colors_gated
-    - Stadium unlocks: governed by city_trial_stadiums_gated
-    - Air ride courses: governed by air_ride_courses_gated
-    - Top ride items: governed by top_ride_items_gated
+    Only categories you specify are added to the pool. Others are left out, and automatically unlocked in-game
+    from the start. In-game checklists will not contain these items.
+
+    Other reward categories are gated by other options. This option only covers the categories above.
     """
 
     display_name = "Checklist Rewards"
@@ -127,7 +119,15 @@ class ChecklistRewards(OptionSet):
 
 class CityTrialGoal(Choice):
     """
-    Sets the goal for City Trial. If you have goals on multiple game modes, all must be achieved to win.
+    Sets the goal for City Trial.
+
+    - 100 Checklist Blocks: Get the checkbox for getting 100 checkboxes in the City Trial Checklist
+    - N Checklist Blocks: Get the specified number of checkboxes
+    - Hydra and Dragoon: Get the checkbox for assembling Hydra and Dragoon in a single CT run
+    - Beat King DeDeDe: Get the checkbox for defeating King DeDeDe in under a minute
+    - Checklist List: Specify a custom list of City Trial checkboxes (locations) to complete
+    - Max Stats in One Run: Get max stats for every patch in one CT run
+
     Select "None" to disable City Trial.
     """
 
@@ -227,8 +227,8 @@ class CityTrialCheckboxFillers(NamedRange):
 
 class CityTrialRevealChecklist(Toggle):
     """
-    If enabled, the City Trial checklist starts off completely revealed instead of filling in around
-    the squares you complete. Revealing is visual only: it does not complete or unlock anything.
+    If enabled, the City Trial checklist starts off completely revealed.
+    Revealing is visual only: it does not complete or unlock anything.
     """
 
     default = 0
@@ -263,20 +263,60 @@ class CityTrialPatchCapMax(Range):
 class CityTrialStadiumsGated(DefaultOnToggle):
     """
     When enabled, City Trial stadiums are locked and must be unlocked by finding their
-    corresponding Unlock Stadium items. The game starts with one random stadium already unlocked (any of
-    the 24, except VS King Dedede when that is the goal).
+    corresponding Unlock Stadium items.
 
     When disabled, every stadium is available from the start and no Unlock Stadium items are added to the
-    pool - except with the Beat King Dedede goal, which always keeps its own Unlock Stadium: VS. KING
-    DEDEDE in the pool so the goal is not winnable in the first match.
+    pool.
     """
 
     display_name = "City Trial Stadiums Gated"
 
 
+class StartingStadium(Choice):
+    """
+    The City Trial stadium unlocked from the start.
+
+    Only applies when City Trial is enabled and "City Trial Stadiums Gated" is on; otherwise ignored.
+    VS. KING DEDEDE cannot be picked when it is your City Trial goal.
+    """
+
+    display_name = "Starting Stadium"
+    default = 0
+    option_randomized = 0
+    option_drag_race_1 = 1
+    option_drag_race_2 = 2
+    option_drag_race_3 = 3
+    option_drag_race_4 = 4
+    option_air_glider = 5
+    option_target_flight = 6
+    option_high_jump = 7
+    option_kirby_melee_1 = 8
+    option_kirby_melee_2 = 9
+    option_destruction_derby_1 = 10
+    option_destruction_derby_2 = 11
+    option_destruction_derby_3 = 12
+    option_destruction_derby_4 = 13
+    option_destruction_derby_5 = 14
+    option_single_race_1 = 15
+    option_single_race_2 = 16
+    option_single_race_3 = 17
+    option_single_race_4 = 18
+    option_single_race_5 = 19
+    option_single_race_6 = 20
+    option_single_race_7 = 21
+    option_single_race_8 = 22
+    option_single_race_9 = 23
+    option_vs_king_dedede = 24
+
+
 class AirRideGoal(Choice):
     """
-    Sets the goal for Air Ride. If you have goals on multiple game modes, all must be achieved to win.
+    Sets the goal for Air Ride.
+
+    - 100 Checklist Blocks: Get the checkbox for getting 100 checkboxes in the Air Ride Checklist
+    - N Checklist Blocks: Get the specified number of checkboxes
+    - Checklist List: Specify a custom list of Air Ride checkboxes (locations) to complete
+
     Select "None" to disable Air Ride.
     """
 
@@ -362,8 +402,8 @@ class AirRideCheckboxFillers(NamedRange):
 
 class AirRideRevealChecklist(Toggle):
     """
-    If enabled, the Air Ride checklist starts off completely revealed instead of filling in around
-    the squares you complete. Revealing is visual only: it does not complete or unlock anything.
+    If enabled, the Air Ride checklist starts off completely revealed.
+    Revealing is visual only: it does not complete or unlock anything.
     """
 
     default = 0
@@ -372,7 +412,12 @@ class AirRideRevealChecklist(Toggle):
 
 class TopRideGoal(Choice):
     """
-    Sets the goal for Top Ride. If you have goals on multiple game modes, all must be achieved to win.
+    Sets the goal for Top Ride.
+
+    - 100 Checklist Blocks: Get the checkbox for getting 100 checkboxes in the Top Ride Checklist
+    - N Checklist Blocks: Get the specified number of checkboxes
+    - Checklist List: Specify a custom list of Top Ride checkboxes (locations) to complete
+
     Select "None" to disable Top Ride.
     """
 
@@ -469,17 +514,14 @@ class TopRideRevealChecklist(Toggle):
 class ArchipelagoGoal(Choice):
     """
     EXPERIMENTAL - ONLY USE IF YOU WANT TO TEST - SOME CHECKS LIKELY BROKEN
-    The Archipelago checklist is incomplete and under active development.
-    Does not have all 120 checks yet, and logic for these may be incorrect.
+    Sets the goal for the Archipelago checklist.
 
-    Sets the goal for the Archipelago checklist. If you have goals on multiple game modes,
-    all must be achieved to win. Select "None" to exclude archipelago checklist locations completely.
+    - N Checklist Blocks: Get the specified number of checkboxes in the Archipelago Checklist
+    - Checklist List: Specify a custom list of Archipelago checkboxes (locations) to complete
+    - Assemble Archipelago Star: Assemble the Archipelago Star Legendary Machine in one CT run
+    - Assemble All Three Legendaries in One Run: Assemble all 3 legendary machines in one CT run
 
-    "assemble_archipelago_star" asks you to collect all six Archipelago spheres in one City Trial
-    round. Each sphere is its own item, so all six have to arrive before a round can deliver a set.
-
-    "all_three_legendaries_in_one_run" asks for Dragoon, Hydra and the Archipelago Star in the same
-    City Trial round - twelve pieces, so it needs the six Hydra/Dragoon part items as well.
+    Select "None" to exclude archipelago checklist locations completely.
     """
 
     display_name = "Archipelago Checklist Goal"
@@ -495,9 +537,6 @@ class ArchipelagoChecklistAmount(Range):
     """
     This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for the
     Archipelago checklist.
-
-    The Archipelago checklist is still incomplete, so it offers fewer boxes than the other modes and
-    this range is correspondingly smaller.
     """
 
     display_name = "Number of Checklist Boxes for Archipelago"
@@ -532,9 +571,8 @@ class ArchipelagoCheckboxFillers(NamedRange):
 
 class ArchipelagoRevealChecklist(Toggle):
     """
-    If enabled, the Archipelago checklist starts off completely revealed instead of filling in around
-    the squares you complete. Only the squares that carry an objective are revealed, and revealing is
-    visual only: it does not complete or unlock anything.
+    If enabled, the Archipelago checklist starts off completely revealed.
+    Revealing is visual only: it does not complete or unlock anything.
     """
 
     default = 0
@@ -591,7 +629,7 @@ class CityTrialPatchesGated(DefaultOnToggle):
 
 class CityTrialItemsGated(Toggle):
     """
-    When enabled, game items (All Up, Speed Max, Candy, food, legendary parts, etc.)
+    When enabled, City Trial items (All Up, Speed Max, Candy, food, legendary parts, etc.)
     are locked and must be unlocked by finding their corresponding items.
 
     When disabled, all game items are available from the start and no item unlock items are added to
@@ -605,8 +643,7 @@ class CityTrialItemsGated(Toggle):
 class MachinesGated(Toggle):
     """
     When enabled, air ride machines are locked and must be unlocked by finding their
-    corresponding items. Applies to all modes. The game starts with one random
-    machine already unlocked (and, when Top Ride is enabled, one random Top Ride machine).
+    corresponding items. Applies to all modes.
 
     When disabled, all machines are available from the start and no machine unlock items are added
     to the pool.
@@ -615,10 +652,58 @@ class MachinesGated(Toggle):
     display_name = "Machines Gated"
 
 
+class StartingMachine(Choice):
+    """
+    The machine unlocked unlocked from the start.
+
+    Only applies when "Machines Gated" is on and City Trial or Air Ride is enabled; otherwise ignored.
+
+    With "Base Abilities Gated" on, Bulk, Slick and Turbo Star cannot be picked.
+    """
+
+    display_name = "Starting Machine"
+    default = 0
+    option_randomized = 0
+    option_warp_star = 1
+    option_compact_star = 2
+    option_winged_star = 3
+    option_shadow_star = 4
+    option_bulk_star = 5
+    option_slick_star = 6
+    option_formula_star = 7
+    option_wagon_star = 8
+    option_rocket_star = 9
+    option_swerve_star = 10
+    option_turbo_star = 11
+    option_jet_star = 12
+    option_flight_warp_star = 13
+    option_meta_knight = 14
+    option_wheelie_bike = 15
+    option_rex_wheelie = 16
+    option_wheelie_scooter = 17
+    option_king_dedede = 18
+
+
+class StartingTopRideMachine(Choice):
+    """
+    The Top Ride machine unlocked from the start.
+
+    Only applies when "Machines Gated" is on and Top Ride is enabled; otherwise ignored.
+    """
+
+    display_name = "Starting Top Ride Machine"
+    default = 0
+    option_randomized = 0
+    option_free_star = 1
+    option_steer_star = 2
+
+
 class CityTrialBoxesGated(DefaultOnToggle):
     """
     When enabled, box types (Blue, Green, Red) are locked and must be unlocked by finding
     their corresponding items.
+
+    Boxes will still not spawn if none of their containing items are unlocked yet.
 
     When disabled, all box types are available from the start and no box unlock items are added to
     the pool.
@@ -630,7 +715,7 @@ class CityTrialBoxesGated(DefaultOnToggle):
 class AirRideCoursesGated(DefaultOnToggle):
     """
     When enabled, Air Ride courses are locked and must be unlocked by finding their
-    corresponding items. The game starts with one random Air Ride course already unlocked.
+    corresponding items.
 
     When disabled, all Air Ride courses are available from the start and no course unlock items are
     added to the pool.
@@ -639,10 +724,31 @@ class AirRideCoursesGated(DefaultOnToggle):
     display_name = "Air Ride Courses Gated"
 
 
+class StartingAirRideCourse(Choice):
+    """
+    The Air Ride course unlocked from the start.
+
+    Only applies when Air Ride is enabled and "Air Ride Courses Gated" is on; otherwise ignored.
+    """
+
+    display_name = "Starting Air Ride Course"
+    default = 0
+    option_randomized = 0
+    option_fantasy_meadows = 1
+    option_magma_flows = 2
+    option_sky_sands = 3
+    option_frozen_hillside = 4
+    option_beanstalk_park = 5
+    option_celestial_valley = 6
+    option_machine_passage = 7
+    option_checker_knights = 8
+    option_nebula_belt = 9
+
+
 class ColorsGated(DefaultOnToggle):
     """
     When enabled, Kirby colors are locked and must be unlocked by finding their corresponding
-    items. The game starts with one random color already unlocked.
+    items.
 
     When disabled, all Kirby colors are available from the start and no color unlock items are added
     to the pool.
@@ -651,10 +757,30 @@ class ColorsGated(DefaultOnToggle):
     display_name = "Kirby Colors Gated"
 
 
+class StartingKirbyColor(Choice):
+    """
+    The Kirby color unlocked from the start.
+
+    Only applies when "Kirby Colors Gated" is on; otherwise ignored.
+    """
+
+    display_name = "Starting Kirby Color"
+    default = 0
+    option_randomized = 0
+    option_pink = 1
+    option_yellow = 2
+    option_blue = 3
+    option_red = 4
+    option_green = 5
+    option_purple = 6
+    option_brown = 7
+    option_white = 8
+
+
 class TopRideCoursesGated(DefaultOnToggle):
     """
     When enabled, Top Ride courses are locked and must be unlocked by finding their
-    corresponding items. The game starts with one random Top Ride course already unlocked.
+    corresponding items.
 
     When disabled, all Top Ride courses are available from the start and no course unlock items are
     added to the pool.
@@ -663,11 +789,32 @@ class TopRideCoursesGated(DefaultOnToggle):
     display_name = "Top Ride Courses Gated"
 
 
+class StartingTopRideCourse(Choice):
+    """
+    The Top Ride course unlocked from the start.
+
+    Only applies when Top Ride is enabled and "Top Ride Courses Gated" is on; otherwise ignored.
+    """
+
+    display_name = "Starting Top Ride Course"
+    default = 0
+    option_randomized = 0
+    option_grass = 1
+    option_sand = 2
+    option_sky = 3
+    option_fire = 4
+    option_light = 5
+    option_water = 6
+    option_metal = 7
+
+
 class TopRideItemsGated(DefaultOnToggle):
     """
     When enabled, Top Ride items are locked and must be unlocked by finding their
-    corresponding items. The four items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky)
-    are additionally unlocked by the copy ability unlock item.
+    corresponding items.
+
+    The four items tied to copy abilities (Freeze Fan, Fire, Bomb, Walky) are additionally unlocked
+    by the copy ability unlock items.
 
     When disabled, all Top Ride items are available from the start and no item unlock items are added
     to the pool.
@@ -704,6 +851,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_patch_cap_min: CityTrialPatchCapMin
     city_trial_patch_cap_max: CityTrialPatchCapMax
     city_trial_stadiums_gated: CityTrialStadiumsGated
+    starting_stadium: StartingStadium
 
     # Air Ride
     air_ride_goal: AirRideGoal
@@ -741,10 +889,15 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_patches_gated: CityTrialPatchesGated
     city_trial_items_gated: CityTrialItemsGated
     machines_gated: MachinesGated
+    starting_machine: StartingMachine
+    starting_top_ride_machine: StartingTopRideMachine
     city_trial_boxes_gated: CityTrialBoxesGated
     air_ride_courses_gated: AirRideCoursesGated
+    starting_air_ride_course: StartingAirRideCourse
     colors_gated: ColorsGated
+    starting_kirby_color: StartingKirbyColor
     top_ride_courses_gated: TopRideCoursesGated
+    starting_top_ride_course: StartingTopRideCourse
     top_ride_items_gated: TopRideItemsGated
 
 
@@ -779,6 +932,7 @@ kar_option_groups = [
             CityTrialPatchCapMin,
             CityTrialPatchCapMax,
             CityTrialStadiumsGated,
+            StartingStadium,
             CityTrialEventsGated,
             CityTrialPatchesGated,
             CityTrialItemsGated,
@@ -798,6 +952,7 @@ kar_option_groups = [
             AirRideCheckboxFillers,
             AirRideRevealChecklist,
             AirRideCoursesGated,
+            StartingAirRideCourse,
         ],
     ),
     OptionGroup(
@@ -813,6 +968,7 @@ kar_option_groups = [
             TopRideCheckboxFillers,
             TopRideRevealChecklist,
             TopRideCoursesGated,
+            StartingTopRideCourse,
             TopRideItemsGated,
         ],
     ),
@@ -832,7 +988,10 @@ kar_option_groups = [
             AbilitiesGated,
             BaseAbilitiesGated,
             ColorsGated,
+            StartingKirbyColor,
             MachinesGated,
+            StartingMachine,
+            StartingTopRideMachine,
         ],
     ),
 ]
