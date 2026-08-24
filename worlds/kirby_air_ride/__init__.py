@@ -1,8 +1,9 @@
 from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any, ClassVar, NamedTuple
 
 from BaseClasses import ItemClassification, Tutorial
-from Options import OptionError, PerGameCommonOptions
+from Options import Choice, OptionError, PerGameCommonOptions
 
 from worlds.AutoWorld import WebWorld, World
 from worlds.generic.Rules import add_item_rule
@@ -18,15 +19,20 @@ from .KARData import GameMode, checklist_reward_placed_bit
 from .KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
+    AR_COURSE_UNLOCK_ITEMS,
+    AR_CT_MACHINE_UNLOCK_ITEMS,
     CHARGE_DEPENDENT_MACHINES,
     CHECKLIST_REWARD_CATEGORIES,
     CHECKLIST_REWARD_ITEM_TYPES,
     CHECKLIST_REWARD_TYPE_MODES,
     CHECKLIST_REWARD_TYPES,
+    COLOR_UNLOCK_ITEMS,
     GATING_CATEGORIES,
     ITEM_TABLE,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_UNLOCK_ITEMS,
+    TR_COURSE_UNLOCK_ITEMS,
+    TR_MACHINE_UNLOCK_ITEMS,
     TRAP_CATEGORIES,
     GatingCategory,
     KARItem,
@@ -92,39 +98,6 @@ class KARWeb(WebWorld):
     theme = "partyTime"
     option_groups = kar_option_groups
     rich_text_options_doc = True
-    options_presets = {  # noqa: RUF012
-        "Max Stats Insanity": {
-            "city_trial_goal": "max_stats_in_one_run",
-            "city_trial_patch_cap_min": 1,
-            "city_trial_patch_cap_max": 30,
-            "spawn_rate_min": 100,
-            "spawn_rate_max": 300,
-            "air_ride_goal": "n_checklist_blocks",
-            "air_ride_checklist_amount": 20,
-            "top_ride_goal": "n_checklist_blocks",
-            "top_ride_checklist_amount": 20,
-            # Disable most gating so the pool isn't dominated by unlock items.
-            "city_trial_events_gated": False,
-            "abilities_gated": False,
-            "base_abilities_gated": False,
-            "city_trial_patches_gated": False,
-            "city_trial_items_gated": False,
-            "machines_gated": False,
-            "city_trial_boxes_gated": False,
-            "air_ride_courses_gated": False,
-            "colors_gated": False,
-            "top_ride_courses_gated": False,
-            "top_ride_items_gated": False,
-            "city_trial_stadiums_gated": False,
-            # Keep the preset's "no permanent patches" intent; all other give categories stay on.
-            "allowed_items": [
-                "City Trial Item Gives",
-                "City Trial Event Gives",
-                "Copy Ability Gives",
-                "Top Ride Item Gives",
-            ],
-        },
-    }
 
 
 # Universal Tracker regenerates the slot from these instead of the player's local YAML, which may not be
@@ -209,7 +182,7 @@ class KARWorld(World):
         self.item_pools_built: bool = False
         self.progression_pool: list[str] = []
         self.counted_useful_pool: list[str] = []
-        self.stadium_starter_choice: KARItemName | None = None
+        self.stadium_starter_choice: str | None = None
         self.goal_locations_to_exclude: set[str] = set()
         self.machine_starter_choice: str | None = None
         self.tr_machine_starter_choice: str | None = None
@@ -308,79 +281,115 @@ class KARWorld(World):
             if goal_option.value in goal_location_map:
                 self.goal_locations_to_exclude.add(goal_location_map[goal_option.value])
 
-    def _pick_random_starter(self, eligible: set[str]) -> str | None:
-        """Random pick from `eligible`; None if it is empty or the player already preset one via
-        start_inventory."""
+    def _resolve_starter(
+        self,
+        option: Choice,
+        candidates: tuple[KARItemName, ...],
+        eligible: set[str],
+        barred: Mapping[KARItemName, str] = MappingProxyType({}),
+        suppression_set: set[str] | None = None,
+    ) -> str | None:
+        """The starting unlock for one category: the player's named pick, or a random draw from
+        `eligible` when the option is on "randomized". None when there is nothing to hand over.
+
+        Options number their choices as 1-based indices into `candidates`, with 0 for "randomized".
+        `barred` maps a member held out of this seed's draw to the reason why; naming one is an error
+        rather than a silent downgrade. `suppression_set` is what start_inventory is tested against when
+        deciding to skip the draw - the stadium category tests 24 unlocks while drawing from 23.
+        """
+        if option.value:
+            named = candidates[option.value - 1]
+            if named in barred:
+                # getattr: AP declares display_name on each option class, never on the Option base.
+                label = getattr(option, "display_name", type(option).__name__)
+                raise OptionError(f"{label} cannot be '{option.current_key}': {barred[named]}.")
+            return None if named in self.options.start_inventory else str(named)
         if not eligible:
             return None
-        if any(item in self.options.start_inventory for item in eligible):
+        if any(item in self.options.start_inventory for item in (suppression_set if suppression_set else eligible)):
             return None
         return self.random.choice(sorted(eligible))
 
     def _determine_starter_items(self) -> None:
         """
-        One random starter per gated category the player should not boot into without; generate_early
-        push_precollects each. Deliberately skipped as playable without: events, abilities, boxes, CT
-        items, TR items, patch types.
+        One starter per gated category the player should not boot into without; generate_early
+        push_precollects each. Deliberately skipped as playable without: events, abilities, boxes,
+        CT items, TR items, patch types.
         """
-        beat_dedede = (
-            self.city_trial_enabled
-            and self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
-        )
         if self.city_trial_enabled and self.options.city_trial_stadiums_gated:
-            player_stadium_unlocks = [
-                item_name for item_name in self.options.start_inventory if item_name in STADIUM_UNLOCK_ITEMS
-            ]
-            if not player_stadium_unlocks:
-                stadiums: list[KARItemName] = list(STADIUM_UNLOCK_ITEMS)
-                if beat_dedede:
-                    stadiums.remove(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
-                self.stadium_starter_choice = self.random.choice(stadiums)
+            # Handing over the goal stadium for free would hand over the goal.
+            beat_dedede = self.options.city_trial_goal.value == self.options.city_trial_goal.option_beat_king_dedede
+            barred_stadiums = (
+                {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: "it is your City Trial goal"} if beat_dedede else {}
+            )
+            stadiums = {str(name) for name in STADIUM_UNLOCK_ITEMS}
+            self.stadium_starter_choice = self._resolve_starter(
+                self.options.starting_stadium,
+                STADIUM_UNLOCK_ITEMS,
+                stadiums - {str(name) for name in barred_stadiums},
+                barred_stadiums,
+                suppression_set=stadiums,
+            )
 
         if (self.city_trial_enabled or self.air_ride_enabled) and self.options.machines_gated:
-            machines = items_by_type[KARItemType.MACHINE_UNLOCK] - {
-                KARItemName.UNLOCK_MACHINE_HYDRA,
-                KARItemName.UNLOCK_MACHINE_DRAGOON,
-                # Assembled in City Trial from its six spheres, like the other two legendaries.
-                KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR,
-                # Exclude TR-only machines
-                KARItemName.UNLOCK_MACHINE_FREE_STAR,
-                KARItemName.UNLOCK_MACHINE_STEER_STAR,
-            }
-            if self.options.base_abilities_gated:
-                # Slick/Turbo only turn by charge-drifting and Bulk has almost no speed of its own, so
-                # any of them as the sole machine with Charge locked strands the player.
-                machines -= CHARGE_DEPENDENT_MACHINES
-            self.machine_starter_choice = self._pick_random_starter(machines)
+            machines = {str(name) for name in AR_CT_MACHINE_UNLOCK_ITEMS}
+            # Slick/Turbo only turn by charge-drifting and Bulk has almost no speed of its own, so
+            # any of them as the sole machine with Charge locked strands the player.
+            barred_machines = (
+                {
+                    name: "it needs Machine Charge to move or steer, which Base Abilities Gated locks"
+                    for name in CHARGE_DEPENDENT_MACHINES
+                    if str(name) in machines
+                }
+                if self.options.base_abilities_gated
+                else {}
+            )
+            self.machine_starter_choice = self._resolve_starter(
+                self.options.starting_machine,
+                AR_CT_MACHINE_UNLOCK_ITEMS,
+                machines - {str(name) for name in barred_machines},
+                barred_machines,
+            )
 
         # The mod hard-gates the Top Ride lobby on Free or Steer, so a machine-gated Top Ride needs one
         # of them up front.
         if self.top_ride_enabled and self.options.machines_gated:
-            self.tr_machine_starter_choice = self._pick_random_starter(
-                {KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR}
+            self.tr_machine_starter_choice = self._resolve_starter(
+                self.options.starting_top_ride_machine,
+                TR_MACHINE_UNLOCK_ITEMS,
+                {str(name) for name in TR_MACHINE_UNLOCK_ITEMS},
             )
 
         if self.air_ride_enabled and self.options.air_ride_courses_gated:
-            self.ar_course_starter_choice = self._pick_random_starter(items_by_type[KARItemType.AR_COURSE_UNLOCK])
+            self.ar_course_starter_choice = self._resolve_starter(
+                self.options.starting_air_ride_course,
+                AR_COURSE_UNLOCK_ITEMS,
+                items_by_type[KARItemType.AR_COURSE_UNLOCK],
+            )
 
         if self.top_ride_enabled and self.options.top_ride_courses_gated:
-            self.tr_course_starter_choice = self._pick_random_starter(items_by_type[KARItemType.TR_COURSE_UNLOCK])
+            self.tr_course_starter_choice = self._resolve_starter(
+                self.options.starting_top_ride_course,
+                TR_COURSE_UNLOCK_ITEMS,
+                items_by_type[KARItemType.TR_COURSE_UNLOCK],
+            )
 
         # A cosmetic exception, but the mod falls back to Pink only while no color is unlocked. Colors
         # have no required_modes, so the gate alone decides.
         if self.options.colors_gated:
-            self.color_starter_choice = self._pick_random_starter(items_by_type[KARItemType.COLOR_UNLOCK])
+            self.color_starter_choice = self._resolve_starter(
+                self.options.starting_kirby_color,
+                COLOR_UNLOCK_ITEMS,
+                items_by_type[KARItemType.COLOR_UNLOCK],
+            )
 
     def _compute_logic_modes(self) -> set[GameMode]:
         """
         The modes whose region trees get built: every mode with a goal, plus every mode an Archipelago
-        checklist box names when the AP checklist is on.
-
-        An AP box lives in the region where its activity happens, so it inherits that region's entrance
-        chain instead of hand-copied Has(...) rules that drift - which needs the tree to exist. A mode
-        pulled in this way has no goal, so it contributes no unlock items, lands in no effective_gates
-        and ships its gates as 0: present, reachable and free. Reads the static REGION_TO_MODE table;
-        inspecting the built regions would be circular.
+        checklist box names when the AP checklist is on - an AP box inherits the entrance chain of the
+        region its activity happens in, which needs that tree to exist. A mode pulled in this way has no
+        goal, so it mints no unlocks, lands in no effective_gates and ships its gates as 0: free. Reads
+        the static REGION_TO_MODE table; inspecting the built regions would be circular.
         """
         modes = {
             mode
@@ -398,10 +407,9 @@ class KARWorld(World):
 
     def _category_holds_keys(self, cat: GatingCategory) -> bool:
         """
-        Whether a category actually holds unlock items this seed: gate on AND some mode giving its items
-        meaning has a goal. Tests the *_enabled flags, not logic_modes - a goal-less mode contributes no
-        unlock items. Empty required_modes means mode-agnostic (colors), always keyed, so the test must
-        be `not cat.required_modes or any(...)` and never an intersection.
+        Whether a category holds unlock items this seed: gate on AND some mode giving its items meaning
+        has a goal. Tests the *_enabled flags, not logic_modes - a goal-less mode mints no unlocks.
+        Empty required_modes means mode-agnostic (colors), always keyed - never an intersection test.
         """
         if not getattr(self.options, cat.option):
             return False
@@ -443,8 +451,7 @@ class KARWorld(World):
         """
         The goal's keys the pool must ship even though their category's gate is off. Ungated, the mod
         hands the whole unlock mask over at connect, making a one-feat goal winnable before any item
-        arrives; the mod withholds exactly these bits from the pre-fill instead, leaving the rest of the
-        category ungated. Empty when the category is already gated.
+        arrives; it withholds exactly these bits instead. Empty when the category is already gated.
         """
         required = self._goal_required_unlocks()
         forced: set[str] = set()
@@ -738,11 +745,10 @@ class KARWorld(World):
         self.item_pools_built = True
 
     def _apply_ut_passthrough(self) -> None:
-        """Restore this slot's recorded option values when Universal Tracker is re-generating.
-
-        A no-op during a real generation: `re_gen_passthrough` only exists on UT's MultiWorld. UT rolls
-        its regeneration from an empty YAML, so every option arrives at its default and has to be put
-        back here before generate_early reads the first one.
+        """Restore this slot's recorded option values when Universal Tracker is re-generating. A no-op
+        during a real generation: `re_gen_passthrough` only exists on UT's MultiWorld. UT regenerates
+        from an empty YAML, so every option arrives at its default and must be put back here before
+        generate_early reads the first one.
         """
         passthrough = getattr(self.multiworld, "re_gen_passthrough", None)
         if not passthrough or self.game not in passthrough:

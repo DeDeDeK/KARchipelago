@@ -22,15 +22,20 @@ from worlds.kirby_air_ride.KARData import checklist_reward_placed_bit
 from worlds.kirby_air_ride.KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
+    AR_COURSE_UNLOCK_ITEMS,
+    AR_CT_MACHINE_UNLOCK_ITEMS,
     CHARGE_DEPENDENT_MACHINES,
     CHECKLIST_REWARD_CATEGORIES,
     CHECKLIST_REWARD_ITEM_TYPES,
     CHECKLIST_REWARD_TYPE_MODES,
     CHECKLIST_REWARD_TYPES,
+    COLOR_UNLOCK_ITEMS,
     GATING_CATEGORIES,
     ITEM_TABLE,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_UNLOCK_ITEMS,
+    TR_COURSE_UNLOCK_ITEMS,
+    TR_MACHINE_UNLOCK_ITEMS,
     KARItemGroup,
     KARItemName,
     item_name_groups,
@@ -133,7 +138,9 @@ class KARHook:
         self._check_checklist_rewards(tag, world, opts, pool_counts, precollected_counts)
         self._check_effective_gates_shipped(tag, world, owned_counts, precollected_counts)
         self._check_goal_forced_unlocks(tag, world, owned_counts, precollected_counts)
-        self._check_starter_precollected(tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on)
+        self._check_starter_precollected(
+            tag, opts, precollected_names, precollected_counts, pool_counts, ct_on, ar_on, tr_on
+        )
         self._check_start_inventory(tag, opts, pool_counts, precollected_counts)
         self._check_checklist_list_goal_locations(tag, mw, player, opts, ct_on, ar_on, tr_on, ap_on)
         self._check_non_local_items(tag, opts, player, items_at_our_locations)
@@ -361,9 +368,12 @@ class KARHook:
                         f"via allowed_items"
                     )
 
-    def _check_starter_precollected(self, tag, opts, precollected_names, precollected_counts, ct_on, ar_on, tr_on):
-        # For each gated category whose mode is enabled, expect either a start_inventory item from that
-        # category (in which case no random starter is picked), or exactly one random precollected starter.
+    def _check_starter_precollected(
+        self, tag, opts, precollected_names, precollected_counts, pool_counts, ct_on, ar_on, tr_on
+    ):
+        # For each gated category whose mode is enabled, expect either the starting_* option's named pick,
+        # a start_inventory item from that category (either suppresses the draw), or exactly one random
+        # precollected starter.
 
         def category_members(group):
             return {str(n) for n in item_name_groups[group]}
@@ -378,9 +388,12 @@ class KARHook:
             self._check_one_starter(
                 tag,
                 "stadium",
+                opts.starting_stadium,
+                STADIUM_UNLOCK_ITEMS,
                 stadium_pool - held_out,
                 opts.start_inventory.value,
                 precollected_counts,
+                pool_counts,
                 held_out=held_out,
                 # The stadium branch does not go through _pick_random_starter: it tests start_inventory
                 # against all 24 unlocks, VS King Dedede included, while picking from the other 23.
@@ -406,9 +419,12 @@ class KARHook:
             self._check_one_starter(
                 tag,
                 "machine",
+                opts.starting_machine,
+                AR_CT_MACHINE_UNLOCK_ITEMS,
                 machines - held_out,
                 opts.start_inventory.value,
                 precollected_counts,
+                pool_counts,
                 held_out=held_out,
             )
 
@@ -417,24 +433,39 @@ class KARHook:
                 str(KARItemName.UNLOCK_MACHINE_FREE_STAR),
                 str(KARItemName.UNLOCK_MACHINE_STEER_STAR),
             }
-            self._check_one_starter(tag, "TR machine", tr_machines, opts.start_inventory.value, precollected_counts)
+            self._check_one_starter(
+                tag,
+                "TR machine",
+                opts.starting_top_ride_machine,
+                TR_MACHINE_UNLOCK_ITEMS,
+                tr_machines,
+                opts.start_inventory.value,
+                precollected_counts,
+                pool_counts,
+            )
 
         if ar_on and opts.air_ride_courses_gated:
             self._check_one_starter(
                 tag,
                 "AR course",
+                opts.starting_air_ride_course,
+                AR_COURSE_UNLOCK_ITEMS,
                 category_members(KARItemGroup.AR_COURSE_UNLOCKS),
                 opts.start_inventory.value,
                 precollected_counts,
+                pool_counts,
             )
 
         if tr_on and opts.top_ride_courses_gated:
             self._check_one_starter(
                 tag,
                 "TR course",
+                opts.starting_top_ride_course,
+                TR_COURSE_UNLOCK_ITEMS,
                 category_members(KARItemGroup.TR_COURSE_UNLOCKS),
                 opts.start_inventory.value,
                 precollected_counts,
+                pool_counts,
             )
 
         # Colors are cross-mode: the gate alone decides, no mode condition.
@@ -442,34 +473,51 @@ class KARHook:
             self._check_one_starter(
                 tag,
                 "color",
+                opts.starting_kirby_color,
+                COLOR_UNLOCK_ITEMS,
                 category_members(KARItemGroup.COLOR_UNLOCKS),
                 opts.start_inventory.value,
                 precollected_counts,
+                pool_counts,
             )
 
     def _check_one_starter(
         self,
         tag,
         label,
+        option,
+        candidates,
         eligible,
         start_inventory,
         precollected_counts,
+        pool_counts,
         held_out=frozenset(),
         suppression_set=None,
     ):
         """
-        `eligible` is exactly the set the world's random pick draws from, so precollected must hold one
-        of its members and nothing more.
+        `option` is the category's starting_* option, numbering its choices as 1-based indices into
+        `candidates` with 0 for "randomized". On "randomized", `eligible` is exactly the set the world's
+        draw picks from, so precollected must hold one of its members and nothing more; on a named pick,
+        precollected must hold that one item instead.
 
         `held_out` names category members this seed's options bar from the pick (unplayable as a sole
         starter, or the goal's own key). They may still reach precollected through start_inventory, so the
         check subtracts the player's presets before complaining.
 
         `suppression_set` is the set the world tests start_inventory against when deciding to skip the
-        pick, which is not always `eligible`: _pick_random_starter tests the narrowed eligible set, while
-        the stadium branch tests the whole category. Defaults to `eligible`.
+        draw, which is not always `eligible`: most categories test the narrowed eligible set, while the
+        stadium branch tests the whole category. Defaults to `eligible`.
         """
         suppression = eligible if suppression_set is None else suppression_set
+
+        # Unlocks are one-time, so a starter that reached precollected - drawn, named or preset - must
+        # have had its pool copy dropped in _build_item_pools.
+        for name in sorted(set(eligible) | set(held_out)):
+            if precollected_counts.get(name, 0) and pool_counts.get(name, 0):
+                raise HookError(
+                    f"{tag} {label} starter {name!r} is precollected but {pool_counts[name]} copies "
+                    f"remain in the itempool"
+                )
 
         for name in sorted(held_out):
             unexplained = precollected_counts.get(name, 0) - start_inventory.get(name, 0)
@@ -478,6 +526,28 @@ class KARHook:
                     f"{tag} {label} starter {name!r} is held out of the pick for this seed (unplayable "
                     f"as a sole starter, or the goal's own key) but was precollected anyway"
                 )
+
+        if option.value:
+            named = str(candidates[option.value - 1])
+            if named not in precollected_counts:
+                raise HookError(
+                    f"{tag} {label} starter was set to {option.current_key!r} but {named!r} is not precollected"
+                )
+            # Nothing else from the category on top of it: a named pick replaces the random draw rather
+            # than adding to it. A pick the player also preset is precollected once, by start_inventory.
+            category = set(eligible) | set(held_out)
+            unexplained = sum(
+                max(count - start_inventory.get(name, 0), 0)
+                for name, count in precollected_counts.items()
+                if name in category
+            )
+            expected = 0 if start_inventory.get(named, 0) else 1
+            if unexplained != expected:
+                raise HookError(
+                    f"{tag} {label} starter was set to {option.current_key!r}; expected {expected} "
+                    f"precollected beyond start_inventory, got {unexplained}"
+                )
+            return
 
         si_in_cat = {n: c for n, c in start_inventory.items() if n in suppression and c > 0}
         if si_in_cat:

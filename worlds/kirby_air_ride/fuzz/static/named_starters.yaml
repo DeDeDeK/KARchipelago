@@ -1,0 +1,31 @@
+name: NamedStarters
+description: Every starting_* option pinned to a named pick, with base_abilities_gated narrowing the legal machines and one pick also preset in start_inventory
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: 100_checklist_blocks
+  air_ride_goal: n_checklist_blocks
+  air_ride_checklist_amount: 30
+  air_ride_checkbox_fillers: 2
+  top_ride_goal: n_checklist_blocks
+  top_ride_checklist_amount: 30
+  top_ride_checkbox_fillers: 2
+  # Every gate a starting_* option depends on, so none of the picks is ignored.
+  city_trial_stadiums_gated: true
+  machines_gated: true
+  air_ride_courses_gated: true
+  top_ride_courses_gated: true
+  colors_gated: true
+  # Bars Hydra, Turbo, Bulk, Slick and Archipelago Star from the machine pick; Rocket Star stays legal.
+  base_abilities_gated: true
+  starting_stadium: single_race_1
+  starting_machine: rocket_star
+  starting_top_ride_machine: steer_star
+  starting_air_ride_course: nebula_belt
+  starting_top_ride_course: metal
+  starting_kirby_color: white
+  start_inventory:
+    # Collides with starting_kirby_color on purpose: a named pick the player also preset must be
+    # precollected once, not twice.
+    "Unlock Kirby Color: White": 1

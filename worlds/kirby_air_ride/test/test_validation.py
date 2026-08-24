@@ -320,3 +320,37 @@ class TestAllowedItemsAllOffWithFullTrapsFills(KARTestBase):
     def test_generates_with_traps_only(self):
         self.assertTrue(self.world.item_pools_built)
         self.assertTrue(self.itempool_items(), "expected a populated item pool")
+
+
+class TestStartingStadiumIsTheDededeGoal(KARTestBase):
+    """Naming VS. KING DEDEDE as the starting stadium under the Beat King Dedede goal would hand over the
+    goal, so the world rejects it rather than quietly drawing something else."""
+
+    options = {
+        **CT_ONLY,
+        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
+        "city_trial_stadiums_gated": Toggle.option_true,
+        "starting_stadium": "vs_king_dedede",
+    }
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaisesRegex(OptionError, r"Starting Stadium cannot be 'vs_king_dedede'"):
+            self.world_setup()
+
+
+class TestStartingMachineNeedsLockedCharge(KARTestBase):
+    """Slick Star can only be steered by charge-drifting, so naming it while Machine Charge is gated
+    would strand the player on their sole machine."""
+
+    options = {
+        **CT_ONLY,
+        "machines_gated": Toggle.option_true,
+        "base_abilities_gated": Toggle.option_true,
+        "starting_machine": "slick_star",
+    }
+    auto_construct = False
+
+    def test_raises_option_error(self):
+        with self.assertRaisesRegex(OptionError, r"Starting Machine cannot be 'slick_star'"):
+            self.world_setup()
