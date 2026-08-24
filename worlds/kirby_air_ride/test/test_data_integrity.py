@@ -11,19 +11,26 @@ The Archipelago band (361-480) is checked for shape in test_archipelago_checklis
 from this module is only that its codes do not collide with the three real modes'.
 """
 
+import re
 import unittest
 
 from BaseClasses import ItemClassification
 
 from ..KARData import GameMode, location_code_to_mode_clear
 from ..KARItems import (
+    AR_COURSE_UNLOCK_ITEMS,
+    AR_CT_MACHINE_UNLOCK_ITEMS,
     CHECKLIST_REWARD_CATEGORIES,
     CHECKLIST_REWARD_CATEGORY_TYPES,
     CHECKLIST_REWARD_TYPE_ITEMS,
     CHECKLIST_REWARD_TYPE_MODES,
     CHECKLIST_REWARD_TYPES,
+    COLOR_UNLOCK_ITEMS,
     GATING_CATEGORIES,
     ITEM_TABLE,
+    STADIUM_UNLOCK_ITEMS,
+    TR_COURSE_UNLOCK_ITEMS,
+    TR_MACHINE_UNLOCK_ITEMS,
     TRAP_CATEGORIES,
 )
 from ..KARLocations import (
@@ -33,6 +40,14 @@ from ..KARLocations import (
     LOCATION_TABLE,
     NATIVE_REWARD_TO_LOCATION,
     TOP_RIDE_LOCATION_TABLE,
+)
+from ..KAROptions import (
+    StartingAirRideCourse,
+    StartingKirbyColor,
+    StartingMachine,
+    StartingStadium,
+    StartingTopRideCourse,
+    StartingTopRideMachine,
 )
 
 
@@ -252,3 +267,36 @@ class TestTrapCategoriesPartitionTraps(unittest.TestCase):
                         ITEM_TABLE[name].classification & ItemClassification.trap,
                         "category lists a non-trap item, which `traps` would then wrongly govern",
                     )
+
+
+class TestStartingUnlockOptionsMatchCandidates(unittest.TestCase):
+    """Each starting_* option numbers its choices as 1-based indices into a candidate tuple, which is how
+    the world turns a pick back into an item. Nothing generates the two halves from each other, so a
+    reordered tuple or a hand-edited option value would hand out the wrong unlock in silence."""
+
+    CASES = (
+        ("starting_stadium", StartingStadium, STADIUM_UNLOCK_ITEMS),
+        ("starting_machine", StartingMachine, AR_CT_MACHINE_UNLOCK_ITEMS),
+        ("starting_top_ride_machine", StartingTopRideMachine, TR_MACHINE_UNLOCK_ITEMS),
+        ("starting_air_ride_course", StartingAirRideCourse, AR_COURSE_UNLOCK_ITEMS),
+        ("starting_top_ride_course", StartingTopRideCourse, TR_COURSE_UNLOCK_ITEMS),
+        ("starting_kirby_color", StartingKirbyColor, COLOR_UNLOCK_ITEMS),
+    )
+
+    @staticmethod
+    def expected_key(item_name: str) -> str:
+        """The option key an unlock item earns: its name past the "Unlock ...:" prefix, lowercased with
+        punctuation folded to underscores."""
+        return re.sub(r"[^a-z0-9]+", "_", item_name.split(": ", 1)[1].lower()).strip("_")
+
+    def test_keys_and_values_line_up_with_the_candidate_tuple(self):
+        for option_name, option, candidates in self.CASES:
+            with self.subTest(option_name):
+                expected = {self.expected_key(item): index for index, item in enumerate(candidates, start=1)}
+                expected["randomized"] = 0
+                self.assertEqual(option.options, expected)
+
+    def test_randomized_is_the_default(self):
+        for option_name, option, _ in self.CASES:
+            with self.subTest(option_name):
+                self.assertEqual(option.default, option.options["randomized"])

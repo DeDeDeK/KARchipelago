@@ -1,11 +1,11 @@
 name: MaxStatsSlot
-description: The shipped "Max Stats Insanity" options preset, mirrored verbatim — a patch cap climbing 1 -> 30 (29 Patch Cap Increase items), a spawn rate climbing 100 -> 300 (20 Spawn Rate Up items), and every gate off so the pool is dominated by those two stacks
+description: Max Stats in one run — a patch cap climbing 1 -> 30 (29 Patch Cap Increase items), a spawn rate climbing 100 -> 300 (20 Spawn Rate Up items), and every gate off so the pool is dominated by those two stacks
 game: Kirby Air Ride
 requires:
   version: 0.5.0
 Kirby Air Ride:
-  # Keep in step with KARWeb.options_presets["Max Stats Insanity"] in __init__.py. The point of the
-  # fixture is that the preset we advertise really generates, so it must not drift from it.
+  # Every gate off, so the pool is almost entirely Patch Cap Increase and Spawn Rate Up - the one
+  # fixture where progression is a pair of deep counted stacks rather than a spread of unlocks.
   city_trial_goal: max_stats_in_one_run
   city_trial_patch_cap_min: 1
   city_trial_patch_cap_max: 30

@@ -55,3 +55,14 @@ Kirby Air Ride:
       then_include:
         archipelago_goal_locations:
           - "Archipelago: City Trial: Go out of bounds!"
+
+    # A named starting unlock this seed's other options bar is an OptionError, so pin those two pairs
+    # back to the random draw and let the named picks fuzz freely everywhere else.
+    - option: city_trial_goal
+      if_value: "beat_king_dedede"
+      then:
+        starting_stadium: randomized
+    - option: base_abilities_gated
+      if_value: "true"
+      then:
+        starting_machine: randomized
