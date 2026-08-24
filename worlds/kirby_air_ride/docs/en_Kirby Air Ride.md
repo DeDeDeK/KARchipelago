@@ -245,7 +245,7 @@ Which Archipelago messages appear is separate, under "Archipelago Settings -> Me
 - **Status** - goal, release and collect announcements, plus a line when the client connects or drops.
 - **Chat** - player and server chat. Off by default.
 
-These lines come from the client, so they only appear while it is connected to both the server and Dolphin. With no client attached, a completed checkbox just reports "Check: recorded".
+These lines come from the client, so they only appear while it is connected to both the server and Dolphin. With no client attached, a completed checkbox just reports "Check recorded".
 
 ### Reveal checklists
 
