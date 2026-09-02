@@ -7,7 +7,7 @@ the mod, a trap item in no `traps` category can never be selected, and a second 
 existing native reward silently drops one of the two from the derived map. Each is cheap to pin here
 and expensive to notice anywhere else.
 
-The Archipelago band (361-480) is checked for shape in test_archipelago_checklist.py; what it needs
+The Archipelago band (361-412) is checked for shape in test_archipelago_checklist.py; what it needs
 from this module is only that its codes do not collide with the three real modes'.
 """
 
@@ -36,6 +36,7 @@ from ..KARItems import (
 from ..KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     AP_CHECKLIST_LOCATION_TABLE,
+    AP_PATCH_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_TABLE,
     NATIVE_REWARD_TO_LOCATION,
@@ -84,11 +85,16 @@ class TestLocationCodePartitioning(unittest.TestCase):
     ]
 
     def test_codes_unique_globally(self):
-        # Across all four tables, Archipelago included: LOCATION_TABLE merges them and the client
-        # decodes a bare code back to (mode, clear_kind), so one code may mean only one box.
+        # Across every table, the AP checklist and the AP Patch block included: LOCATION_TABLE
+        # merges them and the client decodes a bare code back to a mode/clear_kind or a patch
+        # index, so one code may mean only one location.
         seen: dict[int, str] = {}
         duplicates: list[tuple[int, str, str]] = []
-        for table in (*(band[0] for band in self._BANDS), AP_CHECKLIST_LOCATION_TABLE):
+        for table in (
+            *(band[0] for band in self._BANDS),
+            AP_CHECKLIST_LOCATION_TABLE,
+            AP_PATCH_LOCATION_TABLE,
+        ):
             for name, data in table.items():
                 if data.code is None:
                     continue

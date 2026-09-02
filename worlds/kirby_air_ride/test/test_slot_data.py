@@ -45,6 +45,7 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "city_trial_patch_cap_min",
         "city_trial_patch_cap_max",
         "city_trial_stadiums_gated",
+        "ap_patches",
         # Item generation (runtime spawn-rate min; max is generation-only)
         "spawn_rate_min",
         # Gating

@@ -23,11 +23,12 @@ Kirby Air Ride:
       if_value: "n_checklist_blocks"
       then:
         top_ride_checkbox_fillers: 0
-    # The AP target itself needs no pin - every in-range value fits the table. Only
-    # the fillers do, since a rolled target of 1 would reject any nonzero count.
+    # The AP target needs a pin of its own: the option's range reaches 120 like every
+    # other mode's, while the AP checklist holds 52 boxes, so most rolls would reject.
     - option: archipelago_goal
       if_value: "n_checklist_blocks"
       then:
+        archipelago_checklist_amount: 25
         archipelago_checkbox_fillers: 0
 
     # checklist_list goal requires at least one location in *_goal_locations.

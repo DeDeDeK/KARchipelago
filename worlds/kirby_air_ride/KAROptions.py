@@ -13,6 +13,7 @@ from Options import (
     Toggle,
 )
 
+from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_MAX
 from .KARItems import ALLOWED_ITEM_CATEGORIES, CHECKLIST_REWARD_CATEGORIES, TRAP_CATEGORIES
 
 
@@ -223,6 +224,45 @@ class CityTrialCheckboxFillers(NamedRange):
     range_start = 0
     range_end = 20
     special_range_names = {"disabled": 0}  # noqa: RUF012
+
+
+class APPatches(NamedRange):
+    """
+    Number of AP Patches in the seed. AP Patches drop from Archipelago boxes in City Trial.
+    Every AP patch collected is a check, and any rider can collect one, even CPUs.
+
+    Use this to add more locations to the world that can hold items.
+
+    Patches are collected in order, so logic splits larger counts into groups of 20 that open one
+    after another rather than treating them as one flat pool.
+
+    Set to 0 to disable AP patches.
+    """
+
+    display_name = "AP Patches"
+    default = 20
+    range_start = 0
+    range_end = AP_PATCH_CODE_MAX
+    special_range_names = {  # noqa: RUF012
+        "disabled": 0,
+        "low": 20,
+        "normal": 50,
+        "high": AP_PATCH_CODE_MAX,
+    }
+
+
+class APPatchPlacement(Choice):
+    """
+    Whether AP Patch locations can hold progression.
+
+    - Default: treated like any other location.
+    - Excluded: filler only.
+    """
+
+    display_name = "AP Patch Placement"
+    option_default = 0
+    option_excluded = 1
+    default = 0
 
 
 class CityTrialRevealChecklist(Toggle):
@@ -537,12 +577,15 @@ class ArchipelagoChecklistAmount(Range):
     """
     This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for the
     Archipelago checklist.
+
+    The Archipelago checklist holds fewer boxes than the other modes, so the range stops at what
+    the checklist actually has rather than the grid's 120 cells.
     """
 
     display_name = "Number of Checklist Boxes for Archipelago"
     default = 25
     range_start = 1
-    range_end = 52
+    range_end = AP_CHECKLIST_CODE_NUM
 
 
 class ArchipelagoGoalLocations(LocationSet):
@@ -852,6 +895,8 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     city_trial_patch_cap_max: CityTrialPatchCapMax
     city_trial_stadiums_gated: CityTrialStadiumsGated
     starting_stadium: StartingStadium
+    ap_patches: APPatches
+    ap_patch_placement: APPatchPlacement
 
     # Air Ride
     air_ride_goal: AirRideGoal
@@ -933,6 +978,8 @@ kar_option_groups = [
             CityTrialPatchCapMax,
             CityTrialStadiumsGated,
             StartingStadium,
+            APPatches,
+            APPatchPlacement,
             CityTrialEventsGated,
             CityTrialPatchesGated,
             CityTrialItemsGated,

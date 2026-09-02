@@ -5,8 +5,9 @@ from enum import StrEnum
 from BaseClasses import CollectionState, LocationProgressType, Region
 from rule_builder.rules import CanReachLocation, Has, HasAll, Rule
 
-from .KARData import GameMode, location_code_to_mode_clear
+from .KARData import AP_PATCH_GROUP_MAX, GameMode, location_code_to_mode_clear
 from .KARItems import (
+    AP_PATCH_GROUP_EVENT_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     KARItem,
@@ -21,6 +22,19 @@ class KARRegion(StrEnum):
     # City Trial
     CITY_TRIAL = "City Trial"
     CT_FREE_RUN = "City Trial: Free Run"
+
+    # AP Patch groups: consecutive slices of the AP Patch block, chained one into the next. A seed uses
+    # the first N of them and leaves the rest uncreated.
+    CT_AP_PATCHES_1 = "City Trial: AP Patches 1"
+    CT_AP_PATCHES_2 = "City Trial: AP Patches 2"
+    CT_AP_PATCHES_3 = "City Trial: AP Patches 3"
+    CT_AP_PATCHES_4 = "City Trial: AP Patches 4"
+    CT_AP_PATCHES_5 = "City Trial: AP Patches 5"
+    CT_AP_PATCHES_6 = "City Trial: AP Patches 6"
+    CT_AP_PATCHES_7 = "City Trial: AP Patches 7"
+    CT_AP_PATCHES_8 = "City Trial: AP Patches 8"
+    CT_AP_PATCHES_9 = "City Trial: AP Patches 9"
+    CT_AP_PATCHES_10 = "City Trial: AP Patches 10"
 
     # Stadiums
     STADIUM_DR1 = "Stadium: DRAG RACE 1"
@@ -150,6 +164,18 @@ def _build_region_to_mode() -> dict[str, GameMode]:
 REGION_TO_MODE: dict[str, GameMode] = _build_region_to_mode()
 
 
+# The AP Patch group regions in chain order, read off the enum so declaration order is the chain.
+AP_PATCH_GROUP_REGIONS: tuple[str, ...] = tuple(
+    region.value for region in KARRegion if region.name.startswith("CT_AP_PATCHES_")
+)
+
+if len(AP_PATCH_GROUP_REGIONS) != AP_PATCH_GROUP_MAX:
+    raise ValueError(
+        f"KARRegion declares {len(AP_PATCH_GROUP_REGIONS)} AP Patch group regions, but the widest seed "
+        f"splits into {AP_PATCH_GROUP_MAX}. Add or remove CT_AP_PATCHES_* members to match."
+    )
+
+
 # KARLocations imports KARRegion from this module, so its imports are deferred into function bodies.
 if typing.TYPE_CHECKING:
     from . import KARWorld
@@ -263,7 +289,41 @@ def create_regions(world: "KARWorld"):
             world.goal_locations_to_exclude,
         )
 
+    if world.ap_patch_locations:
+        connect_ap_patch_regions(world)
+        assign_locations_to_regions(
+            world,
+            world.ap_patch_locations,
+            world.ap_patch_default_locations,
+            world.ap_patch_excluded_locations,
+            world.goal_locations_to_exclude,
+        )
+
     determine_goal(world)
+
+
+def connect_ap_patch_regions(world: "KARWorld") -> None:
+    """Chain the seed's AP Patch groups off City Trial, one region per group, each opened by an event in
+    the group before it. The mod claims the lowest unclaimed patch index, so the chain is the order the
+    block is really collected in; without it every patch is one flat sphere and fill has no reason to
+    keep a key out of the two-hundredth. The last group gates nothing and so carries no event.
+
+    The chain is structural, not option-driven gating, so its entrance rules are set here rather than
+    deferred to rule setup.
+    """
+    from .KARLocations import KARLocation
+
+    regions = create_regions_batch(world, *AP_PATCH_GROUP_REGIONS[: world.ap_patch_group_count])
+    world.get_region(KARRegion.CITY_TRIAL).connect(regions[0])
+    for index, region in enumerate(regions[:-1]):
+        event_item = AP_PATCH_GROUP_EVENT_ITEMS[index]
+        region.add_event(
+            f"{region.name} Cleared",
+            event_item,
+            location_type=KARLocation,
+            item_type=KARItem,
+        )
+        region.connect(regions[index + 1], rule=Has(event_item))
 
 
 def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> None:
@@ -545,7 +605,7 @@ def create_n_blocks_rule(
 ) -> Callable[[CollectionState], bool]:
     """
     A rule that passes once N of a mode's locations are reachable. Mode membership is the location's
-    code band (CT 1-120, AR 121-240, TR 241-360, AP 361-480), not the region name: an AP box lives in
+    code band (CT 1-120, AR 121-240, TR 241-360, AP 361-412), not the region name: an AP box lives in
     the region where its activity happens, so one in "Air Ride: MAGMA FLOWS" would otherwise count
     toward the Air Ride goal. `exclude_location_name` drops one location, so a cell gated on this rule
     is not asked to reach itself and recurse.

@@ -169,10 +169,12 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
 
 # A config tuned to fit by exactly 1 location: 75 CT progression with all gates on + 2 PATCH_CAP_INCREASE
 # + 5 checkbox fillers + 7 useful checklist rewards = 89 needing default locations, 1 under the 90 CT
-# default locations. Filler rewards aren't counted - they may sit on excluded boxes. Without
-# exclude_locations it fits; with the paired test's 3 excludes it does not.
+# default locations. Filler rewards aren't counted - they may sit on excluded boxes. AP Patches are held
+# out, or their locations would absorb the excludes the paired test relies on. Without exclude_locations
+# it fits; with the paired test's 3 excludes it does not.
 _TIGHT_POOL = {
     **CT_ONLY,
+    "ap_patches": 0,
     "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"],
     "city_trial_patch_cap_min": 16,
     "city_trial_patch_cap_max": 18,
