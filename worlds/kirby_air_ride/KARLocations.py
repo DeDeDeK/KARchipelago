@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 from BaseClasses import Location
 
+from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_BASE, AP_PATCH_CODE_MAX
 from .KARItems import KARItemName
 from .KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from .KARRegions import KARRegion
@@ -963,7 +964,7 @@ class APLocation(StrEnum):
     """Archipelago checklist location names - the synthetic 4th checklist mode, describing objectives
     across City Trial, Air Ride and Top Ride.
 
-    The location code is 361 + clear_kind (AP band 361-480), and each clear_kind MUST match the mod's
+    The location code is 361 + clear_kind (AP band 361-412), and each clear_kind MUST match the mod's
     ap_checks[] order: a cross-repo wire contract nothing catches a desync in. Renumbering is allowed -
     players reinstall fresh - but only with both repos moved together.
 
@@ -1162,13 +1163,33 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
 }
 
 
+# AP Patch locations: one flat block of numbered slots, all City Trial content and all reachable on
+# City Trial access alone, so the region's entrance chain is the whole rule.
+def ap_patch_location_name(n: int) -> str:
+    """Name of the nth AP Patch location, 1-based."""
+    return f"City Trial: AP Patch #{n:03d}"
+
+
+AP_PATCH_LOCATION_TABLE: dict[str, KARLocationData] = {
+    ap_patch_location_name(n): KARLocationData(AP_PATCH_CODE_BASE + n - 1, KARRegion.CITY_TRIAL)
+    for n in range(1, AP_PATCH_CODE_MAX + 1)
+}
+
+# The AP Patch block starts where the Archipelago checklist band ends, and the decode in KARData
+# splits them at exactly that point.
+assert len(AP_CHECKLIST_LOCATION_TABLE) == AP_CHECKLIST_CODE_NUM
+
+
 # Merged view across all modes for lookups by location name.
 LOCATION_TABLE: dict[str, KARLocationData] = (
-    CITY_TRIAL_LOCATION_TABLE | AIR_RIDE_LOCATION_TABLE | TOP_RIDE_LOCATION_TABLE | AP_CHECKLIST_LOCATION_TABLE
+    CITY_TRIAL_LOCATION_TABLE
+    | AIR_RIDE_LOCATION_TABLE
+    | TOP_RIDE_LOCATION_TABLE
+    | AP_CHECKLIST_LOCATION_TABLE
+    | AP_PATCH_LOCATION_TABLE
 )
 
 # Inverse of the native_reward field: reward item name -> the box that awards it in the base game.
-# Injective, since vanilla maps each reward to exactly one box.
 NATIVE_REWARD_TO_LOCATION: dict[str, str] = {
     str(data.native_reward): str(name) for name, data in LOCATION_TABLE.items() if data.native_reward is not None
 }
@@ -1185,6 +1206,7 @@ class KARLocationGroup(StrEnum):
     CT_BUST_VEHICLE_ON_VEHICLE = "City Trial: Bust Vehicle on Vehicle"
     CT_EVENTS = "City Trial: Events"
     CT_PATCHES = "City Trial: Patches"
+    CT_AP_PATCHES = "City Trial: AP Patches"
     CT_HIGH_EFFORT = "City Trial: High Effort"
     CT_RNG = "City Trial: RNG"
     CT_PVP = "City Trial: PVP"
@@ -1215,6 +1237,7 @@ class KARLocationGroup(StrEnum):
 
 
 location_name_groups: dict[str, set[str]] = {
+    KARLocationGroup.CT_AP_PATCHES: set(AP_PATCH_LOCATION_TABLE),
     KARLocationGroup.CT_STADIUMS: {
         CTLocation.STADIUM_PLAY_10_STADIUM_MODES,
         CTLocation.STADIUM_DR2_FINISH_00_24_00,

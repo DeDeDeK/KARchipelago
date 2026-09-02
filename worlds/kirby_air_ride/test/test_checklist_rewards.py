@@ -238,9 +238,11 @@ class TestNoneSelectedFullFill(KARTestBase):
 
 # CT-only config tuned so the 7 useful City Trial checklist rewards decide the needs-default budget:
 # 75 base CT progression + 6 Patch Cap Increases + 5 checkbox fillers = 86 with rewards off (fits under
-# City Trial's 90 default locations) vs 93 with the rewards on (overflows).
+# City Trial's 90 default locations) vs 93 with the rewards on (overflows). AP Patches are held out so
+# the budget is the checklist's alone - any count of them just adds default locations to absorb it.
 _REWARD_RELAX_OPTIONS = {
     **CT_ONLY,
+    "ap_patches": 0,
     "city_trial_patch_cap_min": 12,
     "city_trial_patch_cap_max": 18,
 }

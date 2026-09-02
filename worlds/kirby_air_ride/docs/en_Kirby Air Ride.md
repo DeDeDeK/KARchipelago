@@ -11,6 +11,7 @@
     - [Air Ride](#air-ride)
     - [Top Ride](#top-ride)
     - [Archipelago checklist](#archipelago-checklist)
+  - [AP Patches](#ap-patches)
   - [Access gating](#access-gating)
   - [Checklist rewards](#checklist-rewards)
   - [What does randomization do to this game?](#what-does-randomization-do-to-this-game)
@@ -66,7 +67,7 @@ The mod also adds a fourth checklist/mode of its own, the Archipelago checklist.
 
 You can enable any combination of them, each with its own goal, locations, and progression settings. 
 
-Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist. 
+Setting a mode's goal to "None" disables that mode entirely, so none of its checklist locations will exist. AP Patches are the one exception: they are City Trial locations that exist whenever "AP Patches" is above 0, whatever the City Trial goal is. 
 
 When more than one mode has a goal, you only complete your game by completing every one of them.
 
@@ -104,6 +105,14 @@ not work properly.
 - **Assemble the Archipelago Star.** Collect all six Archipelago spheres in one City Trial round.
 - **Assemble all three legendaries in one run.** Build Dragoon, Hydra and the Archipelago Star in the same City Trial round
 - **None.** Disables the Archipelago locations (default).
+
+## AP Patches
+
+Setting "AP Patches" above 0 adds that many AP patches to your world. These will spawn in City Trial, inside of AP Boxes. 
+
+These are locations, and so each collected AP patch is a check. AP patches are always collected in order, no matter which one you pick up. If you don't pick one up, it will continue to spawn until it is collected.
+
+"AP Patch Placement" chooses whether these locations can hold progression.
 
 ## Access gating
 
