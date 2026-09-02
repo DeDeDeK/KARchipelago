@@ -49,6 +49,7 @@ class KARItemType(StrEnum):
 
     # Internal (event items with no network code)
     GOAL = "Goal"
+    AP_PATCH_GROUP = "AP Patch Group"
 
 
 class KARItemGroup(StrEnum):
@@ -588,6 +589,18 @@ class KARItemName(StrEnum):
     AIR_RIDE_VICTORY = "Air Ride Victory"
     TOP_RIDE_VICTORY = "Top Ride Victory"
     ARCHIPELAGO_VICTORY = "Archipelago Victory"
+
+    # AP Patch group events (no network code, internal AP events only). One per group that gates the
+    # next, so the last group of a seed has none - nine covers the widest block.
+    AP_PATCH_GROUP_1_CLEARED = "AP Patch Group 1 Cleared"
+    AP_PATCH_GROUP_2_CLEARED = "AP Patch Group 2 Cleared"
+    AP_PATCH_GROUP_3_CLEARED = "AP Patch Group 3 Cleared"
+    AP_PATCH_GROUP_4_CLEARED = "AP Patch Group 4 Cleared"
+    AP_PATCH_GROUP_5_CLEARED = "AP Patch Group 5 Cleared"
+    AP_PATCH_GROUP_6_CLEARED = "AP Patch Group 6 Cleared"
+    AP_PATCH_GROUP_7_CLEARED = "AP Patch Group 7 Cleared"
+    AP_PATCH_GROUP_8_CLEARED = "AP Patch Group 8 Cleared"
+    AP_PATCH_GROUP_9_CLEARED = "AP Patch Group 9 Cleared"
 
 
 class KARItemData(NamedTuple):
@@ -1685,6 +1698,16 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.AIR_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.TOP_RIDE_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
     KARItemName.ARCHIPELAGO_VICTORY: KARItemData(KARItemType.GOAL, ItemClassification.progression, None),
+    # AP Patch group events (no network code, internal AP events only)
+    KARItemName.AP_PATCH_GROUP_1_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_2_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_3_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_4_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_5_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_6_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_7_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_8_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
+    KARItemName.AP_PATCH_GROUP_9_CLEARED: KARItemData(KARItemType.AP_PATCH_GROUP, ItemClassification.progression, None),
 }
 
 
@@ -1725,6 +1748,21 @@ AP_STAR_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_ITEM_AP_SPHERE_TAN,
     KARItemName.UNLOCK_ITEM_AP_SPHERE_BLUE,
     KARItemName.UNLOCK_ITEM_AP_SPHERE_YELLOW,
+)
+
+
+# The AP Patch group events in chain order: index k is the event that opens group k+2. A seed of N
+# groups uses the first N-1.
+AP_PATCH_GROUP_EVENT_ITEMS: tuple[KARItemName, ...] = (
+    KARItemName.AP_PATCH_GROUP_1_CLEARED,
+    KARItemName.AP_PATCH_GROUP_2_CLEARED,
+    KARItemName.AP_PATCH_GROUP_3_CLEARED,
+    KARItemName.AP_PATCH_GROUP_4_CLEARED,
+    KARItemName.AP_PATCH_GROUP_5_CLEARED,
+    KARItemName.AP_PATCH_GROUP_6_CLEARED,
+    KARItemName.AP_PATCH_GROUP_7_CLEARED,
+    KARItemName.AP_PATCH_GROUP_8_CLEARED,
+    KARItemName.AP_PATCH_GROUP_9_CLEARED,
 )
 
 

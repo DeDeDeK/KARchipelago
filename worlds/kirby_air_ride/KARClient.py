@@ -20,6 +20,8 @@ from NetUtils import (
 
 from .DolphinInterface import DolphinInterface
 from .KARData import (
+    AP_PATCH_CODE_MAX,
+    AP_PATCH_WORDS,
     CLIENT_BACKFILL_PER_MODE,
     LOCATIONS_PER_MODE,
     OPTION_GOAL_CHECKS_PER_MODE,
@@ -33,6 +35,8 @@ from .KARData import (
     GoalKind,
     MemoryAddress,
     TrapLinkKind,
+    ap_patch_index_to_location_code,
+    location_code_to_ap_patch_index,
     location_code_to_mode_clear,
     mode_clear_to_location_code,
     reward_code_to_mode_index,
@@ -220,6 +224,8 @@ class KARContext(CommonContext):
 
         # Last-seen sent_checks bitmask from game memory. Per mode: [word0, word1].
         self.last_sent_checks: dict[GameMode, list[int]] = {m: [0, 0] for m in GameMode}
+        # Last-seen AP Patch bitmask from game memory, one flat block of AP_PATCH_WORDS words.
+        self.last_ap_patch_checks: list[int] = [0] * AP_PATCH_WORDS
 
         # Backfill: True when the client should write server-known checks the game is missing.
         self.backfill_pending = False
@@ -256,6 +262,7 @@ class KARContext(CommonContext):
         self.locations_written = False
         self.item_send_index = 0
         self.last_sent_checks = {m: [0, 0] for m in GameMode}
+        self.last_ap_patch_checks = [0] * AP_PATCH_WORDS
         self.energy_last_seen = None
         self.text_out.clear()
 
@@ -632,9 +639,10 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd.get("city_trial_checklist_amount", 60)))
         d.write_u32(
-            a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 60))
+            a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 25))
         )
 
+        d.write_u32(a(MemoryAddress.OPTION_AP_PATCHES), int(sd.get("ap_patches", 0)))
         d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MIN), int(sd.get("city_trial_patch_cap_min", 18)))
         d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MAX), int(sd.get("city_trial_patch_cap_max", 18)))
         d.write_u32(a(MemoryAddress.OPTION_SPAWN_RATE_MIN), int(sd.get("spawn_rate_min", 100)))
@@ -741,8 +749,23 @@ class KARContext(CommonContext):
                     self.last_sent_checks[mode][word_idx] = current
                     for bit in range(64):
                         if diff & (1 << bit):
-                            ck = word_idx * 64 + bit
-                            new_checks.add(mode_clear_to_location_code(mode, ck))
+                            code = mode_clear_to_location_code(mode, word_idx * 64 + bit)
+                            if code:
+                                new_checks.add(code)
+
+        for word_idx in range(AP_PATCH_WORDS):
+            addr = self._addr(MemoryAddress.AP_PATCH_CHECKS) + word_idx * 8
+            current = self.dolphin.read_u64(addr)
+            diff = current & ~self.last_ap_patch_checks[word_idx]
+            if diff:
+                self.last_ap_patch_checks[word_idx] = current
+                for bit in range(64):
+                    if diff & (1 << bit):
+                        # The mod's mask is AP_PATCH_MOD_MAX bits wide; only the first
+                        # AP_PATCH_CODE_MAX of them are locations.
+                        index = word_idx * 64 + bit
+                        if index < AP_PATCH_CODE_MAX:
+                            new_checks.add(ap_patch_index_to_location_code(index))
 
         if new_checks:
             await self._report_checks(new_checks)
@@ -1082,10 +1105,18 @@ class KARContext(CommonContext):
         for off in CLIENT_BACKFILL_PER_MODE.values():
             if self.dolphin.read_u64(self._addr(off)) != 0 or self.dolphin.read_u64(self._addr(off) + 8) != 0:
                 return
+        for word_idx in range(AP_PATCH_WORDS):
+            if self.dolphin.read_u64(self._addr(MemoryAddress.AP_PATCH_BACKFILL) + word_idx * 8) != 0:
+                return
 
         # Build bitmask of all server-known checks.
         server_bits: dict[GameMode, list[int]] = {m: [0, 0] for m in GameMode}
+        server_patch_bits: list[int] = [0] * AP_PATCH_WORDS
         for loc_code in self.checked_locations:
+            patch_index = location_code_to_ap_patch_index(loc_code)
+            if patch_index is not None:
+                server_patch_bits[patch_index // 64] |= 1 << (patch_index % 64)
+                continue
             mapping = location_code_to_mode_clear(loc_code)
             if mapping is None:
                 continue
@@ -1100,6 +1131,11 @@ class KARContext(CommonContext):
                 if diff:
                     self.dolphin.write_u64(self._addr(backfill_addr) + word_idx * 8, diff)
                     wrote_any = True
+        for word_idx in range(AP_PATCH_WORDS):
+            diff = server_patch_bits[word_idx] & ~self.last_ap_patch_checks[word_idx]
+            if diff:
+                self.dolphin.write_u64(self._addr(MemoryAddress.AP_PATCH_BACKFILL) + word_idx * 8, diff)
+                wrote_any = True
 
         if wrote_any:
             logger.info("Backfilled server-known checks to game.")

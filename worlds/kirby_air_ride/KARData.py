@@ -221,56 +221,67 @@ class MemoryAddress(IntEnum):
     # Unlocks the pool ships even though their category's gate is off, because this seed's goal is the
     # thing they gate. The mod withholds exactly these bits when it pre-fills that category's mask.
     OPTION_GOAL_FORCED_GATES = 0x0EC  # u32 bitmask, GOAL_FORCED_GATE_*
-    # APSlotOptions is 8-byte aligned (it holds u64s), so the block ends at 0x0F0 (192 bytes) with
-    # LOCATION_DATA_VALID immediately after.
+    # AP Patch locations in this seed, 0 = category off. The mod accepts and clamps to
+    # AP_PATCH_MOD_MAX; the option only ever sends up to AP_PATCH_CODE_MAX.
+    OPTION_AP_PATCHES = 0x0F0  # u32, 0-AP_PATCH_MOD_MAX
+    # APSlotOptions is 8-byte aligned (it holds u64s), so 4 bytes of tail padding follow and the
+    # block ends at 0x0F8 (200 bytes) with LOCATION_DATA_VALID immediately after.
 
     # Location data fields
 
     # Client writes 1 after all location arrays are written. Game reads and clears to 0.
-    LOCATION_DATA_VALID = 0x0F0  # u32
+    LOCATION_DATA_VALID = 0x0F8  # u32
 
     # Location arrays: u16[3][46], locations[source_mode][source_reward_index], 92 bytes per mode. Value
     # is (target_mode << 8) | clear_kind for a local placement, 0xFFFF for remote or unused slots. The AP
     # checklist awards no native rewards, so it has no array.
-    LOCATIONS_AIRRIDE = 0x0F4  # u16[46], 92 bytes (reward indices 0-45)
-    LOCATIONS_TOPRIDE = 0x150  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
-    LOCATIONS_CITYTRIAL = 0x1AC  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
+    LOCATIONS_AIRRIDE = 0x0FC  # u16[46], 92 bytes (reward indices 0-45)
+    LOCATIONS_TOPRIDE = 0x158  # u16[46], 92 bytes (reward indices 0-45; only 0-32 used)
+    LOCATIONS_CITYTRIAL = 0x1B4  # u16[46], 92 bytes (reward indices 0-45; only 0-43 used)
 
     # Check detection fields
 
     # Bitmask of completed checkboxes per mode, game-written: bit (k % 64) of word (k / 64) for
     # clear_kind k.
-    SENT_CHECKS_AIRRIDE = 0x208  # u64[2], 16 bytes
-    SENT_CHECKS_TOPRIDE = 0x218  # u64[2], 16 bytes
-    SENT_CHECKS_CITYTRIAL = 0x228  # u64[2], 16 bytes
-    SENT_CHECKS_ARCHIPELAGO = 0x238  # u64[2], 16 bytes
+    SENT_CHECKS_AIRRIDE = 0x210  # u64[2], 16 bytes
+    SENT_CHECKS_TOPRIDE = 0x220  # u64[2], 16 bytes
+    SENT_CHECKS_CITYTRIAL = 0x230  # u64[2], 16 bytes
+    SENT_CHECKS_ARCHIPELAGO = 0x240  # u64[2], 16 bytes
 
     # Backfill bitmask. Client writes bits for checks the server knows but the mod doesn't (fresh save,
     # slot takeover, !collect); the game ORs into sent_checks, updates clear[], re-checks goal, clears.
-    CLIENT_BACKFILL_AIRRIDE = 0x248  # u64[2], 16 bytes
-    CLIENT_BACKFILL_TOPRIDE = 0x258  # u64[2], 16 bytes
-    CLIENT_BACKFILL_CITYTRIAL = 0x268  # u64[2], 16 bytes
-    CLIENT_BACKFILL_ARCHIPELAGO = 0x278  # u64[2], 16 bytes
+    CLIENT_BACKFILL_AIRRIDE = 0x250  # u64[2], 16 bytes
+    CLIENT_BACKFILL_TOPRIDE = 0x260  # u64[2], 16 bytes
+    CLIENT_BACKFILL_CITYTRIAL = 0x270  # u64[2], 16 bytes
+    CLIENT_BACKFILL_ARCHIPELAGO = 0x280  # u64[2], 16 bytes
 
     # Sticky goal completion flag. Game writes 1 when goal is satisfied. Client reads.
-    GOAL_COMPLETE = 0x288  # u8
+    GOAL_COMPLETE = 0x290  # u8
 
     # Live state of the in-game DeathLink/EnergyLink/TrapLink toggles, game-written and diffed against
     # last-seen to forward to the server. The OPTION_*_ENABLED fields only seed the initial values.
-    DEATHLINK_MENU_ENABLED = 0x28C  # u32
-    ENERGYLINK_MENU_ENABLED = 0x290  # u32
-    TRAPLINK_MENU_ENABLED = 0x294  # u32
+    DEATHLINK_MENU_ENABLED = 0x294  # u32
+    ENERGYLINK_MENU_ENABLED = 0x298  # u32
+    TRAPLINK_MENU_ENABLED = 0x29C  # u32
 
     # Text queue fields
 
     # Text mailbox, the same handshake as INCOMING_ITEM_ID: fill TEXT_MSG, then set TEXT_PENDING.
     # The game clears it once the message is on screen, and holds it while the text box has no
     # canvas, so a scene load backpressures instead of losing the message.
-    TEXT_PENDING = 0x298  # u32
+    TEXT_PENDING = 0x2A0  # u32
     # Live state of the in-game per-kind message toggles, bit (1 << APTextKind). Game-written; the
     # client reads it to skip composing messages the player has turned off.
-    TEXT_MENU_MASK = 0x29C  # u32
-    TEXT_MSG = 0x2A0  # APTextMessage, 256 bytes; see KARText.pack_message for the layout
+    TEXT_MENU_MASK = 0x2A4  # u32
+    TEXT_MSG = 0x2A8  # APTextMessage, 256 bytes; see KARText.pack_message for the layout
+
+    # AP Patch fields
+
+    # Bit w*64+i of word w is AP Patch w*64+i, location code AP_PATCH_CODE_BASE + w*64 + i. Same
+    # single-writer split as SENT_CHECKS / CLIENT_BACKFILL: the game owns the first, the client the
+    # second, and the game ORs the second in and clears it.
+    AP_PATCH_CHECKS = 0x3A8  # u64[8], 64 bytes
+    AP_PATCH_BACKFILL = 0x3E8  # u64[8], 64 bytes
 
 
 # AP item code layout for checklist rewards: 500..649 in 3 mode bands of stride 50 (500-549 Air Ride,
@@ -323,9 +334,45 @@ OPTION_REVEAL_CHECKLIST_PER_MODE: dict[GameMode, tuple[MemoryAddress, str]] = {
     GameMode.ARCHIPELAGO: (MemoryAddress.OPTION_REVEAL_CHECKLIST_ARCHIPELAGO, "archipelago_reveal_checklist"),
 }
 
+AP_CHECKLIST_CODE_BASE = 361
+AP_CHECKLIST_CODE_NUM = 52
+
+AP_PATCH_CODE_BASE = 413
+AP_PATCH_CODE_MAX = 200
+
+# The mod's masks are a fixed 512 bits whatever a seed asks for, so the wire arrays are 8 words
+# wide and stay that width independent of how many patches are locations.
+AP_PATCH_MOD_MAX = 512
+AP_PATCH_WORDS = AP_PATCH_MOD_MAX // 64
+
+# The mod claims the lowest unclaimed patch index, so the block is collected as a linear chain rather
+# than a flat pool. Logic mirrors that by splitting it into consecutive groups, each entered from the
+# one before it through an event, which gives fill and progression balancing the sphere ordering a flat
+# block hides. The size is roughly one City Trial round of collecting at the default box frequency, so a
+# group is a sphere's worth of play rather than a fraction of one.
+AP_PATCH_GROUP_SIZE = 20
+AP_PATCH_GROUP_MAX = (AP_PATCH_CODE_MAX + AP_PATCH_GROUP_SIZE - 1) // AP_PATCH_GROUP_SIZE
+
+
+def ap_patch_group_sizes(count: int) -> list[int]:
+    """Split `count` AP Patches into consecutive group sizes, longest-first. A trailing group under half
+    a full one is folded into its predecessor, so a seed never ends on a group too short to be a sphere
+    of its own. Empty when the category is off."""
+    if count <= 0:
+        return []
+    sizes = [AP_PATCH_GROUP_SIZE] * (count // AP_PATCH_GROUP_SIZE)
+    remainder = count % AP_PATCH_GROUP_SIZE
+    if remainder:
+        if sizes and remainder * 2 < AP_PATCH_GROUP_SIZE:
+            sizes[-1] += remainder
+        else:
+            sizes.append(remainder)
+    return sizes
+
 
 def location_code_to_mode_clear(code: int | None) -> tuple[GameMode, int] | None:
-    """Decode an AP location code (1-480) to (game_mode, clear_kind)."""
+    """Decode a checkbox location code to (game_mode, clear_kind). AP Patch codes decode to None -
+    they are their own category with no checklist cell."""
     if code is None:
         return None
     if 1 <= code <= 120:
@@ -334,13 +381,26 @@ def location_code_to_mode_clear(code: int | None) -> tuple[GameMode, int] | None
         return GameMode.AIRRIDE, code - 121
     if 241 <= code <= 360:
         return GameMode.TOPRIDE, code - 241
-    if 361 <= code <= 480:
-        return GameMode.ARCHIPELAGO, code - 361
+    if AP_CHECKLIST_CODE_BASE <= code < AP_CHECKLIST_CODE_BASE + AP_CHECKLIST_CODE_NUM:
+        return GameMode.ARCHIPELAGO, code - AP_CHECKLIST_CODE_BASE
     return None
 
 
+def ap_patch_index_to_location_code(index: int) -> int:
+    """Encode a 0-based AP Patch index to its location code."""
+    return AP_PATCH_CODE_BASE + index
+
+
+def location_code_to_ap_patch_index(code: int | None) -> int | None:
+    """Decode a location code to its 0-based AP Patch index, or None if it is not one."""
+    if code is None:
+        return None
+    index = code - AP_PATCH_CODE_BASE
+    return index if 0 <= index < AP_PATCH_CODE_MAX else None
+
+
 def mode_clear_to_location_code(mode: GameMode, clear_kind: int) -> int:
-    """Encode (game_mode, clear_kind) to an AP location code."""
+    """Encode (game_mode, clear_kind) to an AP location code, or 0 if it has none."""
     if mode == GameMode.CITYTRIAL:
         return clear_kind + 1
     if mode == GameMode.AIRRIDE:
@@ -348,7 +408,11 @@ def mode_clear_to_location_code(mode: GameMode, clear_kind: int) -> int:
     if mode == GameMode.TOPRIDE:
         return clear_kind + 241
     if mode == GameMode.ARCHIPELAGO:
-        return clear_kind + 361
+        # The Archipelago band is short-filled and the AP Patch block starts where it
+        # ends, so a blank cell encodes to nothing rather than to a patch's code.
+        if clear_kind >= AP_CHECKLIST_CODE_NUM:
+            return 0
+        return clear_kind + AP_CHECKLIST_CODE_BASE
     return 0
 
 

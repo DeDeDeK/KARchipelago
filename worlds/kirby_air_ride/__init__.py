@@ -15,7 +15,7 @@ from worlds.LauncherComponents import (
     launch_subprocess,
 )
 
-from .KARData import GameMode, checklist_reward_placed_bit
+from .KARData import GameMode, ap_patch_group_sizes, checklist_reward_placed_bit
 from .KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
@@ -46,6 +46,7 @@ from .KARLocations import (
     AIR_RIDE_GOAL_TO_LOCATION,
     AIR_RIDE_LOCATION_TABLE,
     AP_CHECKLIST_LOCATION_TABLE,
+    AP_PATCH_LOCATION_TABLE,
     ARCHIPELAGO_GOAL_TO_LOCATION,
     CITY_TRIAL_GOAL_TO_LOCATION,
     CITY_TRIAL_LOCATION_TABLE,
@@ -57,13 +58,14 @@ from .KARLocations import (
 )
 from .KAROptions import (
     AirRideGoal,
+    APPatchPlacement,
     ArchipelagoGoal,
     CityTrialGoal,
     KAROptions,
     TopRideGoal,
     kar_option_groups,
 )
-from .KARRegions import REGION_TO_MODE, create_regions
+from .KARRegions import AP_PATCH_GROUP_REGIONS, REGION_TO_MODE, create_regions
 from .KARRules import set_rules
 
 
@@ -168,6 +170,12 @@ class KARWorld(World):
         self.archipelago_enabled: bool = False
         self.archipelago_default_locations: set[str] = set()
         self.archipelago_excluded_locations: set[str] = set()
+        # The first ap_patches entries of AP_PATCH_LOCATION_TABLE; the rest are not created.
+        self.ap_patch_locations: dict[str, Any] = {}
+        self.ap_patch_default_locations: set[str] = set()
+        self.ap_patch_excluded_locations: set[str] = set()
+        # How many group regions the chain those locations hang off is long.
+        self.ap_patch_group_count: int = 0
         # Gating categories (option names) that really hold keys this seed; see _compute_effective_gates.
         self.effective_gates: set[str] = set()
         # Unlocks the pool ships despite their category's gate being off, because the goal is gated on
@@ -265,6 +273,17 @@ class KARWorld(World):
         self.archipelago_default_locations, self.archipelago_excluded_locations = self._categorize_locations(
             AP_CHECKLIST_LOCATION_TABLE,
             [],
+        )
+
+        # One switch over the whole AP Patch category
+        self.ap_patch_default_locations, self.ap_patch_excluded_locations = self._categorize_locations(
+            self.ap_patch_locations,
+            [
+                (
+                    self.options.ap_patch_placement.value == APPatchPlacement.option_excluded,
+                    set(self.ap_patch_locations),
+                ),
+            ],
         )
 
     def _determine_goal_locations_to_exclude(self) -> None:
@@ -403,6 +422,9 @@ class KARWorld(World):
         }
         if self.archipelago_enabled:
             modes |= {REGION_TO_MODE[data.region] for data in AP_CHECKLIST_LOCATION_TABLE.values()}
+        # AP Patches sit in the City Trial region, so they need its tree even with no City Trial goal.
+        if self.options.ap_patches.value:
+            modes.add(GameMode.CITYTRIAL)
         return modes
 
     def _category_holds_keys(self, cat: GatingCategory) -> bool:
@@ -783,6 +805,20 @@ class KARWorld(World):
         if not any((self.city_trial_enabled, self.air_ride_enabled, self.top_ride_enabled, self.archipelago_enabled)):
             raise OptionError("No modes enabled. You need to have at least one goal in a mode!")
 
+        # Only the first ap_patches table entries become locations; the table is full width so
+        # location_name_to_id covers every seed's names. Each is restamped into its group's region: the
+        # static table names City Trial, which is the chain's root rather than where a patch ends up.
+        group_sizes = ap_patch_group_sizes(self.options.ap_patches.value)
+        self.ap_patch_group_count = len(group_sizes)
+        self.ap_patch_locations = {}
+        entries = list(AP_PATCH_LOCATION_TABLE.items())[: self.options.ap_patches.value]
+        offset = 0
+        for group_index, size in enumerate(group_sizes):
+            region = AP_PATCH_GROUP_REGIONS[group_index]
+            for name, data in entries[offset : offset + size]:
+                self.ap_patch_locations[name] = data._replace(region=region)
+            offset += size
+
         # Order matters: both read the *_enabled flags above, goal_forced_unlocks reads effective_gates,
         # and the pool build, create_regions and set_rules read all three.
         self.effective_gates = self._compute_effective_gates()
@@ -818,6 +854,7 @@ class KARWorld(World):
             (self.air_ride_enabled, self.air_ride_default_locations, self.air_ride_excluded_locations),
             (self.top_ride_enabled, self.top_ride_default_locations, self.top_ride_excluded_locations),
             (self.archipelago_enabled, self.archipelago_default_locations, self.archipelago_excluded_locations),
+            (bool(self.ap_patch_locations), self.ap_patch_default_locations, self.ap_patch_excluded_locations),
         ]:
             if not enabled:
                 continue
@@ -941,6 +978,7 @@ class KARWorld(World):
             excluded_locations |= self.top_ride_excluded_locations
         if self.archipelago_enabled:
             excluded_locations |= self.archipelago_excluded_locations
+        excluded_locations |= self.ap_patch_excluded_locations
 
         # Remove goal locations from excluded_locations since they don't actually exist as real locations
         excluded_locations -= self.goal_locations_to_exclude
@@ -1058,6 +1096,7 @@ class KARWorld(World):
                 "city_trial_patch_cap_min",
                 "city_trial_patch_cap_max",
                 "city_trial_stadiums_gated",
+                "ap_patches",
                 "spawn_rate_min",
                 "city_trial_events_gated",
                 "abilities_gated",
