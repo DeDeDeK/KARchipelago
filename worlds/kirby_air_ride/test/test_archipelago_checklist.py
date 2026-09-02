@@ -7,9 +7,13 @@ import unittest
 from Options import OptionError
 
 from ..KARData import (
+    AP_CHECKLIST_CODE_BASE,
+    AP_CHECKLIST_CODE_NUM,
+    AP_PATCH_CODE_BASE,
     CLIENT_BACKFILL_PER_MODE,
     SENT_CHECKS_PER_MODE,
     GameMode,
+    location_code_to_ap_patch_index,
     location_code_to_mode_clear,
     mode_clear_to_location_code,
 )
@@ -23,6 +27,7 @@ from ..KARItems import (
 from ..KARLocations import (
     AIR_RIDE_LOCATION_TABLE,
     AP_CHECKLIST_LOCATION_TABLE,
+    AP_PATCH_LOCATION_TABLE,
     CITY_TRIAL_LOCATION_TABLE,
     LOCATION_TABLE,
     TOP_RIDE_LOCATION_TABLE,
@@ -47,13 +52,13 @@ AP_WITH_CT: dict = {
 
 
 class TestArchipelagoCodec(unittest.TestCase):
-    """The AP location band (361-480) round-trips through the mode/clear_kind codec, and the table's
-    codes match 361 + clear_kind in ap_checks[] order."""
+    """The AP checklist band round-trips through the mode/clear_kind codec, and the table's codes
+    match 361 + clear_kind in ap_checks[] order. The band stops where the AP Patch block begins."""
 
     def test_band_roundtrip(self):
-        for clear_kind in range(120):
+        for clear_kind in range(AP_CHECKLIST_CODE_NUM):
             code = mode_clear_to_location_code(GameMode.ARCHIPELAGO, clear_kind)
-            self.assertEqual(code, 361 + clear_kind)
+            self.assertEqual(code, AP_CHECKLIST_CODE_BASE + clear_kind)
             self.assertEqual(location_code_to_mode_clear(code), (GameMode.ARCHIPELAGO, clear_kind))
 
     def test_first_location_codes(self):
@@ -64,8 +69,13 @@ class TestArchipelagoCodec(unittest.TestCase):
     def test_boundaries(self):
         self.assertEqual(location_code_to_mode_clear(360), (GameMode.TOPRIDE, 119))  # last Top Ride code
         self.assertEqual(location_code_to_mode_clear(361), (GameMode.ARCHIPELAGO, 0))
-        self.assertEqual(location_code_to_mode_clear(480), (GameMode.ARCHIPELAGO, 119))
-        self.assertIsNone(location_code_to_mode_clear(481))
+        last_checkbox = AP_CHECKLIST_CODE_BASE + AP_CHECKLIST_CODE_NUM - 1
+        self.assertEqual(location_code_to_mode_clear(last_checkbox), (GameMode.ARCHIPELAGO, AP_CHECKLIST_CODE_NUM - 1))
+        # The AP Patch block starts here: its codes are their own category, not checkboxes.
+        self.assertEqual(last_checkbox + 1, AP_PATCH_CODE_BASE)
+        self.assertIsNone(location_code_to_mode_clear(AP_PATCH_CODE_BASE))
+        self.assertEqual(location_code_to_ap_patch_index(AP_PATCH_CODE_BASE), 0)
+        self.assertIsNone(location_code_to_ap_patch_index(last_checkbox))
 
 
 class TestArchipelagoRewardWireEncoding(unittest.TestCase):
@@ -225,13 +235,12 @@ class TestArchipelago100BlocksNotOffered(unittest.TestCase):
 
 
 class TestArchipelagoChecklistAmountRangeTracksTable(unittest.TestCase):
-    """ArchipelagoChecklistAmount must never offer more boxes than the AP table actually holds. The other
-    three modes have a full 120, but the AP checklist is still being built out, so its range is capped at
-    the real table size - otherwise the option promises targets that can only fail at generation. Raise
-    range_end as boxes are added; this test keeps the two in step."""
+    """ArchipelagoChecklistAmount serves n_checklist_blocks alone, and the AP checklist short-fills the
+    120-cell grid, so its range stops at the table's size instead of the grid's."""
 
-    def test_range_end_matches_table_size(self):
+    def test_range_end_matches_the_checklist_table(self):
         self.assertEqual(ArchipelagoChecklistAmount.range_end, len(AP_CHECKLIST_LOCATION_TABLE))
+        self.assertEqual(ArchipelagoChecklistAmount.range_end, AP_CHECKLIST_CODE_NUM)
 
     def test_default_within_range(self):
         self.assertGreaterEqual(ArchipelagoChecklistAmount.default, ArchipelagoChecklistAmount.range_start)
@@ -285,12 +294,14 @@ class TestArchipelagoChecklistListWrongModeRejected(KARTestBase):
 class TestArchipelagoOnly(KARTestBase):
     """The AP checklist can stand alone as the only enabled mode. Item-injecting gates are turned off
     so the guaranteed pool fits the small AP-only world (analogous to a tightly-scoped single-mode
-    seed); the world still generates and is beatable."""
+    seed), and AP Patches are held out because they are City Trial locations that would exist here
+    whatever the City Trial goal is; the world still generates and is beatable."""
 
     options = {
         "city_trial_goal": CityTrialGoal.option_none,
         "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
         "archipelago_checklist_amount": 3,
+        "ap_patches": 0,
         "colors_gated": False,
         "machines_gated": False,
         "abilities_gated": False,
@@ -337,7 +348,12 @@ class TestArchipelagoLocationTableIntegrity(unittest.TestCase):
     def test_names_do_not_collide_with_other_tables(self):
         """LOCATION_TABLE merges the four mode tables by name, so a collision would silently drop one of
         the two boxes. The "Archipelago: " prefix is what keeps them apart - this is the guard."""
-        others = set(CITY_TRIAL_LOCATION_TABLE) | set(AIR_RIDE_LOCATION_TABLE) | set(TOP_RIDE_LOCATION_TABLE)
+        others = (
+            set(CITY_TRIAL_LOCATION_TABLE)
+            | set(AIR_RIDE_LOCATION_TABLE)
+            | set(TOP_RIDE_LOCATION_TABLE)
+            | set(AP_PATCH_LOCATION_TABLE)
+        )
         collisions = sorted(set(AP_CHECKLIST_LOCATION_TABLE) & others)
         self.assertEqual(collisions, [], f"AP location names collide with another mode's table: {collisions}")
         self.assertEqual(
