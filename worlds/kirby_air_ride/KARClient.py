@@ -7,7 +7,7 @@ from typing import Any, ClassVar
 
 import Utils
 from CommonClient import CommonContext as APCommonContext
-from CommonClient import get_base_parser, logger, server_loop
+from CommonClient import get_base_parser, server_loop
 from NetUtils import (
     ClientStatus,
     JSONMessagePart,
@@ -43,6 +43,16 @@ from .KARData import (
 )
 from .KARItems import MODE_VICTORY_EVENTS
 from .KARLocations import LOCATION_TABLE
+from .KARLogging import (
+    log_color,
+    log_detailed,
+    log_error,
+    log_exception,
+    log_info,
+    log_quiet,
+    log_toggle,
+    log_warning,
+)
 from .KARText import (
     RELAYED_PRINT_JSON,
     Segment,
@@ -115,34 +125,6 @@ _DOLPHIN_STATUS_TEXT = {
     "unHooked": "not hooked yet",
     "unknown": "status unavailable",
 }
-
-
-def log_color(ctx: CommonContext, text: str, color: str = "white") -> None:
-    """Log `text` in `color` to the GUI log, the terminal, and the log file.
-
-    Plain `logger` calls cannot be colored - the Kivy GUI escapes markup in log records - so this routes
-    through `on_print_json`, which sends nothing to the server and works while disconnected. `color` must
-    name a `NetUtils.JSONtoTextParser.color_codes` entry; `orange` is GUI-only.
-    """
-    parts: list[JSONMessagePart] = []
-    add_json_text(parts, text, type=JSONTypes.color, color=color)
-    ctx.on_print_json({"data": parts, "cmd": "PrintJSON"})
-
-
-def log_toggle(name: str, enabled: bool) -> None:
-    """Record an in-game menu toggle in the log file only. The player made the change on screen and
-    the mod already acknowledged it there, so repeating it in the GUI and terminal is noise."""
-    log_quiet(f"{name} toggled {'on' if enabled else 'off'} from in-game menu.")
-
-
-def log_quiet(text: str) -> None:
-    """Log `text` to the log file only, keeping it out of the terminal and the GUI.
-
-    For handshake bookkeeping worth reading after the fact but noise during play. `logger.debug` will not
-    do: `init_logging` leaves the root logger at INFO with no flag to lower it. `NoStream` filters the
-    stdout handler; `skip_gui` is checked by `kvui.LogtoUI.handle`.
-    """
-    logger.info(text, extra={"NoStream": True, "skip_gui": True})
 
 
 class KARCommandProcessor(ClientCommandProcessor):
@@ -316,14 +298,11 @@ class KARContext(CommonContext):
         """Server rejected a packet we sent. InvalidPacket doesn't echo the offending packet, so for
         tagged Set flows we cannot pinpoint which tag failed. Drop all pending_energy_withdrawals to
         prevent an indefinite accounting leak, at the cost of in-flight under-subtraction warnings."""
-        logger.error(
-            "[KAR] AP server rejected %s: %s",
-            args.get("type"),
-            args.get("text"),
-        )
+        log_error("Server", "AP server rejected %s: %s", args.get("type"), args.get("text"))
         if args.get("type") == "Set" and self.pending_energy_withdrawals:
-            logger.warning(
-                "[KAR] Dropping %d pending EnergyLink withdrawals due to schema error.",
+            log_warning(
+                "EnergyLink",
+                "Dropping %d pending withdrawals due to schema error.",
                 len(self.pending_energy_withdrawals),
             )
             self.pending_energy_withdrawals.clear()
@@ -343,9 +322,9 @@ class KARContext(CommonContext):
         actual = original_value - value
         if actual < expected:
             shortfall = expected - actual
-            logger.warning(
-                "[EnergyLink] withdrawal under-subtracted by %d J "
-                "(asked %d, got %d). Pool was lower than the mod expected.",
+            log_warning(
+                "EnergyLink",
+                "Withdrawal under-subtracted by %d J (asked %d, got %d). Pool was lower than the mod expected.",
                 shortfall,
                 expected,
                 actual,
@@ -457,7 +436,7 @@ class KARContext(CommonContext):
 
         if not self.pending_scout_ids:
             self.location_arrays_ready = True
-            log_quiet("Location data built from scout results.")
+            log_quiet("Handshake", "Location data built from scout results.")
 
     async def _update_link_tag(self, tag: str, enabled: bool) -> None:
         """Add or drop one link tag, telling the server only when the set actually changed."""
@@ -484,7 +463,7 @@ class KARContext(CommonContext):
 
     async def run_dolphin_sync(self) -> None:
         """Poll game memory at a fixed cadence."""
-        logger.info("Starting Dolphin connector. Use /dolphin for status information.")
+        log_info("Dolphin", "Starting Dolphin connector. Use /dolphin for status information.")
         while not self.exit_event.is_set():
             await asyncio.sleep(DOLPHIN_POLL_INTERVAL)
             try:
@@ -501,7 +480,7 @@ class KARContext(CommonContext):
                         backoff = not connected
                 except Exception as e:  # noqa: BLE001
                     # Any tick failure means the hook is untrustworthy; drop it and re-attach.
-                    logger.error(f"Dolphin sync error: {e}")
+                    log_error("Dolphin", f"Sync error: {e}")
                     if self.dolphin.is_hooked():
                         self.dolphin.unhook()
                     self._reset_dolphin_state()
@@ -522,7 +501,7 @@ class KARContext(CommonContext):
                 # Last-resort guard: this task has no supervisor, so an escaping exception would
                 # silently kill the connector. CancelledError is a BaseException, so shutdown still
                 # propagates.
-                logger.error(f"Unexpected error in Dolphin sync loop: {e}")
+                log_error("Dolphin", f"Unexpected error in sync loop: {e}")
 
     def _try_connect_dolphin(self) -> bool:
         """Attach to Dolphin. True once fully connected; False tells the caller to back off and retry."""
@@ -543,42 +522,54 @@ class KARContext(CommonContext):
             addr = int(MemoryAddress.MEM1_START)
             raw = self.dolphin.read_bytes(addr, 6)
             self._note_attach_failure(
-                f"hooked Dolphin, but {addr:#010x} reads {raw!r}, not {self.dolphin.kar_game_id!r}"
+                "Dolphin is not running Kirby Air Ride (NTSC-U).",
+                f"hooked Dolphin, but {addr:#010x} reads {raw!r}, not {self.dolphin.kar_game_id!r}",
             )
             self.dolphin.unhook()
         else:
             # Never attached. status distinguishes no-process from no-emulation.
             status = self.dolphin.status_name()
             if status == "notRunning":
-                self._note_attach_failure("no Dolphin process found")
+                self._note_attach_failure("Waiting for Dolphin to start.", "no Dolphin process found", "yellow")
             elif status == "noEmu":
-                self._note_attach_failure("Dolphin open, but no emulated game readable yet")
+                self._note_attach_failure(
+                    "Waiting for Kirby Air Ride to start in Dolphin.",
+                    "Dolphin open, but no emulated game readable yet",
+                    "yellow",
+                )
             else:
                 # unHooked here means hook() raised; DolphinInterface.hook() logged why.
-                self._note_attach_failure(f"hook attempt failed (status: {status})")
+                self._note_attach_failure("Could not attach to Dolphin.", f"hook attempt failed (status: {status})")
         return False
 
-    def _note_attach_failure(self, detail: str) -> None:
-        """Record why the latest connect attempt didn't fully connect, and log it only when it changes,
-        so an unchanging failure isn't repeated on every retry. Feeds /dolphin."""
+    def _note_attach_failure(self, summary: str, detail: str, color: str = "red") -> None:
+        """Record why the latest connect attempt didn't fully connect, and report it only when it changes,
+        so an unchanging failure isn't repeated on every retry. `detail` also feeds /dolphin."""
         self.last_attach_detail = detail
         if detail != self._logged_attach_detail:
             self._logged_attach_detail = detail
-            log_color(self, f"Dolphin not fully connected: {detail}", "red")
+            log_detailed(self, "Dolphin", summary, f"Not fully connected: {detail}", color)
 
     async def _dolphin_tick(self) -> None:
         ptr = self.dolphin.resolve_ap_data()
         if ptr is None:
             if self.ap_data_base is not None:
-                log_color(self, "APData pointer lost. Game may have restarted.", "yellow")
+                log_detailed(
+                    self, "Handshake", "Lost contact with the mod. The game may have restarted.", "APData pointer lost."
+                )
                 self._reset_dolphin_state()
             return
         if ptr != self.ap_data_base:
             if self.ap_data_base is not None:
-                log_color(self, "APData pointer changed. Re-handshaking.", "yellow")
+                log_detailed(
+                    self,
+                    "Handshake",
+                    "The game restarted. Reconnecting to the mod.",
+                    "APData pointer changed. Re-handshaking.",
+                )
                 self._reset_dolphin_state()
             self.ap_data_base = ptr
-            log_color(self, f"Found APData at {ptr:#010x}", "yellow")
+            log_detailed(self, "Handshake", "KARchipelago mod detected.", f"Found APData at {ptr:#010x}")
 
         # Wait for game_ready, and detect restarts. The mod sets it once in OnBoot and never clears it, so
         # reading 0 after a 1 means the game rebooted (APData re-zeroed) and the handshake must re-run.
@@ -589,7 +580,12 @@ class KARContext(CommonContext):
             self.game_ready = True
             log_color(self, "Game initialized and save loaded.", "yellow")
         elif game_ready_mem != 1:
-            log_color(self, "game_ready cleared - game restarted. Re-handshaking.", "yellow")
+            log_detailed(
+                self,
+                "Handshake",
+                "The game restarted. Reconnecting to the mod.",
+                "game_ready cleared - game restarted. Re-handshaking.",
+            )
             self._reset_dolphin_state()
             return
 
@@ -599,7 +595,7 @@ class KARContext(CommonContext):
             self._write_options()
             self.options_written = True
             self.item_send_index = self.dolphin.read_u32(self._addr(MemoryAddress.ITEM_RECEIVED_INDEX))
-            log_color(self, f"Options written. Game has received {self.item_send_index} items.", "yellow")
+            log_quiet("Handshake", f"APSlotOptions written; game has received {self.item_send_index} items.")
 
         # The mod clears options_valid once it has taken the options in and republished the live menu
         # mirrors. Until then those mirrors still hold the save's own defaults, and diffing the link
@@ -615,7 +611,7 @@ class KARContext(CommonContext):
                 return  # Waiting for LocationInfo scout response.
             self._write_location_data()
             self.locations_written = True
-            log_color(self, "Location data written. Client fully operational.", "green")
+            log_detailed(self, "Handshake", "Handshake complete. Ready to play!", "Location data written.", "green")
             self._push_text(APTextKind.STATUS, self._client_status_segments(True))
 
             # Re-arm on every handshake, not just on "Connected": a mod restart with a fresh save leaves
@@ -742,7 +738,7 @@ class KARContext(CommonContext):
                 return  # Game hasn't consumed the previous item yet.
             item = self.items_received[self.item_send_index]
             self.dolphin.write_u32(self._addr(MemoryAddress.INCOMING_ITEM_ID), item.item)
-            logger.debug(f"Delivered item #{self.item_send_index}: {self.item_names.lookup_in_game(item.item)}")
+            log_quiet("Items", f"Delivered item #{self.item_send_index}: {self.item_names.lookup_in_game(item.item)}")
             self._push_item_text(item)
             self.item_send_index += 1
 
@@ -788,7 +784,7 @@ class KARContext(CommonContext):
             # Log file only: the server broadcasts its own line for every one of these, so printing
             # them again would double up the client log.
             names = ", ".join(self.location_names.lookup_in_game(loc) for loc in locations)
-            log_quiet(f"New checks sent: {names}")
+            log_quiet("Checks", f"New checks sent: {names}")
             self._push_check_text(locations)
 
     def _push_text(self, kind: APTextKind, segments: list[Segment]) -> None:
@@ -906,7 +902,7 @@ class KARContext(CommonContext):
             self._relay_print_json(args)
         except Exception:  # noqa: BLE001
             # This runs inside the server-packet loop; a malformed line must not take it down.
-            logger.exception("[KAR] Failed to relay a server message to the game")
+            log_exception("Text", "Failed to relay a server message to the game")
 
     def _relay_print_json(self, args: dict[str, Any]) -> None:
         """Forward the server-authored lines worth seeing in-game. ItemSend is deliberately absent:
@@ -1184,7 +1180,7 @@ class KARContext(CommonContext):
                 wrote_any = True
 
         if wrote_any:
-            logger.info("Backfilled server-known checks to game.")
+            log_quiet("Checks", "Backfilled server-known checks to game.")
         self.backfill_pending = False
 
     def make_gui(self):
@@ -1202,7 +1198,7 @@ class KARContext(CommonContext):
 async def async_main(connect: str | None, password: str | None) -> None:
     ctx = KARContext(connect, password)
     if tracker_loaded:
-        logger.info(f"Universal Tracker {tracker_version} found.")
+        log_info("Tracker", f"Universal Tracker {tracker_version} found.")
     # No ctx.run_generator(): KARWorld is yaml-less, so UT rebuilds the slot from slot_data on connect.
     if Utils.gui_enabled:
         ctx.run_gui()
