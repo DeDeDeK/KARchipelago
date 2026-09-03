@@ -257,6 +257,7 @@ class MemoryAddress(IntEnum):
 
     # Sticky goal completion flag. Game writes 1 when goal is satisfied. Client reads.
     GOAL_COMPLETE = 0x290  # u8
+    GOAL_SATISFIED_MASK = 0x291  # u8, bit per GameMode row
 
     # Live state of the in-game DeathLink/EnergyLink/TrapLink toggles, game-written and diffed against
     # last-seen to forward to the server. The OPTION_*_ENABLED fields only seed the initial values.

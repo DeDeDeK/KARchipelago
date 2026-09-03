@@ -192,6 +192,10 @@ class KARWorld(World):
         self.counted_useful_pool: list[str] = []
         self.stadium_starter_choice: str | None = None
         self.goal_locations_to_exclude: set[str] = set()
+        # Universal Tracker only: victory events whose goal the game reports already achieved. KARClient
+        # stamps it before each tracker refresh; None means nothing is reporting, so go mode falls back
+        # to "any goal reachable".
+        self.ut_goals_completed: set[str] | None = None
         self.machine_starter_choice: str | None = None
         self.tr_machine_starter_choice: str | None = None
         self.ar_course_starter_choice: str | None = None
