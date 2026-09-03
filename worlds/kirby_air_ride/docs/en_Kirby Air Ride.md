@@ -6,6 +6,7 @@
   - [What is this?](#what-is-this)
   - [How do I set this up?](#how-do-i-set-this-up)
   - [Poptracker](#poptracker)
+  - [Universal Tracker Support](#universal-tracker-support)
   - [Game modes and goals](#game-modes-and-goals)
     - [City Trial](#city-trial)
     - [Air Ride](#air-ride)
@@ -58,6 +59,12 @@ Setting up the game and instructions on where to get the apworld file, yaml file
 There is also a poptracker for this apworld, created by @lighting8282!
 
 Get it [here!](https://github.com/lighting8282/KAR-Poptracker)
+
+## Universal Tracker Support
+
+The Kirby Air Ride client supports yaml-less Universal Tracker. If you have Universal Tracker installed in your `custom_worlds` folder, it will automatically add a Tracker tab to the client - no need to open UT as a separate client. No yaml file needed in the `Players` folder. 
+
+See the setup guide for more info.
 
 ## Game modes and goals
 
