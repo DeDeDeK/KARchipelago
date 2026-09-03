@@ -753,6 +753,30 @@ def _create_goal_events(
     return victory_event_type
 
 
+def _build_ut_go_mode_rule(world: "KARWorld", goal_event_items: list[str]) -> Callable[[CollectionState], bool]:
+    """
+    Universal Tracker's go-mode readout is `completion_condition`, evaluated against a state swept for
+    event reachability. The real rule ANDs every mode's victory, which in a multi-goal seed reads "No"
+    until the last mode comes into logic, and our block goals go reachable long before they are done -
+    so the honest answer for a tracker is "is there a goal you could go finish right now": some goal
+    still outstanding, and in logic. `ut_goals_completed` is what the game reports done, so unlike pure
+    logic (which never regresses) this turns back off once you actually finish the goal that lit it.
+    """
+    player = world.player
+
+    def can_go(state: CollectionState) -> bool:
+        completed = world.ut_goals_completed
+        if completed is None:
+            # No client reporting - stock UT tracking the slot. Best available answer.
+            return any(state.has(item, player) for item in goal_event_items)
+        remaining = [item for item in goal_event_items if item not in completed]
+        if not remaining:
+            return True  # every goal done; the seed is won
+        return any(state.has(item, player) for item in remaining)
+
+    return can_go
+
+
 def determine_goal(world: "KARWorld") -> None:
     """Create the victory event for each enabled mode's goal and set the completion rule."""
     # Deferred to break the import cycle.
@@ -818,5 +842,12 @@ def determine_goal(world: "KARWorld") -> None:
         if result is not None
     ]
 
-    if goal_event_items:
+    if not goal_event_items:
+        return
+
+    # re_gen_passthrough only exists on Universal Tracker's MultiWorld, and its generation stops before
+    # fill, so nothing but the go-mode label reads the completion condition there.
+    if getattr(world.multiworld, "re_gen_passthrough", None) is not None:
+        world.set_completion_rule(_build_ut_go_mode_rule(world, goal_event_items))
+    else:
         world.set_completion_rule(HasAll(*goal_event_items))
