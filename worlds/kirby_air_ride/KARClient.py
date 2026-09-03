@@ -90,6 +90,7 @@ AP_TEXT_KIND_LABELS: dict[APTextKind, str] = {
     APTextKind.HINT: "Hint",
     APTextKind.STATUS: "Status",
     APTextKind.CHAT: "Chat",
+    APTextKind.LINK: "Link",
 }
 
 GOAL_NAMES: dict[GoalKind, str] = {
@@ -429,6 +430,11 @@ class KARContext(CommonContext):
             if isinstance(t, (int, float)):
                 self.last_traplink_receive = t
             self.pending_trap_receives += 1
+            self._push_link_text(
+                "TrapLink",
+                source=str(data.get("source") or "elsewhere"),
+                detail=str(data.get("trap_name") or ""),
+            )
 
     def _handle_location_info(self, args: dict[str, Any]) -> None:
         """Build location arrays from scout results: for each of our checklist reward items placed at a
@@ -469,6 +475,7 @@ class KARContext(CommonContext):
             return
         if self.ap_data_base is not None:
             self.dolphin.write_u32(self._addr(MemoryAddress.DEATHLINK_RECEIVE), 1)
+        self._push_link_text("DeathLink", source=str(data.get("source") or "elsewhere"))
 
     def _addr(self, offset: int) -> int:
         """Compute an absolute Dolphin address from an APData struct offset."""
@@ -812,6 +819,25 @@ class KARContext(CommonContext):
         self.dolphin.write_u32(self._addr(MemoryAddress.TEXT_PENDING), 1)
         self.text_out.popleft()
 
+    def _push_link_text(self, label: str, *, source: str | None = None, detail: str | None = None) -> None:
+        """Compose one DeathLink/TrapLink line: "<label> sent (<detail>)" outgoing, "<label> from
+        <player> (<detail>)" incoming.
+
+        This is the wire half of the narration - it fires when the client learns of the traffic,
+        and it is the only half that can name the other player. The mod narrates the effect
+        landing under its own Messages -> Local -> Links toggle.
+        """
+        parts: list[JSONMessagePart] = []
+        add_json_text(parts, label, type=JSONTypes.color, color="salmon")
+        if source is None:
+            add_json_text(parts, " sent")
+        else:
+            add_json_text(parts, " from ")
+            add_json_text(parts, source, type=JSONTypes.player_name)
+        if detail:
+            add_json_text(parts, f" ({detail})")
+        self._push_text(APTextKind.LINK, self.segment_parser.collect(parts))
+
     @staticmethod
     def _client_status_segments(connected: bool) -> list[Segment]:
         color = APTextColor.GREEN if connected else APTextColor.RED
@@ -1007,6 +1033,7 @@ class KARContext(CommonContext):
             assert self.slot is not None
             name = self.player_names.get(self.slot, "Unknown")
             await self.send_death(f"{name} exploded.")
+            self._push_link_text("DeathLink")
 
     async def _handle_traplink(self) -> None:
         if "TrapLink" not in self.tags:
@@ -1033,6 +1060,7 @@ class KARContext(CommonContext):
                     }
                 ]
             )
+            self._push_link_text("TrapLink", detail=trap_name)
 
         # deliver one pending trap when the game's receive flag is clear.
         if self.pending_trap_receives > 0 and self.dolphin.read_u32(self._addr(MemoryAddress.TRAPLINK_RECEIVE)) == 0:
