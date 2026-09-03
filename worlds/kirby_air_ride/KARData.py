@@ -101,6 +101,7 @@ class APTextKind(IntEnum):
     HINT = 2
     STATUS = 3
     CHAT = 4
+    LINK = 5
 
 
 # AP color name -> the mod's palette index. Keys are the CommonClient GUI color names; anything
