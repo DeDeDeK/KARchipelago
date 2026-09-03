@@ -41,6 +41,7 @@ from .KARData import (
     mode_clear_to_location_code,
     reward_code_to_mode_index,
 )
+from .KARItems import MODE_VICTORY_EVENTS
 from .KARLocations import LOCATION_TABLE
 from .KARText import (
     RELAYED_PRINT_JSON,
@@ -719,6 +720,7 @@ class KARContext(CommonContext):
         self._deliver_items()
         await self._check_locations()
         await self._check_goal()
+        self._update_ut_goals()
         await self._poll_menu_toggles()
         await self._handle_deathlink()
         await self._handle_traplink()
@@ -938,6 +940,22 @@ class KARContext(CommonContext):
             self.finished_game = True
             log_color(self, "Goal complete! Sending victory.", "yellow")
             await self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}])
+
+    def _update_ut_goals(self) -> None:
+        """Publish the per-mode goals the game reports satisfied onto the world Universal Tracker
+        regenerated from this slot. Its go-mode readout is the world's completion condition, which under
+        UT skips goals listed here - logic alone can only say a goal is reachable, never that it is done."""
+        if not tracker_loaded:
+            return
+        world = self.tracker_core.get_current_world()
+        if world is None:
+            return
+        mask = self.dolphin.read_u8(self._addr(MemoryAddress.GOAL_SATISFIED_MASK))
+        completed = {MODE_VICTORY_EVENTS[mode] for mode in GameMode if mask & (1 << mode)}
+        if completed == world.ut_goals_completed:
+            return
+        world.ut_goals_completed = completed
+        self.updateTracker()
 
     async def _poll_menu_toggles(self) -> None:
         """Read the mod's live in-game menu toggle mirrors and update AP server state if changed. The

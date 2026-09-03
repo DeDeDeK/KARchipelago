@@ -1751,6 +1751,16 @@ AP_STAR_PIECE_UNLOCK_ITEMS: tuple[KARItemName, ...] = (
 )
 
 
+# The victory event a mode's goal mints, keyed by the checklist row the mod reports satisfaction on.
+# The client maps goal_satisfied_mask bits through this for Universal Tracker's go-mode readout.
+MODE_VICTORY_EVENTS: dict[GameMode, KARItemName] = {
+    GameMode.AIRRIDE: KARItemName.AIR_RIDE_VICTORY,
+    GameMode.TOPRIDE: KARItemName.TOP_RIDE_VICTORY,
+    GameMode.CITYTRIAL: KARItemName.CITY_TRIAL_VICTORY,
+    GameMode.ARCHIPELAGO: KARItemName.ARCHIPELAGO_VICTORY,
+}
+
+
 # The AP Patch group events in chain order: index k is the event that opens group k+2. A seed of N
 # groups uses the first N-1.
 AP_PATCH_GROUP_EVENT_ITEMS: tuple[KARItemName, ...] = (
