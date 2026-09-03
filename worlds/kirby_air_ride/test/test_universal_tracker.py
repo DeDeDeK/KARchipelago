@@ -15,13 +15,15 @@ import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from BaseClasses import LocationProgressType, MultiWorld
+from BaseClasses import CollectionState, LocationProgressType, MultiWorld
 from Options import OptionError, PerGameCommonOptions
 from test.general import gen_steps, setup_multiworld
 
 from worlds.AutoWorld import call_all
 
 from .. import UT_OPTIONS_KEY, UT_PASSTHROUGH_OPTIONS, KARWorld
+from ..KARData import GameMode
+from ..KARItems import MODE_VICTORY_EVENTS, KARItemName
 from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, KAROptions, TopRideGoal
 from . import ALL_MODES, CT_ONLY, KARTestBase
 
@@ -218,3 +220,67 @@ class TestPassthroughGuards(KARTestBase):
             self.assertRaises(OptionError),
         ):
             self.world._apply_ut_passthrough()
+
+
+class TestGoModeRule(KARTestBase):
+    """UT's go-mode readout is `has_beaten_game`, i.e. the completion condition, run against a state
+    swept for event reachability. ANDing every victory answers "is the whole seed finishable from here",
+    which in a multi-goal seed reads No until the last mode comes into logic - and our block goals go
+    reachable long before they are done, so pure logic can never say a goal is finished. The passthrough
+    build swaps in the question a tracker wants: is some goal still outstanding and in logic."""
+
+    options = ALL_MODES
+    _VICTORIES = (
+        KARItemName.CITY_TRIAL_VICTORY,
+        KARItemName.AIR_RIDE_VICTORY,
+        KARItemName.TOP_RIDE_VICTORY,
+    )
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.tracked = generate_with_passthrough(dict(self.world.fill_slot_data()))
+        self.tracked_world = self.tracked.worlds[1]
+
+    def _go_mode(self, reachable: tuple, completed: set | None) -> bool:
+        """Go mode as UT computes it: `reachable` stands in for the victories its sweep would collect,
+        `completed` for what KARClient reports the game has actually finished."""
+        self.tracked_world.ut_goals_completed = completed
+        state = CollectionState(self.tracked)
+        for victory in reachable:
+            state.collect(self.tracked_world.create_item(victory), prevent_sweep=True)
+        return self.tracked.has_beaten_game(state, 1)
+
+    def test_real_generation_keeps_the_and(self):
+        # Only UT's build swaps the rule; the one fill runs against still needs every victory.
+        state = CollectionState(self.multiworld)
+        state.collect(self.world.create_item(KARItemName.CITY_TRIAL_VICTORY), prevent_sweep=True)
+        self.assertFalse(self.multiworld.has_beaten_game(state, self.player))
+
+    def test_victory_event_names_match_the_mapping(self):
+        # The client maps goal_satisfied_mask bits through MODE_VICTORY_EVENTS. A name that drifted from
+        # what determine_goal mints would match no goal, and the finished goal would keep counting.
+        rows = (GameMode.CITYTRIAL, GameMode.AIRRIDE, GameMode.TOPRIDE)
+        self.assertEqual({MODE_VICTORY_EVENTS[row] for row in rows}, set(self._VICTORIES))
+
+    def test_an_open_goal_in_logic_is_go_mode(self):
+        self.assertTrue(self._go_mode((KARItemName.CITY_TRIAL_VICTORY,), set()))
+        self.assertFalse(self._go_mode((), set()))
+
+    def test_a_finished_goal_stops_counting(self):
+        # The whole point of the client's report: reachability never regresses, so without it the label
+        # would latch to Yes the moment any goal came into logic and stay there for the rest of the seed.
+        self.assertFalse(self._go_mode((KARItemName.CITY_TRIAL_VICTORY,), {KARItemName.CITY_TRIAL_VICTORY}))
+        self.assertTrue(
+            self._go_mode(
+                (KARItemName.CITY_TRIAL_VICTORY, KARItemName.AIR_RIDE_VICTORY),
+                {KARItemName.CITY_TRIAL_VICTORY},
+            )
+        )
+
+    def test_every_goal_finished_reads_as_beaten(self):
+        self.assertTrue(self._go_mode((), set(self._VICTORIES)))
+
+    def test_no_client_reporting_falls_back_to_any_reachable(self):
+        # Stock UT tracking the slot: nothing stamps the set, and the label still has to say something.
+        self.assertTrue(self._go_mode((KARItemName.AIR_RIDE_VICTORY,), None))
+        self.assertFalse(self._go_mode((), None))
