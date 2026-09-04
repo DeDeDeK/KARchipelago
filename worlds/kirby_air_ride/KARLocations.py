@@ -1352,6 +1352,10 @@ location_name_groups: dict[str, set[str]] = {
         # 150 KOs is a grind on any setup: the per-match KO count is capped by how fast rivals respawn,
         # so no unlock shortens it enough to be worth counting on.
         CTLocation.STADIUM_DD_ALL_KO_ENEMIES_150X,
+        # Both KO counts accrue across every Kirby Melee run, so they land many matches apart from the
+        # per-match boxes and no unlock speeds them up.
+        CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES,
+        CTLocation.STADIUM_KM_ALL_KO_1500_ENEMIES,
     },
     KARLocationGroup.CT_RNG: {
         CTLocation.EAT_3_PLATES_OF_SUSHI,
@@ -1360,6 +1364,7 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.DRINK_3_ENERGY_DRINKS,
         CTLocation.COPY_CHANCE_WHEEL_BOMB,
         CTLocation.COPY_CHANCE_WHEEL_SLEEP,
+        # CT_EVENTS is unioned in after this table - those boxes wait on a random city event too.
     },
     KARLocationGroup.CT_PVP: {
         CTLocation.USE_FIREWORKS_TO_KO_RIVALS_10X,
@@ -1724,6 +1729,9 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.COMPETE_IN_10_MULTIPLAYER_RACES,
     },
 }
+
+# A city event has to spawn on its own before its box can be worked on, so events ride the RNG toggle.
+location_name_groups[KARLocationGroup.CT_RNG] |= location_name_groups[KARLocationGroup.CT_EVENTS]
 
 
 # Maps a goal option value to the location representing that goal - used both to exclude that location
