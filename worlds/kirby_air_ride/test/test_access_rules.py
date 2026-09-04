@@ -143,8 +143,10 @@ class TestAbilitiesGatingApplied(KARTestBase):
                 self.assertAccessDependency([location], [[unlock]], only_check_listed=True)
 
     def test_generic_swallow_locations_ungated(self):
-        # "Swallow N enemies" / "garbage enemies" take any enemy, so they carry no ability rule and
-        # are reachable with nothing collected even while abilities are gated.
+        # "Swallow N enemies" / "garbage enemies" take any enemy, so they carry no ability rule and are
+        # reachable while abilities are gated. Their only rule is the course one every enemy cell has,
+        # and the random course starter can be Nebula Belt, so collect a course that spawns enemies.
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS))
         for location in (
             ARLocation.SWALL_200_ENEMIES,
             ARLocation.SWALL_5_GARBAGE_AND_FIRST,
@@ -212,6 +214,18 @@ class TestBaseAbilitiesGatingApplied(KARTestBase):
                 self.assertAccessDependency(
                     [location], [[KARItemName.UNLOCK_BASE_ABILITY_INHALE]], only_check_listed=True
                 )
+
+    def test_ability_cells_need_no_inhale_when_courses_are_open(self):
+        """A ground copy panel grants an ability without inhaling. With Air Ride courses ungated, Nebula
+        Belt and Celestial Valley are always open, so the cells naming an ability carry no Inhale rule."""
+        for location in (
+            ARLocation.FIRST_WITH_FIRE_ABILITY,
+            ARLocation.FIRST_WITH_SLEEP_ABILITY,
+            ARLocation.SWORD_CHALLENGE_10_SWINGS,
+            ARLocation.TORNADO_CHALLENGE_15_KO,
+        ):
+            with self.subTest(location=location):
+                self.assertTrue(self.can_reach_location(location))
 
     def test_ar_quick_spin_locations_need_unlock(self):
         self.assertAccessDependency(
@@ -1889,14 +1903,103 @@ class TestARRootCourseGating(KARTestBase):
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
 
+    # Cells needing an enemy on the course, which Nebula Belt has none of. The ability-named ones need
+    # their ability unlock too, so they are covered separately below.
+    _ENEMY_LOCATIONS = (
+        ARLocation.SWALL_200_ENEMIES,
+        ARLocation.SWALL_5_GARBAGE_AND_FIRST,
+        ARLocation.DEFEAT_300_OF_YOUR_ENEMIES,
+        ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN,
+    )
+
     def test_root_location_needs_any_course(self):
-        # SWALL_200_ENEMIES is a mode-root cell with no other gating (generic swallow).
-        loc = ARLocation.SWALL_200_ENEMIES
+        # REACH_GOAL_3X_NOT_FR is a mode-root cell with no other gating - just cross the line.
+        loc = ARLocation.REACH_GOAL_3X_NOT_FR
         self.assertTrue(self.can_reach_location(loc))  # pinned Fantasy Meadows starter present
         self.remove([self.world.create_item(KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS)])
         self.assertFalse(self.can_reach_location(loc))  # no course in state
         self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT))
         self.assertTrue(self.can_reach_location(loc))  # any course, even the secret one, restores it
+
+    def test_enemy_locations_need_more_than_nebula_belt(self):
+        """Nebula Belt spawns no enemies, so it alone leaves every enemy-dependent cell unreachable."""
+        self.remove([self.world.create_item(KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS)])
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT))
+        for loc in self._ENEMY_LOCATIONS:
+            with self.subTest(location=loc):
+                self.assertFalse(self.can_reach_location(loc))
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE))
+        for loc in self._ENEMY_LOCATIONS:
+            with self.subTest(location=loc):
+                self.assertTrue(self.can_reach_location(loc))
+
+    def test_ability_location_needs_an_enemy_or_panel_course(self):
+        """An ability cell needs a course that either spawns its enemy or carries a ground copy panel.
+        Celestial Valley is the one standard course with no Phan Phan and no Dayl, but it carries the
+        tree panel; Machine Passage is the plain enemy case."""
+        loc = ARLocation.FIRST_WITH_FIRE_ABILITY
+        self.collect(self.world.create_item(KARItemName.UNLOCK_ABILITY_FIRE))
+        self.remove([self.world.create_item(KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS)])
+        self.assertFalse(self.can_reach_location(loc))
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY))
+        self.assertTrue(self.can_reach_location(loc))
+        self.remove([self.world.create_item(KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY)])
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE))
+        self.assertTrue(self.can_reach_location(loc))
+
+    def test_nebula_belt_grants_abilities_despite_having_no_enemies(self):
+        """Nebula Belt spawns nothing to swallow but ships four ground copy panels, so it works for every
+        ability cell except Tornado's, which also wants 15 enemies defeated."""
+        self.remove([self.world.create_item(KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS)])
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT))
+        for loc, item in (
+            (ARLocation.FIRST_WITH_FIRE_ABILITY, KARItemName.UNLOCK_ABILITY_FIRE),
+            (ARLocation.FIRST_WITH_SLEEP_ABILITY, KARItemName.UNLOCK_ABILITY_SLEEP),
+            (ARLocation.FIRST_WITH_WING_ABILITY, KARItemName.UNLOCK_ABILITY_WING),
+            (ARLocation.FIRST_WITH_NEEDLE_ABILITY, KARItemName.UNLOCK_ABILITY_NEEDLE),
+            (ARLocation.SWORD_CHALLENGE_10_SWINGS, KARItemName.UNLOCK_ABILITY_SWORD),
+        ):
+            self.collect(self.world.create_item(item))
+            with self.subTest(location=loc):
+                self.assertTrue(self.can_reach_location(loc))
+        self.collect(self.world.create_item(KARItemName.UNLOCK_ABILITY_TORNADO))
+        self.assertFalse(self.can_reach_location(ARLocation.TORNADO_CHALLENGE_15_KO))
+
+    def test_needle_ability_excludes_beanstalk_park(self):
+        """Beanstalk Park is too short to carry a swallowed ability to the line in 1st."""
+        loc = ARLocation.FIRST_WITH_NEEDLE_ABILITY
+        self.collect(self.world.create_item(KARItemName.UNLOCK_ABILITY_NEEDLE))
+        self.remove([self.world.create_item(KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS)])
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK))
+        self.assertFalse(self.can_reach_location(loc))
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_SKY_SANDS))
+        self.assertTrue(self.can_reach_location(loc))
+
+
+class TestARAbilityCellInhaleOrPanel(KARTestBase):
+    """base_abilities_gated + air_ride_courses_gated ON: reaching an ability cell by swallowing its enemy
+    needs Inhale, but a ground copy panel hands over an ability without one, so a panel course stands in
+    for the Inhale unlock. Starter pinned to Beanstalk Park: it spawns Fire's enemy and carries no panel."""
+
+    options = {
+        **AR_ONLY,
+        "base_abilities_gated": Toggle.option_true,
+        "abilities_gated": Toggle.option_false,
+        "air_ride_courses_gated": Toggle.option_true,
+        **_PIN_BEANSTALK_STARTER,
+    }
+
+    def test_enemy_course_needs_inhale(self):
+        loc = ARLocation.FIRST_WITH_FIRE_ABILITY
+        self.assertFalse(self.can_reach_location(loc))  # Phan Phan is there, but nothing to swallow with
+        self.collect(self.world.create_item(KARItemName.UNLOCK_BASE_ABILITY_INHALE))
+        self.assertTrue(self.can_reach_location(loc))
+
+    def test_panel_course_stands_in_for_inhale(self):
+        loc = ARLocation.FIRST_WITH_FIRE_ABILITY
+        self.assertFalse(self.can_reach_location(loc))
+        self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT))
+        self.assertTrue(self.can_reach_location(loc))
 
 
 class TestTRRootCourseGating(KARTestBase):
