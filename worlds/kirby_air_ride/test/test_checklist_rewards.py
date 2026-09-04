@@ -19,7 +19,7 @@ These tests pin:
 
 from typing import TYPE_CHECKING
 
-from Options import OptionError
+from Options import OptionError, Toggle
 
 from ..KARData import GameMode, RewardType, checklist_reward_placed_bit
 from ..KARItems import (
@@ -237,13 +237,15 @@ class TestNoneSelectedFullFill(KARTestBase):
 
 
 # CT-only config tuned so the 7 useful City Trial checklist rewards decide the needs-default budget:
-# 75 base CT progression + 6 Patch Cap Increases + 5 checkbox fillers = 86 with rewards off (fits under
-# City Trial's 90 default locations) vs 93 with the rewards on (overflows). AP Patches are held out so
-# the budget is the checklist's alone - any count of them just adds default locations to absorb it.
+# 75 base CT progression + 2 Patch Cap Increases + 5 checkbox fillers = 82 with rewards off (exactly the
+# 82 default locations City Trial has once multiplayer counts as progression) vs 89 with the rewards on
+# (overflows). AP Patches are held out so the budget is the checklist's alone - any count of them just
+# adds default locations to absorb it.
 _REWARD_RELAX_OPTIONS = {
     **CT_ONLY,
     "ap_patches": 0,
-    "city_trial_patch_cap_min": 12,
+    "city_trial_progression_multiplayer": Toggle.option_true,
+    "city_trial_patch_cap_min": 16,
     "city_trial_patch_cap_max": 18,
 }
 
