@@ -79,6 +79,8 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     ARLocation.BP_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.FM_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
+    # The Air Ride cells naming a copy ability are not here: a ground copy panel grants one without
+    # inhaling, so their Inhale requirement is conditional -- see _AR_ABILITY_PANEL_COURSES.
     # Air Ride + Top Ride quick-spin cells. "Cross the finish line while spinning" names the animation,
     # but Quick Spin is the only way to be mid-spin on the line.
     ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
@@ -441,10 +443,111 @@ _SWALLOW_ENEMY_COURSE_RULES: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Nebula Belt ships no enemy spawn table at all, so nothing that needs an enemy can be done there.
+# Every other course spawns enemies.
+_AR_ENEMY_COURSE_UNLOCKS: tuple[str, ...] = _AR_STANDARD_COURSE_UNLOCKS
+
+# Mode-root cells that just need enemies on the course - some to inhale, or some to run a count up on.
+_AR_ENEMY_DEPENDENT_LOCATIONS: tuple[str, ...] = (
+    ARLocation.SWALL_5_GARBAGE_AND_FIRST,
+    ARLocation.SWALL_200_ENEMIES,
+    ARLocation.DEFEAT_300_OF_YOUR_ENEMIES,
+    ARLocation.DEFEAT_1000_OF_YOUR_ENEMIES,
+    ARLocation.DEFEAT_100_ENEMIES_WITH_EXHALED_STARS,
+    ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN,
+)
+
+# Courses each ability's source enemy spawns on. Swallowing that one enemy is one of the two ways to an
+# ability in Air Ride (the other is a ground copy panel below); the mode ships no item spawns, and the
+# random wheel a multi-enemy swallow opens is not logic. Sword Knight's list is shared with its swallow cell.
+_SWORD_KNIGHT_COURSES: tuple[str, ...] = _SWALLOW_ENEMY_COURSE_RULES[ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST]
+
+# Phan Phan and Dayl - every course but Celestial Valley.
+_FIRE_ENEMY_COURSES: tuple[str, ...] = (
+    KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+    KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+)
+
+# Noddy.
+_SLEEP_ENEMY_COURSES: tuple[str, ...] = (
+    KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+)
+
+# Flappy.
+_WING_ENEMY_COURSES: tuple[str, ...] = (
+    KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+)
+
+# Pichikuri. Beanstalk Park is left out although it spawns them: its enemies sit too late on a track too
+# short to take the ability to the line in 1st.
+_NEEDLE_ENEMY_COURSES: tuple[str, ...] = (
+    KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+)
+
+# Caller.
+_TORNADO_ENEMY_COURSES: tuple[str, ...] = (
+    KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+)
+
+# Courses carrying a ground copy panel. Driving over one spins the wheel for a random unlocked ability
+# with no enemy and no inhale involved, so it reaches any ability given retries. Nebula Belt ships four -
+# its only ability source, since it spawns no enemies at all - and Celestial Valley the single one on top
+# of the tree. No other course ships any.
+_AR_COPY_PANEL_COURSES: tuple[str, ...] = (
+    KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
+    KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+)
+
+# Per ability cell, the panel courses that can finish it. Tornado's cell also wants 15 enemies defeated,
+# which rules out enemy-less Nebula Belt however the ability was obtained.
+_AR_ABILITY_PANEL_COURSES: dict[str, tuple[str, ...]] = {
+    ARLocation.FIRST_WITH_FIRE_ABILITY: _AR_COPY_PANEL_COURSES,
+    ARLocation.FIRST_WITH_SLEEP_ABILITY: _AR_COPY_PANEL_COURSES,
+    ARLocation.FIRST_WITH_WING_ABILITY: _AR_COPY_PANEL_COURSES,
+    ARLocation.FIRST_WITH_NEEDLE_ABILITY: _AR_COPY_PANEL_COURSES,
+    ARLocation.SWORD_CHALLENGE_10_SWINGS: _AR_COPY_PANEL_COURSES,
+    ARLocation.TORNADO_CHALLENGE_15_KO: (KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,),
+}
+
+
+def _with_panels(enemy_courses: tuple[str, ...], location: str) -> tuple[str, ...]:
+    """Enemy courses for an ability cell plus the panel courses that can stand in for them."""
+    panels = _AR_ABILITY_PANEL_COURSES[location]
+    return enemy_courses + tuple(c for c in panels if c not in enemy_courses)
+
+
 # Air Ride cells that live in the mode-root region but only complete on a subset of courses. Without a
 # rule here the blanket "any course unlocked" rule below would call them reachable on any single course.
 _AR_COURSE_SUBSET_RULES: dict[str, tuple[str, ...]] = {
     **_SWALLOW_ENEMY_COURSE_RULES,
+    **dict.fromkeys(_AR_ENEMY_DEPENDENT_LOCATIONS, _AR_ENEMY_COURSE_UNLOCKS),
+    # Cells naming a copy ability: the course has to spawn that ability's enemy or carry a copy panel.
+    ARLocation.FIRST_WITH_FIRE_ABILITY: _with_panels(_FIRE_ENEMY_COURSES, ARLocation.FIRST_WITH_FIRE_ABILITY),
+    ARLocation.FIRST_WITH_SLEEP_ABILITY: _with_panels(_SLEEP_ENEMY_COURSES, ARLocation.FIRST_WITH_SLEEP_ABILITY),
+    ARLocation.FIRST_WITH_WING_ABILITY: _with_panels(_WING_ENEMY_COURSES, ARLocation.FIRST_WITH_WING_ABILITY),
+    ARLocation.FIRST_WITH_NEEDLE_ABILITY: _with_panels(_NEEDLE_ENEMY_COURSES, ARLocation.FIRST_WITH_NEEDLE_ABILITY),
+    ARLocation.TORNADO_CHALLENGE_15_KO: _with_panels(_TORNADO_ENEMY_COURSES, ARLocation.TORNADO_CHALLENGE_15_KO),
+    ARLocation.SWORD_CHALLENGE_10_SWINGS: _with_panels(_SWORD_KNIGHT_COURSES, ARLocation.SWORD_CHALLENGE_10_SWINGS),
     # Celestial Valley and Beanstalk Park are the only courses with a cliff that drops you.
     ARLocation.DROP_FROM_CLIFFS_3X: (
         KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
@@ -622,6 +725,16 @@ def set_rules(world: "KARWorld"):
     if world.options.base_abilities_gated:
         for loc, item in _BASE_ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
+
+        # The Air Ride cells naming a copy ability have two sources: swallow that ability's enemy, which
+        # needs Inhale, or drive over a ground copy panel, which needs neither Inhale nor an enemy. Which
+        # courses offer which is the course rule's job; this only drops the Inhale half once a panel
+        # course is in play. With courses ungated every course is open, so a panel always is too and the
+        # cells need no Inhale at all.
+        if world.air_ride_enabled and world.options.air_ride_courses_gated:
+            inhale = Has(KARItemName.UNLOCK_BASE_ABILITY_INHALE)
+            for loc, panels in _AR_ABILITY_PANEL_COURSES.items():
+                add_location_rule(loc, inhale | HasAny(*panels))
 
     # Course-subset cells sit in the generic Air Ride region, so without this they would be reachable
     # with no course that can actually complete them unlocked.
