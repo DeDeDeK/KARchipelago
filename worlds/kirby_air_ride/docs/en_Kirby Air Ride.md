@@ -195,7 +195,7 @@ You can change which modes these will apply to in the in-game settings menu.
 
 "Allowed Item Types" controls which categories of optional (non-progression) give items appear in your pool. 
 
-All categories are on by default; removing one keeps all of that category's items out of your pool.
+Only "Permanent Patches" is on by default; add a category to put its gives in your pool, and removing one keeps all of that category's items out.
 
 ### Spawn Rate Up items
 

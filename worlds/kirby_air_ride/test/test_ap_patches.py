@@ -8,6 +8,7 @@ capacity for the item pool - no goal reads them.
 """
 
 from BaseClasses import CollectionState
+from Options import Toggle
 
 from ..KARData import (
     AP_PATCH_CODE_BASE,
@@ -84,7 +85,9 @@ class TestAPPatchTable(KARTestBase):
 
 
 class TestAPPatchesOff(KARTestBase):
-    options = {**CT_ONLY, "ap_patches": 0}
+    # RNG boxes count as progression here: with no AP patch locations, City Trial's remaining default
+    # boxes are one short of its guaranteed pool.
+    options = {**CT_ONLY, "ap_patches": 0, "city_trial_progression_rng": Toggle.option_true}
 
     def test_no_patch_locations_exist(self):
         self.assertFalse(self.real_location_names() & set(AP_PATCH_LOCATION_TABLE))
@@ -126,10 +129,12 @@ class TestAPPatchWordBoundaryCounts(KARTestBase):
 
 
 class TestAPPatchExcludedPlacement(KARTestBase):
+    # Excluding all 20 leaves the same shortfall as having none, so RNG boxes count as progression.
     options = {
         **CT_ONLY,
         "ap_patches": 20,
         "ap_patch_placement": APPatchPlacement.option_excluded,
+        "city_trial_progression_rng": Toggle.option_true,
     }
 
     def test_all_of_them_are_excluded(self):

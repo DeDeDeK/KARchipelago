@@ -167,29 +167,30 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
             self.world_setup()
 
 
-# A config tuned to fit by exactly 1 location: 75 CT progression with all gates on + 2 PATCH_CAP_INCREASE
-# + 5 checkbox fillers + 7 useful checklist rewards = 89 needing default locations, 1 under the 90 CT
-# default locations. Filler rewards aren't counted - they may sit on excluded boxes. AP Patches are held
-# out, or their locations would absorb the excludes the paired test relies on. Without exclude_locations
-# it fits; with the paired test's 3 excludes it does not.
+# A config tuned to fit exactly: 81 CT progression with all gates on (75 plus 6 PATCH_CAP_INCREASE) + 5
+# checkbox fillers + 7 useful checklist rewards = 93 needing default locations, matching the 93 CT default
+# locations RNG-as-progression opens up. Filler rewards aren't counted - they may sit on excluded boxes.
+# AP Patches are held out, or their locations would absorb the excludes the paired test relies on. Without
+# exclude_locations it fits; with the paired test's 3 excludes it does not.
 _TIGHT_POOL = {
     **CT_ONLY,
     "ap_patches": 0,
     "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"],
-    "city_trial_patch_cap_min": 16,
+    "city_trial_progression_rng": Toggle.option_true,
+    "city_trial_patch_cap_min": 12,
     "city_trial_patch_cap_max": 18,
 }
 
 
 class TestTightPoolFitsWithoutExcludeLocations(KARTestBase):
-    """Baseline for the exclude_locations pair: 89-items-needing-default just fit 90 default CT locations."""
+    """Baseline for the exclude_locations pair: 93-items-needing-default just fit 93 default CT locations."""
 
     options = _TIGHT_POOL
 
     def test_setup_succeeds(self):
         # If this stops fitting (e.g. a default-locations rebalance or reward-classification change), the
         # paired exclude_locations test will need its excludes count tuned.
-        self.assertEqual(len(self.world.progression_pool), 77)
+        self.assertEqual(len(self.world.progression_pool), 81)
         self.assertEqual(len(self.world.counted_useful_pool), 5)
 
 
