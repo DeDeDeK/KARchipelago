@@ -210,6 +210,26 @@ _CT_MACHINE_UNLOCKS: list[str] = sorted(
 _CHARGE_DEPENDENT_CT_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name in CHARGE_DEPENDENT_MACHINES]
 _STEERABLE_CT_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in CHARGE_DEPENDENT_MACHINES]
 
+# Target Flight scores the flight off its launch ramp, so "stay airborne longer than 15 seconds" is a
+# glide check. The wheelie/bike class holds no air at all and drops straight off the ramp, Dedede's
+# ride included, and Formula, Wagon, Bulk, Rocket Star and Hydra glide too poorly to hold the launch
+# that long. The stadium grid offers every unlocked machine, so any other one clears it.
+_TF_AIRBORNE_EXCLUDED_MACHINES: frozenset[str] = frozenset(
+    {
+        KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE,
+        KARItemName.UNLOCK_MACHINE_REX_WHEELIE,
+        KARItemName.UNLOCK_MACHINE_WHEELIE_SCOOTER,
+        KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE,
+        KARItemName.UNLOCK_MACHINE_FORMULA_STAR,
+        KARItemName.UNLOCK_MACHINE_WAGON_STAR,
+        KARItemName.UNLOCK_MACHINE_BULK_STAR,
+        KARItemName.UNLOCK_MACHINE_ROCKET_STAR,
+        KARItemName.UNLOCK_MACHINE_HYDRA,
+    }
+)
+
+_TF_AIRBORNE_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in _TF_AIRBORNE_EXCLUDED_MACHINES]
+
 # Machines that cannot hold Fantasy Meadows' 20 mph floor for a whole lap. The cell polls per-frame
 # displacement, so it wants sustained speed, not a lap time. Shadow Star (19.9 mph), Compact Star (18.0)
 # and Rocket Star (15.5) never reach it; Swerve Star clears it (31.2) but stops dead to steer.
@@ -751,6 +771,8 @@ def set_rules(world: "KARWorld"):
         # Unlike the "on <machine>" cells this one names no machine, but it still needs a specific
         # kind of one - see _FM_20MPH_EXCLUDED_MACHINES.
         add_location_rule(ARLocation.FM_LAP_ABOVE_20_MPH, HasAny(*_FM_20MPH_MACHINES))
+        # Same shape in the Target Flight stadium - see _TF_AIRBORNE_EXCLUDED_MACHINES.
+        add_location_rule(CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS, HasAny(*_TF_AIRBORNE_MACHINES))
 
     if world.options.city_trial_items_gated:
         for loc, item in _ITEM_LOCATION_RULES.items():
