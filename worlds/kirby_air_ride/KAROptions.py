@@ -14,7 +14,7 @@ from Options import (
 )
 
 from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_MAX
-from .KARItems import ALLOWED_ITEM_CATEGORIES, CHECKLIST_REWARD_CATEGORIES, TRAP_CATEGORIES
+from .KARItems import ALLOWED_ITEM_CATEGORIES, CHECKLIST_REWARD_CATEGORIES, TRAP_CATEGORIES, KARItemGroup
 
 
 class TrapChance(Range):
@@ -43,11 +43,20 @@ class AllowedItems(OptionSet):
     """
     Which categories of optional (non-progression) give items may appear in your item pool. Removing a
     category keeps all of its optional items out of your pool. Trap items are unaffected.
+
+    Defaults to "Permanent Patches" only; add the others to put their gives in your pool.
+
+    Valid categories are:
+    - "Permanent Patches"
+    - "City Trial Item Gives"
+    - "City Trial Event Gives"
+    - "Copy Ability Gives"
+    - "Top Ride Item Gives"
     """
 
     display_name = "Allowed Item Types"
     valid_keys = frozenset(str(category) for category in ALLOWED_ITEM_CATEGORIES)
-    default = frozenset(str(category) for category in ALLOWED_ITEM_CATEGORIES)
+    default = frozenset({str(KARItemGroup.PERMANENT_PATCHES)})
 
 
 class SpawnRateMin(Range):
