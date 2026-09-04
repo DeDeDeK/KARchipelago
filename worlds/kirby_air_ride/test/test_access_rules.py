@@ -35,6 +35,8 @@ from ..KARRules import (
     _GREEN_BOX_ITEMS,
     _STEERABLE_CT_MACHINES,
     _SWALLOW_ENEMY_COURSE_RULES,
+    _TF_AIRBORNE_EXCLUDED_MACHINES,
+    _TF_AIRBORNE_MACHINES,
     _TR_ABILITY_ITEM_KEYS,
     _TR_COURSE_SUBSET_RULES,
 )
@@ -1536,6 +1538,57 @@ class TestFantasyMeadows20MphNeedsCapableMachine(KARTestBase):
         for name in _FM_20MPH_EXCLUDED_MACHINES:
             self.assertIn(name, ar_machines)
         self.assertEqual(len(_FM_20MPH_EXCLUDED_MACHINES), 4)
+
+
+class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
+    """TARGET FLIGHT's airtime cell names no machine, but the flight is scored off a launch ramp, so it
+    needs one that glides. A seed handing out only the wheelie/bike class or one of the four poor
+    gliders would leave it unwinnable.
+
+    The starter is pinned to Wheelie Bike: itself one of the excluded machines, so it suppresses the
+    random pick without satisfying the rule."""
+
+    options = {
+        **CT_ONLY,
+        "machines_gated": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_false,
+        "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
+    }
+
+    _LOCATION = CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS
+
+    def test_unreachable_on_the_excluded_machines_alone(self):
+        # Every excluded machine at once still is not enough - this is not just "some machine".
+        state = CollectionState(self.multiworld)
+        for name in sorted(_TF_AIRBORNE_EXCLUDED_MACHINES):
+            if not state.has(name, self.player):  # the pinned starter is already in
+                state.collect(self.get_item_by_name(name), prevent_sweep=True)
+        for name in _TF_AIRBORNE_MACHINES:
+            self.assertFalse(
+                state.has(name, self.player),
+                f"{name} leaked into the state, making this test vacuous",
+            )
+        self.assertFalse(
+            state.can_reach(self._LOCATION, "Location", self.player),
+            "the airtime cell should not be reachable on the excluded machines",
+        )
+
+    def test_reachable_on_each_gliding_machine(self):
+        for machine in _TF_AIRBORNE_MACHINES:
+            with self.subTest(machine=machine):
+                state = CollectionState(self.multiworld)
+                state.collect(self.get_item_by_name(machine), prevent_sweep=True)
+                self.assertTrue(
+                    state.can_reach(self._LOCATION, "Location", self.player),
+                    f"the airtime cell should be reachable on {machine} alone",
+                )
+
+    def test_excluded_machines_are_city_trial_machines(self):
+        # Guards against a typo'd or non-City-Trial name silently excluding nothing.
+        for name in _TF_AIRBORNE_EXCLUDED_MACHINES:
+            self.assertIn(name, _CT_MACHINE_UNLOCKS)
+        self.assertEqual(len(_TF_AIRBORNE_EXCLUDED_MACHINES), 9)
+        self.assertFalse(set(_TF_AIRBORNE_MACHINES) & _TF_AIRBORNE_EXCLUDED_MACHINES)
 
 
 class TestTRAbilityItemEitherKey(KARTestBase):
