@@ -18,6 +18,7 @@ from ..KARItems import (
     CHECKLIST_REWARD_TYPES,
     ITEM_TABLE,
     STADIUM_CHECKLIST_REWARDS,
+    KARItemGroup,
     KARItemName,
     KARItemType,
 )
@@ -114,11 +115,11 @@ class TestPermanentPatchesDisabled(KARTestBase):
         self.assertFalse(leaked, f"Permanent patches leaked when disabled: {sorted(leaked)}")
 
 
-class TestAllowedItemsDefaultAllOn(KARTestBase):
-    """Default allowed_items = all five categories on, so every category's non-trap items are eligible.
-    None of these types are progression/reward/counted, so eligibility is exactly useful_pool | filler_pool."""
+class TestAllowedItemsAllOn(KARTestBase):
+    """With all five categories on, every category's non-trap items are eligible. None of these types are
+    progression/reward/counted, so eligibility is exactly useful_pool | filler_pool."""
 
-    options = ALL_MODES
+    options = {**ALL_MODES, "allowed_items": sorted(ALLOWED_ITEM_CATEGORY_ITEMS)}
 
     def test_all_categories_eligible(self):
         eligible = self.world.useful_pool | self.world.filler_pool
@@ -126,6 +127,28 @@ class TestAllowedItemsDefaultAllOn(KARTestBase):
             with self.subTest(category=category):
                 missing = set(names) - eligible
                 self.assertFalse(missing, f"{category} items not eligible when allowed: {sorted(missing)}")
+
+
+class TestAllowedItemsDefaultPermanentPatchesOnly(KARTestBase):
+    """The default is "Permanent Patches" alone: its non-trap items are eligible and every other category's
+    are kept out of the pool and the draw pools."""
+
+    options = ALL_MODES
+
+    def test_permanent_patches_eligible(self):
+        eligible = self.world.useful_pool | self.world.filler_pool
+        names = set(ALLOWED_ITEM_CATEGORY_ITEMS[KARItemGroup.PERMANENT_PATCHES])
+        self.assertTrue(names <= eligible, f"Permanent patches not eligible by default: {sorted(names - eligible)}")
+
+    def test_other_categories_absent(self):
+        eligible = self.world.useful_pool | self.world.filler_pool
+        pool_names = set(self.itempool_names())
+        for category, names in ALLOWED_ITEM_CATEGORY_ITEMS.items():
+            if category == KARItemGroup.PERMANENT_PATCHES:
+                continue
+            with self.subTest(category=category):
+                self.assertFalse(set(names) & eligible, f"{category} eligible by default")
+                self.assertFalse(set(names) & pool_names, f"{category} item in pool by default")
 
 
 class TestAllowedItemsCategoryDisabled(KARTestBase):
