@@ -144,11 +144,11 @@ class CityTrialGoal(Choice):
     display_name = "City Trial Goal"
     option_100_checklist_blocks = 0
     option_n_checklist_blocks = 1
-    option_hydra_and_dragoon = 2
-    option_beat_king_dedede = 3
-    option_none = 4
-    option_checklist_list = 5
-    option_max_stats_in_one_run = 6
+    option_checklist_list = 2
+    option_hydra_and_dragoon = 3
+    option_beat_king_dedede = 4
+    option_max_stats_in_one_run = 5
+    option_none = 8
     default = 0
 
 
@@ -372,9 +372,9 @@ class AirRideGoal(Choice):
     display_name = "Air Ride Goal"
     option_100_checklist_blocks = 0
     option_n_checklist_blocks = 1
-    option_none = 4
-    option_checklist_list = 5
-    default = 4
+    option_checklist_list = 2
+    option_none = 8
+    default = 8
 
 
 class AirRideChecklistAmount(Range):
@@ -473,9 +473,9 @@ class TopRideGoal(Choice):
     display_name = "Top Ride Goal"
     option_100_checklist_blocks = 0
     option_n_checklist_blocks = 1
-    option_none = 4
-    option_checklist_list = 5
-    default = 4
+    option_checklist_list = 2
+    option_none = 8
+    default = 8
 
 
 class TopRideChecklistAmount(Range):
@@ -575,11 +575,11 @@ class ArchipelagoGoal(Choice):
 
     display_name = "Archipelago Checklist Goal"
     option_n_checklist_blocks = 1
-    option_none = 4
-    option_checklist_list = 5
-    option_assemble_archipelago_star = 7
-    option_all_three_legendaries_in_one_run = 8
-    default = 4
+    option_checklist_list = 2
+    option_assemble_archipelago_star = 6
+    option_all_three_legendaries_in_one_run = 7
+    option_none = 8
+    default = 8
 
 
 class ArchipelagoChecklistAmount(Range):
