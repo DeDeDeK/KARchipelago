@@ -43,6 +43,7 @@ from .KARData import (
 )
 from .KARItems import MODE_VICTORY_EVENTS
 from .KARLocations import LOCATION_TABLE
+from .KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from .KARLogging import (
     log_color,
     log_detailed,
@@ -634,10 +635,14 @@ class KARContext(CommonContext):
             d.write_u32(a(addr), int(bool(sd.get(key, 0))))
 
         # Goals per mode: option values map directly to the GoalKind enum.
-        d.write_u32(a(MemoryAddress.OPTION_GOAL_AIRRIDE), int(sd.get("air_ride_goal", 4)))
-        d.write_u32(a(MemoryAddress.OPTION_GOAL_TOPRIDE), int(sd.get("top_ride_goal", 4)))
-        d.write_u32(a(MemoryAddress.OPTION_GOAL_CITYTRIAL), int(sd.get("city_trial_goal", 0)))
-        d.write_u32(a(MemoryAddress.OPTION_GOAL_ARCHIPELAGO), int(sd.get("archipelago_goal", 4)))
+        goal_writes = (
+            (MemoryAddress.OPTION_GOAL_AIRRIDE, "air_ride_goal", AirRideGoal.default),
+            (MemoryAddress.OPTION_GOAL_TOPRIDE, "top_ride_goal", TopRideGoal.default),
+            (MemoryAddress.OPTION_GOAL_CITYTRIAL, "city_trial_goal", CityTrialGoal.default),
+            (MemoryAddress.OPTION_GOAL_ARCHIPELAGO, "archipelago_goal", ArchipelagoGoal.default),
+        )
+        for addr, key, fallback in goal_writes:
+            d.write_u32(a(addr), int(sd.get(key, fallback)))
 
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_AIRRIDE), int(sd.get("air_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))

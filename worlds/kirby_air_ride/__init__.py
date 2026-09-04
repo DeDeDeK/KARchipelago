@@ -766,8 +766,6 @@ class KARWorld(World):
             else:
                 self.filler_pool.add(item_name)
 
-        # Pools are authoritative from here; an empty filler_pool after a real build is intentional
-        # (see _random_filler).
         self.item_pools_built = True
 
     def _apply_ut_passthrough(self) -> None:

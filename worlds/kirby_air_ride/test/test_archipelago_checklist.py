@@ -230,8 +230,49 @@ class TestArchipelago100BlocksNotOffered(unittest.TestCase):
     def test_remaining_values_keep_their_numbering(self):
         # The mod switches on the raw goal value, so dropping one must not renumber the others.
         self.assertEqual(ArchipelagoGoal.option_n_checklist_blocks, 1)
-        self.assertEqual(ArchipelagoGoal.option_none, 4)
-        self.assertEqual(ArchipelagoGoal.option_checklist_list, 5)
+        self.assertEqual(ArchipelagoGoal.option_checklist_list, 2)
+        self.assertEqual(ArchipelagoGoal.option_none, 8)
+
+
+class TestGoalValuesShareOneEnum(unittest.TestCase):
+    """The four *_goal options are one enum: the client writes the raw value into APSlotOptions.goal[row]
+    and the mod switches on it as APGoalKind, so a name means the same number in every option."""
+
+    # Must stay in step with APGoalKind in the mod's mods/archipelago/src/main.h.
+    GOAL_KIND = {
+        "100_checklist_blocks": 0,
+        "n_checklist_blocks": 1,
+        "checklist_list": 2,
+        "hydra_and_dragoon": 3,
+        "beat_king_dedede": 4,
+        "max_stats_in_one_run": 5,
+        "assemble_archipelago_star": 6,
+        "all_three_legendaries_in_one_run": 7,
+        "none": 8,
+    }
+
+    GOALS = (CityTrialGoal, AirRideGoal, TopRideGoal, ArchipelagoGoal)
+
+    def test_values_match_the_shared_enum(self):
+        for goal in self.GOALS:
+            for name, value in goal.options.items():
+                with self.subTest(goal=goal.__name__, option=name):
+                    self.assertEqual(value, self.GOAL_KIND[name])
+
+    def test_every_enum_value_is_offered_somewhere(self):
+        offered = {name for goal in self.GOALS for name in goal.options}
+        self.assertEqual(offered, set(self.GOAL_KIND))
+
+    def test_none_is_the_last_option(self):
+        for goal in self.GOALS:
+            with self.subTest(goal=goal.__name__):
+                self.assertEqual(goal.option_none, max(goal.options.values()))
+                self.assertEqual(list(goal.options)[-1], "none")
+
+    def test_defaults_are_offered_values(self):
+        for goal in self.GOALS:
+            with self.subTest(goal=goal.__name__):
+                self.assertIn(goal.default, goal.options.values())
 
 
 class TestArchipelagoChecklistAmountRangeTracksTable(unittest.TestCase):
