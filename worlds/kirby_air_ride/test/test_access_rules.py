@@ -2297,11 +2297,34 @@ class TestCTCompleteDragoonHydraItemGating(KARTestBase):
         self.collect_by_name(KARItemName.UNLOCK_ITEM_DRAGOON_PART_C)
         self.assertTrue(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
 
+    def test_unreachable_without_red_box(self):
+        # The pieces arrive in a red carrier box, so all six unlocks are not enough on their own.
+        self.collect_all_but([KARItemName.UNLOCK_BOX_RED])
+        self.assertFalse(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
+        self.collect_by_name(KARItemName.UNLOCK_BOX_RED)
+        self.assertTrue(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
+
 
 class TestCTCompleteDragoonHydraItemGatingOff(KARTestBase):
-    """city_trial_items_gated OFF: pieces always spawn, so the checkbox carries no rule and is reachable empty."""
+    """city_trial_items_gated OFF: pieces always spawn, so the checkbox carries no piece rule - only the
+    Red Box unlock its carrier box needs, which the still-on box gate keys."""
 
     options = {**CT_ONLY, "city_trial_items_gated": Toggle.option_false}
+
+    def test_needs_only_the_red_box(self):
+        self.assertFalse(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
+        self.collect_by_name(KARItemName.UNLOCK_BOX_RED)
+        self.assertTrue(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
+
+
+class TestCTCompleteDragoonHydraAllGatingOff(KARTestBase):
+    """Both gates OFF: nothing keys the pieces or their carrier, so the checkbox is reachable empty."""
+
+    options = {
+        **CT_ONLY,
+        "city_trial_items_gated": Toggle.option_false,
+        "city_trial_boxes_gated": Toggle.option_false,
+    }
 
     def test_reachable_empty(self):
         self.assertTrue(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
@@ -2326,6 +2349,9 @@ class TestCTHydraAndDragoonGoalItemGating(KARTestBase):
         self.assertFalse(self.can_reach_location(victory))
         for piece in LEGENDARY_PIECE_UNLOCK_ITEMS:
             self.collect_by_name(piece)
+        # The carrier box is red, so the six pieces alone still do not open the goal.
+        self.assertFalse(self.can_reach_location(victory))
+        self.collect_by_name(KARItemName.UNLOCK_BOX_RED)
         self.assertTrue(self.can_reach_location(victory))
 
 
