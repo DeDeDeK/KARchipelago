@@ -114,13 +114,15 @@ class TestAPPatchesCreatesThatMany(KARTestBase):
 class TestAPPatchWordBoundaryCounts(KARTestBase):
     """The mod tracks patches in u64 words, so the counts either side of one are worth pinning."""
 
-    options = CT_ONLY
+    # RNG boxes count as progression here: the low counts leave too few AP patch locations for City
+    # Trial's guaranteed pool on their own.
+    options = {**CT_ONLY, "city_trial_progression_rng": Toggle.option_true}
     auto_construct = False
 
     def test_exactly_the_first_n_are_created(self):
         for count in (1, 63, 64, 65, APPatches.range_end):
             with self.subTest(ap_patches=count):
-                self.options = {**CT_ONLY, "ap_patches": count}
+                self.options = {**self.options, "ap_patches": count}
                 self.world_setup()
                 created = self.real_location_names() & set(AP_PATCH_LOCATION_TABLE)
                 self.assertEqual(created, {ap_patch_location_name(n) for n in range(1, count + 1)})
