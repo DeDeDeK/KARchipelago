@@ -245,7 +245,7 @@ _REWARD_RELAX_OPTIONS = {
     **CT_ONLY,
     "ap_patches": 0,
     "city_trial_progression_multiplayer": Toggle.option_true,
-    "city_trial_patch_cap_min": 16,
+    "city_trial_patch_cap_min": 18,
     "city_trial_patch_cap_max": 18,
 }
 
