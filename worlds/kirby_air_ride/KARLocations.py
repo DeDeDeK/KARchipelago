@@ -1339,6 +1339,7 @@ location_name_groups: dict[str, set[str]] = {
     KARLocationGroup.CT_HIGH_EFFORT: {
         CTLocation.BREAK_500_BOXES,
         CTLocation.BREAK_1000_BOXES,
+        CTLocation.PICKUP_500_ITEMS,
         CTLocation.PICKUP_1000_ITEMS,
         CTLocation.PICKUP_3000_ITEMS,
         CTLocation.FR_DRIVE_FOR_2_HOURS,
@@ -1348,6 +1349,7 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.FILL_IN_100_CHECKLIST_BLOCKS,
         CTLocation.GET_10_ITEMS_IN_20S,
         CTLocation.GET_50_ITEMS,
+        CTLocation.RACE_60_MILES,
         CTLocation.RACE_200_MILES,
         # 150 KOs is a grind on any setup: the per-match KO count is capped by how fast rivals respawn,
         # so no unlock shortens it enough to be worth counting on.

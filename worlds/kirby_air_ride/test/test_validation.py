@@ -177,20 +177,20 @@ _TIGHT_POOL = {
     "ap_patches": 0,
     "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"],
     "city_trial_progression_rng": Toggle.option_true,
-    "city_trial_patch_cap_min": 12,
+    "city_trial_patch_cap_min": 14,
     "city_trial_patch_cap_max": 18,
 }
 
 
 class TestTightPoolFitsWithoutExcludeLocations(KARTestBase):
-    """Baseline for the exclude_locations pair: 93-items-needing-default just fit 93 default CT locations."""
+    """Baseline for the exclude_locations pair: 91-items-needing-default just fit 91 default CT locations."""
 
     options = _TIGHT_POOL
 
     def test_setup_succeeds(self):
         # If this stops fitting (e.g. a default-locations rebalance or reward-classification change), the
         # paired exclude_locations test will need its excludes count tuned.
-        self.assertEqual(len(self.world.progression_pool), 81)
+        self.assertEqual(len(self.world.progression_pool), 79)
         self.assertEqual(len(self.world.counted_useful_pool), 5)
 
 
