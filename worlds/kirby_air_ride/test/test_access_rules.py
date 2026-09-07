@@ -35,6 +35,8 @@ from ..KARRules import (
     _GREEN_BOX_ITEMS,
     _STEERABLE_CT_MACHINES,
     _SWALLOW_ENEMY_COURSE_RULES,
+    _TAC_LOOT_ABILITY_UNLOCK,
+    _TAC_LOOT_ITEM_UNLOCKS,
     _TF_AIRBORNE_EXCLUDED_MACHINES,
     _TF_AIRBORNE_MACHINES,
     _TR_ABILITY_ITEM_KEYS,
@@ -515,38 +517,45 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
                 self.assertAccessDependency([location], [[unlock]], only_check_listed=True)
 
     def test_tac_location_needs_something_to_steal(self):
-        # "Steal over 8 items from Tac" needs some item type able to spawn for Tac to carry off - any CT
-        # item unlock except All Up, whose city fall chance is zero.
+        # "Steal over 8 items from Tac" needs a kind carrying weight in Tac's own column of the event
+        # drop table: the nine patches, Sleep, All Up or one of the twelve foods. Every other item kind
+        # sits at 0 there, and the six legendary pieces have no row at all.
         item_unlocks = items_of_type(KARItemType.CT_ITEM_UNLOCK)
-        stealable = sorted(item_unlocks - {KARItemName.UNLOCK_ITEM_ALL_UP})
+        patch_unlocks = items_of_type(KARItemType.CT_PATCH_UNLOCK)
+        held_out = item_unlocks | patch_unlocks | {_TAC_LOOT_ABILITY_UNLOCK}
+
+        loot = [*sorted(_TAC_LOOT_ITEM_UNLOCKS), *sorted(patch_unlocks), _TAC_LOOT_ABILITY_UNLOCK]
+        not_loot = sorted(item_unlocks - set(_TAC_LOOT_ITEM_UNLOCKS))
 
         state = CollectionState(self.multiworld)
-        self.collect_all_but(item_unlocks, state)
+        self.collect_all_but(held_out, state)
         for item in self.multiworld.precollected_items[self.player]:
-            if item.name in item_unlocks:
+            if item.name in held_out:
                 state.remove(item)
 
         self.assertFalse(
             state.can_reach(CTLocation.STEAL_8_FROM_TAC, "Location", self.player),
-            "reachable with no item unlock held",
+            "reachable with no Tac loot held",
         )
 
-        # All Up never spawns in the city on its own, so it alone must not open the cell.
-        all_up = self.world.create_item(KARItemName.UNLOCK_ITEM_ALL_UP)
-        state.collect(all_up)
-        self.assertFalse(
-            state.can_reach(CTLocation.STEAL_8_FROM_TAC, "Location", self.player),
-            "reachable with only All Up held",
-        )
-        state.remove(all_up)
-
-        # Any other single item unlock is enough.
-        for unlock in stealable:
+        # Any single kind with weight in his column is enough - one type respawns as he throws.
+        for unlock in loot:
             item = self.world.create_item(unlock)
             state.collect(item)
             self.assertTrue(
                 state.can_reach(CTLocation.STEAL_8_FROM_TAC, "Location", self.player),
                 f"not reachable with only {unlock}",
+            )
+            state.remove(item)
+
+        # Nothing else is loot, the legendary pieces included: Tac throws a roll over his column, never
+        # the carrier box that is the pieces' only delivery.
+        for unlock in not_loot:
+            item = self.world.create_item(unlock)
+            state.collect(item)
+            self.assertFalse(
+                state.can_reach(CTLocation.STEAL_8_FROM_TAC, "Location", self.player),
+                f"reachable with only {unlock}, which has no weight in Tac's column",
             )
             state.remove(item)
 
@@ -634,7 +643,13 @@ class TestCTTacNeedsEventAndLoot(KARTestBase):
     }
 
     def test_needs_both_the_event_and_an_item(self):
-        keys = items_of_type(KARItemType.CT_ITEM_UNLOCK) | {KARItemName.UNLOCK_EVENT_TAC}
+        # Patches and Sleep carry weight in Tac's column too, so they are held out alongside the item
+        # unlocks - otherwise the loot half is already satisfied before the test starts.
+        keys = (
+            items_of_type(KARItemType.CT_ITEM_UNLOCK)
+            | items_of_type(KARItemType.CT_PATCH_UNLOCK)
+            | {_TAC_LOOT_ABILITY_UNLOCK, KARItemName.UNLOCK_EVENT_TAC}
+        )
         state = CollectionState(self.multiworld)
         self.collect_all_but(keys, state)
         for item in self.multiworld.precollected_items[self.player]:
