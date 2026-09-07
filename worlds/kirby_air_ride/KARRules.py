@@ -267,17 +267,6 @@ _FM_SHORTCUT_MACHINES: list[str] = sorted(
     if GameMode.AIRRIDE in ITEM_TABLE[name].source_modes and name not in _FM_SHORTCUT_EXCLUDED_MACHINES
 )
 
-# Item types Tac can carry off in the city: every City Trial item unlock except All Up, whose city fall
-# chance is zero. The legendary pieces stay in - their carrier box is a real pickup - but they are the
-# only ones that also need the Red unlock, so they are listed apart for the box-gated case.
-_TAC_STEALABLE_ITEM_UNLOCKS: list[str] = sorted(
-    items_by_type[KARItemType.CT_ITEM_UNLOCK] - {KARItemName.UNLOCK_ITEM_ALL_UP}
-)
-
-_TAC_STEALABLE_NON_PIECE_UNLOCKS: list[str] = sorted(
-    set(_TAC_STEALABLE_ITEM_UNLOCKS) - set(LEGENDARY_PIECE_UNLOCK_ITEMS)
-)
-
 # Item-count CT locations. The in-game pickup counter tallies every itemkind EXCEPT the three box types,
 # so a cell here just needs one counting type able to spawn -- types respawn, so one unlock suffices.
 _ITEM_PICKUP_LOCATIONS: tuple[str, ...] = (
@@ -349,6 +338,14 @@ _BLUE_BOX_FOOD_ITEMS: tuple[str, ...] = (
     KARItemName.UNLOCK_ITEM_HOT_DOG,
     KARItemName.UNLOCK_ITEM_APPLE,
 )
+
+# Tac scatters a fresh weighted roll over his own column of the event drop table on every throw, so the
+# only loot he has is what carries weight there. In City Trial that is the nine patches, Sleep, All Up
+# and the twelve foods; every other kind sits at 0, and the six legendary pieces have no row at all.
+# Split by gating category, since each one is loot on its own.
+_TAC_LOOT_ITEM_UNLOCKS: tuple[str, ...] = (*_BLUE_BOX_FOOD_ITEMS, KARItemName.UNLOCK_ITEM_ALL_UP)
+
+_TAC_LOOT_ABILITY_UNLOCK: str = KARItemName.UNLOCK_ABILITY_SLEEP
 
 
 def _box_color_requirements(gated: typing.Callable[[str], bool]) -> dict[str, list[Rule]]:
@@ -782,16 +779,6 @@ def set_rules(world: "KARWorld"):
     if world.options.city_trial_items_gated:
         for loc, item in _ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
-        # "Steal over 8 items from Tac" needs something in the city for Tac to steal. Composes with the
-        # Tac event unlock above when the event gate is on as well: Tac has to show up AND have loot. A
-        # legendary piece only counts as loot alongside Red - it arrives in a red carrier box.
-        if "city_trial_boxes_gated" in world.effective_gates:
-            tac_loot = HasAny(*_TAC_STEALABLE_NON_PIECE_UNLOCKS) | (
-                HasAny(*LEGENDARY_PIECE_UNLOCK_ITEMS) & Has(KARItemName.UNLOCK_BOX_RED)
-            )
-        else:
-            tac_loot = HasAny(*_TAC_STEALABLE_ITEM_UNLOCKS)
-        add_location_rule(CTLocation.STEAL_8_FROM_TAC, tac_loot)
         # "In one match, complete both Dragoon and Hydra!" needs every piece to spawn. (As the
         # hydra_and_dragoon goal the cell is excluded here and its victory event is gated instead.)
         add_location_rule(CTLocation.COMPLETE_DRAGOON_AND_HYDRA, HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS))
@@ -807,6 +794,23 @@ def set_rules(world: "KARWorld"):
     if world.options.city_trial_patches_gated:
         for loc, item in _PATCH_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
+
+    # "Steal over 8 items from Tac" needs a kind with weight in Tac's own drop column able to spawn, and
+    # the three categories that hold one are loot independently - so an ungated category leaves the cell
+    # free and only all three gated needs a rule. Composes with the Tac event unlock when the event gate
+    # is on as well: Tac has to show up AND have loot.
+    tac_loot: list[Rule] = []
+    if "city_trial_items_gated" in world.effective_gates:
+        tac_loot.append(HasAny(*_TAC_LOOT_ITEM_UNLOCKS))
+    if "city_trial_patches_gated" in world.effective_gates:
+        tac_loot.append(HasAny(*sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK])))
+    if "abilities_gated" in world.effective_gates:
+        tac_loot.append(Has(_TAC_LOOT_ABILITY_UNLOCK))
+    if len(tac_loot) == 3:
+        any_loot = tac_loot[0]
+        for rule in tac_loot[1:]:
+            any_loot |= rule
+        add_location_rule(CTLocation.STEAL_8_FROM_TAC, any_loot)
 
     # Breaking boxes needs one color both unlocked and still holding contents. effective_gates and the
     # raw options agree here (the cells only exist with a City Trial goal); sharing the helper keeps the
