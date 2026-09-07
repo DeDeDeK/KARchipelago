@@ -268,9 +268,14 @@ _FM_SHORTCUT_MACHINES: list[str] = sorted(
 )
 
 # Item types Tac can carry off in the city: every City Trial item unlock except All Up, whose city fall
-# chance is zero. The legendary pieces stay in - their carrier box is a real pickup.
+# chance is zero. The legendary pieces stay in - their carrier box is a real pickup - but they are the
+# only ones that also need the Red unlock, so they are listed apart for the box-gated case.
 _TAC_STEALABLE_ITEM_UNLOCKS: list[str] = sorted(
     items_by_type[KARItemType.CT_ITEM_UNLOCK] - {KARItemName.UNLOCK_ITEM_ALL_UP}
+)
+
+_TAC_STEALABLE_NON_PIECE_UNLOCKS: list[str] = sorted(
+    set(_TAC_STEALABLE_ITEM_UNLOCKS) - set(LEGENDARY_PIECE_UNLOCK_ITEMS)
 )
 
 # Item-count CT locations. The in-game pickup counter tallies every itemkind EXCEPT the three box types,
@@ -313,9 +318,9 @@ _AP_BOX_COLOR_RULES: dict[str, str] = {
 # A box color spawns only when it is unlocked AND its contents pool still holds something: the three
 # colors draw from disjoint pools, and the mod drops a color whose whole pool is locked out. Blue holds
 # the patches plus the 12 foods (only the patch and item gates together empty it), green the special
-# items (item gate), red the 11 copy abilities (ability gate) plus the ungated legendary-piece carrier
-# box, which keeps red coming while any piece is unlocked. All Up never joins blue - its fall chance
-# in the city is zero.
+# items (item gate), red the 11 copy abilities (ability gate) plus the legendary-piece carrier box,
+# which carries a forced item and so keeps red coming while any piece is unlocked even with the copy
+# pool empty. All Up never joins blue - its fall chance in the city is zero.
 _GREEN_BOX_ITEMS: tuple[str, ...] = (
     KARItemName.UNLOCK_ITEM_SPEED_MAX,
     KARItemName.UNLOCK_ITEM_SPEED_MIN,
@@ -778,11 +783,26 @@ def set_rules(world: "KARWorld"):
         for loc, item in _ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
         # "Steal over 8 items from Tac" needs something in the city for Tac to steal. Composes with the
-        # Tac event unlock above when the event gate is on as well: Tac has to show up AND have loot.
-        add_location_rule(CTLocation.STEAL_8_FROM_TAC, HasAny(*_TAC_STEALABLE_ITEM_UNLOCKS))
+        # Tac event unlock above when the event gate is on as well: Tac has to show up AND have loot. A
+        # legendary piece only counts as loot alongside Red - it arrives in a red carrier box.
+        if "city_trial_boxes_gated" in world.effective_gates:
+            tac_loot = HasAny(*_TAC_STEALABLE_NON_PIECE_UNLOCKS) | (
+                HasAny(*LEGENDARY_PIECE_UNLOCK_ITEMS) & Has(KARItemName.UNLOCK_BOX_RED)
+            )
+        else:
+            tac_loot = HasAny(*_TAC_STEALABLE_ITEM_UNLOCKS)
+        add_location_rule(CTLocation.STEAL_8_FROM_TAC, tac_loot)
         # "In one match, complete both Dragoon and Hydra!" needs every piece to spawn. (As the
         # hydra_and_dragoon goal the cell is excluded here and its victory event is gated instead.)
         add_location_rule(CTLocation.COMPLETE_DRAGOON_AND_HYDRA, HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS))
+
+    # Pieces and spheres are delivered by a red carrier box, which the mod gates on the Red unlock the
+    # same as any other red box. Separate from the item gate above, which keys the pieces themselves:
+    # either gate alone stops a delivery, so an assemble cell needs both keys when both are on.
+    if "city_trial_boxes_gated" in world.effective_gates:
+        add_location_rule(CTLocation.COMPLETE_DRAGOON_AND_HYDRA, Has(KARItemName.UNLOCK_BOX_RED))
+        add_location_rule(APLocation.ASSEMBLE_ARCHIPELAGO_STAR, Has(KARItemName.UNLOCK_BOX_RED))
+        add_location_rule(APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES, Has(KARItemName.UNLOCK_BOX_RED))
 
     if world.options.city_trial_patches_gated:
         for loc, item in _PATCH_LOCATION_RULES.items():
