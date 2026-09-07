@@ -716,6 +716,15 @@ def set_rules(world: "KARWorld"):
                 HasAny(*combat_keys, *DAMAGING_ABILITY_UNLOCKS),
             )
 
+    # Entrance rules: every City Trial Free Run cell is a machine stat - ten machine swaps, or drive
+    # time, which only ticks while a machine is under the rider and moving. One machine, any machine,
+    # is the floor for all of them: it gets the player through the select grid and covers the three
+    # drive-time cells on its own. The drive-time speed floor is a parked check that anything which
+    # rolls clears, so nothing here asks a machine to handle well and Charge is no part of it - the
+    # steerable / charge-dependent split does not apply.
+    if "machines_gated" in world.effective_gates:
+        add_region_entrance_rule(KARRegion.CT_FREE_RUN, HasAny(*_CT_MACHINE_UNLOCKS))
+
     # "Unlock Hydra/Dragoon Parts ... on the Checklist!" completes only once the player has received the
     # three corresponding CT_REWARD_*_PART_* items -- each performs the in-game part unlock on delivery.
     add_location_rule(
@@ -976,6 +985,15 @@ def set_rules(world: "KARWorld"):
         add_location_rule(APLocation.CASTLE_FLOWER_ON_FOOT, any_ct_machine)
         add_location_rule(APLocation.SKY_GARDEN_TOP_ON_FOOT, any_ct_machine)
         add_location_rule(APLocation.FLY_TO_HIGHEST_POINT, any_ct_machine)
+        # A swap counts when the boarded machine's instance id differs from the one cached at the
+        # rider's last respawn, so ten boardings of any machine other than the one spawned on clear
+        # the cell. Free Run's placer seeds its placed-kinds array from every player's starting
+        # vehicle before placing one machine per remaining unlocked kind, so a lone unlocked machine
+        # is the one already under the rider and leaves the city empty - two is the real floor.
+        add_location_rule(
+            CTLocation.FR_CHANGE_AIR_RIDE_MACHINES_10X,
+            HasFromListUnique(*_CT_MACHINE_UNLOCKS, count=2),
+        )
         add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_MACHINE_BULK_STAR))
         # The AR character gate resolves a character through its machine, so Meta Knight's / Dedede's
         # machine unlock is what makes them selectable. The vanilla reward granting the same machine is
