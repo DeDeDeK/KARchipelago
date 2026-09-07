@@ -712,6 +712,12 @@ def _create_goal_events(
         goal_region = world.get_region(goal_location_data.region)
 
         blocks_rule = None
+        # Pieces and spheres ride a red carrier box, so every assembly goal also needs Red. Only while
+        # the box category is gated - ungated, the mod hands all three colors over at connect, and Red
+        # is not one of the bits a goal can hold back.
+        red_carrier = (
+            Has(KARItemName.UNLOCK_BOX_RED) if "city_trial_boxes_gated" in world.effective_gates else None
+        )
         # getattr, not attribute access: ArchipelagoGoal has no 100_checklist_blocks (its checklist is
         # under 100 boxes). Goal values are ints, so the None default can never compare equal.
         if goal_option.value == getattr(goal_option, "option_100_checklist_blocks", None):
@@ -721,6 +727,8 @@ def _create_goal_events(
             # unlocks control. They are in the pool either way - gated ships the whole category, ungated
             # still ships these six as the goal's keys.
             blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS)
+            if red_carrier is not None:
+                blocks_rule &= red_carrier
         elif goal_option.value == CityTrialGoal.option_beat_king_dedede:
             # Dedede has to come up in the stadium rotation, which his stadium's unlock controls. Also
             # in the pool either way - stadium gating on ships all 24, off still ships this one.
@@ -729,8 +737,12 @@ def _create_goal_events(
             # Every sphere has to spawn, which the six sphere unlocks control. The machine unlock is
             # not among them: assembling the star mounts it either way.
             blocks_rule = HasAll(*AP_STAR_PIECE_UNLOCK_ITEMS)
+            if red_carrier is not None:
+                blocks_rule &= red_carrier
         elif goal_option.value == ArchipelagoGoal.option_all_three_legendaries_in_one_run:
             blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS, *AP_STAR_PIECE_UNLOCK_ITEMS)
+            if red_carrier is not None:
+                blocks_rule &= red_carrier
 
         goal_region.add_event(
             f"{goal_location_name} (Victory)",
