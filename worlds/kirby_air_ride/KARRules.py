@@ -985,6 +985,11 @@ def set_rules(world: "KARWorld"):
         add_location_rule(APLocation.CASTLE_FLOWER_ON_FOOT, any_ct_machine)
         add_location_rule(APLocation.SKY_GARDEN_TOP_ON_FOOT, any_ct_machine)
         add_location_rule(APLocation.FLY_TO_HIGHEST_POINT, any_ct_machine)
+        # The two mileage cells sum a pair of per-frame distance accumulators that Ply_UnkUpdate only
+        # touches when the player has a machine GObj, so on-foot travel adds nothing and 60 / 200 miles
+        # need a ride.
+        add_location_rule(CTLocation.RACE_60_MILES, any_ct_machine)
+        add_location_rule(CTLocation.RACE_200_MILES, any_ct_machine)
         # A swap counts when the boarded machine's instance id differs from the one cached at the
         # rider's last respawn, so ten boardings of any machine other than the one spawned on clear
         # the cell. Free Run's placer seeds its placed-kinds array from every player's starting
