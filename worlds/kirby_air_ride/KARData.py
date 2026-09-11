@@ -41,17 +41,18 @@ def checklist_reward_placed_bit(mode: GameMode, reward_type: RewardType) -> int:
 
 
 class GoalKind(IntEnum):
-    """Mirrors the mod's GoalKind enum. Value written to OPTION_GOAL_<MODE>."""
+    """Mirrors the mod's APGoalKind. Value written to OPTION_GOAL_<MODE>, and the number
+    each *_goal Option offers for the same name."""
 
     CHECKLIST_100 = 0
     N_CHECKLIST = 1
-    HYDRA_AND_DRAGOON = 2
-    BEAT_KING_DEDEDE = 3
-    NONE = 4
-    CHECKLIST_LIST = 5
-    MAX_STATS_CT = 6
-    ASSEMBLE_AP_STAR = 7
-    ALL_LEGENDARIES_CT = 8
+    CHECKLIST_LIST = 2
+    HYDRA_AND_DRAGOON = 3
+    BEAT_KING_DEDEDE = 4
+    MAX_STATS_CT = 5
+    ASSEMBLE_AP_STAR = 6
+    ALL_LEGENDARIES_CT = 7
+    NONE = 8
 
 
 class GoalForcedGate(IntEnum):
@@ -141,9 +142,12 @@ class MemoryAddress(IntEnum):
     # EnergyLink pool balance. Client writes, game reads. s64 raw units (1 unit = 1 MJ), widened to
     # s64 so multiworld pools exceeding u64 joules still fit at MJ scale.
     ENERGY_BALANCE = 0x000  # s64
-    # EnergyLink cumulative send counter, s64 signed raw MJ. Game-owned: only the game adds/subtracts,
-    # the client reads-and-diffs and NEVER writes. Resets on mod boot; persists across scene loads.
-    ENERGY_SENT_TOTAL = 0x008  # s64
+    # EnergyLink cumulative raw-MJ counters, both rising. Game-owned: only the game adds, the client
+    # diffs each and nets them, and NEVER writes either. Two u32s rather than one signed net total
+    # because a 64-bit store is not atomic on the GameCube's PPC32 - a read straddling a net value
+    # crossing zero decodes a small negative as ~4.29e9. Reset on mod boot; persist across scene loads.
+    ENERGY_DEPOSIT_TOTAL = 0x008  # u32
+    ENERGY_WITHDRAW_TOTAL = 0x00C  # u32
     # DeathLink receive flag. Client writes 1, game reads and clears to 0.
     DEATHLINK_RECEIVE = 0x010  # u32
     # DeathLink send flag. Game writes 1, client reads and clears to 0.
@@ -284,6 +288,12 @@ class MemoryAddress(IntEnum):
     # second, and the game ORs the second in and clears it.
     AP_PATCH_CHECKS = 0x3A8  # u64[8], 64 bytes
     AP_PATCH_BACKFILL = 0x3E8  # u64[8], 64 bytes
+
+    # Publishes both backfill arrays at once. Write CLIENT_BACKFILL_* and AP_PATCH_BACKFILL, then set
+    # this to 1; the game consumes both, zeroes them, and clears this last. Never write backfill words
+    # while this reads nonzero - the game is mid-consume and would zero them away. Without the flag the
+    # game can read a half-written u64 and lose the bits that had not landed yet.
+    BACKFILL_VALID = 0x428  # u32
 
 
 # AP item code layout for checklist rewards: 500..649 in 3 mode bands of stride 50 (500-549 Air Ride,
