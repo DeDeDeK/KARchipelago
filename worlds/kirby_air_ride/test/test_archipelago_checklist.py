@@ -13,6 +13,7 @@ from ..KARData import (
     CLIENT_BACKFILL_PER_MODE,
     SENT_CHECKS_PER_MODE,
     GameMode,
+    GoalKind,
     location_code_to_ap_patch_index,
     location_code_to_mode_clear,
     mode_clear_to_location_code,
@@ -273,6 +274,24 @@ class TestGoalValuesShareOneEnum(unittest.TestCase):
         for goal in self.GOALS:
             with self.subTest(goal=goal.__name__):
                 self.assertIn(goal.default, goal.options.values())
+
+    def test_goalkind_enum_matches_the_shared_enum(self):
+        # The client decodes the option value through GoalKind, so a stale number there
+        # mislabels the goal and takes the wrong per-goal branch.
+        self.assertEqual(
+            {
+                "100_checklist_blocks": GoalKind.CHECKLIST_100,
+                "n_checklist_blocks": GoalKind.N_CHECKLIST,
+                "checklist_list": GoalKind.CHECKLIST_LIST,
+                "hydra_and_dragoon": GoalKind.HYDRA_AND_DRAGOON,
+                "beat_king_dedede": GoalKind.BEAT_KING_DEDEDE,
+                "max_stats_in_one_run": GoalKind.MAX_STATS_CT,
+                "assemble_archipelago_star": GoalKind.ASSEMBLE_AP_STAR,
+                "all_three_legendaries_in_one_run": GoalKind.ALL_LEGENDARIES_CT,
+                "none": GoalKind.NONE,
+            },
+            self.GOAL_KIND,
+        )
 
 
 class TestArchipelagoChecklistAmountRangeTracksTable(unittest.TestCase):

@@ -225,7 +225,7 @@ class KARContext(CommonContext):
         self.energy_link_enabled = False
         # `{tag: expected_subtraction_joules}`, reconciled against SetReply to catch server-clamped withdrawals.
         self.pending_energy_withdrawals: dict[str, int] = {}
-        # Watermark on the game's energy_sent_total, so we diff forward. None means "needs (re)seeding".
+        # Watermark on the game's net deposit-minus-withdrawal, so we diff forward. None means "needs (re)seeding".
         self.energy_last_seen: int | None = None
 
         # In-game text. Composed wherever the event happens, packed immediately, and handed to the
@@ -1074,9 +1074,13 @@ class KARContext(CommonContext):
 
         # Sends FIRST, balance write LAST: the balance write seeds from the last server-pushed pool, so
         # running it first would bounce the mod's local decrement back up to a stale value and let the
-        # affordability gate overdraw. energy_sent_total is game-owned and cumulative - read-and-diff only.
-        raw = self.dolphin.read_u64(self._addr(MemoryAddress.ENERGY_SENT_TOTAL))
-        cur = raw - (1 << 64) if raw >= (1 << 63) else raw
+        # affordability gate overdraw. The energy counters are game-owned and rising - read-and-diff only.
+        # Net of two rising u32 counters. Each is read separately, so a frame that both deposits and
+        # withdraws can be observed half-applied; the watermark is cumulative, so the next poll picks
+        # up the remainder rather than losing it.
+        deposited = self.dolphin.read_u32(self._addr(MemoryAddress.ENERGY_DEPOSIT_TOTAL))
+        withdrawn = self.dolphin.read_u32(self._addr(MemoryAddress.ENERGY_WITHDRAW_TOTAL))
+        cur = deposited - withdrawn
 
         if self.energy_last_seen is None:
             # Seed on connect / after a restart: record the total without applying it, so we diff forward
@@ -1148,13 +1152,10 @@ class KARContext(CommonContext):
         if not self.backfill_pending:
             return
 
-        # Wait for the game to finish processing previous backfill.
-        for off in CLIENT_BACKFILL_PER_MODE.values():
-            if self.dolphin.read_u64(self._addr(off)) != 0 or self.dolphin.read_u64(self._addr(off) + 8) != 0:
-                return
-        for word_idx in range(AP_PATCH_WORDS):
-            if self.dolphin.read_u64(self._addr(MemoryAddress.AP_PATCH_BACKFILL) + word_idx * 8) != 0:
-                return
+        # Wait for the game to finish processing the previous backfill. It clears the flag last, so a
+        # zero here also means it is not mid-consume and cannot zero away what we are about to write.
+        if self.dolphin.read_u32(self._addr(MemoryAddress.BACKFILL_VALID)) != 0:
+            return
 
         # Build bitmask of all server-known checks.
         server_bits: dict[GameMode, list[int]] = {m: [0, 0] for m in GameMode}
@@ -1185,6 +1186,8 @@ class KARContext(CommonContext):
                 wrote_any = True
 
         if wrote_any:
+            # Last, and only now: the flag is what makes the words above safe for the game to read.
+            self.dolphin.write_u32(self._addr(MemoryAddress.BACKFILL_VALID), 1)
             log_quiet("Checks", "Backfilled server-known checks to game.")
         self.backfill_pending = False
 

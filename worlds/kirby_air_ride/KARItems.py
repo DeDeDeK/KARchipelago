@@ -1431,8 +1431,8 @@ ITEM_TABLE: dict[str, KARItemData] = {
         KARItemType.CT_ITEM_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 825, _CT
     ),
     # Machine Unlocks (830-854, plus the appended 856). Gate whether a machine can be ridden. Excluded
-    # VCKINDs (not selectable player machines): 847 WINGKIRBY and 850 WHEELIEKIRBY (ability states),
-    # 849 WHEELIE (enemy form; the ridable machine is Wheelie Bike 851), 855 WHEELVSDEDEDE (CPU-only).
+    # VCKINDs (not selectable player machines): 847 WINGKIRBY and 850 WHEELKIRBY (ability states),
+    # 849 WHEELNORMAL (enemy form; the rideable machine is Wheelie Bike 851), 855 WHEELVSDEDEDE (CPU-only).
     # 856 is the Archipelago Star, which also puts its six spheres into City Trial's item pool.
     KARItemName.UNLOCK_MACHINE_WARP_STAR: KARItemData(
         KARItemType.MACHINE_UNLOCK, ItemClassification.progression, 830, _AR_CT
