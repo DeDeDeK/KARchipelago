@@ -12,6 +12,7 @@ from Options import Toggle
 from ..KARItems import (
     CHARACTER_MACHINE_UNLOCKS,
     DAMAGING_ABILITY_UNLOCKS,
+    DD5_DAMAGING_ABILITY_UNLOCKS,
     GATING_CATEGORIES,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_CHECKLIST_REWARDS,
@@ -27,12 +28,14 @@ from ..KARRules import (
     _AR_COURSE_SUBSET_RULES,
     _BLUE_BOX_FOOD_ITEMS,
     _CHARGE_DEPENDENT_CT_MACHINES,
+    _CT_FLIGHT_MACHINES,
     _CT_MACHINE_UNLOCKS,
     _FM_20MPH_EXCLUDED_MACHINES,
     _FM_20MPH_MACHINES,
     _FM_SHORTCUT_EXCLUDED_MACHINES,
     _FM_SHORTCUT_MACHINES,
     _GREEN_BOX_ITEMS,
+    _PATCH_LOCATION_RULES,
     _STEERABLE_CT_MACHINES,
     _SWALLOW_ENEMY_COURSE_RULES,
     _TAC_LOOT_ABILITY_UNLOCK,
@@ -73,6 +76,13 @@ _DEDEDE_DAMAGE_KEYS = [
 _DERBY_DAMAGE_KEYS = [
     *_DEDEDE_DAMAGE_KEYS,
     # Hydra only counts alongside Charge, so it is one group rather than two.
+    [KARItemName.UNLOCK_MACHINE_HYDRA, KARItemName.UNLOCK_BASE_ABILITY_CHARGE],
+]
+# Derby 5 spawns only four of the copy panels, so it keeps its own, shorter list.
+_DERBY5_DAMAGE_KEYS = [
+    [KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN],
+    *([machine] for machine in CHARACTER_MACHINE_UNLOCKS),
+    *([ability] for ability in DD5_DAMAGING_ABILITY_UNLOCKS),
     [KARItemName.UNLOCK_MACHINE_HYDRA, KARItemName.UNLOCK_BASE_ABILITY_CHARGE],
 ]
 
@@ -389,10 +399,17 @@ class TestCombatStadiumDamageRules(KARTestBase):
         self.assertAccessDependency(
             [
                 CTLocation.STADIUM_DD1_KO_YOUR_RIVALS_5,
-                CTLocation.STADIUM_DD5_KO_A_RIVAL_10X,
+                CTLocation.STADIUM_DD4_KO_YOUR_RIVALS_5,
                 CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X,
             ],
             _DERBY_DAMAGE_KEYS,
+            only_check_listed=True,
+        )
+
+    def test_destruction_derby_5_needs_one_of_its_own_panels(self):
+        self.assertAccessDependency(
+            [CTLocation.STADIUM_DD5_KO_A_RIVAL_10X, CTLocation.STADIUM_DD5_KO_YOUR_RIVALS_5],
+            _DERBY5_DAMAGE_KEYS,
             only_check_listed=True,
         )
 
@@ -772,7 +789,7 @@ class TestTopRideItemsGatingApplied(KARTestBase):
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true}
 
     def test_hammer_location_needs_unlock(self):
-        # FIRST_WHILE_HOLDING_HAMMER is in TR_TIME_ATTACK (not course-gated).
+        # FIRST_WHILE_HOLDING_HAMMER is in the TOP_RIDE root region (not course-gated).
         self.assertAccessDependency(
             [TRLocation.FIRST_WHILE_HOLDING_HAMMER],
             [[KARItemName.UNLOCK_TR_ITEM_HAMMER]],
@@ -824,7 +841,7 @@ class TestProgressiveStadiumGating(KARTestBase):
 
 
 class TestProgressiveStadiumAllGroupGating(KARTestBase):
-    """STADIUM_DD_ALL and STADIUM_KM_ALL are reachable via ANY of their sub-stadium unlocks
+    """CITY_TRIAL_STADIUM_DD_ALL and CITY_TRIAL_STADIUM_KM_ALL are reachable via ANY of their sub-stadium unlocks
     (HasAny rule). Pin starter so neither DD nor KM unlocks are pre-collected."""
 
     options = {
@@ -855,6 +872,31 @@ class TestProgressiveStadiumAllGroupGating(KARTestBase):
             [
                 [KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1],
                 [KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2],
+            ],
+            only_check_listed=True,
+        )
+
+
+class TestProgressiveStadiumDragRaceAllGating(KARTestBase):
+    """CITY_TRIAL_STADIUM_DR_ALL is reachable via ANY DRAG RACE unlock. Its only box is the Archipelago photo finish,
+    which the mod counts in all four DRAG RACE stadiums, so this seed turns the AP checklist on."""
+
+    options = {
+        **CT_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+        "archipelago_checklist_amount": 3,
+        "city_trial_stadiums_gated": Toggle.option_true,
+        **_PIN_STADIUM_STARTER,
+    }
+
+    def test_dr_all_reachable_via_any_dr_unlock(self):
+        self.assertAccessDependency(
+            [APLocation.DR_PHOTO_FINISH],
+            [
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_1],
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_2],
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_3],
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_4],
             ],
             only_check_listed=True,
         )
@@ -1321,9 +1363,9 @@ class TestARDropFromCliffsGatingNotApplied(KARTestBase):
 
 
 _NEBULA_REGIONS = (
-    KARRegion.AR_NEBULA_BELT,
-    KARRegion.AR_TA_NEBULA_BELT,
-    KARRegion.AR_FR_NEBULA_BELT,
+    KARRegion.AIR_RIDE_NEBULA_BELT,
+    KARRegion.AIR_RIDE_TA_NEBULA_BELT,
+    KARRegion.AIR_RIDE_FR_NEBULA_BELT,
 )
 
 
@@ -2073,7 +2115,8 @@ class TestARAbilityCellInhaleOrPanel(KARTestBase):
 class TestTRRootCourseGating(KARTestBase):
     """top_ride_courses_gated ON: non-course-specific Top Ride cells need at least one TR course. Covers
     a TOP_RIDE-root cell plus the mode-level Free Run / Time Attack cells (which live in the
-    TR_FREE_RUN / TR_TIME_ATTACK regions, not a course region). Starter pinned for deterministic removal."""
+    TOP_RIDE_FREE_RUN / TOP_RIDE_TIME_ATTACK regions, not a course region). Starter pinned for
+    deterministic removal."""
 
     options = {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true, **_PIN_TR_COURSE_STARTER}
 
@@ -2436,14 +2479,12 @@ class TestFill100AsGoalNotARealLocation(KARTestBase):
 
 _AP_ON = {"archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks, "archipelago_checklist_amount": 3}
 
-# The five "you need something to ride" City Trial boxes: breaking the coral, leaving the map, reaching
-# the sky garden or Castle Hall's roof, and touching the city's ceiling.
+# The three "you need something to ride" City Trial boxes: breaking the coral and reaching the sky
+# garden or Castle Hall's roof. Touching the city's ceiling needs flight, not any ride.
 _AP_CITY_MACHINE_BOXES = (
     APLocation.BREAK_ALL_CORAL,
-    APLocation.GO_OUT_OF_BOUNDS,
     APLocation.CASTLE_FLOWER_ON_FOOT,
     APLocation.SKY_GARDEN_TOP_ON_FOOT,
-    APLocation.FLY_TO_HIGHEST_POINT,
 )
 
 
@@ -2484,9 +2525,9 @@ class TestAPFoodBoxesUngated(KARTestBase):
 
 
 class TestAPPatchAndAbilityBoxes(KARTestBase):
-    """The HP-patch counter needs the HP patch type, and the Copy Chance Mic box needs the Mic ability.
-    Neither is covered by a vanilla checklist box: HP is the one stat with no "get 10 patches" cell, and
-    Mic is the one ability the wheel can hand over that no vanilla box names."""
+    """The two patch counters need their patch type, and the Copy Chance Mic box needs the Mic ability.
+    None is covered by a vanilla checklist box: HP and Offense are the two stats with no "get 10 patches"
+    cell, and Mic is the one ability the wheel can hand over that no vanilla box names."""
 
     options = {
         **CT_ONLY,
@@ -2502,6 +2543,21 @@ class TestAPPatchAndAbilityBoxes(KARTestBase):
             [[KARItemName.UNLOCK_PATCH_HP]],
             only_check_listed=True,
         )
+
+    def test_offense_patch_box_needs_offense_patch_unlock(self):
+        self.assertAccessDependency(
+            [APLocation.GET_10_OFFENSE_PATCHES],
+            [[KARItemName.UNLOCK_PATCH_OFFENSE]],
+            only_check_listed=True,
+        )
+
+    def test_the_two_counters_cover_the_stats_vanilla_misses(self):
+        # Non-vacuity: every other patch type is counted on the City Trial checklist, so these two
+        # are exactly the gap the AP tab fills. A new vanilla-covered counter here would be a duplicate.
+        vanilla_counted = set(_PATCH_LOCATION_RULES.values())
+        ap_counted = {KARItemName.UNLOCK_PATCH_HP, KARItemName.UNLOCK_PATCH_OFFENSE}
+        self.assertFalse(vanilla_counted & ap_counted)
+        self.assertEqual(vanilla_counted | ap_counted, set(items_of_type(KARItemType.CT_PATCH_UNLOCK)))
 
     def test_copy_chance_mic_box_needs_mic(self):
         # The wheel hands the ability over in the city, so this one needs no Inhale - unlike the melee
@@ -2683,8 +2739,8 @@ class TestAPFantasyMeadowsShortcutNeedsAGlidingMachine(KARTestBase):
 
 
 class TestAPCityMachineBoxesAnyMachine(KARTestBase):
-    """base_abilities_gated OFF: the five "you need a ride" City Trial boxes take any City Trial machine,
-    so every one of them opens all five on its own."""
+    """base_abilities_gated OFF: the four "you need a ride" City Trial boxes take any City Trial machine,
+    so every one of them opens all four on its own."""
 
     options = {
         **CT_ONLY,
@@ -2726,7 +2782,7 @@ class TestAPCityMachineBoxesAnyMachine(KARTestBase):
         for name in (KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR):
             self.assertNotIn(name, _CT_MACHINE_UNLOCKS)
             state.collect(self.world.create_item(name))
-        self.assertFalse(state.can_reach(APLocation.GO_OUT_OF_BOUNDS, "Location", self.player))
+        self.assertFalse(state.can_reach(APLocation.BREAK_ALL_CORAL, "Location", self.player))
 
 
 class TestAPCityMachineBoxesChargeSplit(KARTestBase):
@@ -2742,7 +2798,7 @@ class TestAPCityMachineBoxesChargeSplit(KARTestBase):
         "city_trial_stadiums_gated": Toggle.option_false,
     }
 
-    _LOCATION = APLocation.GO_OUT_OF_BOUNDS
+    _LOCATION = APLocation.BREAK_ALL_CORAL
 
     def _base_state(self) -> CollectionState:
         """Everything collected except the machine unlocks and Charge, precollected starter included."""
@@ -2786,3 +2842,53 @@ class TestAPCityMachineBoxesChargeSplit(KARTestBase):
                     self._reachable(machine, KARItemName.UNLOCK_BASE_ABILITY_CHARGE),
                     f"{machine} should be a ride once Charge is in",
                 )
+
+
+class TestAPFlyToHighestPointNeedsFlight(KARTestBase):
+    """Touching the city's ceiling is not just "have a ride": the box needs the Dragoon, the Flight Warp
+    Star or the Winged Star, the only City Trial machines that climb that high."""
+
+    options = {
+        **CT_ONLY,
+        **_AP_ON,
+        "machines_gated": Toggle.option_true,
+        "base_abilities_gated": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
+    }
+
+    _LOCATION = APLocation.FLY_TO_HIGHEST_POINT
+
+    def _state_without_machines(self) -> CollectionState:
+        # The random machine starter could be a flight machine, so strip the precollected copy too.
+        machines = items_of_type(KARItemType.MACHINE_UNLOCK)
+        state = CollectionState(self.multiworld)
+        self.collect_all_but(machines, state)
+        for item in self.multiworld.precollected_items[self.player]:
+            if item.name in machines:
+                state.remove(item)
+        return state
+
+    def _reachable_with(self, machine: str) -> bool:
+        state = self._state_without_machines()
+        state.collect(self.world.create_item(machine))
+        return state.can_reach(self._LOCATION, "Location", self.player)
+
+    def test_the_flight_set_is_a_strict_subset(self):
+        # Non-vacuity: a typo'd name or the whole machine list would make the loops below prove nothing.
+        self.assertEqual(len(_CT_FLIGHT_MACHINES), 3)
+        self.assertTrue(set(_CT_FLIGHT_MACHINES) < set(_CT_MACHINE_UNLOCKS))
+
+    def test_unreachable_with_no_machine(self):
+        self.assertFalse(self._state_without_machines().can_reach(self._LOCATION, "Location", self.player))
+
+    def test_each_flight_machine_suffices_alone(self):
+        for machine in _CT_FLIGHT_MACHINES:
+            with self.subTest(machine=machine):
+                self.assertTrue(self._reachable_with(machine), f"{machine} should reach the ceiling on its own")
+
+    def test_grounded_machines_do_not_suffice(self):
+        for machine in _CT_MACHINE_UNLOCKS:
+            if machine in _CT_FLIGHT_MACHINES:
+                continue
+            with self.subTest(machine=machine):
+                self.assertFalse(self._reachable_with(machine), f"{machine} should not reach the ceiling")

@@ -39,7 +39,7 @@ def _victory_event(goal_location_name: str) -> str:
     return f"{goal_location_name} (Victory)"
 
 
-_MAX_STATS_EVENT = f"{KARRegion.CITY_TRIAL}: Max Stats (Insanity)"
+_MAX_STATS_EVENT = f"{KARRegion.CITY_TRIAL}: Max Stats"
 
 
 class TestCTGoal100Blocks(KARTestBase):

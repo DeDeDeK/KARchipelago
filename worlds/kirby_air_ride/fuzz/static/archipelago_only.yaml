@@ -11,7 +11,7 @@ Kirby Air Ride:
   # One box per region flavour the AP table reaches into: the flat City Trial region, a stadium
   # sub-region, the Air Ride root, and a specific Air Ride course sub-region.
   archipelago_goal_locations:
-    - "Archipelago: City Trial: Go out of bounds!"
+    - "Archipelago: City Trial: Break all the coral in one game!"
     - "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place!"
     - "Archipelago: Air Ride: Finish a race as every Kirby color!"
     - "Archipelago: Air Ride: NEBULA BELT Finish in 1st place!"

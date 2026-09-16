@@ -70,7 +70,7 @@ class TestArchipelagoGoalLocationsLocalOnly(KARTestBase):
     case: an AP box lives in another mode's region, so it is the one goal location whose parent region
     belongs to a mode that may have no goal at all."""
 
-    _GOAL_LOCS = [APLocation.GO_OUT_OF_BOUNDS, APLocation.BREAK_ALL_CORAL]
+    _GOAL_LOCS = [APLocation.GET_10_HP_PATCHES, APLocation.BREAK_ALL_CORAL]
     options = {
         **CT_ONLY,
         "archipelago_goal": ArchipelagoGoal.option_checklist_list,
