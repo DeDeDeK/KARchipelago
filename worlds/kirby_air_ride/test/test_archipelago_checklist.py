@@ -34,6 +34,8 @@ from ..KARLocations import (
     TOP_RIDE_LOCATION_TABLE,
     APLocation,
     CTLocation,
+    KARLocationGroup,
+    location_name_groups,
 )
 from ..KAROptions import (
     AirRideGoal,
@@ -65,7 +67,7 @@ class TestArchipelagoCodec(unittest.TestCase):
     def test_first_location_codes(self):
         self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.CASTLE_FLOWER_ON_FOOT].code, 361)
         self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.BREAK_ALL_CORAL].code, 362)
-        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.GO_OUT_OF_BOUNDS].code, 363)
+        self.assertEqual(AP_CHECKLIST_LOCATION_TABLE[APLocation.GET_10_HP_PATCHES].code, 363)
 
     def test_boundaries(self):
         self.assertEqual(location_code_to_mode_clear(360), (GameMode.TOPRIDE, 119))  # last Top Ride code
@@ -206,7 +208,7 @@ class TestArchipelagoChecklistListGoal(KARTestBase):
     options = {
         **CT_ONLY,
         "archipelago_goal": ArchipelagoGoal.option_checklist_list,
-        "archipelago_goal_locations": [APLocation.GO_OUT_OF_BOUNDS],
+        "archipelago_goal_locations": [APLocation.BREAK_ALL_CORAL],
     }
 
     def test_victory_event_placed(self):
@@ -428,6 +430,31 @@ class TestArchipelagoLocationTableIntegrity(unittest.TestCase):
             with self.subTest(location=name):
                 self.assertIn(data.region, REGION_TO_MODE)
 
+    # Each area group owns exactly the boxes whose name carries its prefix.
+    _AREA_GROUP_PREFIXES = {
+        KARLocationGroup.AP_CITY_TRIAL: "Archipelago: City Trial: ",
+        KARLocationGroup.AP_STADIUMS: "Archipelago: Stadium: ",
+        KARLocationGroup.AP_AIR_RIDE: "Archipelago: Air Ride: ",
+    }
+
+    def test_area_groups_partition_the_table(self):
+        """Every AP box sits in exactly one area group, so a new box cannot ship ungrouped."""
+        grouped = sorted(name for group in self._AREA_GROUP_PREFIXES for name in location_name_groups[group])
+        self.assertEqual(grouped, sorted(AP_CHECKLIST_LOCATION_TABLE))
+
+    def test_area_groups_match_their_name_prefix(self):
+        for group, prefix in self._AREA_GROUP_PREFIXES.items():
+            for name in location_name_groups[group]:
+                with self.subTest(group=group, location=name):
+                    self.assertTrue(name.startswith(prefix), f"{name} is filed under {group}")
+
+    def test_ap_groups_hold_only_ap_boxes(self):
+        ap_groups = [group for group in KARLocationGroup if group.startswith("Archipelago: ")]
+        self.assertTrue(ap_groups)
+        for group in ap_groups:
+            with self.subTest(group=group):
+                self.assertLessEqual(location_name_groups[group], set(AP_CHECKLIST_LOCATION_TABLE))
+
 
 class TestRegionToModeExhaustive(unittest.TestCase):
     """Every region is classified. _build_region_to_mode raises at import for an unclassified region, so
@@ -439,10 +466,10 @@ class TestRegionToModeExhaustive(unittest.TestCase):
                 self.assertIn(region.value, REGION_TO_MODE)
 
     def test_spot_check_classifications(self):
-        self.assertEqual(REGION_TO_MODE[KARRegion.STADIUM_KM2], GameMode.CITYTRIAL)
-        self.assertEqual(REGION_TO_MODE[KARRegion.CT_FREE_RUN], GameMode.CITYTRIAL)
-        self.assertEqual(REGION_TO_MODE[KARRegion.AR_MAGMA_FLOWS], GameMode.AIRRIDE)
-        self.assertEqual(REGION_TO_MODE[KARRegion.TR_TA_GRASS], GameMode.TOPRIDE)
+        self.assertEqual(REGION_TO_MODE[KARRegion.CITY_TRIAL_STADIUM_KM2], GameMode.CITYTRIAL)
+        self.assertEqual(REGION_TO_MODE[KARRegion.CITY_TRIAL_FREE_RUN], GameMode.CITYTRIAL)
+        self.assertEqual(REGION_TO_MODE[KARRegion.AIR_RIDE_MAGMA_FLOWS], GameMode.AIRRIDE)
+        self.assertEqual(REGION_TO_MODE[KARRegion.TOP_RIDE_TA_GRASS], GameMode.TOPRIDE)
         self.assertEqual(REGION_TO_MODE[KARRegion.ARCHIPELAGO], GameMode.ARCHIPELAGO)
 
 
@@ -468,8 +495,8 @@ class TestArchipelagoPullsModesIntoLogic(KARTestBase):
 
     def test_goalless_mode_trees_are_built(self):
         region_names = {r.name for r in self.multiworld.get_regions(self.player)}
-        self.assertIn(KARRegion.STADIUM_KM2, region_names)
-        self.assertIn(KARRegion.AR_MAGMA_FLOWS, region_names)
+        self.assertIn(KARRegion.CITY_TRIAL_STADIUM_KM2, region_names)
+        self.assertIn(KARRegion.AIR_RIDE_MAGMA_FLOWS, region_names)
 
     def test_goalless_mode_assigns_no_own_locations(self):
         """In logic is not the same as having a goal: City Trial's own boxes are still absent."""

@@ -15,7 +15,7 @@ from worlds.LauncherComponents import (
     launch_subprocess,
 )
 
-from .KARData import GameMode, ap_patch_group_sizes, checklist_reward_placed_bit
+from .KARData import GameMode, GoalKind, ap_patch_group_sizes, checklist_reward_placed_bit
 from .KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
@@ -528,9 +528,7 @@ class KARWorld(World):
 
             if goal_option.value == goal_option.option_n_checklist_blocks:
                 required = checklist_amount_option.value
-            # getattr, not attribute access: ArchipelagoGoal has no 100_checklist_blocks (its checklist is
-            # under 100 boxes). Goal values are ints, so the None default can never compare equal.
-            elif goal_option.value == getattr(goal_option, "option_100_checklist_blocks", None):
+            elif goal_option.value == GoalKind.CHECKLIST_100:
                 required = 100
             else:
                 continue

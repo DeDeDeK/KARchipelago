@@ -1796,7 +1796,7 @@ CHARGE_DEPENDENT_MACHINES: frozenset[KARItemName] = frozenset(
         KARItemName.UNLOCK_MACHINE_BULK_STAR,
         KARItemName.UNLOCK_MACHINE_SLICK_STAR,
         KARItemName.UNLOCK_MACHINE_TURBO_STAR,
-        # The Archipelago Star inherits the Slick Star's handling attributes.
+        # The Archipelago Star is authored with the Slick Star's handling attributes.
         KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR,
     }
 )
@@ -1858,6 +1858,17 @@ DAMAGING_ABILITY_UNLOCKS: tuple[KARItemName, ...] = (
     KARItemName.UNLOCK_ABILITY_MIC,
     KARItemName.UNLOCK_ABILITY_FREEZE,
     KARItemName.UNLOCK_ABILITY_TORNADO,
+)
+
+
+# Destruction Derby 5 is the one derby whose copy-panel pool is not the full set: its spawn table
+# (GrCity1 item entry 2) gives a nonzero chance only to Ice, Plasma, Sword and Needle, and its three
+# weight columns are identical, so replaying cannot roll a different pool.
+DD5_DAMAGING_ABILITY_UNLOCKS: tuple[KARItemName, ...] = (
+    KARItemName.UNLOCK_ABILITY_FREEZE,
+    KARItemName.UNLOCK_ABILITY_PLASMA,
+    KARItemName.UNLOCK_ABILITY_SWORD,
+    KARItemName.UNLOCK_ABILITY_NEEDLE,
 )
 
 
