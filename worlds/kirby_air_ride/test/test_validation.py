@@ -1,181 +1,164 @@
-"""Option validation tests: every OptionError-raising branch in KARWorld, co-located so the exercised error
-branches are auditable at a glance."""
+"""Option validation: every OptionError-raising branch in KARWorld, plus the near-miss configs that
+deliberately no longer raise. Co-located so the exercised error branches stay auditable at a glance."""
 
 from Options import OptionError, Toggle
 
 from ..KARItems import KARItemName
 from ..KARLocations import ARLocation, CTLocation
-from ..KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
+from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
 
+_ALL_REWARD_CATEGORIES = ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"]
 
-class TestNoModesEnabled(KARTestBase):
-    options = {
+
+def _register(cls: type, name: str) -> None:
+    cls.__name__ = name
+    cls.__qualname__ = name
+    globals()[name] = cls
+
+
+def _make_raises_test(name: str, opts: dict, pattern: str) -> None:
+    class _Raises(KARTestBase):
+        options = opts
+        auto_construct = False
+
+        def test_raises_option_error(self):
+            with self.assertRaisesRegex(OptionError, pattern):
+                self.world_setup()
+
+    _register(_Raises, name)
+
+
+_make_raises_test(
+    "TestNoModesEnabled",
+    {
         "city_trial_goal": CityTrialGoal.option_none,
         "air_ride_goal": AirRideGoal.option_none,
         "top_ride_goal": TopRideGoal.option_none,
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"No modes enabled"):
-            self.world_setup()
+    },
+    r"No modes enabled",
+)
 
 
-class TestCTFillerExceedsGoalAmount(KARTestBase):
-    options = {
+# (label, preset, option prefix, goal option class, display name, a location from another mode).
+_MODES = [
+    ("ct", CT_ONLY, "city_trial", CityTrialGoal, "City Trial", ARLocation.RACE_100_LAPS),
+    ("ar", AR_ONLY, "air_ride", AirRideGoal, "Air Ride", CTLocation.DESTROY_ALL_HOUSES),
+    ("tr", TR_ONLY, "top_ride", TopRideGoal, "Top Ride", ARLocation.RACE_100_LAPS),
+    ("ap", CT_ONLY, "archipelago", ArchipelagoGoal, "Archipelago", CTLocation.RACE_60_MILES),
+]
+
+for _label, _preset, _prefix, _goal, _display, _foreign in _MODES:
+    # Checkbox fillers pre-complete boxes, so at or above the target they would win the seed outright.
+    _make_raises_test(
+        f"TestFillerExceedsGoalAmount_{_label}",
+        {
+            **_preset,
+            f"{_prefix}_goal": _goal.option_n_checklist_blocks,
+            f"{_prefix}_checklist_amount": 4,
+            f"{_prefix}_checkbox_fillers": 4,
+        },
+        rf"{_display} checkbox fillers",
+    )
+    _make_raises_test(
+        f"TestChecklistListEmpty_{_label}",
+        {**_preset, f"{_prefix}_goal": _goal.option_checklist_list, f"{_prefix}_goal_locations": []},
+        rf"{_prefix}_goal_locations is empty",
+    )
+    _make_raises_test(
+        f"TestChecklistListWrongMode_{_label}",
+        {**_preset, f"{_prefix}_goal": _goal.option_checklist_list, f"{_prefix}_goal_locations": [_foreign]},
+        rf"{_display} goal locations include names that are not {_display} locations",
+    )
+
+
+# Starting with a goal's own key would win the seed on the spot, whatever the category's gate says.
+for _label, _opts in (
+    (
+        "dedede_stadiums_gated",
+        {
+            "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
+            "city_trial_stadiums_gated": Toggle.option_true,
+            "start_inventory": {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: 1},
+        },
+    ),
+    (
+        "dedede_stadiums_ungated",
+        {
+            "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
+            "city_trial_stadiums_gated": Toggle.option_false,
+            "start_inventory": {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: 1},
+        },
+    ),
+    (
+        "legendary_piece",
+        {
+            "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon,
+            "start_inventory": {KARItemName.UNLOCK_ITEM_DRAGOON_PART_A: 1},
+        },
+    ),
+    (
+        "archipelago_sphere",
+        {
+            "archipelago_goal": ArchipelagoGoal.option_assemble_archipelago_star,
+            "start_inventory": {KARItemName.UNLOCK_ITEM_AP_SPHERE_TAN: 1},
+        },
+    ),
+):
+    _make_raises_test(
+        f"TestGoalKeyInStartInventory_{_label}",
+        {**CT_ONLY, **_opts},
+        r"starting inventory - this seed's goal is gated on it",
+    )
+
+
+# A named starting_* pick the world must refuse rather than quietly draw something else.
+_make_raises_test(
+    "TestStartingStadiumIsTheDededeGoal",
+    {
         **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_n_checklist_blocks,
-        "city_trial_checklist_amount": 5,
-        "city_trial_checkbox_fillers": 5,
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"City Trial checkbox fillers"):
-            self.world_setup()
-
-
-class TestARFillerExceedsGoalAmount(KARTestBase):
-    options = {
-        **AR_ONLY,
-        "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
-        "air_ride_checklist_amount": 4,
-        "air_ride_checkbox_fillers": 4,
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"Air Ride checkbox fillers"):
-            self.world_setup()
-
-
-class TestTRFillerExceedsGoalAmount(KARTestBase):
-    options = {
-        **TR_ONLY,
-        "top_ride_goal": TopRideGoal.option_n_checklist_blocks,
-        "top_ride_checklist_amount": 3,
-        "top_ride_checkbox_fillers": 3,
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"Top Ride checkbox fillers"):
-            self.world_setup()
-
-
-class TestCTChecklistListWrongMode(KARTestBase):
-    # CT goal_locations containing an AR location should be rejected.
-    options = {
+        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
+        "city_trial_stadiums_gated": Toggle.option_true,
+        "starting_stadium": "vs_king_dedede",
+    },
+    r"Starting Stadium cannot be 'vs_king_dedede'",
+)
+# Slick Star can only be steered by charge-drifting, so naming it while Charge is gated strands the
+# player on their sole machine.
+_make_raises_test(
+    "TestStartingMachineNeedsLockedCharge",
+    {
         **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_checklist_list,
-        "city_trial_goal_locations": [ARLocation.RACE_100_LAPS],
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(
-            OptionError, r"City Trial goal locations include names that are not City Trial locations"
-        ):
-            self.world_setup()
+        "machines_gated": Toggle.option_true,
+        "base_abilities_gated": Toggle.option_true,
+        "starting_machine": "slick_star",
+    },
+    r"Starting Machine cannot be 'slick_star'",
+)
 
 
-class TestARChecklistListWrongMode(KARTestBase):
-    # AR goal_locations containing a CT location should be rejected.
-    options = {
-        "city_trial_goal": CityTrialGoal.option_none,
-        "air_ride_goal": AirRideGoal.option_checklist_list,
-        "air_ride_goal_locations": [CTLocation.DESTROY_ALL_HOUSES],
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(
-            OptionError, r"Air Ride goal locations include names that are not Air Ride locations"
-        ):
-            self.world_setup()
-
-
-class TestTRChecklistListWrongMode(KARTestBase):
-    options = {
-        "city_trial_goal": CityTrialGoal.option_none,
-        "top_ride_goal": TopRideGoal.option_checklist_list,
-        "top_ride_goal_locations": [ARLocation.RACE_100_LAPS],
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(
-            OptionError, r"Top Ride goal locations include names that are not Top Ride locations"
-        ):
-            self.world_setup()
-
-
-class TestCTChecklistListEmpty(KARTestBase):
-    options = {
+# The capacity validator. Spanning the patch cap 1 -> 30 mints 29 Patch Cap Increases, which needs 115
+# non-excluded locations against the 97 a default CT-only seed offers.
+_make_raises_test(
+    "TestGuaranteedPoolExceedsLocations",
+    {
         **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_checklist_list,
-        "city_trial_goal_locations": [],
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"city_trial_goal_locations is empty"):
-            self.world_setup()
-
-
-class TestARChecklistListEmpty(KARTestBase):
-    options = {
-        "city_trial_goal": CityTrialGoal.option_none,
-        "air_ride_goal": AirRideGoal.option_checklist_list,
-        "air_ride_goal_locations": [],
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"air_ride_goal_locations is empty"):
-            self.world_setup()
-
-
-class TestTRChecklistListEmpty(KARTestBase):
-    options = {
-        "city_trial_goal": CityTrialGoal.option_none,
-        "top_ride_goal": TopRideGoal.option_checklist_list,
-        "top_ride_goal_locations": [],
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"top_ride_goal_locations is empty"):
-            self.world_setup()
-
-
-class TestGuaranteedPoolExceedsLocations(KARTestBase):
-    # CT-only with the patch cap spanning 1 -> 30 (29 Patch Cap Increases) needs 116 default locations
-    # (104 progression + 5 counted-useful + 7 useful rewards) against 90, tripping the fit validator.
-    # Every reward category is selected here (none by default) so the 7 useful ones count toward the budget.
-    options = {
-        **CT_ONLY,
-        "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"],
+        "checklist_rewards": _ALL_REWARD_CATEGORIES,
         "city_trial_patch_cap_min": 1,
         "city_trial_patch_cap_max": 30,
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"needs \d+ non-excluded locations"):
-            self.world_setup()
+    },
+    r"needs \d+ non-excluded locations",
+)
 
 
-# A config tuned to fit exactly: 81 CT progression with all gates on (75 plus 6 PATCH_CAP_INCREASE) + 5
-# checkbox fillers + 7 useful checklist rewards = 93 needing default locations, matching the 93 CT default
-# locations RNG-as-progression opens up. Filler rewards aren't counted - they may sit on excluded boxes.
-# AP Patches are held out, or their locations would absorb the excludes the paired test relies on. Without
-# exclude_locations it fits; with the paired test's 3 excludes it does not.
+# Tuned to fit by one: 65 progression + 19 counted-useful + 6 useful checklist rewards = 90 items needing
+# a default location, against the 91 City Trial has once RNG boxes count as progression. Filler rewards
+# are not counted - they may sit on excluded boxes. AP Patches are held out, or their locations would
+# absorb the excludes the paired test relies on.
 _TIGHT_POOL = {
     **CT_ONLY,
     "ap_patches": 0,
-    "checklist_rewards": ["Endings", "Filler Boxes", "Gameplay Extras", "Music", "Sound Test"],
+    "checklist_rewards": _ALL_REWARD_CATEGORIES,
     "city_trial_progression_rng": Toggle.option_true,
     "city_trial_patch_cap_min": 14,
     "city_trial_patch_cap_max": 18,
@@ -183,178 +166,86 @@ _TIGHT_POOL = {
 
 
 class TestTightPoolFitsWithoutExcludeLocations(KARTestBase):
-    """Baseline for the exclude_locations pair: 90-items-needing-default fit 91 default CT locations."""
+    """Baseline for the exclude_locations pair. If this stops fitting - a default-location rebalance, a
+    reward reclassification - the paired test's exclude count needs retuning; the split between the two
+    pools moves whenever an item's classification does, and their sum is what the validator budgets."""
 
     options = _TIGHT_POOL
 
-    def test_setup_succeeds(self):
-        # If this stops fitting (e.g. a default-locations rebalance or reward-classification change), the
-        # paired exclude_locations test will need its excludes count tuned. The split between the two
-        # pools moves whenever an item's classification does; their sum is what the validator budgets.
+    def test_pool_sizes_are_unchanged(self):
         self.assertEqual(len(self.world.progression_pool), 65)
         self.assertEqual(len(self.world.counted_useful_pool), 19)
 
 
-class TestExcludeLocationsTipsValidatorOver(KARTestBase):
-    """Same tight pool, but enough exclude_locations to push guaranteed > available."""
-
-    options = {
+_make_raises_test(
+    "TestExcludeLocationsTipsValidatorOver",
+    {
         **_TIGHT_POOL,
         "exclude_locations": [
             CTLocation.DESTROY_ALL_HOUSES,
             CTLocation.BUST_STAR_POLE,
             CTLocation.BREAK_ALL_ROCKS,
         ],
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"needs \d+ non-excluded locations"):
-            self.world_setup()
-
-
-class TestStadiumStarterDededeInInventoryRaises(KARTestBase):
-    options = {
-        **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_stadiums_gated": Toggle.option_true,
-        "start_inventory": {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: 1},
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"starting inventory - this seed's goal is gated on it"):
-            self.world_setup()
-
-
-class TestDededeInInventoryRaisesWithStadiumsUngated(KARTestBase):
-    """Stadium gating off does not make the goal's own stadium a free starter - it is still the key."""
-
-    options = {
-        **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_stadiums_gated": Toggle.option_false,
-        "start_inventory": {KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE: 1},
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"starting inventory - this seed's goal is gated on it"):
-            self.world_setup()
-
-
-class TestLegendaryPieceInInventoryRaises(KARTestBase):
-    """Same for the hydra_and_dragoon goal: starting with any of its six pieces wins on the spot."""
-
-    options = {
-        **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon,
-        "start_inventory": {KARItemName.UNLOCK_ITEM_DRAGOON_PART_A: 1},
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"starting inventory - this seed's goal is gated on it"):
-            self.world_setup()
+    },
+    r"needs \d+ non-excluded locations",
+)
 
 
 # allowed_items can no longer starve the draw pools: Big Kirby / Small Kirby are immune to it and carry
-# _ALL_MODES, so filler_pool is never empty. These configs used to OptionError; they now generate.
+# every mode, so filler_pool is never empty. These configs used to OptionError; they now generate.
+_STILL_FILLS_CASES: list[tuple[str, dict]] = [
+    ("every_category_off", {**ALL_MODES, "allowed_items": [], "trap_chance": 0}),
+    # Traps fill leftover slots and excluded boxes alongside the cosmetic filler.
+    ("every_category_off_full_traps", {**ALL_MODES, "allowed_items": [], "trap_chance": 100}),
+    # Top Ride Item Gives is Top Ride's only give-item filler source; a low n_checklist amount forces
+    # many excluded boxes on top.
+    (
+        "top_ride_only_without_tr_gives",
+        {
+            **TR_ONLY,
+            "top_ride_goal": TopRideGoal.option_n_checklist_blocks,
+            "top_ride_checklist_amount": 5,
+            "top_ride_checkbox_fillers": 0,
+            "allowed_items": [
+                "Permanent Patches",
+                "City Trial Item Gives",
+                "City Trial Event Gives",
+                "Copy Ability Gives",
+            ],
+            "trap_chance": 0,
+        },
+    ),
+    # City Trial Item Gives doubles as Air Ride's give-item filler source (the _AR_CT single-stat patches).
+    (
+        "air_ride_only_without_ct_gives",
+        {
+            **AR_ONLY,
+            "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
+            "air_ride_checklist_amount": 5,
+            "air_ride_checkbox_fillers": 0,
+            "allowed_items": [
+                "Permanent Patches",
+                "City Trial Event Gives",
+                "Copy Ability Gives",
+                "Top Ride Item Gives",
+            ],
+            "trap_chance": 0,
+        },
+    ),
+]
 
 
-class TestAllowedItemsAllOffStillFills(KARTestBase):
-    """Every give category off and traps off used to be unfillable. The cosmetic all-mode filler now
-    covers every excluded box and leftover slot, so the config generates cleanly."""
+def _make_still_fills_test(opts: dict) -> type:
+    class _StillFills(KARTestBase):
+        options = opts
 
-    options = {**ALL_MODES, "allowed_items": [], "trap_chance": 0}
+        def test_generates_with_a_populated_pool(self):
+            self.assertTrue(self.world.item_pools_built)
+            self.assertIn(KARItemName.BIG_KIRBY, self.world.filler_pool)
+            self.assertEqual(len(self.itempool_items()), len(self.placeable_locations()))
 
-    def test_generates_with_cosmetic_filler(self):
-        self.assertTrue(self.world.item_pools_built)
-        self.assertIn(KARItemName.BIG_KIRBY, self.world.filler_pool)
-        self.assertIn(KARItemName.SMALL_KIRBY, self.world.filler_pool)
-        self.assertTrue(self.itempool_items(), "expected a populated item pool")
-
-
-class TestAllowedItemsTopRideOnlyNoTRGivesStillFills(KARTestBase):
-    """Top Ride Item Gives is Top Ride's only give-item filler source. With it off (and traps off), a TR-only
-    seed with many excluded boxes used to OptionError; the cosmetic all-mode filler now fills those boxes.
-    Low n_checklist amount forces many excluded boxes."""
-
-    options = {
-        **TR_ONLY,
-        "top_ride_goal": TopRideGoal.option_n_checklist_blocks,
-        "top_ride_checklist_amount": 5,
-        "top_ride_checkbox_fillers": 0,
-        "allowed_items": ["Permanent Patches", "City Trial Item Gives", "City Trial Event Gives", "Copy Ability Gives"],
-        "trap_chance": 0,
-    }
-
-    def test_generates_with_cosmetic_filler(self):
-        self.assertTrue(self.world.item_pools_built)
-        self.assertIn(KARItemName.BIG_KIRBY, self.world.filler_pool)
-        self.assertTrue(self.itempool_items(), "expected a populated item pool")
+    return _StillFills
 
 
-class TestAllowedItemsAirRideOnlyNoCTGivesStillFills(KARTestBase):
-    """City Trial Item Gives doubles as Air Ride's give-item filler source (the _AR_CT single-stat patches).
-    With it off (and traps off), an AR-only seed with many excluded boxes used to OptionError; the cosmetic
-    all-mode filler now fills those boxes."""
-
-    options = {
-        **AR_ONLY,
-        "air_ride_goal": AirRideGoal.option_n_checklist_blocks,
-        "air_ride_checklist_amount": 5,
-        "air_ride_checkbox_fillers": 0,
-        "allowed_items": ["Permanent Patches", "City Trial Event Gives", "Copy Ability Gives", "Top Ride Item Gives"],
-        "trap_chance": 0,
-    }
-
-    def test_generates_with_cosmetic_filler(self):
-        self.assertTrue(self.world.item_pools_built)
-        self.assertIn(KARItemName.BIG_KIRBY, self.world.filler_pool)
-        self.assertTrue(self.itempool_items(), "expected a populated item pool")
-
-
-class TestAllowedItemsAllOffWithFullTrapsFills(KARTestBase):
-    """With every give category off and trap_chance 100 (traps default on), traps fill both leftover
-    slots and excluded boxes alongside the cosmetic filler, so the config generates cleanly."""
-
-    options = {**ALL_MODES, "allowed_items": [], "trap_chance": 100}
-
-    def test_generates_with_traps_only(self):
-        self.assertTrue(self.world.item_pools_built)
-        self.assertTrue(self.itempool_items(), "expected a populated item pool")
-
-
-class TestStartingStadiumIsTheDededeGoal(KARTestBase):
-    """Naming VS. KING DEDEDE as the starting stadium under the Beat King Dedede goal would hand over the
-    goal, so the world rejects it rather than quietly drawing something else."""
-
-    options = {
-        **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_stadiums_gated": Toggle.option_true,
-        "starting_stadium": "vs_king_dedede",
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"Starting Stadium cannot be 'vs_king_dedede'"):
-            self.world_setup()
-
-
-class TestStartingMachineNeedsLockedCharge(KARTestBase):
-    """Slick Star can only be steered by charge-drifting, so naming it while Machine Charge is gated
-    would strand the player on their sole machine."""
-
-    options = {
-        **CT_ONLY,
-        "machines_gated": Toggle.option_true,
-        "base_abilities_gated": Toggle.option_true,
-        "starting_machine": "slick_star",
-    }
-    auto_construct = False
-
-    def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"Starting Machine cannot be 'slick_star'"):
-            self.world_setup()
+for _label, _opts in _STILL_FILLS_CASES:
+    _register(_make_still_fills_test(_opts), f"TestAllowedItemsStillFills_{_label}")

@@ -1,11 +1,12 @@
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from random import Random
 from typing import TYPE_CHECKING
 
+from BaseClasses import CollectionState
 from test.bases import WorldTestBase
 
-from ..KARItems import KARItemName, KARItemType, items_by_type
+from ..KARItems import GATING_CATEGORIES, KARItemName, KARItemType, items_by_type
 from ..KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
 
 if TYPE_CHECKING:
@@ -13,8 +14,17 @@ if TYPE_CHECKING:
 
 
 def items_of_type(t: KARItemType) -> set[str]:
-    """All item names in ITEM_TABLE whose type matches `t` (copied so callers can't mutate the shared bucket)."""
+    """All item names in ITEM_TABLE whose type matches `t`, copied so callers can't mutate the shared bucket."""
     return set(items_by_type.get(t, set()))
+
+
+def names(items: Iterable) -> set[str]:
+    """Plain-str view of a collection of KARItemName / KARLocation members."""
+    return {str(item) for item in items}
+
+
+# The checklist rewards each gating category subsumes; always excluded from the pool, gate on or off.
+OVERLAP_REWARDS: dict[str, frozenset] = {cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES}
 
 
 class KARTestBase(WorldTestBase):
@@ -23,8 +33,8 @@ class KARTestBase(WorldTestBase):
 
     def setUp(self) -> None:
         super().setUp()
-        # The test framework's gen_steps skips the start_inventory push that real generation does.
-        # Push them here so start_inventory tests behave like a real generation.
+        # gen_steps skips the start_inventory push real generation does; do it here so start_inventory
+        # tests behave like a real generation.
         if not getattr(self, "constructed", False):
             return
         for item_name, count in self.world.options.start_inventory.value.items():
@@ -37,19 +47,19 @@ class KARTestBase(WorldTestBase):
     def itempool_names(self) -> list[str]:
         return [item.name for item in self.itempool_items()]
 
-    def precollected_items(self) -> list:
-        return list(self.multiworld.precollected_items[self.player])
-
     def precollected_names(self) -> list[str]:
-        return [item.name for item in self.precollected_items()]
+        return [item.name for item in self.multiworld.precollected_items[self.player]]
 
     def world_item_names(self) -> set[str]:
-        """Items either in the itempool or precollected (the player will see both)."""
+        """Items either in the itempool or precollected - everything the player can end up holding."""
         return set(self.itempool_names()) | set(self.precollected_names())
 
+    def precollected_in(self, group: Iterable[str]) -> list[str]:
+        """The precollected items belonging to `group` - one starter per gated category."""
+        return [name for name in self.precollected_names() if name in set(group)]
+
     def count_in_pool(self, name: str) -> int:
-        """Count of items in the itempool with this name (distinct from the inherited `count(...)`,
-        which counts the item in the multiworld state)."""
+        """Copies of `name` in the itempool, as distinct from the inherited `count(...)`, which reads state."""
         return sum(1 for n in self.itempool_names() if n == name)
 
     def real_location_names(self) -> set[str]:
@@ -59,16 +69,20 @@ class KARTestBase(WorldTestBase):
         return {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is None}
 
     def placed_event_items(self) -> set[str]:
-        """Names of items placed at event locations (e.g. victory events)."""
+        """Names of the items placed at event locations, e.g. the per-mode victories."""
         return {
             loc.item.name
             for loc in self.multiworld.get_locations(self.player)
             if loc.address is None and loc.item is not None
         }
 
+    def placeable_locations(self) -> list:
+        """The locations create_items has to fill: real, unlocked ones."""
+        return [loc for loc in self.multiworld.get_locations(self.player) if loc.address is not None and not loc.locked]
+
     def collect_all_but_victories(self) -> None:
-        """Like `collect_all_but([])` but excludes the `*_VICTORY` event items, which are already placed
-        at event locations and would make any subsequent `assertBeatable(True)` tautological."""
+        """`collect_all_but([])` minus the `*_VICTORY` events, which are already placed and would make any
+        following `assertBeatable(True)` tautological."""
         self.collect_all_but(
             [
                 KARItemName.CITY_TRIAL_VICTORY,
@@ -78,9 +92,40 @@ class KARTestBase(WorldTestBase):
             ]
         )
 
+    def assert_victory_needs_all(self, keys: Iterable[str], victory: str) -> None:
+        """Collect everything but `keys` and the `victory` event item, then hand the keys over one at a
+        time: the seed stays unbeatable until the last of them arrives."""
+        keys = list(keys)
+        self.collect_all_but([*keys, victory])
+        self.assertBeatable(False)
+        for key in keys[:-1]:
+            self.collect_by_name(key)
+            self.assertBeatable(False)
+        self.collect_by_name(keys[-1])
+        self.assertBeatable(True)
 
-# Mode presets. CityTrialGoal defaults to 100_checklist_blocks, AR and TR default to none,
-# so CT_ONLY is the empty dict. Other presets explicitly toggle modes.
+    def state_without(self, withheld: Iterable[str]) -> CollectionState:
+        """Everything collected except `withheld`, precollected starter copies stripped out too."""
+        held_out = names(withheld)
+        state = CollectionState(self.multiworld)
+        self.collect_all_but(held_out, state)
+        for item in self.multiworld.precollected_items[self.player]:
+            if item.name in held_out:
+                state.remove(item)
+        return state
+
+    def state_with(self, *item_names: str) -> CollectionState:
+        """A fresh state holding only the named items (plus whatever is precollected)."""
+        state = CollectionState(self.multiworld)
+        for name in item_names:
+            state.collect(self.world.create_item(name), prevent_sweep=True)
+        return state
+
+    def reaches(self, state: CollectionState, location: str) -> bool:
+        return state.can_reach(location, "Location", self.player)
+
+
+# Mode presets. CityTrialGoal defaults to 100_checklist_blocks and AR/TR to none, so CT_ONLY is empty.
 CT_ONLY: dict = {}
 
 AR_ONLY: dict = {
@@ -114,16 +159,9 @@ ALL_MODES: dict = {
 
 
 class RecordingRandom(Random):
-    """Stand-in for `world.random` that records what `choice` was offered and returns its first entry.
-
-    A random draw can only be observed by sampling it, and sampling turns "is X barred from this pick?"
-    into a probability: one draw out of 24 catches a broken exclusion one time in 24. Recording the
-    candidate list answers the same question exactly, in one call.
-
-    Subclasses Random (rather than wrapping one) so it is a drop-in for the typed `world.random`
-    attribute, and is seeded so the methods it does not override are reproducible too. The record is
-    `offers`, not `choices` - Random.choices() is a real method and shadowing it would break callers.
-    """
+    """Stand-in for `world.random` recording the list `choice` was offered and returning its first entry,
+    so "is X barred from this pick?" is answered exactly rather than sampled. The record is `offers`, not
+    `choices` - Random.choices() is a real method and shadowing it would break callers."""
 
     def __init__(self, seed: int = 0) -> None:
         super().__init__(seed)
