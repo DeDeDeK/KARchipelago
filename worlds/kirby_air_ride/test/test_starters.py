@@ -112,11 +112,13 @@ _STARTER_CASES: list[tuple[str, dict, str, set[str], set[str]]] = [
         names(item_name_groups[KARItemGroup.COLOR_UNLOCKS]),
     ),
     (
-        # The mod hard-gates the Top Ride lobby on Free/Steer, so a TR-only seed must still get one.
-        "tr_machine_alone",
-        {**TR_ONLY, "machines_gated": Toggle.option_true},
+        # Top Ride is not one of machines_gated's required modes, so the TR control machine is only a
+        # starter when City Trial or Air Ride is also enabled to make the gate hold keys. The group is
+        # narrowed to the TR pair because such a seed also draws an Air Ride / City Trial machine.
+        "tr_machine",
+        {**ALL_MODES, "machines_gated": Toggle.option_true},
         "tr_machine_starter_choice",
-        _ALL_MACHINES,
+        _TR_MACHINES,
         _TR_MACHINES,
     ),
     (
@@ -199,6 +201,26 @@ class TestNoStarterForADisabledMode(KARTestBase):
         self.assertIsNone(self.world.tr_machine_starter_choice)
 
 
+class TestNoMachineStarterWhenOnlyTopRideIsEnabled(KARTestBase):
+    """`machines_gated` needs City Trial or Air Ride to hold keys, so a Top-Ride-only seed mints no
+    machine unlocks however the option is set - and must therefore hand out no machine starter. The
+    starter branch used to read the raw option and precollect a Free/Steer Star for a category the
+    mod opens wholesale at connect."""
+
+    options = {**TR_ONLY, "machines_gated": Toggle.option_true}
+
+    def test_gate_does_not_hold_keys(self):
+        self.assertNotIn("machines_gated", self.world.effective_gates)
+        self.assertEqual(self.world.fill_slot_data()["machines_gated"], 0)
+
+    def test_no_machine_starter_and_no_machine_items(self):
+        self.assertIsNone(self.world.tr_machine_starter_choice)
+        self.assertIsNone(self.world.machine_starter_choice)
+        self.assertEqual(self.precollected_in(_ALL_MACHINES), [])
+        # Nothing to precollect precisely because nothing was minted.
+        self.assertEqual([n for n in self.itempool_names() if n in _ALL_MACHINES], [])
+
+
 # Unlock items and checklist rewards are one-time, so presetting one in start_inventory must drop its
 # pool copy. Copy abilities and rewards grant no starter, so they exercise the general dedup path.
 def _make_preset_dedup_test(preset_item: str, opts: dict) -> type:
@@ -236,7 +258,7 @@ _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
     ),
     (
         "tr_machine",
-        {**TR_ONLY, "machines_gated": Toggle.option_true},
+        {**ALL_MODES, "machines_gated": Toggle.option_true},
         "tr_machine_starter_choice",
         KARItemName.UNLOCK_MACHINE_FREE_STAR,
     ),
@@ -305,13 +327,13 @@ _NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str, str, int]] = [
     ),
     (
         "tr_machine",
-        {**TR_ONLY, "machines_gated": Toggle.option_true},
+        {**ALL_MODES, "machines_gated": Toggle.option_true},
         "starting_top_ride_machine",
         "steer_star",
         "tr_machine_starter_choice",
         KARItemName.UNLOCK_MACHINE_STEER_STAR,
         KARItemGroup.MACHINE_UNLOCKS,
-        1,
+        2,
     ),
     (
         "ar_course",
@@ -447,6 +469,14 @@ for _label, _opts, _attr, _group in (
         {**CT_ONLY, "air_ride_courses_gated": Toggle.option_true, "starting_air_ride_course": "nebula_belt"},
         "ar_course_starter_choice",
         KARItemGroup.AR_COURSE_UNLOCKS,
+    ),
+    (
+        # Top Ride is not one of machines_gated's required modes, so the gate holds no keys here even
+        # though the mode owning the named pick is enabled and the option is on.
+        "gate_holds_no_keys",
+        {**TR_ONLY, "machines_gated": Toggle.option_true, "starting_top_ride_machine": "steer_star"},
+        "tr_machine_starter_choice",
+        KARItemGroup.MACHINE_UNLOCKS,
     ),
 ):
     _register(_make_ignored_starter_test(_opts, _attr, _group), f"TestNamedStarterIgnoredWhen_{_label}")

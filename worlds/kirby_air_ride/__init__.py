@@ -349,7 +349,8 @@ class KARWorld(World):
                 suppression_set=stadiums,
             )
 
-        if (self.city_trial_enabled or self.air_ride_enabled) and self.options.machines_gated:
+        # Both machine branches key on the effective gate, not the raw option.
+        if "machines_gated" in self.effective_gates:
             machines = {str(name) for name in AR_CT_MACHINE_UNLOCK_ITEMS}
             barred_machines = (
                 {
@@ -367,7 +368,7 @@ class KARWorld(World):
                 barred_machines,
             )
 
-        if self.top_ride_enabled and self.options.machines_gated:
+        if self.top_ride_enabled and "machines_gated" in self.effective_gates:
             self.tr_machine_starter_choice = self._resolve_starter(
                 self.options.starting_top_ride_machine,
                 TR_MACHINE_UNLOCK_ITEMS,
