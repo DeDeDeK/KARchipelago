@@ -13,6 +13,7 @@ from collections import Counter
 from BaseClasses import ItemClassification
 from Options import Toggle
 
+from ..KARData import GameMode
 from ..KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     CHECKLIST_REWARD_TYPES,
@@ -22,7 +23,7 @@ from ..KARItems import (
     KARItemName,
     KARItemType,
 )
-from ..KAROptions import CityTrialGoal
+from ..KAROptions import ArchipelagoGoal, CityTrialGoal
 from ..KARRegions import KARRegion
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
 
@@ -345,16 +346,44 @@ class TestPatchCapExcludedWhenCTDisabled(KARTestBase):
         self.assertEqual(self.count_in_pool(KARItemName.PATCH_CAP_INCREASE), 0)
 
 
-class TestPermanentPatchesExcludedWhenCTDisabled(KARTestBase):
-    """Permanent patches are CT-only. Even with their allowed_items category ON (the default),
-    with CT disabled they should not appear in the pool (source-modes backstop)."""
+class TestPermanentPatchesReachAirRide(KARTestBase):
+    """Permanent patches carry _AR_CT: the mod applies them at Air Ride round start too. With CT off and
+    their allowed_items category ON (the default) they still stock the pool - the case that otherwise
+    leaves an AR-only seed with nothing in filler_pool but Big and Small Kirby."""
 
     options = AR_ONLY
+
+    def test_permanent_patches_in_pool(self):
+        perm_names = items_of_type(KARItemType.PERMANENT_PATCH)
+        self.assertTrue(set(self.itempool_names()) & perm_names)
+
+
+class TestPermanentPatchesExcludedInTopRideOnly(KARTestBase):
+    """The other half of _AR_CT: Top Ride has no MachineData, so the mod's apply loop reaches nobody."""
+
+    options = TR_ONLY
 
     def test_no_permanent_patches_in_pool(self):
         perm_names = items_of_type(KARItemType.PERMANENT_PATCH)
         leaked = set(self.itempool_names()) & perm_names
-        self.assertFalse(leaked, f"Permanent patches leaked when CT disabled: {sorted(leaked)}")
+        self.assertFalse(leaked, f"Permanent patches leaked into a Top-Ride-only pool: {sorted(leaked)}")
+
+
+class TestArchipelagoChecklistMakesCityTrialAPlayedMode(KARTestBase):
+    """The source-modes backstop reads logic_modes, not the goal flags, and the Archipelago checklist is
+    the one thing that still separates them: its boxes are City Trial and Air Ride activities, so
+    choosing that goal is choosing those modes, and their items work. AP Patches no longer do this -
+    they are zeroed without a City Trial goal, which TestAPPatchesNeedCityTrial covers."""
+
+    options = {
+        "city_trial_goal": CityTrialGoal.option_none,
+        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+    }
+
+    def test_city_trial_items_admitted(self):
+        self.assertIn(GameMode.CITYTRIAL, self.world.logic_modes)
+        perm_names = items_of_type(KARItemType.PERMANENT_PATCH)
+        self.assertTrue(set(self.itempool_names()) & perm_names)
 
 
 class TestDropPatchesTrapExcludedWhenCTDisabled(KARTestBase):

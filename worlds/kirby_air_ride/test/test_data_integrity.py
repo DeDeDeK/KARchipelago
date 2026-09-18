@@ -1,5 +1,6 @@
 """
-Data integrity tests for ITEM_TABLE, the per-mode location tables, and the derived lookup maps.
+Data integrity tests for ITEM_TABLE, the per-mode location tables, the derived lookup maps, and the
+codecs that translate between location/item codes and the mod's (mode, index) pairs.
 
 These are all static structures generation reads without re-validating, so a mistake in one shows up
 as a silent behaviour change rather than an error: a duplicate code corrupts the wire contract with
@@ -16,7 +17,16 @@ import unittest
 
 from BaseClasses import ItemClassification
 
-from ..KARData import GameMode, location_code_to_mode_clear
+from ..KARData import (
+    CODE_BAND_PER_MODE,
+    REWARD_CODE_BASE,
+    REWARD_CODE_STRIDE,
+    REWARDS_PER_MODE,
+    GameMode,
+    location_code_to_mode_clear,
+    mode_clear_to_location_code,
+    reward_code_to_mode_index,
+)
 from ..KARItems import (
     AR_COURSE_UNLOCK_ITEMS,
     AR_CT_MACHINE_UNLOCK_ITEMS,
@@ -152,6 +162,59 @@ class TestLocationCodeContiguity(unittest.TestCase):
         for table, lo, hi in self._BANDS:
             codes = sorted(d.code for d in table.values() if d.code is not None)
             self.assertEqual(codes, list(range(lo, hi + 1)), f"Codes not contiguous in [{lo},{hi}]: got {codes}")
+
+
+class TestCheckboxCodecBands(unittest.TestCase):
+    """The two checkbox codecs must be exact inverses over every band. _check_locations feeds
+    mode_clear_to_location_code bits 0-127 of a two-word mask while no band is wider than 120, so an unbounded
+    encode would report a neighbouring mode's location for a bit the game should never have set."""
+
+    def test_every_mode_has_a_band(self):
+        self.assertEqual(set(CODE_BAND_PER_MODE), set(GameMode))
+
+    def test_bands_do_not_overlap(self):
+        codes = [c for base, width in CODE_BAND_PER_MODE.values() for c in range(base, base + width)]
+        self.assertEqual(len(codes), len(set(codes)), "Two modes claim the same location code")
+
+    def test_in_band_clear_kinds_round_trip(self):
+        for mode, (base, width) in CODE_BAND_PER_MODE.items():
+            for clear_kind in range(width):
+                with self.subTest(mode=mode.name, clear_kind=clear_kind):
+                    code = mode_clear_to_location_code(mode, clear_kind)
+                    self.assertEqual(code, base + clear_kind)
+                    self.assertEqual(location_code_to_mode_clear(code), (mode, clear_kind))
+
+    def test_out_of_band_clear_kinds_encode_to_zero(self):
+        for mode, (_, width) in CODE_BAND_PER_MODE.items():
+            for clear_kind in (-1, width, width + 1, 127):
+                with self.subTest(mode=mode.name, clear_kind=clear_kind):
+                    self.assertEqual(mode_clear_to_location_code(mode, clear_kind), 0)
+
+
+class TestRewardCodeDecoding(unittest.TestCase):
+    """reward_code_to_mode_index is the only filter on scouted reward items before they are written into the
+    mod's locations[3][REWARDS_PER_MODE] array, so the four padding codes per band must decode to None."""
+
+    def test_band_edges_decode(self):
+        for index in range(3):
+            mode = GameMode(index)
+            base = REWARD_CODE_BASE + index * REWARD_CODE_STRIDE
+            with self.subTest(mode=mode.name):
+                self.assertEqual(reward_code_to_mode_index(base), (mode, 0))
+                last = REWARDS_PER_MODE - 1
+                self.assertEqual(reward_code_to_mode_index(base + last), (mode, last))
+
+    def test_padding_above_the_array_decodes_to_none(self):
+        for index in range(3):
+            base = REWARD_CODE_BASE + index * REWARD_CODE_STRIDE
+            for offset in range(REWARDS_PER_MODE, REWARD_CODE_STRIDE):
+                with self.subTest(mode=GameMode(index).name, offset=offset):
+                    self.assertIsNone(reward_code_to_mode_index(base + offset))
+
+    def test_codes_outside_the_block_decode_to_none(self):
+        self.assertIsNone(reward_code_to_mode_index(None))
+        self.assertIsNone(reward_code_to_mode_index(REWARD_CODE_BASE - 1))
+        self.assertIsNone(reward_code_to_mode_index(REWARD_CODE_BASE + 3 * REWARD_CODE_STRIDE))
 
 
 class TestNativeRewardMap(unittest.TestCase):

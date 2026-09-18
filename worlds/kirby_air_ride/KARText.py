@@ -1,16 +1,3 @@
-"""Composition of the in-game text-box messages the mod renders.
-
-The mod owns no name tables for other worlds, so the client composes each line here - resolving
-item, location and player names with Archipelago's own rules - and ships it as pre-colored
-segments through the APData text mailbox.
-
-Two constraints shape everything below. The game font has no lowercase-safe fallback for
-non-ASCII, so text is folded to the glyph set `Text_Sanitize` can render; and the wire record
-holds `AP_TEXT_SEG_NUM` colored runs in `AP_TEXT_BLOB_LEN` bytes. That blob is sized past what
-the screen can show, because the mod owns the fit: it knows the player's font size, wraps onto
-three lines and truncates what is left over.
-"""
-
 from __future__ import annotations
 
 import re
@@ -29,20 +16,15 @@ from .KARData import (
     APTextKind,
 )
 
-# Glyphs the game font renders: alphanumerics go through untouched, and every symbol here is in
-# either `Text_Sanitize`'s Shift-JIS table or `Text_ConvertASCIIToShiftJIS`'s Latin one. Anything
-# else would emit an undefined code, so it is dropped.
+# Glyphs the game font renders: alphanumerics go through untouched.
 RENDERABLE = frozenset(string.ascii_letters + string.digits + " !\"#$%&'()*+,-./:;<=>?@[]_")
 
-# Derived from Archipelago's own table so a status added upstream is carried through. The labels
-# lose their parentheses because they are printed inside the "Hint (x): " prefix, and unspecified
-# is dropped: it carries no information, so that hint prints a bare "Hint: ".
+# Derived from Archipelago's own table
 HINT_STATUS_LABELS: dict[int, str] = {
     status: name.strip("()") for status, name in status_names.items() if status != HintStatus.HINT_UNSPECIFIED
 }
 
-# Server-authored PrintJSON lines worth relaying in-game, with the kind that gates them and the
-# color they get: they arrive as one uncolored text run, so the line carries the meaning.
+# Server-authored PrintJSON lines worth relaying in-game
 RELAYED_PRINT_JSON: dict[str, tuple[APTextKind, APTextColor]] = {
     "Goal": (APTextKind.STATUS, APTextColor.GREEN),
     "Release": (APTextKind.STATUS, APTextColor.YELLOW),
@@ -51,7 +33,7 @@ RELAYED_PRINT_JSON: dict[str, tuple[APTextKind, APTextColor]] = {
     "ServerChat": (APTextKind.CHAT, APTextColor.ORANGE),
 }
 
-# The server stamps a team number onto its broadcast lines; it is noise on one line of screen.
+# The server stamps a team number onto its broadcast lines
 _TEAM_SUFFIX = re.compile(r"\s*\(Team #\d+\)")
 
 
@@ -63,13 +45,7 @@ class Segment(NamedTuple):
 
 
 def _sanitize(text: str) -> str:
-    """Fold `text` to the glyphs the game font can render.
-
-    NFKD decomposition turns accented letters into a base letter plus a combining mark, and the
-    mark is then dropped along with everything else outside RENDERABLE, so "Cafe\u0301" renders
-    "Cafe" rather than losing the word. Runs of whitespace collapse to one space, but leading and
-    trailing spaces survive - segments are concatenated, so their edge spaces are the word gaps.
-    """
+    """Fold `text` to RENDERABLE glyphs. Collapses whitespace runs."""
     folded = unicodedata.normalize("NFKD", text)
     out: list[str] = []
     prev_space = False
@@ -88,12 +64,7 @@ def _sanitize(text: str) -> str:
 
 
 class SegmentCollector(JSONtoTextParser):
-    """Resolves JSON message parts into colored segments instead of an ANSI string.
-
-    Subclassing rather than reimplementing keeps item/location/player name lookup and the
-    flags-to-color and hint-status-to-color rules identical to the rest of Archipelago: the
-    `_handle_*` methods set `node["color"]`/`node["text"]` and then delegate here.
-    """
+    """Resolves JSON message parts into colored segments instead of an ANSI string."""
 
     def __init__(self, ctx: Any) -> None:
         super().__init__(ctx)
@@ -129,7 +100,8 @@ class SegmentCollector(JSONtoTextParser):
 
 def _coalesce(segments: list[Segment]) -> list[Segment]:
     """Merge adjacent runs sharing a color, then fold any overflow past AP_TEXT_SEG_NUM into the
-    last run - a colored run costs a subtext object in the renderer, so the cap is hard."""
+    last run.
+    """
     merged: list[Segment] = []
     for seg in segments:
         if not seg.text:
@@ -155,8 +127,7 @@ def _truncate(text: str, keep: int) -> str:
 
 def _fit(segments: list[Segment]) -> list[Segment]:
     """Trim segments until the whole message fits the blob, always cutting the longest run first
-    so a long location name gives way before the words around it. This is a transport limit, not
-    a display one - the mod does the wrapping and the on-screen truncation."""
+    so a long location name gives way before the words around it."""
     segs = list(segments)
     budget = AP_TEXT_BLOB_LEN - len(segs)  # one NUL terminator per segment
     while segs:
@@ -192,14 +163,7 @@ def pack_message(kind: APTextKind, segments: list[Segment]) -> bytes | None:
 
 
 def add_hint_prefix(parts: list[JSONMessagePart], data: list[JSONMessagePart]) -> None:
-    """Open a hint line with the "Hint (status): " lead-in, reading the status out of the server's
-    own `data` parts - the Hint packet's other fields are receiving/item/found.
-
-    Archipelago's own wording repeats what the reader already knows - one side of every hint is
-    always this slot - and would not fit one line. Folding the status into the prefix leaves the
-    room the location name needs. It goes in as a real `hint_status` part, so the color comes from
-    Archipelago's status table rather than a second table here.
-    """
+    """Open a hint line with the "Hint (status):" """
     status = HintStatus.HINT_UNSPECIFIED
     for node in data:
         if node.get("type") == "hint_status":
@@ -214,11 +178,7 @@ def add_hint_prefix(parts: list[JSONMessagePart], data: list[JSONMessagePart]) -
 
 
 def relay_segments(segments: list[Segment], color: APTextColor) -> list[Segment]:
-    """Strip the server's team stamp and give the line its kind's color.
-
-    A relayed line arrives as one uncolored run, so the color is the only thing marking what it
-    is; any run the server did color keeps it.
-    """
+    """Strip the server's team stamp and give the line its kind's color."""
     return [
         Segment(_TEAM_SUFFIX.sub("", seg.text), color if seg.color == APTextColor.DEFAULT else seg.color)
         for seg in segments

@@ -163,7 +163,7 @@ class TestGuaranteedPoolExceedsLocations(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"needing default locations"):
+        with self.assertRaisesRegex(OptionError, r"needs \d+ non-excluded locations"):
             self.world_setup()
 
 
@@ -183,15 +183,16 @@ _TIGHT_POOL = {
 
 
 class TestTightPoolFitsWithoutExcludeLocations(KARTestBase):
-    """Baseline for the exclude_locations pair: 91-items-needing-default just fit 91 default CT locations."""
+    """Baseline for the exclude_locations pair: 90-items-needing-default fit 91 default CT locations."""
 
     options = _TIGHT_POOL
 
     def test_setup_succeeds(self):
         # If this stops fitting (e.g. a default-locations rebalance or reward-classification change), the
-        # paired exclude_locations test will need its excludes count tuned.
-        self.assertEqual(len(self.world.progression_pool), 79)
-        self.assertEqual(len(self.world.counted_useful_pool), 5)
+        # paired exclude_locations test will need its excludes count tuned. The split between the two
+        # pools moves whenever an item's classification does; their sum is what the validator budgets.
+        self.assertEqual(len(self.world.progression_pool), 65)
+        self.assertEqual(len(self.world.counted_useful_pool), 19)
 
 
 class TestExcludeLocationsTipsValidatorOver(KARTestBase):
@@ -208,7 +209,7 @@ class TestExcludeLocationsTipsValidatorOver(KARTestBase):
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaisesRegex(OptionError, r"needing default locations"):
+        with self.assertRaisesRegex(OptionError, r"needs \d+ non-excluded locations"):
             self.world_setup()
 
 
