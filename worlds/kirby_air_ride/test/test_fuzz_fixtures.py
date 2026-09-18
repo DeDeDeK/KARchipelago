@@ -1,25 +1,6 @@
-"""
-Guard tests for the dev-only fuzz fixtures in ``worlds/kirby_air_ride/fuzz/``.
-
-Archipelago does not reject an unknown option key in a YAML - ``Generate.roll_settings`` logs
-"<key> is not a valid option name" and moves on. A fixture that keeps writing an option after the
-world renames it therefore keeps generating, silently exercising the option's *default* instead of
-the value it names. That is not hypothetical: three fixtures spent several releases claiming to
-stress the patch-cap stack while minting zero Patch Cap Increase items, because the option had been
-split into ``city_trial_patch_cap_min`` / ``_max`` underneath them.
-
-Nothing in the fuzz pipeline can catch that - the fixtures only ever run through ``Generate.py`` by
-hand, and a warning line in a 40-second spoiler run is easy to miss. So the checks live here:
-
-  - every key under ``Kirby Air Ride:`` names a real option;
-  - every value parses and verifies against that option, which covers location and item names,
-    Choice spellings, Range bounds and OptionSet keys in one step;
-  - the fuzz meta's constraints target real options and seed a real, correctly-moded goal location.
-
-These read the YAML files off disk rather than importing anything from ``fuzz``. Both ``test/`` and
-``fuzz/`` are excluded from the built ``.apworld`` (see ``.apignore``), so this dependency is
-dev-tooling-only and never ships.
-"""
+"""Guards for the dev-only fuzz fixtures in ``fuzz/``. Archipelago only logs a warning for an unknown
+option key, so a fixture that keeps writing one after a rename silently exercises that option's default
+- three once claimed to stress the patch-cap stack while minting zero Patch Cap Increase items."""
 
 import unittest
 from pathlib import Path
@@ -43,10 +24,10 @@ _META_PATH = _FUZZ_DIR / "fuzz_meta.yaml"
 
 _GAME = "Kirby Air Ride"
 
-# Keys the fuzzer's meta format adds on top of the option surface. Only legal in the meta file.
+# Keys the fuzzer's meta format adds on top of the option surface; only legal in the meta file.
 _META_ONLY_KEYS = frozenset({"fuzz_constraints"})
 
-# Keys Archipelago itself understands inside a game section but that are not options.
+# Keys Archipelago understands inside a game section but that are not options.
 _NON_OPTION_GAME_KEYS = frozenset({"triggers"})
 
 # Every plando module enabled, so a fixture's plando_items block is verified rather than skipped.
@@ -69,7 +50,7 @@ class TestStaticFixturesAreWellFormed(unittest.TestCase):
     """Every fixture is a valid single-slot Kirby Air Ride YAML."""
 
     def test_at_least_one_fixture_exists(self):
-        # Non-vacuity guard: an empty or moved directory would make every subTest loop below pass.
+        # Non-vacuity guard: an empty or moved directory would make every loop below pass.
         self.assertTrue(_STATIC_DIR.is_dir(), f"{_STATIC_DIR} is missing")
         self.assertGreaterEqual(len(_static_fixtures()), 5)
 
@@ -81,8 +62,7 @@ class TestStaticFixturesAreWellFormed(unittest.TestCase):
                 for key in ("name", "description"):
                     self.assertTrue(str(doc.get(key, "")).strip(), f"fixture needs a non-empty {key}")
                 self.assertIn(_GAME, doc, "fixture needs a 'Kirby Air Ride:' options section")
-                # Generation puts every fixture in one multiworld (the campaign's Phase 5), so duplicate
-                # slot names would collide there.
+                # Generation puts every fixture in one multiworld, so duplicate slot names would collide.
                 name = doc["name"]
                 self.assertNotIn(name, names, f"slot name {name!r} is already used by {names.get(name)}")
                 names[name] = filename
@@ -92,32 +72,22 @@ class TestStaticFixturesAreWellFormed(unittest.TestCase):
         for filename, doc in _static_fixtures():
             for key in doc[_GAME]:
                 with self.subTest(fixture=filename, option=key):
-                    self.assertIn(
-                        key,
-                        valid,
-                        f"{key!r} is not a Kirby Air Ride option; Archipelago would ignore it with only "
-                        f"a log warning, so the fixture would silently test the option's default",
-                    )
+                    self.assertIn(key, valid, f"{key!r} is not a Kirby Air Ride option, so it would be ignored")
 
     def test_every_option_value_parses_and_verifies(self):
-        """Round-trip each value through its own option class.
-
-        ``from_any`` catches bad Choice spellings, out-of-range numbers and unknown OptionSet keys;
-        ``verify`` is what additionally checks location and item names against this world, including
-        the ones inside ``plando_items``.
-        """
+        # `from_any` catches bad Choice spellings, out-of-range numbers and unknown OptionSet keys;
+        # `verify` additionally checks location and item names, including inside `plando_items`.
         for filename, doc in _static_fixtures():
             slot_name = doc.get("name", filename)
             for key, value in doc[_GAME].items():
                 if key not in KAROptions.type_hints:
                     continue  # reported by test_every_option_key_is_real
                 with self.subTest(fixture=filename, option=key):
-                    option = KAROptions.type_hints[key].from_any(value)
-                    option.verify(KARWorld, slot_name, _ALL_PLANDO)
+                    KAROptions.type_hints[key].from_any(value).verify(KARWorld, slot_name, _ALL_PLANDO)
 
     def test_goal_locations_belong_to_their_mode(self):
-        """The world rejects a cross-mode goal location at generation. Catching it here names the
-        fixture instead of surfacing as an OptionError mid-campaign."""
+        # The world rejects a cross-mode goal location at generation; catching it here names the fixture
+        # instead of surfacing as an OptionError mid-campaign.
         for filename, doc in _static_fixtures():
             for key, table in _GOAL_LOCATION_OPTIONS.items():
                 for name in doc[_GAME].get(key) or []:
@@ -166,16 +136,30 @@ class TestFuzzMetaIsCurrent(unittest.TestCase):
                 )
 
     def test_seeded_goal_locations_are_valid_for_their_mode(self):
-        """`checklist_list` always OptionErrors on an empty list, so the meta seeds one location per
-        mode. A stale name there would trade one guaranteed OptionError for another."""
-        seeded = 0
+        # `checklist_list` always OptionErrors on an empty list, so the meta seeds locations per mode.
+        seeded: dict[str, int] = {}
         for index, constraint in enumerate(self.constraints):
             for target, names in constraint.get("then_include", {}).items():
                 table = _GOAL_LOCATION_OPTIONS.get(target)
                 if table is None:
                     continue
                 for name in names:
-                    seeded += 1
+                    seeded[target] = seeded.get(target, 0) + 1
                     with self.subTest(constraint=index, option=target, location=name):
                         self.assertIn(name, table)
-        self.assertEqual(seeded, len(_GOAL_LOCATION_OPTIONS), "every mode's checklist_list goal needs a seed")
+        # Per option, not a total: a total would be satisfied by four seeds for one mode and none for
+        # the other three, which is exactly the drift this guards against.
+        for target in _GOAL_LOCATION_OPTIONS:
+            with self.subTest(option=target):
+                self.assertGreater(seeded.get(target, 0), 0, "every mode's checklist_list goal needs a seed")
+
+    def test_constraint_values_are_legal_for_their_option(self):
+        # A `then` value the option no longer accepts makes every YAML the constraint touches fail to
+        # parse, which reads as a total collapse of the run rather than as a stale meta file.
+        for index, constraint in enumerate(self.constraints):
+            for target, value in constraint.get("then", {}).items():
+                option = KAROptions.type_hints.get(target)
+                if option is None:
+                    continue  # reported by test_constraints_name_real_options
+                with self.subTest(constraint=index, option=target, value=value):
+                    option.from_any(value).verify(KARWorld, _GAME, _ALL_PLANDO)

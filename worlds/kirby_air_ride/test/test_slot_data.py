@@ -1,12 +1,5 @@
-"""
-Slot data contract tests.
-
-fill_slot_data() returns the dict the client consumes on connect. These pin the contract: required keys
-present, types correct, and the spawn-rate min shipped to the mod verbatim. Only options the client or
-mod consume are shipped - generation-only ones (trap_chance, spawn_rate_max) are deliberately omitted.
-
-Update EXPECTED_KEYS when intentionally adding or removing a field; the client moves in lockstep.
-"""
+"""fill_slot_data() returns the dict the client consumes on connect; generation-only options are
+deliberately omitted. Update EXPECTED_KEYS when a field is intentionally added or removed."""
 
 import json
 
@@ -14,8 +7,8 @@ from Options import Toggle
 
 from .. import UT_OPTIONS_KEY
 from ..KARLocations import CTLocation
-from ..KAROptions import CityTrialGoal
-from . import ALL_MODES, CT_ONLY, KARTestBase
+from ..KAROptions import ArchipelagoGoal, CityTrialGoal
+from . import ALL_MODES, CT_ONLY, KARTestBase, names
 
 EXPECTED_KEYS: frozenset[str] = frozenset(
     {
@@ -46,7 +39,7 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "city_trial_patch_cap_max",
         "city_trial_stadiums_gated",
         "ap_patches",
-        # Item generation (runtime spawn-rate min; max is generation-only)
+        # Runtime spawn-rate floor; the ceiling is generation-only
         "spawn_rate_min",
         # Gating
         "city_trial_events_gated",
@@ -65,115 +58,80 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "legendary_pieces_goal_gated",
         "vs_king_dedede_goal_gated",
         "ap_star_pieces_goal_gated",
-        # Universal Tracker's raw-option record; not consumed by the client or the mod.
+        # Universal Tracker's raw-option record; not consumed by the client or the mod
         UT_OPTIONS_KEY,
     }
 )
 
-
-class TestSlotDataDefaults(KARTestBase):
-    """Default CT options produce a slot_data with the expected key set and types."""
-
-    options = CT_ONLY
-
-    def test_exact_key_set(self):
-        data = self.world.fill_slot_data()
-        actual = set(data.keys())
-        missing = EXPECTED_KEYS - actual
-        extra = actual - EXPECTED_KEYS
-        self.assertFalse(missing, f"slot_data missing expected keys: {sorted(missing)}")
-        self.assertFalse(extra, f"slot_data has unexpected keys: {sorted(extra)}")
-
-    def test_serializes_as_json(self):
-        # The network layer round-trips slot_data as JSON; non-JSON-serializable values
-        # would fail at connect time.
-        data = self.world.fill_slot_data()
-        try:
-            json.dumps(dict(data))
-        except (TypeError, ValueError) as exc:
-            self.fail(f"slot_data is not JSON-serializable: {exc}")
-
-    def test_value_types(self):
-        data = self.world.fill_slot_data()
-        # Numeric fields the client treats as ints/bools.
-        for int_key in (
-            "city_trial_checklist_amount",
-            "air_ride_checklist_amount",
-            "top_ride_checklist_amount",
-            "city_trial_patch_cap_min",
-            "city_trial_patch_cap_max",
-            "spawn_rate_min",
-            "city_trial_goal",
-            "air_ride_goal",
-            "top_ride_goal",
-            "archipelago_goal",
-            "archipelago_checklist_amount",
-        ):
-            with self.subTest(key=int_key):
-                self.assertIsInstance(data[int_key], int, f"{int_key} should be int-like")
-        # LocationSet fields serialize as iterable of strings.
-        for locset_key in (
-            "city_trial_goal_locations",
-            "air_ride_goal_locations",
-            "top_ride_goal_locations",
-            "archipelago_goal_locations",
-        ):
-            with self.subTest(key=locset_key):
-                self.assertIsInstance(list(data[locset_key]), list)
+_INT_KEYS = (
+    "city_trial_checklist_amount",
+    "air_ride_checklist_amount",
+    "top_ride_checklist_amount",
+    "archipelago_checklist_amount",
+    "city_trial_patch_cap_min",
+    "city_trial_patch_cap_max",
+    "spawn_rate_min",
+    "city_trial_goal",
+    "air_ride_goal",
+    "top_ride_goal",
+    "archipelago_goal",
+)
+_LOCATION_SET_KEYS = (
+    "city_trial_goal_locations",
+    "air_ride_goal_locations",
+    "top_ride_goal_locations",
+    "archipelago_goal_locations",
+)
 
 
-class TestSlotDataSpawnRateMinShips(KARTestBase):
-    """The player's spawn_rate_min flows through to the mod verbatim. An on-grid sub-vanilla
-    min (80) ships unchanged. Uses ALL_MODES so the Spawn Rate Up items the range generates
-    fit in the available default locations."""
+def _make_key_set_test(label: str, preset: dict) -> None:
+    class _KeySet(KARTestBase):
+        options = preset
 
-    options = {**ALL_MODES, "spawn_rate_min": 80, "spawn_rate_max": 200}
+        def test_exact_key_set(self):
+            self.assertEqual(set(self.world.fill_slot_data()), EXPECTED_KEYS)
 
-    def test_min_passes_through(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(data["spawn_rate_min"], 80)
+        def test_serializes_as_json(self):
+            # The network layer round-trips slot_data as JSON; a non-serializable value fails at connect.
+            json.dumps(dict(self.world.fill_slot_data()))
+
+        def test_value_types(self):
+            data = self.world.fill_slot_data()
+            for key in _INT_KEYS:
+                with self.subTest(key=key):
+                    self.assertIsInstance(data[key], int)
+            for key in _LOCATION_SET_KEYS:
+                with self.subTest(key=key):
+                    self.assertIsInstance(list(data[key]), list)
+
+    _KeySet.__name__ = f"TestSlotDataShape_{label}"
+    _KeySet.__qualname__ = _KeySet.__name__
+    globals()[_KeySet.__name__] = _KeySet
 
 
-class TestSlotDataSpawnRateSnapped(KARTestBase):
+for _label, _preset in (("ct_only", CT_ONLY), ("all_modes", ALL_MODES)):
+    _make_key_set_test(_label, _preset)
+
+
+class TestSlotDataSpawnRateMin(KARTestBase):
     """Spawn rate moves in 10% steps, so the min is snapped to the nearest multiple of 10 at generation
-    and the snapped value is what ships. spawn_rate_max is snapped too but isn't shipped: it only sizes
-    the Spawn Rate Up pool."""
-
-    options = {
-        **ALL_MODES,
-        "spawn_rate_min": 64,
-        "spawn_rate_max": 227,
-    }
-
-    def test_min_snapped_to_nearest_ten(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(data["spawn_rate_min"], 60)
-
-
-class TestSlotDataAllModes(KARTestBase):
-    """The same key set is produced for any enabled-modes combination."""
+    and the snapped value is what ships. ALL_MODES gives the Spawn Rate Up items the range mints room to
+    land."""
 
     options = ALL_MODES
+    auto_construct = False
 
-    def test_all_modes_keys_match_default(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(set(data.keys()), EXPECTED_KEYS)
-
-
-class TestSlotDataGoalValueReflectsOption(KARTestBase):
-    """Goal field carries the player's selected goal value."""
-
-    options = {**CT_ONLY, "city_trial_goal": CityTrialGoal.option_beat_king_dedede}
-
-    def test_ct_goal_value(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(data["city_trial_goal"], CityTrialGoal.option_beat_king_dedede)
+    def test_min_ships_snapped(self):
+        for raw_min, raw_max, shipped in ((80, 200, 80), (64, 227, 60)):
+            with self.subTest(spawn_rate_min=raw_min):
+                self.options = {**self.options, "spawn_rate_min": raw_min, "spawn_rate_max": raw_max}
+                self.world_setup()
+                self.assertEqual(self.world.fill_slot_data()["spawn_rate_min"], shipped)
 
 
-class TestSlotDataChecklistListShipsItsLocations(KARTestBase):
-    """The checklist_list goal is the one goal the mod cannot evaluate from a count: it has to be told
-    which boxes to watch, so the LocationSet ships by name. An empty or reordered set would leave the
-    mod watching nothing."""
+class TestSlotDataGoalFields(KARTestBase):
+    """The checklist_list goal is the one the mod cannot evaluate from a count: it has to be told which
+    boxes to watch, so the LocationSet ships by name and the other modes ship empty."""
 
     _GOAL_LOCS = [CTLocation.DESTROY_ALL_HOUSES, CTLocation.BUST_STAR_POLE]
     options = {
@@ -182,69 +140,71 @@ class TestSlotDataChecklistListShipsItsLocations(KARTestBase):
         "city_trial_goal_locations": _GOAL_LOCS,
     }
 
-    def test_goal_locations_ship_by_name(self):
+    def test_goal_value_and_locations_ship(self):
         data = self.world.fill_slot_data()
-        self.assertEqual(set(data["city_trial_goal_locations"]), {str(loc) for loc in self._GOAL_LOCS})
+        self.assertEqual(data["city_trial_goal"], CityTrialGoal.option_checklist_list)
+        self.assertEqual(set(data["city_trial_goal_locations"]), names(self._GOAL_LOCS))
 
     def test_other_modes_ship_empty_sets(self):
         data = self.world.fill_slot_data()
-        for key in ("air_ride_goal_locations", "top_ride_goal_locations", "archipelago_goal_locations"):
+        for key in _LOCATION_SET_KEYS[1:]:
             with self.subTest(key=key):
                 self.assertEqual(set(data[key]), set())
 
 
-class TestSlotDataGoalKeysUnsetByDefault(KARTestBase):
-    """None of the three goal-key holdback flags ship for a goal no single unlock hands over. The
-    default City Trial goal is a checklist count, which nothing in the pool short-circuits."""
+# The three goal-key holdback flags. Each ships 1 only when its category is ungated AND the goal is keyed
+# on part of it, so the mod knows to leave exactly those bits locked while pre-filling the rest.
+# (label, options, the flags expected to be set).
+_HOLDBACK_CASES: list[tuple[str, dict, set[str]]] = [
+    ("no_goal_key", CT_ONLY, set()),
+    (
+        "legendary_pieces",
+        {**CT_ONLY, "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon},
+        {"legendary_pieces_goal_gated"},
+    ),
+    # With the category gated the mod never pre-fills its mask, so the flag stays clear.
+    (
+        "legendary_pieces_category_gated",
+        {
+            **ALL_MODES,
+            "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon,
+            "city_trial_items_gated": Toggle.option_true,
+        },
+        set(),
+    ),
+    (
+        "vs_king_dedede",
+        {
+            **CT_ONLY,
+            "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
+            "city_trial_stadiums_gated": Toggle.option_false,
+        },
+        {"vs_king_dedede_goal_gated"},
+    ),
+    (
+        "ap_star_pieces",
+        {**CT_ONLY, "archipelago_goal": ArchipelagoGoal.option_assemble_archipelago_star},
+        {"ap_star_pieces_goal_gated"},
+    ),
+]
 
-    options = CT_ONLY
-
-    def test_both_flags_zero(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(data["legendary_pieces_goal_gated"], 0)
-        self.assertEqual(data["vs_king_dedede_goal_gated"], 0)
-        self.assertEqual(data["ap_star_pieces_goal_gated"], 0)
-
-
-class TestSlotDataLegendaryPiecesGoalGated(KARTestBase):
-    """hydra_and_dragoon + item gating off: the mod must leave the six piece bits locked when it
-    pre-fills the ungated item mask."""
-
-    options = {**CT_ONLY, "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon}
-
-    def test_flag_set(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(data["city_trial_items_gated"], 0)
-        self.assertEqual(data["legendary_pieces_goal_gated"], 1)
-
-
-class TestSlotDataGoalKeyFlagOffWhenCategoryGated(KARTestBase):
-    """With the category gated the mod never pre-fills its mask, so the goal-key flag stays 0 - the
-    category's own gate flag already keeps every bit locked."""
-
-    options = {
-        **ALL_MODES,
-        "city_trial_goal": CityTrialGoal.option_hydra_and_dragoon,
-        "city_trial_items_gated": Toggle.option_true,
-    }
-
-    def test_flag_clear(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(data["city_trial_items_gated"], 1)
-        self.assertEqual(data["legendary_pieces_goal_gated"], 0)
+_HOLDBACK_FLAGS = ("legendary_pieces_goal_gated", "vs_king_dedede_goal_gated", "ap_star_pieces_goal_gated")
 
 
-class TestSlotDataVsKingDededeGoalGated(KARTestBase):
-    """beat_king_dedede + stadium gating off: the mod must leave the Vs. King Dedede bit locked when it
-    pre-fills the ungated stadium mask."""
+def _make_holdback_test(label: str, opts: dict, expected: set[str]) -> None:
+    class _Holdback(KARTestBase):
+        options = opts
 
-    options = {
-        **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_stadiums_gated": Toggle.option_false,
-    }
+        def test_holdback_flags(self):
+            data = self.world.fill_slot_data()
+            for flag in _HOLDBACK_FLAGS:
+                with self.subTest(flag=flag):
+                    self.assertEqual(data[flag], int(flag in expected))
 
-    def test_flag_set(self):
-        data = self.world.fill_slot_data()
-        self.assertEqual(data["city_trial_stadiums_gated"], 0)
-        self.assertEqual(data["vs_king_dedede_goal_gated"], 1)
+    _Holdback.__name__ = f"TestSlotDataGoalHoldback_{label}"
+    _Holdback.__qualname__ = _Holdback.__name__
+    globals()[_Holdback.__name__] = _Holdback
+
+
+for _label, _opts, _expected in _HOLDBACK_CASES:
+    _make_holdback_test(_label, _opts, _expected)

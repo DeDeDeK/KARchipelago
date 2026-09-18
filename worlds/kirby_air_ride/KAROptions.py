@@ -242,9 +242,6 @@ class APPatches(NamedRange):
 
     Use this to add more locations to the world that can hold items.
 
-    Patches are collected in order, so logic splits larger counts into groups of 20 that open one
-    after another rather than treating them as one flat pool.
-
     Set to 0 to disable AP patches.
     """
 
@@ -685,8 +682,7 @@ class CityTrialItemsGated(Toggle):
     are locked and must be unlocked by finding their corresponding items.
 
     When disabled, all game items are available from the start and no item unlock items are added to
-    the pool - except with the Hydra and Dragoon goal, which always keeps the six legendary part
-    unlocks in the pool so the goal is not winnable in the first match.
+    the pool.
     """
 
     display_name = "City Trial Items Gated"

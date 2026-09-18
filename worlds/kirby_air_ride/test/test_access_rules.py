@@ -1,18 +1,20 @@
-"""
-Access-rule tests for set_rules().
+"""Access rules for set_rules(): each case pins its locations unreachable without the gating item and
+reachable once it is collected. A random starter that would shadow an item under test is pinned via
+start_inventory."""
 
-Each test asserts the rule-protected locations are unreachable without the gating item and reachable
-when it is collected; only_check_listed=True keeps each focused on its own rule. Random starter picks
-are non-deterministic, so a test that depends on one not being chosen pins it via start_inventory.
-"""
+import unittest
+from typing import TYPE_CHECKING
 
-from BaseClasses import CollectionState, ItemClassification
+from BaseClasses import ItemClassification
 from Options import Toggle
 
+from ..KARData import GameMode
 from ..KARItems import (
+    AP_STAR_PIECE_UNLOCK_ITEMS,
     CHARACTER_MACHINE_UNLOCKS,
     DAMAGING_ABILITY_UNLOCKS,
-    GATING_CATEGORIES,
+    DD5_DAMAGING_ABILITY_UNLOCKS,
+    ITEM_TABLE,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_CHECKLIST_REWARDS,
     STADIUM_UNLOCK_ITEMS,
@@ -27,34 +29,62 @@ from ..KARRules import (
     _AR_COURSE_SUBSET_RULES,
     _BLUE_BOX_FOOD_ITEMS,
     _CHARGE_DEPENDENT_CT_MACHINES,
+    _CT_ANY_MACHINE_LOCATIONS,
+    _CT_FLIGHT_MACHINES,
     _CT_MACHINE_UNLOCKS,
     _FM_20MPH_EXCLUDED_MACHINES,
     _FM_20MPH_MACHINES,
     _FM_SHORTCUT_EXCLUDED_MACHINES,
     _FM_SHORTCUT_MACHINES,
     _GREEN_BOX_ITEMS,
+    _PATCH_LOCATION_RULES,
     _STEERABLE_CT_MACHINES,
     _SWALLOW_ENEMY_COURSE_RULES,
+    _TAC_LOOT_ABILITY_UNLOCK,
+    _TAC_LOOT_ITEM_UNLOCKS,
     _TF_AIRBORNE_EXCLUDED_MACHINES,
     _TF_AIRBORNE_MACHINES,
     _TR_ABILITY_ITEM_KEYS,
     _TR_COURSE_SUBSET_RULES,
+    _TR_ITEM_LOCATION_RULES,
 )
-from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, items_of_type
+from . import (
+    ALL_MODES,
+    AR_AND_TR,
+    AR_ONLY,
+    CT_ONLY,
+    OVERLAP_REWARDS,
+    TR_ONLY,
+    KARTestBase,
+    items_of_type,
+    names,
+)
 
-# Overlapping checklist rewards per gating option (always excluded from the pool).
-_OVERLAP = {cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES}
+# Type-check time the mixin below inherits KARTestBase so `self.*` resolves; at runtime it is `object`.
+_MixinBase = KARTestBase if TYPE_CHECKING else object
 
-# Pin random starter picks so they don't shadow items under test. Only categories that grant a
-# random starter need pinning: stadiums, machines, AR/TR courses, and colors.
+
+def _register(cls: type, name: str) -> None:
+    cls.__name__ = name
+    cls.__qualname__ = name
+    globals()[name] = cls
+
+
+# Pin random starter picks so they cannot shadow an item under test. Only the categories that grant a
+# random starter need pinning: stadiums, machines, AR/TR courses and colors.
 _PIN_MACHINE_STARTER = {"start_inventory": {KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR: 1}}
 _PIN_AR_COURSE_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS: 1}}
 _PIN_TR_COURSE_STARTER = {"start_inventory": {KARItemName.UNLOCK_TR_COURSE_GRASS: 1}}
 _PIN_STADIUM_STARTER = {"start_inventory": {KARItemName.UNLOCK_STADIUM_AIR_GLIDER: 1}}
 _PIN_COLOR_STARTER = {"start_inventory": {KARItemName.UNLOCK_COLOR_PINK: 1}}
-# Beanstalk Park is the one standard Air Ride course that none of the four named swallow-enemies
-# spawn on, so precollecting it disables the random AR-course starter without satisfying any swallow rule.
+# Beanstalk Park is the one standard Air Ride course none of the four named swallow-enemies spawn on.
 _PIN_BEANSTALK_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK: 1}}
+
+# The Air Ride machine pool the Fantasy Meadows rules carve their exclusions out of, derived the way
+# KARRules derives it so an excluded name that is not one of them fails rather than excluding nothing.
+_AR_MACHINE_UNLOCKS = frozenset(
+    name for name in items_of_type(KARItemType.MACHINE_UNLOCK) if GameMode.AIRRIDE in ITEM_TABLE[name].source_modes
+)
 
 # Every alternative key of a combat stadium's damage rule, as assertAccessDependency groups. The lists
 # must be exhaustive: the helper collects everything NOT listed, so a missing key fails the test.
@@ -71,6 +101,13 @@ _DEDEDE_DAMAGE_KEYS = [
 _DERBY_DAMAGE_KEYS = [
     *_DEDEDE_DAMAGE_KEYS,
     # Hydra only counts alongside Charge, so it is one group rather than two.
+    [KARItemName.UNLOCK_MACHINE_HYDRA, KARItemName.UNLOCK_BASE_ABILITY_CHARGE],
+]
+# Derby 5 spawns only four of the copy panels, so it keeps its own, shorter list.
+_DERBY5_DAMAGE_KEYS = [
+    [KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN],
+    *([machine] for machine in CHARACTER_MACHINE_UNLOCKS),
+    *([ability] for ability in DD5_DAMAGING_ABILITY_UNLOCKS),
     [KARItemName.UNLOCK_MACHINE_HYDRA, KARItemName.UNLOCK_BASE_ABILITY_CHARGE],
 ]
 
@@ -145,9 +182,8 @@ class TestAbilitiesGatingApplied(KARTestBase):
                 self.assertAccessDependency([location], [[unlock]], only_check_listed=True)
 
     def test_generic_swallow_locations_ungated(self):
-        # "Swallow N enemies" / "garbage enemies" take any enemy, so they carry no ability rule and are
-        # reachable while abilities are gated. Their only rule is the course one every enemy cell has,
-        # and the random course starter can be Nebula Belt, so collect a course that spawns enemies.
+        # These take any enemy, so their only rule is the course one every enemy cell carries - and the
+        # random starter can be Nebula Belt, so collect a course that actually spawns enemies.
         self.collect(self.world.create_item(KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS))
         for location in (
             ARLocation.SWALL_200_ENEMIES,
@@ -387,10 +423,17 @@ class TestCombatStadiumDamageRules(KARTestBase):
         self.assertAccessDependency(
             [
                 CTLocation.STADIUM_DD1_KO_YOUR_RIVALS_5,
-                CTLocation.STADIUM_DD5_KO_A_RIVAL_10X,
+                CTLocation.STADIUM_DD4_KO_YOUR_RIVALS_5,
                 CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X,
             ],
             _DERBY_DAMAGE_KEYS,
+            only_check_listed=True,
+        )
+
+    def test_destruction_derby_5_needs_one_of_its_own_panels(self):
+        self.assertAccessDependency(
+            [CTLocation.STADIUM_DD5_KO_A_RIVAL_10X, CTLocation.STADIUM_DD5_KO_YOUR_RIVALS_5],
+            _DERBY5_DAMAGE_KEYS,
             only_check_listed=True,
         )
 
@@ -403,11 +446,10 @@ class TestCombatStadiumDamageRules(KARTestBase):
 
     def test_hydra_alone_does_not_open_the_derby(self):
         # Hydra is the only machine that KOs by ramming, and it needs Charge to move at all.
-        state = CollectionState(self.multiworld)
-        self.collect_all_but([name for group in _DERBY_DAMAGE_KEYS for name in group], state)
+        state = self.state_without([name for group in _DERBY_DAMAGE_KEYS for name in group])
         for item in self.get_items_by_name([KARItemName.UNLOCK_MACHINE_HYDRA]):
             state.collect(item)
-        self.assertFalse(state.can_reach(CTLocation.STADIUM_DD1_KO_YOUR_RIVALS_5, "Location", self.player))
+        self.assertFalse(self.reaches(state, CTLocation.STADIUM_DD1_KO_YOUR_RIVALS_5))
 
 
 class TestCombatStadiumDamageRulesAbilitiesUngated(KARTestBase):
@@ -485,7 +527,7 @@ class TestPatchesGatingApplied(KARTestBase):
 
 class TestCityTrialItemsGatingApplied(KARTestBase):
     """city_trial_items_gated ON: item-specific locations need their unlock items.
-    Uses ALL_MODES because the 30 added unlock items need more default locations than CT-only provides."""
+    Uses ALL_MODES because the 36 added unlock items need more default locations than CT-only provides."""
 
     options = {**ALL_MODES, "city_trial_items_gated": Toggle.option_true}
 
@@ -515,38 +557,41 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
                 self.assertAccessDependency([location], [[unlock]], only_check_listed=True)
 
     def test_tac_location_needs_something_to_steal(self):
-        # "Steal over 8 items from Tac" needs some item type able to spawn for Tac to carry off - any CT
-        # item unlock except All Up, whose city fall chance is zero.
+        # "Steal over 8 items from Tac" needs a kind carrying weight in Tac's own column of the event
+        # drop table: the nine patches, Sleep, All Up or one of the twelve foods. Every other item kind
+        # sits at 0 there, and the six legendary pieces have no row at all.
         item_unlocks = items_of_type(KARItemType.CT_ITEM_UNLOCK)
-        stealable = sorted(item_unlocks - {KARItemName.UNLOCK_ITEM_ALL_UP})
+        patch_unlocks = items_of_type(KARItemType.CT_PATCH_UNLOCK)
+        held_out = item_unlocks | patch_unlocks | {_TAC_LOOT_ABILITY_UNLOCK}
 
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(item_unlocks, state)
-        for item in self.multiworld.precollected_items[self.player]:
-            if item.name in item_unlocks:
-                state.remove(item)
+        loot = [*sorted(_TAC_LOOT_ITEM_UNLOCKS), *sorted(patch_unlocks), _TAC_LOOT_ABILITY_UNLOCK]
+        not_loot = sorted(item_unlocks - set(_TAC_LOOT_ITEM_UNLOCKS))
+
+        state = self.state_without(held_out)
 
         self.assertFalse(
-            state.can_reach(CTLocation.STEAL_8_FROM_TAC, "Location", self.player),
-            "reachable with no item unlock held",
+            self.reaches(state, CTLocation.STEAL_8_FROM_TAC),
+            "reachable with no Tac loot held",
         )
 
-        # All Up never spawns in the city on its own, so it alone must not open the cell.
-        all_up = self.world.create_item(KARItemName.UNLOCK_ITEM_ALL_UP)
-        state.collect(all_up)
-        self.assertFalse(
-            state.can_reach(CTLocation.STEAL_8_FROM_TAC, "Location", self.player),
-            "reachable with only All Up held",
-        )
-        state.remove(all_up)
-
-        # Any other single item unlock is enough.
-        for unlock in stealable:
+        # Any single kind with weight in his column is enough - one type respawns as he throws.
+        for unlock in loot:
             item = self.world.create_item(unlock)
             state.collect(item)
             self.assertTrue(
-                state.can_reach(CTLocation.STEAL_8_FROM_TAC, "Location", self.player),
+                self.reaches(state, CTLocation.STEAL_8_FROM_TAC),
                 f"not reachable with only {unlock}",
+            )
+            state.remove(item)
+
+        # Nothing else is loot, the legendary pieces included: Tac throws a roll over his column, never
+        # the carrier box that is the pieces' only delivery.
+        for unlock in not_loot:
+            item = self.world.create_item(unlock)
+            state.collect(item)
+            self.assertFalse(
+                self.reaches(state, CTLocation.STEAL_8_FROM_TAC),
+                f"reachable with only {unlock}, which has no weight in Tac's column",
             )
             state.remove(item)
 
@@ -567,18 +612,14 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
             | items_of_type(KARItemType.ABILITY_UNLOCK)
         )
 
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(counting_unlocks, state)
-        # Drop any precollected counting unlock so the cells are gated by the rule alone.
-        for item in self.multiworld.precollected_items[self.player]:
-            if item.name in counting_unlocks:
-                state.remove(item)
+        # Everything but the counting unlocks, precollected copies included.
+        state = self.state_without(counting_unlocks)
 
         # Everything except counting unlocks is now collected, including box unlocks. Boxes are not a
         # counting source, so the cells stay unreachable (doubles as the "breaking a box does not count" check).
         for location in pickup_locations:
             self.assertFalse(
-                state.can_reach(location, "Location", self.player),
+                self.reaches(state, location),
                 f"{location} reachable with no counting-item unlock held",
             )
         # Any single counting unlock makes every cell reachable. Build via create_item so the check
@@ -588,15 +629,16 @@ class TestCityTrialItemsGatingApplied(KARTestBase):
             state.collect(item)
             for location in pickup_locations:
                 self.assertTrue(
-                    state.can_reach(location, "Location", self.player),
+                    self.reaches(state, location),
                     f"{location} not reachable with only {unlock}",
                 )
             state.remove(item)
 
 
 class TestCityTrialItemsGatingNotApplied(KARTestBase):
-    """city_trial_items_gated OFF: item unlocks aren't in the pool and the item-count cells have no
-    rule, so they are reachable with nothing collected."""
+    """city_trial_items_gated OFF: every item type spawns from connect, so no item unlock exists and the
+    cells that count items carry no item rule. What they keep is whatever else still gates them - Tac's
+    event unlock, and the Red Box the legendary pieces arrive in."""
 
     options = {**CT_ONLY, "city_trial_items_gated": Toggle.option_false}
 
@@ -609,22 +651,28 @@ class TestCityTrialItemsGatingNotApplied(KARTestBase):
             with self.subTest(location=location):
                 self.assertTrue(self.can_reach_location(location))
 
-    def test_tac_location_carries_no_item_rule(self):
-        # Every item type spawns with the gate off, so Tac always has loot and the cell keeps only its
-        # event rule (that gate is on by default here). The event unlock alone must open it.
-        self.assertFalse(self.can_reach_location(CTLocation.STEAL_8_FROM_TAC))
-        self.collect_by_name(KARItemName.UNLOCK_EVENT_TAC)
-        self.assertTrue(self.can_reach_location(CTLocation.STEAL_8_FROM_TAC))
-
     def test_item_unlock_items_absent_from_pool(self):
-        names = self.world_item_names()
-        self.assertNotIn(KARItemName.UNLOCK_ITEM_ALL_UP, names)
-        self.assertNotIn(KARItemName.UNLOCK_ITEM_HOT_DOG, names)
+        world_items = self.world_item_names()
+        self.assertNotIn(KARItemName.UNLOCK_ITEM_ALL_UP, world_items)
+        self.assertNotIn(KARItemName.UNLOCK_ITEM_HOT_DOG, world_items)
+
+    def test_tac_keeps_only_its_event_rule(self):
+        # Tac always has loot now, so the event unlock alone must open the cell.
+        state = self.state_without([KARItemName.UNLOCK_EVENT_TAC])
+        self.assertFalse(self.reaches(state, CTLocation.STEAL_8_FROM_TAC))
+        state.collect(self.world.create_item(KARItemName.UNLOCK_EVENT_TAC))
+        self.assertTrue(self.reaches(state, CTLocation.STEAL_8_FROM_TAC))
+
+    def test_assemble_cell_keeps_only_its_red_box_rule(self):
+        state = self.state_without([KARItemName.UNLOCK_BOX_RED])
+        self.assertFalse(self.reaches(state, CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
+        state.collect(self.world.create_item(KARItemName.UNLOCK_BOX_RED))
+        self.assertTrue(self.reaches(state, CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
 
 
 class TestCTTacNeedsEventAndLoot(KARTestBase):
     """Events + items gated: the Tac cell composes both rules -- Tac has to show up AND have something to
-    steal. Either key alone leaves it unreachable. ALL_MODES because the ~30 item unlocks the item gate
+    steal. Either key alone leaves it unreachable. ALL_MODES because the 36 item unlocks the item gate
     adds need more default locations than CT-only provides."""
 
     options = {
@@ -634,60 +682,61 @@ class TestCTTacNeedsEventAndLoot(KARTestBase):
     }
 
     def test_needs_both_the_event_and_an_item(self):
-        keys = items_of_type(KARItemType.CT_ITEM_UNLOCK) | {KARItemName.UNLOCK_EVENT_TAC}
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(keys, state)
-        for item in self.multiworld.precollected_items[self.player]:
-            if item.name in keys:
-                state.remove(item)
+        # Patches and Sleep carry weight in Tac's column too, so they are held out alongside the item
+        # unlocks - otherwise the loot half is already satisfied before the test starts.
+        keys = (
+            items_of_type(KARItemType.CT_ITEM_UNLOCK)
+            | items_of_type(KARItemType.CT_PATCH_UNLOCK)
+            | {_TAC_LOOT_ABILITY_UNLOCK, KARItemName.UNLOCK_EVENT_TAC}
+        )
+        state = self.state_without(keys)
 
         loc = CTLocation.STEAL_8_FROM_TAC
-        self.assertFalse(state.can_reach(loc, "Location", self.player), "reachable with neither key")
+        self.assertFalse(self.reaches(state, loc), "reachable with neither key")
 
         event = self.world.create_item(KARItemName.UNLOCK_EVENT_TAC)
         state.collect(event)
-        self.assertFalse(state.can_reach(loc, "Location", self.player), "reachable with the event but no loot")
+        self.assertFalse(self.reaches(state, loc), "reachable with the event but no loot")
         state.remove(event)
 
         loot = self.world.create_item(KARItemName.UNLOCK_ITEM_APPLE)
         state.collect(loot)
-        self.assertFalse(state.can_reach(loc, "Location", self.player), "reachable with loot but no event")
+        self.assertFalse(self.reaches(state, loc), "reachable with loot but no event")
 
         state.collect(self.world.create_item(KARItemName.UNLOCK_EVENT_TAC))
-        self.assertTrue(state.can_reach(loc, "Location", self.player), "not reachable with both keys")
+        self.assertTrue(self.reaches(state, loc), "not reachable with both keys")
 
 
-class TestMachinesSingleGatingApplied(KARTestBase):
-    """machines_gated ON: machine-specific locations need their unlock items."""
-
-    options = {**ALL_MODES, "machines_gated": Toggle.option_true, **_PIN_MACHINE_STARTER}
-
-    def test_formula_ct_location_needs_unlock(self):
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DR1_17_00_FORMULA],
-            [[KARItemName.UNLOCK_MACHINE_FORMULA_STAR]],
-            only_check_listed=True,
-        )
-
-    def test_shadow_ar_location_needs_unlock(self):
-        self.assertAccessDependency(
-            [ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR],
-            [[KARItemName.UNLOCK_MACHINE_SHADOW_STAR]],
-            only_check_listed=True,
-        )
-
-
-class TestMachinesPairGatingApplied(KARTestBase):
-    """machines_gated ON: 'bust X on Y' locations need BOTH machine unlocks."""
+class TestMachinesGatingApplied(KARTestBase):
+    """machines_gated ON: a cell naming a machine needs that machine's unlock, and a "bust X on Y" cell
+    needs both. The Free Run swap cell needs two distinct ones, since Free Run only ever places machines
+    other than the rider's current one."""
 
     options = {**ALL_MODES, "machines_gated": Toggle.option_true, **_PIN_MACHINE_STARTER}
 
-    def test_bust_wheelie_bike_on_warpstar_needs_both(self):
+    def test_named_machine_cells_need_their_unlock(self):
+        for loc, unlock in (
+            (CTLocation.STADIUM_DR1_17_00_FORMULA, KARItemName.UNLOCK_MACHINE_FORMULA_STAR),
+            (ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR, KARItemName.UNLOCK_MACHINE_SHADOW_STAR),
+        ):
+            with self.subTest(location=loc):
+                self.assertAccessDependency([loc], [[unlock]], only_check_listed=True)
+
+    def test_bust_cells_need_both_machines(self):
         self.assertAccessDependency(
             [CTLocation.BUST_WHEELIE_BIKE_ON_WARPSTAR],
             [[KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE, KARItemName.UNLOCK_MACHINE_WARP_STAR]],
             only_check_listed=True,
         )
+
+    def test_free_run_swap_cell_needs_two_distinct_machines(self):
+        loc = CTLocation.FR_CHANGE_AIR_RIDE_MACHINES_10X
+        # The pinned Flight Warp Star is one of the two; one more machine completes the pair.
+        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
+        state.collect(self.world.create_item(KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR))
+        self.assertFalse(self.reaches(state, loc), "one machine cannot be swapped away from")
+        state.collect(self.world.create_item(KARItemName.UNLOCK_MACHINE_WARP_STAR))
+        self.assertTrue(self.reaches(state, loc))
 
 
 class TestMachinesGatingNotApplied(KARTestBase):
@@ -738,7 +787,7 @@ class TestCTOnlyMachinesGatingNotApplied(KARTestBase):
     def test_no_machine_unlock_or_reward_items(self):
         names = self.world_item_names()
         self.assertEqual(sorted(n for n in names if n in items_of_type(KARItemType.MACHINE_UNLOCK)), [])
-        for reward in _OVERLAP["machines_gated"]:
+        for reward in OVERLAP_REWARDS["machines_gated"]:
             self.assertNotIn(reward, names, f"{reward} (machine overlap reward) must be absent")
 
     def test_machine_cells_reachable_without_gate(self):
@@ -757,7 +806,7 @@ class TestTopRideItemsGatingApplied(KARTestBase):
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true}
 
     def test_hammer_location_needs_unlock(self):
-        # FIRST_WHILE_HOLDING_HAMMER is in TR_TIME_ATTACK (not course-gated).
+        # FIRST_WHILE_HOLDING_HAMMER is in the TOP_RIDE root region (not course-gated).
         self.assertAccessDependency(
             [TRLocation.FIRST_WHILE_HOLDING_HAMMER],
             [[KARItemName.UNLOCK_TR_ITEM_HAMMER]],
@@ -780,84 +829,16 @@ class TestTopRideItemsGatingApplied(KARTestBase):
         )
 
 
-class TestProgressiveStadiumGating(KARTestBase):
-    """progressive_stadiums ON: each stadium region requires its unlock item.
-    Pin starter to Air Glider so other stadiums remain locked."""
+class TestStadiumGatingApplied(KARTestBase):
+    """Stadiums gated: every one of the 24, the six vanilla hands out as checklist rewards included, is
+    gated by its own Unlock Stadium item, so all 24 are obtainable and progression-classified and the
+    overlapping stadium rewards leave the pool. Starter pinned to Air Glider so the rest stay locked."""
 
-    options = {
-        **CT_ONLY,
-        "city_trial_stadiums_gated": Toggle.option_true,
-        **_PIN_STADIUM_STARTER,
-    }
+    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true, **_PIN_STADIUM_STARTER}
 
-    def test_dr1_stadium_location_needs_dr1_unlock(self):
-        # DRAG_RACE_1 has no checklist-reward overlap, so the unlock item gates it directly.
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DR1_FINISH_00_24_00],
-            [[KARItemName.UNLOCK_STADIUM_DRAG_RACE_1]],
-            only_check_listed=True,
-        )
-
-    def test_dr4_stadium_location_needs_dr4_unlock(self):
-        # DRAG_RACE_4 gates on its own Unlock Stadium item like every other stadium, even though vanilla
-        # hands it out as a checklist reward.
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DR4_FINISH_00_24_00],
-            [[KARItemName.UNLOCK_STADIUM_DRAG_RACE_4]],
-            only_check_listed=True,
-        )
-
-
-class TestProgressiveStadiumAllGroupGating(KARTestBase):
-    """STADIUM_DD_ALL and STADIUM_KM_ALL are reachable via ANY of their sub-stadium unlocks
-    (HasAny rule). Pin starter so neither DD nor KM unlocks are pre-collected."""
-
-    options = {
-        **CT_ONLY,
-        "city_trial_stadiums_gated": Toggle.option_true,
-        **_PIN_STADIUM_STARTER,
-    }
-
-    def test_dd_all_reachable_via_any_dd_unlock(self):
-        # Every DD stadium gates on its own Unlock Stadium item. The HasAny rule accepts any of these
-        # five, so all five must be listed.
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X],
-            [
-                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1],
-                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2],
-                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3],
-                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4],
-                [KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5],
-            ],
-            only_check_listed=True,
-        )
-
-    def test_km_all_reachable_via_any_km_unlock(self):
-        # Either Kirby Melee unlock opens the KM (All) cell, so both must be listed.
-        self.assertAccessDependency(
-            [CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES],
-            [
-                [KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1],
-                [KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2],
-            ],
-            only_check_listed=True,
-        )
-
-
-class TestStadiumNeedsOnlyOwnUnlock(KARTestBase):
-    """Regression: the five stadiums vanilla hands out as checklist rewards need only their own Unlock
-    Stadium item, not their vanilla predecessor's. They used to sit behind a DD3<-DD2 / DR4<-DR3 /
-    KM2<-KM1 style chain, which the mod does not reproduce - stadium availability comes from the AP
-    unlock mask, never from completing the box. Same class of stale rule as the AR machine chains."""
-
-    options = {
-        **CT_ONLY,
-        "city_trial_stadiums_gated": Toggle.option_true,
-        **_PIN_STADIUM_STARTER,
-    }
-
-    # (location, its own stadium unlock, the predecessor unlock it must NOT need).
+    # (location, its own stadium unlock, the vanilla predecessor unlock it must NOT need). They used to
+    # sit behind a DD3<-DD2 / DR4<-DR3 / KM2<-KM1 chain, which the mod does not reproduce - stadium
+    # availability comes from the AP unlock mask, never from completing the box.
     _CHAIN_STADIUMS: list[tuple[str, str, str]] = [
         (
             CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5,
@@ -886,78 +867,133 @@ class TestStadiumNeedsOnlyOwnUnlock(KARTestBase):
         ),
     ]
 
-    def test_reachable_on_own_unlock_alone(self):
+    def test_unlocks_are_obtainable_and_progression(self):
+        world_items = self.world_item_names()
+        pool = {it.name: it for it in self.itempool_items()}
+        for unlock in items_of_type(KARItemType.CT_STADIUM_UNLOCK):
+            with self.subTest(unlock=unlock):
+                self.assertIn(unlock, world_items, f"{unlock} must be obtainable when stadiums are gated")
+                if unlock in pool:
+                    self.assertTrue(
+                        pool[unlock].classification & ItemClassification.progression,
+                        f"{unlock} must be progression-classified to gate its stadium",
+                    )
+
+    def test_overlap_rewards_excluded(self):
+        world_items = self.world_item_names()
+        for reward in STADIUM_CHECKLIST_REWARDS:
+            with self.subTest(reward=reward):
+                self.assertNotIn(reward, world_items, "a gated stadium is keyed by its unlock, not its reward")
+
+    def test_a_stadium_cell_needs_its_own_unlock(self):
+        # DRAG_RACE_1 has no checklist-reward overlap; DRAG_RACE_4 does, and still gates on its unlock.
+        for loc, unlock in (
+            (CTLocation.STADIUM_DR1_FINISH_00_24_00, KARItemName.UNLOCK_STADIUM_DRAG_RACE_1),
+            (CTLocation.STADIUM_DR4_FINISH_00_24_00, KARItemName.UNLOCK_STADIUM_DRAG_RACE_4),
+        ):
+            with self.subTest(location=loc):
+                self.assertAccessDependency([loc], [[unlock]], only_check_listed=True)
+
+    def test_an_all_group_cell_opens_on_any_of_its_sub_stadiums(self):
+        # The HasAny rule accepts any one, so every member has to be listed for the helper to pass.
+        for loc, unlocks in (
+            (
+                CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X,
+                [
+                    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1,
+                    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2,
+                    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
+                    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
+                    KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5,
+                ],
+            ),
+            (
+                CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES,
+                [KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1, KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2],
+            ),
+        ):
+            with self.subTest(location=loc):
+                self.assertAccessDependency([loc], [[unlock] for unlock in unlocks], only_check_listed=True)
+
+    def test_a_reward_stadium_needs_no_vanilla_predecessor(self):
         for loc, own_unlock, predecessor in self._CHAIN_STADIUMS:
             with self.subTest(location=loc, withheld=predecessor):
-                state = CollectionState(self.multiworld)
-                state.collect(self.get_item_by_name(own_unlock), prevent_sweep=True)
+                state = self.state_with(own_unlock)
                 self.assertFalse(
-                    state.has(predecessor, self.player),
-                    f"{predecessor} leaked into the state, making this subtest vacuous",
+                    state.has(predecessor, self.player), f"{predecessor} leaked in, making this subtest vacuous"
                 )
-                self.assertTrue(
-                    state.can_reach(loc, "Location", self.player),
-                    f"{loc} should be reachable on {own_unlock} alone",
-                )
+                self.assertTrue(self.reaches(state, loc), f"{loc} should be reachable on {own_unlock} alone")
+                # Guard against the above passing for the wrong reason.
+                self.assertAccessDependency([loc], [[own_unlock]], only_check_listed=True)
 
-    def test_unreachable_without_own_unlock(self):
-        # Guard against the above passing for the wrong reason.
-        for loc, own_unlock, _ in self._CHAIN_STADIUMS:
-            with self.subTest(location=loc, stripped=own_unlock):
-                self.assertAccessDependency(
-                    [loc],
-                    [[own_unlock]],
-                    only_check_listed=True,
-                )
+    def test_play_count_cells_need_more_than_that_many_stadiums(self):
+        # "Play in over 10/20 stadium modes" needs 11 / 21 unlocked, since a locked one cannot be
+        # entered. Withholding `short_by` non-starter stadiums leaves exactly one short of that.
+        others = sorted(names(STADIUM_UNLOCK_ITEMS) - {str(KARItemName.UNLOCK_STADIUM_AIR_GLIDER)})
+        for loc, short_by in (
+            (CTLocation.STADIUM_PLAY_10_STADIUM_MODES, 14),
+            (CTLocation.STADIUM_PLAY_20_STADIUM_MODES, 4),
+        ):
+            with self.subTest(location=loc):
+                # Only the pinned Air Glider starter is held - far short of either threshold.
+                self.assertFalse(self.can_reach_location(loc))
+                missing = others[:short_by]
+                state = self.state_without(missing)
+                self.assertFalse(self.reaches(state, loc), "reachable one stadium short of the threshold")
+                state.collect(self.world.create_item(missing[0]))
+                self.assertTrue(self.reaches(state, loc))
 
 
-class TestStadiumGatingUsesUnlockItems(KARTestBase):
-    """Stadiums gated: every stadium, including the six vanilla unlocks via a checklist reward, is gated
-    by its own Unlock Stadium item. So all 24 are obtainable and progression-classified, while the
-    overlapping stadium checklist rewards leave the pool - they gate nothing."""
+class TestStadiumDragRaceAllGating(KARTestBase):
+    """DR_ALL's only box is the Archipelago photo finish, which the mod counts in all four DRAG RACE
+    stadiums, so this case needs the AP checklist on."""
 
     options = {
         **CT_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+        "archipelago_checklist_amount": 3,
         "city_trial_stadiums_gated": Toggle.option_true,
         **_PIN_STADIUM_STARTER,
     }
 
-    def test_stadium_unlocks_obtainable_and_progression(self):
-        names = self.world_item_names()
-        pool = {it.name: it for it in self.itempool_items()}
-        for unlock in items_of_type(KARItemType.CT_STADIUM_UNLOCK):
-            self.assertIn(unlock, names, f"{unlock} must be obtainable when stadiums are gated")
-            if unlock in pool:
-                self.assertTrue(
-                    pool[unlock].classification & ItemClassification.progression,
-                    f"{unlock} must be progression-classified to gate its stadium",
-                )
-
-    def test_overlap_rewards_excluded(self):
-        names = self.world_item_names()
-        for reward in STADIUM_CHECKLIST_REWARDS:
-            self.assertNotIn(reward, names, f"{reward} should be excluded (stadium gated by its unlock item)")
+    def test_dr_all_reachable_via_any_dr_unlock(self):
+        self.assertAccessDependency(
+            [APLocation.DR_PHOTO_FINISH],
+            [
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_1],
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_2],
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_3],
+                [KARItemName.UNLOCK_STADIUM_DRAG_RACE_4],
+            ],
+            only_check_listed=True,
+        )
 
 
-class TestStadiumUngatedReachable(KARTestBase):
-    """Stadiums ungated: the mod unlocks all 24 stadiums at connect, so every stadium cell - including the
-    six that double as checklist rewards - is reachable from the start, no Unlock Stadium items exist, and
-    the six stadium reward items are excluded from the pool."""
+class TestStadiumGatingNotApplied(KARTestBase):
+    """Stadiums ungated: the mod unlocks all 24 at connect, so every stadium cell - the six that double
+    as checklist rewards and both play-count cells included - is reachable from the start, and the six
+    stadium reward items are excluded from the pool."""
 
     options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_false}
 
-    def test_ordinary_stadium_reachable_empty(self):
-        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DR1_FINISH_00_24_00))
-
-    def test_reward_overlap_stadium_cells_reachable_empty(self):
-        # DR4 / DD3 are reward-overlap stadiums; they open from the start like every other stadium.
-        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DR4_FINISH_00_24_00))
-        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5))
+    def test_stadium_cells_reachable_empty(self):
+        for loc in (
+            CTLocation.STADIUM_DR1_FINISH_00_24_00,
+            # DR4 / DD3 are the reward-overlap stadiums.
+            CTLocation.STADIUM_DR4_FINISH_00_24_00,
+            CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5,
+            # 24 unlocked is over both thresholds.
+            CTLocation.STADIUM_PLAY_10_STADIUM_MODES,
+            CTLocation.STADIUM_PLAY_20_STADIUM_MODES,
+        ):
+            with self.subTest(location=loc):
+                self.assertTrue(self.can_reach_location(loc))
 
     def test_stadium_rewards_excluded(self):
-        names = self.world_item_names()
+        world_items = self.world_item_names()
         for reward in STADIUM_CHECKLIST_REWARDS:
-            self.assertNotIn(reward, names, f"{reward} should be excluded when stadiums are ungated")
+            with self.subTest(reward=reward):
+                self.assertNotIn(reward, world_items)
 
 
 class TestBoxesGatingApplied(KARTestBase):
@@ -1006,14 +1042,8 @@ class TestBoxesGatedWithContentsGated(KARTestBase):
         "abilities_gated": Toggle.option_true,
     }
 
-    def _state_with(self, *item_names: str) -> CollectionState:
-        state = CollectionState(self.multiworld)
-        for name in item_names:
-            state.collect(self.world.create_item(name), prevent_sweep=True)
-        return state
-
     def test_box_unlocks_alone_do_not_open_break_box_cells(self):
-        state = self._state_with(
+        state = self.state_with(
             KARItemName.UNLOCK_BOX_BLUE,
             KARItemName.UNLOCK_BOX_GREEN,
             KARItemName.UNLOCK_BOX_RED,
@@ -1021,21 +1051,21 @@ class TestBoxesGatedWithContentsGated(KARTestBase):
         for location in (CTLocation.BREAK_500_BOXES, CTLocation.BREAK_1000_BOXES):
             with self.subTest(location=location):
                 self.assertFalse(
-                    state.can_reach(location, "Location", self.player),
+                    self.reaches(state, location),
                     f"{location} should need contents for an unlocked color, not just the color",
                 )
 
     def test_a_color_with_contents_opens_break_box_cells(self):
-        state = self._state_with(KARItemName.UNLOCK_BOX_BLUE, KARItemName.UNLOCK_PATCH_BOOST)
+        state = self.state_with(KARItemName.UNLOCK_BOX_BLUE, KARItemName.UNLOCK_PATCH_BOOST)
         for location in (CTLocation.BREAK_500_BOXES, CTLocation.BREAK_1000_BOXES):
             with self.subTest(location=location):
-                self.assertTrue(state.can_reach(location, "Location", self.player))
+                self.assertTrue(self.reaches(state, location))
 
     def test_contents_without_the_color_does_not_open_break_box_cells(self):
-        state = self._state_with(KARItemName.UNLOCK_PATCH_BOOST, *_GREEN_BOX_ITEMS)
+        state = self.state_with(KARItemName.UNLOCK_PATCH_BOOST, *_GREEN_BOX_ITEMS)
         for location in (CTLocation.BREAK_500_BOXES, CTLocation.BREAK_1000_BOXES):
             with self.subTest(location=location):
-                self.assertFalse(state.can_reach(location, "Location", self.player))
+                self.assertFalse(self.reaches(state, location))
 
 
 class TestBoxesUngatedWithContentsGated(KARTestBase):
@@ -1097,66 +1127,135 @@ class TestTRCourseGatingApplied(KARTestBase):
         )
 
 
-# The enemy -> spawn-course map under test is the production table itself, reused here so the wiring
-# tests can't drift from it. Beanstalk Park and Nebula Belt are in no enemy's set.
 _ALL_AR_COURSE_UNLOCKS = frozenset(items_of_type(KARItemType.AR_COURSE_UNLOCK))
+_ALL_TR_COURSE_UNLOCKS = frozenset(items_of_type(KARItemType.TR_COURSE_UNLOCK))
 
+# Courses pinned as the starter for each subset rule below: one the rule does NOT accept, so it
+# suppresses the random pick without satisfying the rule under test.
+_PIN_AR_CHECKER_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS: 1}}
+_PIN_TR_SKY_STARTER = {"start_inventory": {KARItemName.UNLOCK_TR_COURSE_SKY: 1}}
 
-class TestARSwallowEnemyCourseGatingApplied(KARTestBase):
-    """air_ride_courses_gated ON: a "swallow a named copy-ability enemy" cell needs one of the courses
-    that enemy actually spawns on, not merely the ability - these cells live in the generic Air Ride
-    region and would otherwise be reachable with no course unlocked. abilities_gated is OFF so the course
-    HasAny is the only gate under test, and Beanstalk Park is pinned as the starter: the one standard
-    course none of these enemies spawn on, so it suppresses the random pick without satisfying a rule."""
-
-    options = {
-        **AR_ONLY,
-        "abilities_gated": Toggle.option_false,
-        "air_ride_courses_gated": Toggle.option_true,
-        **_PIN_BEANSTALK_STARTER,
+_CLIFF_COURSES = frozenset(
+    {
+        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+        KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
     }
+)
+_AIR_FINISH_COURSES = frozenset(
+    {
+        KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+        KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+        KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+        KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+        KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
+    }
+)
+_NO_WALL_COURSES = frozenset(
+    {
+        KARItemName.UNLOCK_TR_COURSE_GRASS,
+        KARItemName.UNLOCK_TR_COURSE_SAND,
+        KARItemName.UNLOCK_TR_COURSE_LIGHT,
+        KARItemName.UNLOCK_TR_COURSE_METAL,
+    }
+)
 
-    def test_unreachable_with_all_courses_held_back(self):
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-        for location in _SWALLOW_ENEMY_COURSE_RULES:
+
+def _make_course_subset_test(opts: dict, all_courses: frozenset, rules: dict) -> type:
+    """A cell only some courses can complete. Without its own rule the blanket "any course" rule would
+    call it reachable on any one of them, so each listed course has to satisfy it alone and the unlisted
+    ones must not satisfy it even all together."""
+
+    class _CourseSubset(KARTestBase):
+        options = opts
+
+        def test_unreachable_with_every_course_held_back(self):
+            state = self.state_without(all_courses)
+            for location in rules:
+                with self.subTest(location=location):
+                    self.assertFalse(self.reaches(state, location), f"{location} reachable with no course")
+
+        def test_each_listed_course_independently_satisfies(self):
+            for location, courses in rules.items():
+                for course in courses:
+                    with self.subTest(location=location, course=course):
+                        state = self.state_without(all_courses)
+                        state.collect(self.world.create_item(course))
+                        self.assertTrue(self.reaches(state, location), f"{location} needs only {course}")
+
+        def test_the_unlisted_courses_together_do_not_satisfy(self):
+            # Collecting EVERY course the rule leaves out pins the accepted set exactly: a wrongly
+            # omitted course would make the cell reachable here.
+            for location, courses in rules.items():
+                unlisted = sorted(all_courses - frozenset(courses))
+                with self.subTest(location=location):
+                    state = self.state_without(all_courses)
+                    for course in unlisted:
+                        state.collect(self.world.create_item(course))
+                    self.assertFalse(self.reaches(state, location), f"{location} reachable on {unlisted}")
+
+    return _CourseSubset
+
+
+class TestCourseSubsetRuleTables(unittest.TestCase):
+    """Non-vacuity for the behavioural cases below: they prove whatever the production tables happen to
+    hold, so the hand-written expectations are pinned against them here. The swallow rules are the
+    exception - their production table IS the enemy-spawn map, so there is nothing to restate."""
+
+    def test_tables_list_exactly_the_expected_courses(self):
+        for table, location, expected in (
+            (_AR_COURSE_SUBSET_RULES, ARLocation.DROP_FROM_CLIFFS_3X, _CLIFF_COURSES),
+            (_AR_COURSE_SUBSET_RULES, ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR, _AIR_FINISH_COURSES),
+            (_TR_COURSE_SUBSET_RULES, TRLocation.LAP_NO_WALLS_AND_FIRST, _NO_WALL_COURSES),
+        ):
             with self.subTest(location=location):
-                self.assertFalse(
-                    state.can_reach(location, "Location", self.player),
-                    f"{location} reachable with no spawn course held",
-                )
+                self.assertEqual(frozenset(table[location]), expected)
 
-    def test_each_spawn_course_independently_satisfies(self):
-        for location, courses in _SWALLOW_ENEMY_COURSE_RULES.items():
-            for course in courses:
-                with self.subTest(location=location, course=course):
-                    state = CollectionState(self.multiworld)
-                    self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-                    state.collect(self.world.create_item(course))
-                    self.assertTrue(
-                        state.can_reach(location, "Location", self.player),
-                        f"{location} not reachable with only {course}",
-                    )
 
-    def test_non_spawn_courses_do_not_satisfy(self):
-        # Collecting EVERY course the enemy does not spawn on must still leave the cell unreachable, which
-        # pins the spawn-course set exactly: a wrongly omitted course would make it reachable here.
-        for location, courses in _SWALLOW_ENEMY_COURSE_RULES.items():
-            non_spawn = sorted(_ALL_AR_COURSE_UNLOCKS - set(courses))
-            with self.subTest(location=location):
-                state = CollectionState(self.multiworld)
-                self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-                for course in non_spawn:
-                    state.collect(self.world.create_item(course))
-                self.assertFalse(
-                    state.can_reach(location, "Location", self.player),
-                    f"{location} reachable with only non-spawn courses {non_spawn}",
-                )
+_COURSE_SUBSET_CASES: list[tuple[str, dict, frozenset, dict]] = [
+    # Swallowing a named copy-ability enemy needs a course that enemy actually spawns on, not merely the
+    # ability. Beanstalk Park is the pin: the one standard course none of these four enemies spawn on.
+    (
+        "ar_swallow_enemies",
+        {
+            **AR_ONLY,
+            "abilities_gated": Toggle.option_false,
+            "air_ride_courses_gated": Toggle.option_true,
+            **_PIN_BEANSTALK_STARTER,
+        },
+        _ALL_AR_COURSE_UNLOCKS,
+        _SWALLOW_ENEMY_COURSE_RULES,
+    ),
+    # "Drop from the cliffs 3 times" only completes where there is a cliff that drops you.
+    (
+        "ar_drop_from_cliffs",
+        {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER},
+        _ALL_AR_COURSE_UNLOCKS,
+        {ARLocation.DROP_FROM_CLIFFS_3X: _CLIFF_COURSES},
+    ),
+    # "Finish 1st while flying through the air" needs something to launch off near the finish line.
+    (
+        "ar_air_finish",
+        {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_CHECKER_STARTER},
+        _ALL_AR_COURSE_UNLOCKS,
+        {ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR: _AIR_FINISH_COURSES},
+    ),
+    # "Race one lap without hitting a wall and finish 1st" only completes on the four open courses.
+    (
+        "tr_no_wall_lap",
+        {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true, **_PIN_TR_SKY_STARTER},
+        _ALL_TR_COURSE_UNLOCKS,
+        {TRLocation.LAP_NO_WALLS_AND_FIRST: _NO_WALL_COURSES},
+    ),
+]
+
+for _label, _opts, _all, _rules in _COURSE_SUBSET_CASES:
+    _register(_make_course_subset_test(_opts, _all, _rules), f"TestCourseSubsetRule_{_label}")
 
 
 class TestARSwallowEnemyAbilityAndCourseGating(KARTestBase):
-    """abilities_gated AND air_ride_courses_gated both ON: a swallow-named-enemy cell needs BOTH the
-    copy-ability unlock AND a course the enemy spawns on. Verifies the two rules compose with AND."""
+    """abilities_gated AND air_ride_courses_gated both ON: a swallow-named-enemy cell needs BOTH the copy
+    ability unlock AND a course the enemy spawns on, so the two rules compose with AND."""
 
     options = {
         **AR_ONLY,
@@ -1169,15 +1268,13 @@ class TestARSwallowEnemyAbilityAndCourseGating(KARTestBase):
         location = ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST
         ability = KARItemName.UNLOCK_ABILITY_SWORD
         course = KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS  # one of Sword Knight's spawn courses
-
-        base = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS | {ability}, base)
+        base = self.state_without(_ALL_AR_COURSE_UNLOCKS | {ability})
 
         def reachable(*items: str) -> bool:
             state = base.copy()
             for name in items:
                 state.collect(self.world.create_item(name))
-            return state.can_reach(location, "Location", self.player)
+            return self.reaches(state, location)
 
         self.assertFalse(reachable(), "reachable with neither ability nor course")
         self.assertFalse(reachable(course), "reachable with course but no ability")
@@ -1185,211 +1282,80 @@ class TestARSwallowEnemyAbilityAndCourseGating(KARTestBase):
         self.assertTrue(reachable(course, ability), "not reachable with both ability and course")
 
 
-_CLIFF_COURSES = frozenset(
-    {
-        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
-        KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
-    }
-)
-
-
-class TestARDropFromCliffsCourseGating(KARTestBase):
-    """air_ride_courses_gated ON: "drop from the cliffs 3 times" only completes on Celestial Valley or
-    Beanstalk Park, the only courses with a cliff that drops you. Without its rule the blanket "any
-    course" rule would call it reachable on any one. Starter pinned to Fantasy Meadows, neither of them."""
-
-    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
-
-    def test_rule_table_lists_exactly_the_cliff_courses(self):
-        self.assertEqual(
-            frozenset(_AR_COURSE_SUBSET_RULES[ARLocation.DROP_FROM_CLIFFS_3X]),
-            _CLIFF_COURSES,
-        )
-
-    def test_each_cliff_course_independently_satisfies(self):
-        for course in _CLIFF_COURSES:
-            with self.subTest(course=course):
-                state = CollectionState(self.multiworld)
-                self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-                state.collect(self.world.create_item(course))
-                self.assertTrue(
-                    state.can_reach(ARLocation.DROP_FROM_CLIFFS_3X, "Location", self.player),
-                    f"not reachable with only {course}",
-                )
-
-    def test_non_cliff_courses_do_not_satisfy(self):
-        # Every course without a cliff, collected together, must still leave the cell unreachable.
-        non_cliff = sorted(_ALL_AR_COURSE_UNLOCKS - _CLIFF_COURSES)
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-        for course in non_cliff:
-            state.collect(self.world.create_item(course))
-        self.assertFalse(
-            state.can_reach(ARLocation.DROP_FROM_CLIFFS_3X, "Location", self.player),
-            f"reachable with only non-cliff courses {non_cliff}",
-        )
-
-
-_AIR_FINISH_COURSES = frozenset(
-    {
-        KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
-        KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
-        KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
-        KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
-        KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
-        KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
-    }
-)
-# Checker Knights is one of the three cut courses, so pinning it disables the random AR-course starter
-# without satisfying the air-finish rule.
-_PIN_AR_CHECKER_STARTER = {"start_inventory": {KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS: 1}}
-
-
-class TestARAirFinishCourseGating(KARTestBase):
-    """air_ride_courses_gated ON: "finish 1st while flying through the air" needs a course with something
-    to launch off near the finish. Checker Knights, Frozen Hillside and Magma Flows are out; without its
-    rule the blanket "any course" rule would call it reachable on any of the three. Starter pinned to
-    Checker Knights, which is one of them."""
-
-    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_CHECKER_STARTER}
-
-    def test_rule_table_lists_exactly_the_air_finish_courses(self):
-        self.assertEqual(
-            frozenset(_AR_COURSE_SUBSET_RULES[ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR]),
-            _AIR_FINISH_COURSES,
-        )
-
-    def test_each_air_finish_course_independently_satisfies(self):
-        for course in _AIR_FINISH_COURSES:
-            with self.subTest(course=course):
-                state = CollectionState(self.multiworld)
-                self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-                state.collect(self.world.create_item(course))
-                self.assertTrue(
-                    state.can_reach(ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR, "Location", self.player),
-                    f"not reachable with only {course}",
-                )
-
-    def test_cut_courses_do_not_satisfy(self):
-        # Checker Knights, Frozen Hillside and Magma Flows together must still leave the cell unreachable.
-        cut = sorted(_ALL_AR_COURSE_UNLOCKS - _AIR_FINISH_COURSES)
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-        for course in cut:
-            state.collect(self.world.create_item(course))
-        self.assertFalse(
-            state.can_reach(ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR, "Location", self.player),
-            f"reachable with only the cut courses {cut}",
-        )
-
-
-class TestARAirFinishGatingNotApplied(KARTestBase):
-    """AR course gating OFF: all nine courses unlock at connect, so the air-finish cell needs no rule."""
-
-    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_false}
-
-    def test_reachable_with_no_courses(self):
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-        self.assertTrue(state.can_reach(ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR, "Location", self.player))
-
-
-class TestARDropFromCliffsGatingNotApplied(KARTestBase):
-    """AR course gating OFF: all nine courses unlock at connect, so the cliff cell needs no rule."""
-
-    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_false}
-
-    def test_reachable_with_no_courses(self):
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_AR_COURSE_UNLOCKS, state)
-        self.assertTrue(state.can_reach(ARLocation.DROP_FROM_CLIFFS_3X, "Location", self.player))
-
-
 _NEBULA_REGIONS = (
-    KARRegion.AR_NEBULA_BELT,
-    KARRegion.AR_TA_NEBULA_BELT,
-    KARRegion.AR_FR_NEBULA_BELT,
+    KARRegion.AIR_RIDE_NEBULA_BELT,
+    KARRegion.AIR_RIDE_TA_NEBULA_BELT,
+    KARRegion.AIR_RIDE_FR_NEBULA_BELT,
 )
-
-
-class TestARNebulaBeltGatingNotApplied(KARTestBase):
-    """AR course gating OFF: the mod unlocks all nine courses at connect, so the three Nebula Belt
-    regions are reachable from the start and the Nebula reward is excluded from the pool. Nebula
-    regions hold no AP locations, so this is checked via region reachability."""
-
-    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_false}
-
-    def test_nebula_regions_reachable_empty(self):
-        for region_name in _NEBULA_REGIONS:
-            with self.subTest(region=region_name):
-                region = self.multiworld.get_region(region_name, self.player)
-                self.assertTrue(region.can_reach(self.multiworld.state))
-
-    def test_nebula_reward_excluded(self):
-        self.assertNotIn(KARItemName.AR_REWARD_NEBULA_BELT_COURSE, self.world_item_names())
 
 
 class TestARNebulaBeltUnlockGate(KARTestBase):
-    """AR course gating ON: Nebula Belt is gated by its course unlock item (like every other course),
-    not by the Race-100-laps checkbox. Starter pinned to Fantasy Meadows so Nebula's unlock is not
-    precollected."""
+    """Nebula Belt is gated by its course unlock item like every other course, not by the Race-100-laps
+    checkbox. Its regions hold no AP locations, so this goes through region reachability. Starter pinned
+    to Fantasy Meadows so Nebula's own unlock is not precollected."""
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
 
-    def test_nebula_regions_need_unlock(self):
+    def test_nebula_regions_need_the_unlock(self):
         for region_name in _NEBULA_REGIONS:
             with self.subTest(region=region_name):
-                region = self.multiworld.get_region(region_name, self.player)
-                self.assertFalse(region.can_reach(self.multiworld.state))
+                self.assertFalse(self.multiworld.get_region(region_name, self.player).can_reach(self.multiworld.state))
         self.collect_by_name(KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT)
         for region_name in _NEBULA_REGIONS:
             with self.subTest(region=region_name):
-                region = self.multiworld.get_region(region_name, self.player)
-                self.assertTrue(region.can_reach(self.multiworld.state))
+                self.assertTrue(self.multiworld.get_region(region_name, self.player).can_reach(self.multiworld.state))
 
 
-class TestARMachineCellPrereqs(KARTestBase):
-    """Sanity that a machine-specific AR location is gated by its own machine unlock under
-    collect_all_but."""
+class TestCourseGatingNotApplied(KARTestBase):
+    """Both course gates OFF: the mod unlocks every course at connect and no course-unlock item exists,
+    so nothing keyed on one may carry a rule - a Has()-style rule here would strand cells behind items
+    that were never created."""
 
     options = {
-        **AR_ONLY,
-        "air_ride_courses_gated": Toggle.option_true,
-        "machines_gated": Toggle.option_true,
-        "start_inventory": {
-            KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS: 1,
-            KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR: 1,
-        },
+        **AR_AND_TR,
+        "air_ride_courses_gated": Toggle.option_false,
+        "top_ride_courses_gated": Toggle.option_false,
     }
 
-    # (location, its machine unlock).
-    _MACHINE_CELLS: list[tuple[str, str]] = [
-        (
-            ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR,
-            KARItemName.UNLOCK_MACHINE_SHADOW_STAR,
-        ),
-    ]
-
-    def test_location_unreachable_when_its_own_unlock_missing(self):
-        for loc, strip in self._MACHINE_CELLS:
+    def test_subset_rule_cells_reachable_empty(self):
+        state = self.state_without(_ALL_AR_COURSE_UNLOCKS | _ALL_TR_COURSE_UNLOCKS)
+        for loc in (
+            ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR,
+            ARLocation.DROP_FROM_CLIFFS_3X,
+            TRLocation.LAP_NO_WALLS_AND_FIRST,
+        ):
             with self.subTest(location=loc):
-                self.assertAccessDependency(
-                    [loc],
-                    [[strip]],
-                    only_check_listed=True,
-                )
+                self.assertTrue(self.reaches(state, loc))
+
+    def test_root_and_all_courses_cells_reachable_empty(self):
+        for loc in (
+            ARLocation.SWALL_200_ENEMIES,
+            ARLocation.RACE_100_LAPS,
+            ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,
+            TRLocation.CROSS_GOAL_20,
+            TRLocation.FR_RACE_100_LAPS,
+            TRLocation.TA_CROSS_GOAL_30,
+            TRLocation.FIRST_ON_ALL_COURSES,
+            TRLocation.ALL_COURSES_NO_BOOST,
+            TRLocation.FIRST_ON_ALL_COURSES_WITHOUT_BOOST,
+            TRLocation.NOITEMS_ALL_COURSES,
+            TRLocation.NOITEMS_FIRST_ALL_COURSES,
+        ):
+            with self.subTest(location=loc):
+                self.assertTrue(self.can_reach_location(loc))
+
+    def test_nebula_regions_reachable_and_its_reward_excluded(self):
+        for region_name in _NEBULA_REGIONS:
+            with self.subTest(region=region_name):
+                self.assertTrue(self.multiworld.get_region(region_name, self.player).can_reach(self.multiworld.state))
+        self.assertNotIn(KARItemName.AR_REWARD_NEBULA_BELT_COURSE, self.world_item_names())
 
 
 class TestARMachineCellNeedsOnlyOwnCourse(KARTestBase):
     """Regression: a machine-specific AR cell needs its machine and its OWN course, nothing else. It used
-    to chain onto the box that awards the machine in vanilla - which the mod does not reproduce - and
-    where that box lived in another course's region the chain silently demanded that course too. The
-    reported case was Swerve Star's Machine Passage cell held behind Sky Sands.
-
-    Both starter pins live in one start_inventory dict (a naive merge of two would drop one). Pinning
-    matters because a random AR-course / machine pick could precollect something a subtest withholds,
-    making it vacuous. Nebula Belt is pinned because no cell below names it: it suppresses the random
-    pick while being neither an own-course nor a withheld course."""
+    to chain onto the box that awards the machine in vanilla, silently demanding that box's course too -
+    the reported case was Swerve Star's Machine Passage cell held behind Sky Sands. Nebula Belt is the
+    pin because no cell below names it, and both pins share one start_inventory dict."""
 
     options = {
         **AR_ONLY,
@@ -1459,7 +1425,7 @@ class TestARMachineCellNeedsOnlyOwnCourse(KARTestBase):
     def test_reachable_on_machine_plus_own_course_alone(self):
         for loc, machine, own_course, foreign_course in self._MACHINE_CELLS:
             with self.subTest(location=loc, withheld=foreign_course):
-                state = CollectionState(self.multiworld)
+                state = self.state_with()
                 for name in (machine, own_course):
                     state.collect(self.get_item_by_name(name), prevent_sweep=True)
                 # Non-vacuity: the course the removed chain used to drag in must still be missing.
@@ -1469,7 +1435,7 @@ class TestARMachineCellNeedsOnlyOwnCourse(KARTestBase):
                         f"{foreign_course} leaked into the state, making this subtest vacuous",
                     )
                 self.assertTrue(
-                    state.can_reach(loc, "Location", self.player),
+                    self.reaches(state, loc),
                     f"{loc} should be reachable on {machine} + {own_course} alone",
                 )
 
@@ -1477,10 +1443,10 @@ class TestARMachineCellNeedsOnlyOwnCourse(KARTestBase):
         # Guard against the above passing for the wrong reason: with the course but no machine, no.
         for loc, machine, own_course, _ in self._MACHINE_CELLS:
             with self.subTest(location=loc, stripped=machine):
-                state = CollectionState(self.multiworld)
+                state = self.state_with()
                 state.collect(self.get_item_by_name(own_course), prevent_sweep=True)
                 self.assertFalse(
-                    state.can_reach(loc, "Location", self.player),
+                    self.reaches(state, loc),
                     f"{loc} should need {machine}",
                 )
 
@@ -1504,7 +1470,7 @@ class TestFantasyMeadows20MphNeedsCapableMachine(KARTestBase):
 
     def test_unreachable_on_excluded_machines_alone(self):
         # Every excluded machine at once still is not enough - this is not just "some machine".
-        state = CollectionState(self.multiworld)
+        state = self.state_with()
         for name in sorted(_FM_20MPH_EXCLUDED_MACHINES):
             if not state.has(name, self.player):  # the pinned starter is already in
                 state.collect(self.get_item_by_name(name), prevent_sweep=True)
@@ -1518,35 +1484,32 @@ class TestFantasyMeadows20MphNeedsCapableMachine(KARTestBase):
                 f"{name} leaked into the state, making this test vacuous",
             )
         self.assertFalse(
-            state.can_reach(ARLocation.FM_LAP_ABOVE_20_MPH, "Location", self.player),
+            self.reaches(state, ARLocation.FM_LAP_ABOVE_20_MPH),
             "the 20 mph cell should not be reachable on the excluded machines",
         )
 
     def test_reachable_on_each_capable_machine(self):
         for machine in _FM_20MPH_MACHINES:
             with self.subTest(machine=machine):
-                state = CollectionState(self.multiworld)
+                state = self.state_with()
                 state.collect(self.get_item_by_name(machine), prevent_sweep=True)
                 self.assertTrue(
-                    state.can_reach(ARLocation.FM_LAP_ABOVE_20_MPH, "Location", self.player),
+                    self.reaches(state, ARLocation.FM_LAP_ABOVE_20_MPH),
                     f"the 20 mph cell should be reachable on {machine} alone",
                 )
 
     def test_excluded_machines_are_air_ride_machines(self):
         # Guards against a typo'd or Top-Ride-only name silently excluding nothing.
-        ar_machines = set(_FM_20MPH_MACHINES) | _FM_20MPH_EXCLUDED_MACHINES
         for name in _FM_20MPH_EXCLUDED_MACHINES:
-            self.assertIn(name, ar_machines)
+            self.assertIn(name, _AR_MACHINE_UNLOCKS)
         self.assertEqual(len(_FM_20MPH_EXCLUDED_MACHINES), 4)
+        self.assertFalse(set(_FM_20MPH_MACHINES) & _FM_20MPH_EXCLUDED_MACHINES)
 
 
 class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
-    """TARGET FLIGHT's airtime cell names no machine, but the flight is scored off a launch ramp, so it
-    needs one that glides. A seed handing out only the wheelie/bike class or one of the four poor
-    gliders would leave it unwinnable.
-
-    The starter is pinned to Wheelie Bike: itself one of the excluded machines, so it suppresses the
-    random pick without satisfying the rule."""
+    """TARGET FLIGHT's airtime cell names no machine, but the flight is scored off a launch ramp, so a
+    seed handing out only the wheelie/bike class or one of the four poor gliders would leave it
+    unwinnable. The Wheelie Bike pin is itself excluded, so it suppresses the draw without satisfying."""
 
     options = {
         **CT_ONLY,
@@ -1559,7 +1522,7 @@ class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
 
     def test_unreachable_on_the_excluded_machines_alone(self):
         # Every excluded machine at once still is not enough - this is not just "some machine".
-        state = CollectionState(self.multiworld)
+        state = self.state_with()
         for name in sorted(_TF_AIRBORNE_EXCLUDED_MACHINES):
             if not state.has(name, self.player):  # the pinned starter is already in
                 state.collect(self.get_item_by_name(name), prevent_sweep=True)
@@ -1569,17 +1532,17 @@ class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
                 f"{name} leaked into the state, making this test vacuous",
             )
         self.assertFalse(
-            state.can_reach(self._LOCATION, "Location", self.player),
+            self.reaches(state, self._LOCATION),
             "the airtime cell should not be reachable on the excluded machines",
         )
 
     def test_reachable_on_each_gliding_machine(self):
         for machine in _TF_AIRBORNE_MACHINES:
             with self.subTest(machine=machine):
-                state = CollectionState(self.multiworld)
+                state = self.state_with()
                 state.collect(self.get_item_by_name(machine), prevent_sweep=True)
                 self.assertTrue(
-                    state.can_reach(self._LOCATION, "Location", self.player),
+                    self.reaches(state, self._LOCATION),
                     f"the airtime cell should be reachable on {machine} alone",
                 )
 
@@ -1591,50 +1554,33 @@ class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
         self.assertFalse(set(_TF_AIRBORNE_MACHINES) & _TF_AIRBORNE_EXCLUDED_MACHINES)
 
 
+# Every named TR cell whose item has a copy-ability stand-in, read off the production tables so a new
+# pairing is covered without editing this file.
+_TR_EITHER_KEY_CELLS = [
+    (location, tr_item, _TR_ABILITY_ITEM_KEYS[tr_item])
+    for location, tr_item in _TR_ITEM_LOCATION_RULES.items()
+    if tr_item in _TR_ABILITY_ITEM_KEYS
+]
+
+
 class TestTRAbilityItemEitherKey(KARTestBase):
-    """Both gates ON: the four ability-themed TR items (Freeze Fan, Fire, Bomb, Walky) accept either
-    key -- their own TR item unlock or the matching copy ability unlock -- so the cells that need one
-    of those items spawning are reachable with either alone and unreachable with neither."""
+    """Both gates ON: an ability-themed TR item accepts either key -- its own TR item unlock or the
+    matching copy ability unlock -- so a cell needing that item to spawn is reachable with either alone
+    and unreachable with neither."""
 
     options = {**ALL_MODES, "abilities_gated": Toggle.option_true, "top_ride_items_gated": Toggle.option_true}
 
-    _EITHER_KEY = (
-        (
-            TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM,
-            KARItemName.UNLOCK_TR_ITEM_FIRE,
-            KARItemName.UNLOCK_ABILITY_FIRE,
-        ),
-        (
-            TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS,
-            KARItemName.UNLOCK_TR_ITEM_BOMB,
-            KARItemName.UNLOCK_ABILITY_BOMB,
-        ),
-        (
-            TRLocation.GET_20_WALKY_ITEMS,
-            KARItemName.UNLOCK_TR_ITEM_WALKY,
-            KARItemName.UNLOCK_ABILITY_MIC,
-        ),
-    )
-
     def test_either_key_alone_suffices(self):
         # Two single-item groups: unreachable with neither key, reachable with each on its own.
-        for location, tr_item, ability in self._EITHER_KEY:
+        for location, tr_item, ability in _TR_EITHER_KEY_CELLS:
             with self.subTest(location=location):
                 self.assertAccessDependency([location], [[tr_item], [ability]], only_check_listed=True)
 
-
-class TestTRAbilityItemAbilitiesUngated(KARTestBase):
-    """top_ride_items_gated ON, abilities OFF: the copy ability key is handed out at connect, so the
-    mod ignores it and the TR item unlock is the only key for the four ability-themed items."""
-
-    options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true, "abilities_gated": Toggle.option_false}
-
-    def test_tr_bomb_location_needs_tr_item_unlock(self):
-        self.assertAccessDependency(
-            [TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS],
-            [[KARItemName.UNLOCK_TR_ITEM_BOMB]],
-            only_check_listed=True,
-        )
+    def test_freeze_fan_is_keyed_only_through_the_generic_count(self):
+        # Non-vacuity for the pairing table: Freeze Fan is the fourth ability-themed item but no cell
+        # names it, so its stand-in is only ever exercised by the "any item type" cells.
+        named = {tr_item for _, tr_item, _ in _TR_EITHER_KEY_CELLS}
+        self.assertEqual(set(_TR_ABILITY_ITEM_KEYS) - named, {str(KARItemName.UNLOCK_TR_ITEM_FREEZE_FAN)})
 
 
 class TestCTLegendaryPartChecklistGating(KARTestBase):
@@ -1755,10 +1701,9 @@ class TestAPEveryColorGating(KARTestBase):
 
 
 class TestAPBoxColorGating(KARTestBase):
-    """The three per-color box counts. A color spawns only while its own unlock is held and its contents
-    pool still holds something, so each needs the color plus a key to that pool: patches or food for
-    blue, the special items for green, a copy ability for red. Red also accepts a legendary piece, whose
-    carrier box the game spawns without consulting the color picker."""
+    """A color spawns only while its own unlock is held and its contents pool still holds something, so
+    each per-color count needs the color plus a key to that pool. Red also accepts a legendary piece,
+    whose carrier box the game spawns without consulting the color picker."""
 
     options = {
         **CT_ONLY,
@@ -1801,12 +1746,11 @@ class TestAPBoxColorGating(KARTestBase):
             *_BLUE_BOX_FOOD_ITEMS,
             KARItemName.UNLOCK_ITEM_ALL_UP,
         ]
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(withheld, state)
+        state = self.state_without(withheld)
         for item in self.get_items_by_name(KARItemName.UNLOCK_ITEM_ALL_UP):
             state.collect(item)
         self.assertFalse(
-            state.can_reach(APLocation.BREAK_20_BLUE_BOXES, "Location", self.player),
+            self.reaches(state, APLocation.BREAK_20_BLUE_BOXES),
             "All Up alone must not satisfy the blue box count",
         )
 
@@ -1860,99 +1804,10 @@ class TestTRAllCoursesGating(KARTestBase):
                 self.assertTrue(self.can_reach_location(loc))
 
 
-_ALL_TR_COURSE_UNLOCKS = frozenset(items_of_type(KARItemType.TR_COURSE_UNLOCK))
-_NO_WALL_COURSES = frozenset(
-    {
-        KARItemName.UNLOCK_TR_COURSE_GRASS,
-        KARItemName.UNLOCK_TR_COURSE_SAND,
-        KARItemName.UNLOCK_TR_COURSE_LIGHT,
-        KARItemName.UNLOCK_TR_COURSE_METAL,
-    }
-)
-# Sky is one of the three cut courses, so pinning it disables the random TR-course starter without
-# satisfying the no-wall rule.
-_PIN_TR_SKY_STARTER = {"start_inventory": {KARItemName.UNLOCK_TR_COURSE_SKY: 1}}
-
-
-class TestTRNoWallLapCourseGating(KARTestBase):
-    """top_ride_courses_gated ON: "race one lap without hitting a wall and finish 1st" only completes on
-    Grass, Sand, Light or Metal. Without its rule the blanket "any course" rule would call it reachable
-    on Sky, Water or Fire alone. Starter pinned to Sky, one of the cut courses."""
-
-    options = {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true, **_PIN_TR_SKY_STARTER}
-
-    def test_rule_table_lists_exactly_the_no_wall_courses(self):
-        self.assertEqual(
-            frozenset(_TR_COURSE_SUBSET_RULES[TRLocation.LAP_NO_WALLS_AND_FIRST]),
-            _NO_WALL_COURSES,
-        )
-
-    def test_each_no_wall_course_independently_satisfies(self):
-        for course in _NO_WALL_COURSES:
-            with self.subTest(course=course):
-                state = CollectionState(self.multiworld)
-                self.collect_all_but(_ALL_TR_COURSE_UNLOCKS, state)
-                state.collect(self.world.create_item(course))
-                self.assertTrue(
-                    state.can_reach(TRLocation.LAP_NO_WALLS_AND_FIRST, "Location", self.player),
-                    f"not reachable with only {course}",
-                )
-
-    def test_cut_courses_do_not_satisfy(self):
-        # Sky, Water and Fire together must still leave the cell unreachable.
-        cut = sorted(_ALL_TR_COURSE_UNLOCKS - _NO_WALL_COURSES)
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_TR_COURSE_UNLOCKS, state)
-        for course in cut:
-            state.collect(self.world.create_item(course))
-        self.assertFalse(
-            state.can_reach(TRLocation.LAP_NO_WALLS_AND_FIRST, "Location", self.player),
-            f"reachable with only the cut courses {cut}",
-        )
-
-
-class TestTRNoWallLapGatingNotApplied(KARTestBase):
-    """TR course gating OFF: all seven courses unlock at connect, so the no-wall cell needs no rule."""
-
-    options = {**TR_ONLY, "top_ride_courses_gated": Toggle.option_false}
-
-    def test_reachable_with_no_courses(self):
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(_ALL_TR_COURSE_UNLOCKS, state)
-        self.assertTrue(state.can_reach(TRLocation.LAP_NO_WALLS_AND_FIRST, "Location", self.player))
-
-
-class TestCourseAggregatesGatingNotApplied(KARTestBase):
-    """Course gating OFF: the 'all courses' checkboxes carry no rule. All courses are available from
-    the start and no course-unlock items exist in the pool, so the cells are reachable empty (a
-    Has()-style rule here would wrongly strand them behind items that were never created)."""
-
-    options = {
-        **ALL_MODES,
-        "air_ride_courses_gated": Toggle.option_false,
-        "top_ride_courses_gated": Toggle.option_false,
-    }
-
-    def test_ar_race_all_standard_reachable_empty(self):
-        self.assertTrue(self.can_reach_location(ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES))
-
-    def test_tr_all_courses_reachable_empty(self):
-        for loc in (
-            TRLocation.FIRST_ON_ALL_COURSES,
-            TRLocation.ALL_COURSES_NO_BOOST,
-            TRLocation.FIRST_ON_ALL_COURSES_WITHOUT_BOOST,
-            TRLocation.NOITEMS_ALL_COURSES,
-            TRLocation.NOITEMS_FIRST_ALL_COURSES,
-        ):
-            with self.subTest(location=loc):
-                self.assertTrue(self.can_reach_location(loc))
-
-
 class TestARRootCourseGating(KARTestBase):
-    """air_ride_courses_gated ON: mode-root Air Ride cells need at least one AR course, since you cannot
-    race without one. The course starter normally satisfies this, so the test removes it to expose the
-    rule; any single course restores access, Nebula Belt included. The starter is pinned so removal is
-    deterministic."""
+    """air_ride_courses_gated ON: mode-root Air Ride cells need at least one course, since you cannot
+    race without one. The pinned starter normally satisfies that, so each case removes it to expose the
+    rule."""
 
     options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true, **_PIN_AR_COURSE_STARTER}
 
@@ -2056,9 +1911,8 @@ class TestARAbilityCellInhaleOrPanel(KARTestBase):
 
 
 class TestTRRootCourseGating(KARTestBase):
-    """top_ride_courses_gated ON: non-course-specific Top Ride cells need at least one TR course. Covers
-    a TOP_RIDE-root cell plus the mode-level Free Run / Time Attack cells (which live in the
-    TR_FREE_RUN / TR_TIME_ATTACK regions, not a course region). Starter pinned for deterministic removal."""
+    """top_ride_courses_gated ON: the TOP_RIDE-root cell and the mode-level Free Run / Time Attack cells
+    all need at least one course. Starter pinned so its removal is deterministic."""
 
     options = {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true, **_PIN_TR_COURSE_STARTER}
 
@@ -2082,77 +1936,6 @@ class TestTRRootCourseGating(KARTestBase):
                 self.assertTrue(self.can_reach_location(loc))
 
 
-class TestRootCourseGatingNotApplied(KARTestBase):
-    """Course gating OFF: mode-root cells carry no course rule (no course unlocks exist), so they are
-    reachable with nothing collected."""
-
-    options = {
-        **AR_AND_TR,
-        "air_ride_courses_gated": Toggle.option_false,
-        "top_ride_courses_gated": Toggle.option_false,
-    }
-
-    def test_root_locations_reachable_empty(self):
-        for loc in (
-            ARLocation.SWALL_200_ENEMIES,
-            ARLocation.RACE_100_LAPS,
-            TRLocation.CROSS_GOAL_20,
-            TRLocation.FR_RACE_100_LAPS,
-            TRLocation.TA_CROSS_GOAL_30,
-        ):
-            with self.subTest(location=loc):
-                self.assertTrue(self.can_reach_location(loc))
-
-
-# Every stadium mode is gated by its own Unlock Stadium item.
-_STADIUM_UNLOCKS: list[str] = [str(u) for u in STADIUM_UNLOCK_ITEMS]
-
-
-class TestStadiumPlayCountGating(KARTestBase):
-    """progressive stadiums ON: 'play in over 10/20 stadium modes!' need more than that many of the
-    24 stadium modes unlocked (11 / 21), since a locked stadium can't be entered. The Air Glider
-    starter is pinned so the precollected mode is known when counting."""
-
-    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true, **_PIN_STADIUM_STARTER}
-
-    def _missing_other_than_starter(self, n: int) -> list[str]:
-        return [s for s in _STADIUM_UNLOCKS if s != KARItemName.UNLOCK_STADIUM_AIR_GLIDER][:n]
-
-    def test_unreachable_with_only_starter(self):
-        # Only the pinned Air Glider starter is held - far short of either threshold.
-        self.assertFalse(self.can_reach_location(CTLocation.STADIUM_PLAY_10_STADIUM_MODES))
-        self.assertFalse(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
-
-    def test_play_10_needs_eleven_modes(self):
-        # Hold back 14 non-starter modes -> 10 held (incl. starter) -> unreachable; one more -> 11.
-        missing = self._missing_other_than_starter(14)
-        self.collect_all_but(missing)
-        self.assertFalse(self.can_reach_location(CTLocation.STADIUM_PLAY_10_STADIUM_MODES))
-        self.collect_by_name(missing[0])
-        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_PLAY_10_STADIUM_MODES))
-
-    def test_play_20_needs_twenty_one_modes(self):
-        # Hold back 4 non-starter modes -> 20 held -> unreachable; one more -> 21.
-        missing = self._missing_other_than_starter(4)
-        self.collect_all_but(missing)
-        self.assertFalse(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
-        self.collect_by_name(missing[0])
-        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
-
-
-class TestStadiumPlayCountProgressiveOff(KARTestBase):
-    """progressive stadiums OFF: the mod unlocks all 24 stadiums at connect, so both 'play in over
-    10/20 stadium modes!' cells are reachable from the start (24 >= 21)."""
-
-    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_false}
-
-    def test_play_counts_reachable_empty(self):
-        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_PLAY_10_STADIUM_MODES))
-        self.assertTrue(self.can_reach_location(CTLocation.STADIUM_PLAY_20_STADIUM_MODES))
-
-
-# city_trial_items_gated adds ~30 CT_ITEM_UNLOCK progression items, overflowing the 90 default CT-only
-# locations. Opening every CT progression-location flag raises capacity to all 120 CT cells so it fills.
 _CT_ALL_PROGRESSION_LOCATIONS = {
     "city_trial_progression_high_effort": Toggle.option_true,
     "city_trial_progression_multiplayer": Toggle.option_true,
@@ -2162,110 +1945,78 @@ _CT_ALL_PROGRESSION_LOCATIONS = {
 }
 
 
-class TestTRItemTypeCountItemGateOnly(KARTestBase):
-    """top_ride_items_gated ON, abilities OFF: every TR item type is keyed solely by its own unlock
-    (an ungated world's copy abilities are handed out at connect and the mod ignores them as a key),
-    so 'get over 18 different types of items!' needs 19 of the 21 TR item unlocks."""
+_TR_GENERIC_ITEM_CELLS = (TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE)
 
-    options = {
-        **TR_ONLY,
-        "top_ride_items_gated": Toggle.option_true,
-        "abilities_gated": Toggle.option_false,
-    }
 
-    def test_needs_nineteen_of_twenty_one_item_unlocks(self):
+class _TRItemCountMixin(_MixinBase):
+    """The two item-count shapes top_ride_items_gated drives, shared by the gate-on configurations."""
+
+    def assert_18_types_needs_nineteen_unlocks(self):
+        # The four ability-themed types accept a copy ability as a second key, but counting both would
+        # score one type twice, so the rule reads the 21 TR item unlocks only.
         tr_unlocks = sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK))
-        # Hold back 3 -> 18 held < 19 -> unreachable; one more -> 19.
-        self.collect_all_but(tr_unlocks[:3])
-        self.assertFalse(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
-        self.collect_by_name(tr_unlocks[0])
-        self.assertTrue(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
+        loc = TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS
+        state = self.state_without(tr_unlocks[:3])  # 18 held < 19
+        self.assertFalse(self.reaches(state, loc))
+        state.collect(self.world.create_item(tr_unlocks[0]))  # 19
+        self.assertTrue(self.reaches(state, loc))
+
+    def assert_generic_cells_need_any_of(self, keys: list[str]):
+        state = self.state_without(keys)
+        for loc in _TR_GENERIC_ITEM_CELLS:
+            with self.subTest(location=loc, phase="no type"):
+                self.assertFalse(self.reaches(state, loc))
+        state.collect(self.world.create_item(keys[0]))
+        for loc in _TR_GENERIC_ITEM_CELLS:
+            with self.subTest(location=loc, phase="one type"):
+                self.assertTrue(self.reaches(state, loc))
 
 
-class TestTRItemTypeCountBothGates(KARTestBase):
-    """top_ride_items_gated AND abilities_gated ON: 'get over 18 different types!' still counts the 21
-    TR item unlocks only. The four ability-themed types accept a copy ability unlock as a second key,
-    but counting both keys would score one type twice, so the rule ignores the ability form."""
-
-    options = {
-        **TR_ONLY,
-        "top_ride_items_gated": Toggle.option_true,
-        "abilities_gated": Toggle.option_true,
-    }
-
-    def test_needs_nineteen_of_twenty_one_item_unlocks(self):
-        tr_unlocks = sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK))
-        # Hold back 3 -> 18 held -> unreachable; one more -> 19.
-        self.collect_all_but(tr_unlocks[:3])
-        self.assertFalse(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
-        self.collect_by_name(tr_unlocks[0])
-        self.assertTrue(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
-
-
-class TestTRItemTypeCountNoGates(KARTestBase):
-    """Both TR-item and ability gating OFF: the mod unlocks every TR item type at connect - the three
-    New-Item types (Lantern/Who?Paint/Chickie) via a has_reward nudge, the rest as vanilla defaults -
-    so all 21 types can spawn and 'get over 18 different types!' is reachable with nothing collected."""
-
-    options = {
-        **TR_ONLY,
-        "top_ride_items_gated": Toggle.option_false,
-        "abilities_gated": Toggle.option_false,
-    }
-
-    def test_reachable_from_empty(self):
-        self.assertTrue(self.can_reach_location(TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS))
-
-
-class TestTRAnyItemBothGates(KARTestBase):
-    """top_ride_items_gated AND abilities_gated ON: the generic 'collect/get items' cells name no specific
-    item, so they need any one of the 21 TR item types able to spawn. Holding back every key makes them
-    unreachable; any single one restores them (the 21 unlocks plus the four copy abilities)."""
+class TestTRItemGatingBothGates(_TRItemCountMixin, KARTestBase):
+    """top_ride_items_gated AND abilities_gated ON: the generic "collect/get items" cells name no
+    specific item, so they take any of the 21 TR item unlocks or the four copy abilities that stand in
+    for an ability-themed one."""
 
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true, "abilities_gated": Toggle.option_true}
 
-    _GENERIC = [TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE]
+    def test_18_types_cell_counts_item_unlocks_only(self):
+        self.assert_18_types_needs_nineteen_unlocks()
 
-    def test_generic_item_cells_need_any_type(self):
-        all_keys = [*sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK)), *sorted(_TR_ABILITY_ITEM_KEYS.values())]
-        self.collect_all_but(all_keys)  # everything but the type keys (courses included)
-        for loc in self._GENERIC:
-            with self.subTest(location=loc, phase="no type"):
-                self.assertFalse(self.can_reach_location(loc))
-        self.collect_by_name(all_keys[0])  # any single key
-        for loc in self._GENERIC:
-            with self.subTest(location=loc, phase="one type"):
-                self.assertTrue(self.can_reach_location(loc))
+    def test_generic_cells_need_any_type(self):
+        self.assert_generic_cells_need_any_of(
+            [*sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK)), *sorted(_TR_ABILITY_ITEM_KEYS.values())]
+        )
 
 
-class TestTRAnyItemAbilitiesUngated(KARTestBase):
-    """top_ride_items_gated ON, abilities OFF: the copy ability key is out of play, so the generic
-    'collect/get items' cells need one of the 21 TR item unlocks and nothing else."""
+class TestTRItemGatingAbilitiesUngated(_TRItemCountMixin, KARTestBase):
+    """top_ride_items_gated ON, abilities OFF: an ungated world's copy abilities are handed out at
+    connect and the mod ignores them as a key, so every TR item type is keyed solely by its own unlock."""
 
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_true, "abilities_gated": Toggle.option_false}
 
-    _GENERIC = [TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE]
+    def test_18_types_cell_counts_item_unlocks_only(self):
+        self.assert_18_types_needs_nineteen_unlocks()
 
-    def test_generic_item_cells_need_any_item_unlock(self):
-        tr_unlocks = sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK))
-        self.collect_all_but(tr_unlocks)
-        for loc in self._GENERIC:
-            with self.subTest(location=loc, phase="no type"):
-                self.assertFalse(self.can_reach_location(loc))
-        self.collect_by_name(tr_unlocks[0])
-        for loc in self._GENERIC:
-            with self.subTest(location=loc, phase="one type"):
-                self.assertTrue(self.can_reach_location(loc))
+    def test_generic_cells_need_any_item_unlock(self):
+        self.assert_generic_cells_need_any_of(sorted(items_of_type(KARItemType.TR_ITEM_UNLOCK)))
+
+    def test_ability_themed_cell_needs_its_tr_item_unlock(self):
+        self.assertAccessDependency(
+            [TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS],
+            [[KARItemName.UNLOCK_TR_ITEM_BOMB]],
+            only_check_listed=True,
+        )
 
 
-class TestTRAnyItemGateOff(KARTestBase):
-    """top_ride_items_gated OFF: every TR item type spawns from connect, so the generic 'collect/get
-    items' cells carry no HasAny rule and are reachable with nothing collected."""
+class TestTRItemGatingNotApplied(KARTestBase):
+    """top_ride_items_gated OFF: every TR item type spawns from connect - the three New-Item types via a
+    has_reward nudge, the rest as vanilla defaults - so none of the item-count cells carries a rule.
+    Abilities stay gated to show the item gate alone decides this."""
 
     options = {**TR_ONLY, "top_ride_items_gated": Toggle.option_false, "abilities_gated": Toggle.option_true}
 
-    def test_generic_item_cells_reachable_empty(self):
-        for loc in (TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE):
+    def test_item_count_cells_reachable_empty(self):
+        for loc in (TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS, *_TR_GENERIC_ITEM_CELLS):
             with self.subTest(location=loc):
                 self.assertTrue(self.can_reach_location(loc))
 
@@ -2297,11 +2048,22 @@ class TestCTCompleteDragoonHydraItemGating(KARTestBase):
         self.collect_by_name(KARItemName.UNLOCK_ITEM_DRAGOON_PART_C)
         self.assertTrue(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
 
+    def test_unreachable_without_red_box(self):
+        # The pieces arrive in a red carrier box, so all six unlocks are not enough on their own.
+        self.collect_all_but([KARItemName.UNLOCK_BOX_RED])
+        self.assertFalse(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
+        self.collect_by_name(KARItemName.UNLOCK_BOX_RED)
+        self.assertTrue(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
 
-class TestCTCompleteDragoonHydraItemGatingOff(KARTestBase):
-    """city_trial_items_gated OFF: pieces always spawn, so the checkbox carries no rule and is reachable empty."""
 
-    options = {**CT_ONLY, "city_trial_items_gated": Toggle.option_false}
+class TestCTCompleteDragoonHydraAllGatingOff(KARTestBase):
+    """Both gates OFF: nothing keys the pieces or their carrier, so the checkbox is reachable empty."""
+
+    options = {
+        **CT_ONLY,
+        "city_trial_items_gated": Toggle.option_false,
+        "city_trial_boxes_gated": Toggle.option_false,
+    }
 
     def test_reachable_empty(self):
         self.assertTrue(self.can_reach_location(CTLocation.COMPLETE_DRAGOON_AND_HYDRA))
@@ -2326,15 +2088,16 @@ class TestCTHydraAndDragoonGoalItemGating(KARTestBase):
         self.assertFalse(self.can_reach_location(victory))
         for piece in LEGENDARY_PIECE_UNLOCK_ITEMS:
             self.collect_by_name(piece)
+        # The carrier box is red, so the six pieces alone still do not open the goal.
+        self.assertFalse(self.can_reach_location(victory))
+        self.collect_by_name(KARItemName.UNLOCK_BOX_RED)
         self.assertTrue(self.can_reach_location(victory))
 
 
 class TestFill100NonGoalGating(KARTestBase):
-    """'Fill in over 100 Checklist blocks!' is a real in-game meta checkbox the game auto-completes once
-    the player fills over 100 of that mode's other boxes - distinct from the synthetic 'N checklist
-    blocks' goal. When it is NOT the mode's goal it stays a normal location and must carry that same
-    requirement, or fill could strand progression behind ~100 checks. Top Ride is on the N-blocks goal
-    here, with course gating holding six of seven courses."""
+    """ "Fill in over 100 Checklist blocks!" is a real in-game meta checkbox, distinct from the synthetic
+    N-blocks goal. When it is not the mode's goal it stays a normal location and must carry that same
+    requirement, or fill could strand progression behind ~100 checks."""
 
     options = {
         **TR_ONLY,
@@ -2384,26 +2147,11 @@ class TestFill100AsGoalNotARealLocation(KARTestBase):
         self.assertNotIn(TRLocation.FILL_IN_100_CHECKLIST_BLOCKS, self.real_location_names())
 
 
-# Archipelago checklist access rules.
-#
-# An AP box lives in the region of the activity it describes, so it inherits that region's entrance
-# chain and carries only what the mod additionally reads. Every class below therefore turns OFF the
-# stadium / course gates that would otherwise stack an entrance rule on top of the rule under test.
-#
-# All of these guard on effective_gates rather than the raw toggle, so City Trial needs a goal for its
-# categories to hold keys at all - hence CT_ONLY as the base rather than an AP-only seed.
+# Archipelago checklist access rules. An AP box inherits the entrance chain of the region it sits in, so
+# every class below turns OFF the stadium / course gates that would stack an entrance rule on top of the
+# rule under test. They guard on effective_gates, so City Trial needs a goal - hence CT_ONLY as the base.
 
 _AP_ON = {"archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks, "archipelago_checklist_amount": 3}
-
-# The five "you need something to ride" City Trial boxes: breaking the coral, leaving the map, reaching
-# the sky garden or Castle Hall's roof, and touching the city's ceiling.
-_AP_CITY_MACHINE_BOXES = (
-    APLocation.BREAK_ALL_CORAL,
-    APLocation.GO_OUT_OF_BOUNDS,
-    APLocation.CASTLE_FLOWER_ON_FOOT,
-    APLocation.SKY_GARDEN_TOP_ON_FOOT,
-    APLocation.FLY_TO_HIGHEST_POINT,
-)
 
 
 class TestAPFoodBoxesNeedTheirItemUnlock(KARTestBase):
@@ -2443,9 +2191,9 @@ class TestAPFoodBoxesUngated(KARTestBase):
 
 
 class TestAPPatchAndAbilityBoxes(KARTestBase):
-    """The HP-patch counter needs the HP patch type, and the Copy Chance Mic box needs the Mic ability.
-    Neither is covered by a vanilla checklist box: HP is the one stat with no "get 10 patches" cell, and
-    Mic is the one ability the wheel can hand over that no vanilla box names."""
+    """The two patch counters need their patch type, and the Copy Chance Mic box needs the Mic ability.
+    None is covered by a vanilla checklist box: HP and Offense are the two stats with no "get 10 patches"
+    cell, and Mic is the one ability the wheel can hand over that no vanilla box names."""
 
     options = {
         **CT_ONLY,
@@ -2461,6 +2209,21 @@ class TestAPPatchAndAbilityBoxes(KARTestBase):
             [[KARItemName.UNLOCK_PATCH_HP]],
             only_check_listed=True,
         )
+
+    def test_offense_patch_box_needs_offense_patch_unlock(self):
+        self.assertAccessDependency(
+            [APLocation.GET_10_OFFENSE_PATCHES],
+            [[KARItemName.UNLOCK_PATCH_OFFENSE]],
+            only_check_listed=True,
+        )
+
+    def test_the_two_counters_cover_the_stats_vanilla_misses(self):
+        # Non-vacuity: every other patch type is counted on the City Trial checklist, so these two
+        # are exactly the gap the AP tab fills. A new vanilla-covered counter here would be a duplicate.
+        vanilla_counted = set(_PATCH_LOCATION_RULES.values())
+        ap_counted = {KARItemName.UNLOCK_PATCH_HP, KARItemName.UNLOCK_PATCH_OFFENSE}
+        self.assertFalse(vanilla_counted & ap_counted)
+        self.assertEqual(vanilla_counted | ap_counted, set(items_of_type(KARItemType.CT_PATCH_UNLOCK)))
 
     def test_copy_chance_mic_box_needs_mic(self):
         # The wheel hands the ability over in the city, so this one needs no Inhale - unlike the melee
@@ -2489,14 +2252,13 @@ class TestAPMicKirbyMeleeBoxNeedsBothKeys(KARTestBase):
     def test_needs_mic_and_inhale(self):
         location = APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY
         keys = [KARItemName.UNLOCK_ABILITY_MIC, KARItemName.UNLOCK_BASE_ABILITY_INHALE]
-        base = CollectionState(self.multiworld)
-        self.collect_all_but(keys, base)
+        base = self.state_without(keys)
 
         def reachable(*items: str) -> bool:
             state = base.copy()
             for name in items:
                 state.collect(self.world.create_item(name))
-            return state.can_reach(location, "Location", self.player)
+            return self.reaches(state, location)
 
         self.assertFalse(reachable(), "reachable with neither key")
         self.assertFalse(reachable(KARItemName.UNLOCK_ABILITY_MIC), "reachable with Mic but no Inhale")
@@ -2555,47 +2317,26 @@ class TestAPCharacterAndNamedMachineBoxes(KARTestBase):
             with self.subTest(location=location):
                 self.assertAccessDependency([location], [[machine]], only_check_listed=True)
 
-    def test_character_machine_rewards_are_not_a_second_key(self):
-        # The vanilla checklist rewards that grant Meta Knight / Dedede are listed as machines_gated
-        # overlapping_rewards, so they are out of the pool entirely and cannot open these boxes.
-        names = self.world_item_names()
-        for reward in (KARItemName.AR_REWARD_META_KNIGHT, KARItemName.AR_REWARD_KING_DEDEDE):
-            self.assertNotIn(reward, names)
-
-
-class TestAPNebulaAirborneNeedsAGlider(KARTestBase):
-    """The mod counts the 10-second glide only on the three machines the cell names, so the box takes
-    any one of them and nothing else."""
-
-    options = {
-        **CT_ONLY,
-        **_AP_ON,
-        "machines_gated": Toggle.option_true,
-        "city_trial_stadiums_gated": Toggle.option_false,
-        **_PIN_JET_STAR_STARTER,
-    }
-
-    _GLIDERS = (
-        KARItemName.UNLOCK_MACHINE_DRAGOON,
-        KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR,
-        KARItemName.UNLOCK_MACHINE_WINGED_STAR,
-    )
-
-    def test_any_of_the_three_gliders_suffices(self):
+    def test_the_nebula_glide_box_takes_any_of_its_three_machines(self):
+        # The mod counts the 10-second glide only on the machines the cell names.
         self.assertAccessDependency(
             [APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS],
-            [[glider] for glider in self._GLIDERS],
+            [[machine] for machine in _CT_FLIGHT_MACHINES],
             only_check_listed=True,
         )
 
+    def test_character_machine_rewards_are_not_a_second_key(self):
+        # The vanilla checklist rewards that grant Meta Knight / Dedede are listed as machines_gated
+        # overlapping_rewards, so they are out of the pool entirely and cannot open these boxes.
+        world_items = self.world_item_names()
+        for reward in (KARItemName.AR_REWARD_META_KNIGHT, KARItemName.AR_REWARD_KING_DEDEDE):
+            self.assertNotIn(reward, world_items)
+
 
 class TestAPFantasyMeadowsShortcutNeedsAGlidingMachine(KARTestBase):
-    """The Fantasy Meadows shortcut is an arc 40-60 units above the racing line, so reaching it means
-    holding a glide - which the wheelie/bike class cannot, Dedede's ride included. Like the 20 mph cell
-    the box names no machine, so without this rule any machine at all would appear to do.
-
-    The starter is pinned to Wheelie Bike: itself one of the excluded machines, so it suppresses the
-    random pick without satisfying the rule."""
+    """The shortcut is an arc 40-60 units above the racing line, so reaching it means holding a glide,
+    which the wheelie/bike class cannot. The box names no machine, so without this rule any machine at
+    all would appear to do. The Wheelie Bike pin is itself excluded."""
 
     options = {
         **CT_ONLY,
@@ -2607,43 +2348,37 @@ class TestAPFantasyMeadowsShortcutNeedsAGlidingMachine(KARTestBase):
 
     _LOCATION = APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT
 
-    def _state_without_machines(self) -> CollectionState:
-        machines = items_of_type(KARItemType.MACHINE_UNLOCK)
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(machines, state)
-        for item in self.multiworld.precollected_items[self.player]:
-            if item.name in machines:
-                state.remove(item)
-        return state
-
     def test_unreachable_on_the_excluded_machines_alone(self):
-        state = self._state_without_machines()
+        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
         for name in sorted(_FM_SHORTCUT_EXCLUDED_MACHINES):
             state.collect(self.world.create_item(name))
         self.assertFalse(
-            state.can_reach(self._LOCATION, "Location", self.player),
+            self.reaches(state, self._LOCATION),
             "the shortcut should not be reachable on the wheelie/bike class",
         )
 
     def test_reachable_on_each_gliding_machine(self):
         for machine in _FM_SHORTCUT_MACHINES:
             with self.subTest(machine=machine):
-                state = self._state_without_machines()
+                state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
                 state.collect(self.world.create_item(machine))
                 self.assertTrue(
-                    state.can_reach(self._LOCATION, "Location", self.player),
+                    self.reaches(state, self._LOCATION),
                     f"the shortcut should be reachable on {machine} alone",
                 )
 
     def test_excluded_machines_are_air_ride_machines(self):
         # Guards against a typo'd or non-Air-Ride name silently excluding nothing.
+        for name in _FM_SHORTCUT_EXCLUDED_MACHINES:
+            self.assertIn(name, _AR_MACHINE_UNLOCKS)
         self.assertEqual(len(_FM_SHORTCUT_EXCLUDED_MACHINES), 4)
         self.assertFalse(set(_FM_SHORTCUT_MACHINES) & _FM_SHORTCUT_EXCLUDED_MACHINES)
 
 
-class TestAPCityMachineBoxesAnyMachine(KARTestBase):
-    """base_abilities_gated OFF: the five "you need a ride" City Trial boxes take any City Trial machine,
-    so every one of them opens all five on its own."""
+class TestCityAnyMachineCells(KARTestBase):
+    """base_abilities_gated OFF: the "you need something to ride" City Trial cells - breaking the coral,
+    reaching the sky garden or Castle Hall's roof, and the two mileage counters - take any City Trial
+    machine, so every one of them opens all five on its own."""
 
     options = {
         **CT_ONLY,
@@ -2653,39 +2388,28 @@ class TestAPCityMachineBoxesAnyMachine(KARTestBase):
         "city_trial_stadiums_gated": Toggle.option_false,
     }
 
-    def _state_without_machines(self) -> CollectionState:
-        # No pin can help here: every City Trial machine satisfies the rule, so the precollected starter
-        # has to be stripped out of the state instead.
-        machines = items_of_type(KARItemType.MACHINE_UNLOCK)
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(machines, state)
-        for item in self.multiworld.precollected_items[self.player]:
-            if item.name in machines:
-                state.remove(item)
-        return state
-
     def test_unreachable_with_no_machine(self):
-        state = self._state_without_machines()
-        for location in _AP_CITY_MACHINE_BOXES:
+        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
+        for location in _CT_ANY_MACHINE_LOCATIONS:
             with self.subTest(location=location):
-                self.assertFalse(state.can_reach(location, "Location", self.player))
+                self.assertFalse(self.reaches(state, location))
 
     def test_any_city_trial_machine_opens_them(self):
         for machine in _CT_MACHINE_UNLOCKS:
-            state = self._state_without_machines()
+            state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
             state.collect(self.world.create_item(machine))
-            for location in _AP_CITY_MACHINE_BOXES:
+            for location in _CT_ANY_MACHINE_LOCATIONS:
                 with self.subTest(machine=machine, location=location):
-                    self.assertTrue(state.can_reach(location, "Location", self.player))
+                    self.assertTrue(self.reaches(state, location))
 
     def test_top_ride_machines_are_not_a_city_ride(self):
         # Free and Steer Star are Top Ride controls; _CT_MACHINE_UNLOCKS is derived from source_modes so
         # they must not appear in it, and holding both must not open a City Trial box.
-        state = self._state_without_machines()
+        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
         for name in (KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR):
             self.assertNotIn(name, _CT_MACHINE_UNLOCKS)
             state.collect(self.world.create_item(name))
-        self.assertFalse(state.can_reach(APLocation.GO_OUT_OF_BOUNDS, "Location", self.player))
+        self.assertFalse(self.reaches(state, APLocation.BREAK_ALL_CORAL))
 
 
 class TestAPCityMachineBoxesChargeSplit(KARTestBase):
@@ -2701,23 +2425,15 @@ class TestAPCityMachineBoxesChargeSplit(KARTestBase):
         "city_trial_stadiums_gated": Toggle.option_false,
     }
 
-    _LOCATION = APLocation.GO_OUT_OF_BOUNDS
-
-    def _base_state(self) -> CollectionState:
-        """Everything collected except the machine unlocks and Charge, precollected starter included."""
-        withheld = items_of_type(KARItemType.MACHINE_UNLOCK) | {str(KARItemName.UNLOCK_BASE_ABILITY_CHARGE)}
-        state = CollectionState(self.multiworld)
-        self.collect_all_but(withheld, state)
-        for item in self.multiworld.precollected_items[self.player]:
-            if item.name in withheld:
-                state.remove(item)
-        return state
+    _LOCATION = APLocation.BREAK_ALL_CORAL
 
     def _reachable(self, *names: str) -> bool:
-        state = self._base_state()
+        state = self.state_without(
+            items_of_type(KARItemType.MACHINE_UNLOCK) | {str(KARItemName.UNLOCK_BASE_ABILITY_CHARGE)}
+        )
         for name in names:
             state.collect(self.world.create_item(name))
-        return state.can_reach(self._LOCATION, "Location", self.player)
+        return self.reaches(state, self._LOCATION)
 
     def test_the_split_is_non_trivial(self):
         # Both halves have to be non-empty or the two tests below prove nothing.
@@ -2745,3 +2461,67 @@ class TestAPCityMachineBoxesChargeSplit(KARTestBase):
                     self._reachable(machine, KARItemName.UNLOCK_BASE_ABILITY_CHARGE),
                     f"{machine} should be a ride once Charge is in",
                 )
+
+
+class TestAPFlyToHighestPointNeedsFlight(KARTestBase):
+    """Touching the city's ceiling is not just "have a ride": the box needs the Dragoon, the Flight Warp
+    Star or the Winged Star, the only City Trial machines that climb that high."""
+
+    options = {
+        **CT_ONLY,
+        **_AP_ON,
+        "machines_gated": Toggle.option_true,
+        "base_abilities_gated": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
+    }
+
+    _LOCATION = APLocation.FLY_TO_HIGHEST_POINT
+
+    def _reachable_with(self, machine: str) -> bool:
+        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
+        state.collect(self.world.create_item(machine))
+        return self.reaches(state, self._LOCATION)
+
+    def test_the_flight_set_is_a_strict_subset(self):
+        # Non-vacuity: a typo'd name or the whole machine list would make the loops below prove nothing.
+        self.assertEqual(len(_CT_FLIGHT_MACHINES), 3)
+        self.assertTrue(set(_CT_FLIGHT_MACHINES) < set(_CT_MACHINE_UNLOCKS))
+
+    def test_unreachable_with_no_machine(self):
+        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
+        self.assertFalse(self.reaches(state, self._LOCATION))
+
+    def test_each_flight_machine_suffices_alone(self):
+        for machine in _CT_FLIGHT_MACHINES:
+            with self.subTest(machine=machine):
+                self.assertTrue(self._reachable_with(machine), f"{machine} should reach the ceiling on its own")
+
+    def test_grounded_machines_do_not_suffice(self):
+        for machine in _CT_MACHINE_UNLOCKS:
+            if machine in _CT_FLIGHT_MACHINES:
+                continue
+            with self.subTest(machine=machine):
+                self.assertFalse(self._reachable_with(machine), f"{machine} should not reach the ceiling")
+
+
+class TestAssembleBoxesFreeWhenPiecesUngatedWithoutCityTrial(KARTestBase):
+    """No City Trial goal and a plain block count for Archipelago: no sphere is a goal key, so none is
+    minted and both "assemble" boxes are free. A rule read off the raw option would instead ask for six
+    items that do not exist."""
+
+    options = {
+        **TR_ONLY,
+        **_AP_ON,
+        "city_trial_items_gated": Toggle.option_true,
+    }
+
+    def test_no_sphere_is_minted(self):
+        pool = self.world_item_names()
+        for name in AP_STAR_PIECE_UNLOCK_ITEMS:
+            with self.subTest(item=name):
+                self.assertNotIn(name, pool)
+
+    def test_assemble_boxes_reachable_with_nothing(self):
+        for location in (APLocation.ASSEMBLE_ARCHIPELAGO_STAR, APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES):
+            with self.subTest(location=location):
+                self.assertTrue(self.can_reach_location(location))

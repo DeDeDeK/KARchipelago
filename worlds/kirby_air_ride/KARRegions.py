@@ -3,148 +3,142 @@ from collections.abc import Callable, Iterable, Mapping
 from enum import StrEnum
 
 from BaseClasses import CollectionState, LocationProgressType, Region
-from rule_builder.rules import CanReachLocation, Has, HasAll, Rule
+from rule_builder.rules import And, CanReachLocation, Has, HasAll, Rule
 
-from .KARData import AP_PATCH_GROUP_MAX, GameMode, location_code_to_mode_clear
+from .KARData import AP_PATCH_GROUP_MAX, GameMode, GoalKind, location_code_to_mode_clear
 from .KARItems import (
     AP_PATCH_GROUP_EVENT_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
+    CT_PATCH_UNLOCK_ITEMS,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
+    MODE_VICTORY_EVENTS,
     KARItem,
     KARItemName,
-    KARItemType,
-    items_by_type,
 )
-from .KAROptions import ArchipelagoGoal, CityTrialGoal
 
 
 class KARRegion(StrEnum):
     # City Trial
     CITY_TRIAL = "City Trial"
-    CT_FREE_RUN = "City Trial: Free Run"
+    CITY_TRIAL_FREE_RUN = "City Trial: Free Run"
 
     # AP Patch groups: consecutive slices of the AP Patch block, chained one into the next. A seed uses
     # the first N of them and leaves the rest uncreated.
-    CT_AP_PATCHES_1 = "City Trial: AP Patches 1"
-    CT_AP_PATCHES_2 = "City Trial: AP Patches 2"
-    CT_AP_PATCHES_3 = "City Trial: AP Patches 3"
-    CT_AP_PATCHES_4 = "City Trial: AP Patches 4"
-    CT_AP_PATCHES_5 = "City Trial: AP Patches 5"
-    CT_AP_PATCHES_6 = "City Trial: AP Patches 6"
-    CT_AP_PATCHES_7 = "City Trial: AP Patches 7"
-    CT_AP_PATCHES_8 = "City Trial: AP Patches 8"
-    CT_AP_PATCHES_9 = "City Trial: AP Patches 9"
-    CT_AP_PATCHES_10 = "City Trial: AP Patches 10"
+    CITY_TRIAL_AP_PATCHES_1 = "City Trial: AP Patches 1"
+    CITY_TRIAL_AP_PATCHES_2 = "City Trial: AP Patches 2"
+    CITY_TRIAL_AP_PATCHES_3 = "City Trial: AP Patches 3"
+    CITY_TRIAL_AP_PATCHES_4 = "City Trial: AP Patches 4"
+    CITY_TRIAL_AP_PATCHES_5 = "City Trial: AP Patches 5"
+    CITY_TRIAL_AP_PATCHES_6 = "City Trial: AP Patches 6"
+    CITY_TRIAL_AP_PATCHES_7 = "City Trial: AP Patches 7"
+    CITY_TRIAL_AP_PATCHES_8 = "City Trial: AP Patches 8"
+    CITY_TRIAL_AP_PATCHES_9 = "City Trial: AP Patches 9"
+    CITY_TRIAL_AP_PATCHES_10 = "City Trial: AP Patches 10"
 
     # Stadiums
-    STADIUM_DR1 = "Stadium: DRAG RACE 1"
-    STADIUM_DR2 = "Stadium: DRAG RACE 2"
-    STADIUM_DR3 = "Stadium: DRAG RACE 3"
-    STADIUM_DR4 = "Stadium: DRAG RACE 4"
-    STADIUM_HJ = "Stadium: HIGH JUMP"
-    STADIUM_TF = "Stadium: TARGET FLIGHT"
-    STADIUM_AG = "Stadium: AIR GLIDER"
-    STADIUM_DD_ALL = "Stadium: DESTRUCTION DERBY ALL"
-    STADIUM_DD1 = "Stadium: DESTRUCTION DERBY 1"
-    STADIUM_DD2 = "Stadium: DESTRUCTION DERBY 2"
-    STADIUM_DD3 = "Stadium: DESTRUCTION DERBY 3"
-    STADIUM_DD4 = "Stadium: DESTRUCTION DERBY 4"
-    STADIUM_DD5 = "Stadium: DESTRUCTION DERBY 5"
-    STADIUM_KM_ALL = "Stadium: KIRBY MELEE ALL"
-    STADIUM_KM1 = "Stadium: KIRBY MELEE 1"
-    STADIUM_KM2 = "Stadium: KIRBY MELEE 2"
-    STADIUM_VSKD = "Stadium: VS. KING DEDEDE"
-    STADIUM_SR1 = "Stadium: SINGLE RACE 1"
-    STADIUM_SR2 = "Stadium: SINGLE RACE 2"
-    STADIUM_SR3 = "Stadium: SINGLE RACE 3"
-    STADIUM_SR4 = "Stadium: SINGLE RACE 4"
-    STADIUM_SR5 = "Stadium: SINGLE RACE 5"
-    STADIUM_SR6 = "Stadium: SINGLE RACE 6"
-    STADIUM_SR7 = "Stadium: SINGLE RACE 7"
-    STADIUM_SR8 = "Stadium: SINGLE RACE 8"
-    STADIUM_SR9 = "Stadium: SINGLE RACE 9"
+    CITY_TRIAL_STADIUM_DR_ALL = "Stadium: DRAG RACE ALL"
+    CITY_TRIAL_STADIUM_DR1 = "Stadium: DRAG RACE 1"
+    CITY_TRIAL_STADIUM_DR2 = "Stadium: DRAG RACE 2"
+    CITY_TRIAL_STADIUM_DR3 = "Stadium: DRAG RACE 3"
+    CITY_TRIAL_STADIUM_DR4 = "Stadium: DRAG RACE 4"
+    CITY_TRIAL_STADIUM_HJ = "Stadium: HIGH JUMP"
+    CITY_TRIAL_STADIUM_TF = "Stadium: TARGET FLIGHT"
+    CITY_TRIAL_STADIUM_AG = "Stadium: AIR GLIDER"
+    CITY_TRIAL_STADIUM_DD_ALL = "Stadium: DESTRUCTION DERBY ALL"
+    CITY_TRIAL_STADIUM_DD1 = "Stadium: DESTRUCTION DERBY 1"
+    CITY_TRIAL_STADIUM_DD2 = "Stadium: DESTRUCTION DERBY 2"
+    CITY_TRIAL_STADIUM_DD3 = "Stadium: DESTRUCTION DERBY 3"
+    CITY_TRIAL_STADIUM_DD4 = "Stadium: DESTRUCTION DERBY 4"
+    CITY_TRIAL_STADIUM_DD5 = "Stadium: DESTRUCTION DERBY 5"
+    CITY_TRIAL_STADIUM_KM_ALL = "Stadium: KIRBY MELEE ALL"
+    CITY_TRIAL_STADIUM_KM1 = "Stadium: KIRBY MELEE 1"
+    CITY_TRIAL_STADIUM_KM2 = "Stadium: KIRBY MELEE 2"
+    CITY_TRIAL_STADIUM_VSKD = "Stadium: VS. KING DEDEDE"
+    CITY_TRIAL_STADIUM_SR1 = "Stadium: SINGLE RACE 1"
+    CITY_TRIAL_STADIUM_SR2 = "Stadium: SINGLE RACE 2"
+    CITY_TRIAL_STADIUM_SR3 = "Stadium: SINGLE RACE 3"
+    CITY_TRIAL_STADIUM_SR4 = "Stadium: SINGLE RACE 4"
+    CITY_TRIAL_STADIUM_SR5 = "Stadium: SINGLE RACE 5"
+    CITY_TRIAL_STADIUM_SR6 = "Stadium: SINGLE RACE 6"
+    CITY_TRIAL_STADIUM_SR7 = "Stadium: SINGLE RACE 7"
+    CITY_TRIAL_STADIUM_SR8 = "Stadium: SINGLE RACE 8"
+    CITY_TRIAL_STADIUM_SR9 = "Stadium: SINGLE RACE 9"
 
     # Air Ride
     AIR_RIDE = "Air Ride"
-    AR_TIME_ATTACK = "Air Ride: Time Attack"
-    AR_FREE_RUN = "Air Ride: Free Run"
-    AR_MAGMA_FLOWS = "Air Ride: MAGMA FLOWS"
-    AR_FANTASY_MEADOWS = "Air Ride: FANTASY MEADOWS"
-    AR_CELESTIAL_VALLEY = "Air Ride: CELESTIAL VALLEY"
-    AR_BEANSTALK_PARK = "Air Ride: BEANSTALK PARK"
-    AR_FROZEN_HILLSIDE = "Air Ride: FROZEN HILLSIDE"
-    AR_MACHINE_PASSAGE = "Air Ride: MACHINE PASSAGE"
-    AR_SKY_SANDS = "Air Ride: SKY SANDS"
-    AR_CHECKER_KNIGHTS = "Air Ride: CHECKER KNIGHTS"
-    AR_NEBULA_BELT = "Air Ride: NEBULA BELT"
-    AR_TA_MAGMA_FLOWS = "Air Ride: Time Attack: MAGMA FLOWS"
-    AR_TA_FANTASY_MEADOWS = "Air Ride: Time Attack: FANTASY MEADOWS"
-    AR_TA_CELESTIAL_VALLEY = "Air Ride: Time Attack: CELESTIAL VALLEY"
-    AR_TA_BEANSTALK_PARK = "Air Ride: Time Attack: BEANSTALK PARK"
-    AR_TA_FROZEN_HILLSIDE = "Air Ride: Time Attack: FROZEN HILLSIDE"
-    AR_TA_MACHINE_PASSAGE = "Air Ride: Time Attack: MACHINE PASSAGE"
-    AR_TA_SKY_SANDS = "Air Ride: Time Attack: SKY SANDS"
-    AR_TA_CHECKER_KNIGHTS = "Air Ride: Time Attack: CHECKER KNIGHTS"
-    AR_TA_NEBULA_BELT = "Air Ride: Time Attack: NEBULA BELT"
-    AR_FR_MAGMA_FLOWS = "Air Ride: Free Run: MAGMA FLOWS"
-    AR_FR_FANTASY_MEADOWS = "Air Ride: Free Run: FANTASY MEADOWS"
-    AR_FR_CELESTIAL_VALLEY = "Air Ride: Free Run: CELESTIAL VALLEY"
-    AR_FR_BEANSTALK_PARK = "Air Ride: Free Run: BEANSTALK PARK"
-    AR_FR_FROZEN_HILLSIDE = "Air Ride: Free Run: FROZEN HILLSIDE"
-    AR_FR_MACHINE_PASSAGE = "Air Ride: Free Run: MACHINE PASSAGE"
-    AR_FR_SKY_SANDS = "Air Ride: Free Run: SKY SANDS"
-    AR_FR_CHECKER_KNIGHTS = "Air Ride: Free Run: CHECKER KNIGHTS"
-    AR_FR_NEBULA_BELT = "Air Ride: Free Run: NEBULA BELT"
+    AIR_RIDE_TIME_ATTACK = "Air Ride: Time Attack"
+    AIR_RIDE_FREE_RUN = "Air Ride: Free Run"
+    AIR_RIDE_MAGMA_FLOWS = "Air Ride: MAGMA FLOWS"
+    AIR_RIDE_FANTASY_MEADOWS = "Air Ride: FANTASY MEADOWS"
+    AIR_RIDE_CELESTIAL_VALLEY = "Air Ride: CELESTIAL VALLEY"
+    AIR_RIDE_BEANSTALK_PARK = "Air Ride: BEANSTALK PARK"
+    AIR_RIDE_FROZEN_HILLSIDE = "Air Ride: FROZEN HILLSIDE"
+    AIR_RIDE_MACHINE_PASSAGE = "Air Ride: MACHINE PASSAGE"
+    AIR_RIDE_SKY_SANDS = "Air Ride: SKY SANDS"
+    AIR_RIDE_CHECKER_KNIGHTS = "Air Ride: CHECKER KNIGHTS"
+    AIR_RIDE_NEBULA_BELT = "Air Ride: NEBULA BELT"
+    AIR_RIDE_TA_MAGMA_FLOWS = "Air Ride: Time Attack: MAGMA FLOWS"
+    AIR_RIDE_TA_FANTASY_MEADOWS = "Air Ride: Time Attack: FANTASY MEADOWS"
+    AIR_RIDE_TA_CELESTIAL_VALLEY = "Air Ride: Time Attack: CELESTIAL VALLEY"
+    AIR_RIDE_TA_BEANSTALK_PARK = "Air Ride: Time Attack: BEANSTALK PARK"
+    AIR_RIDE_TA_FROZEN_HILLSIDE = "Air Ride: Time Attack: FROZEN HILLSIDE"
+    AIR_RIDE_TA_MACHINE_PASSAGE = "Air Ride: Time Attack: MACHINE PASSAGE"
+    AIR_RIDE_TA_SKY_SANDS = "Air Ride: Time Attack: SKY SANDS"
+    AIR_RIDE_TA_CHECKER_KNIGHTS = "Air Ride: Time Attack: CHECKER KNIGHTS"
+    AIR_RIDE_TA_NEBULA_BELT = "Air Ride: Time Attack: NEBULA BELT"
+    AIR_RIDE_FR_MAGMA_FLOWS = "Air Ride: Free Run: MAGMA FLOWS"
+    AIR_RIDE_FR_FANTASY_MEADOWS = "Air Ride: Free Run: FANTASY MEADOWS"
+    AIR_RIDE_FR_CELESTIAL_VALLEY = "Air Ride: Free Run: CELESTIAL VALLEY"
+    AIR_RIDE_FR_BEANSTALK_PARK = "Air Ride: Free Run: BEANSTALK PARK"
+    AIR_RIDE_FR_FROZEN_HILLSIDE = "Air Ride: Free Run: FROZEN HILLSIDE"
+    AIR_RIDE_FR_MACHINE_PASSAGE = "Air Ride: Free Run: MACHINE PASSAGE"
+    AIR_RIDE_FR_SKY_SANDS = "Air Ride: Free Run: SKY SANDS"
+    AIR_RIDE_FR_CHECKER_KNIGHTS = "Air Ride: Free Run: CHECKER KNIGHTS"
+    AIR_RIDE_FR_NEBULA_BELT = "Air Ride: Free Run: NEBULA BELT"
 
     # Top Ride
     TOP_RIDE = "Top Ride"
-    TR_TIME_ATTACK = "Top Ride: Time Attack"
-    TR_FREE_RUN = "Top Ride: Free Run"
-    TR_GRASS = "Top Ride: GRASS"
-    TR_SAND = "Top Ride: SAND"
-    TR_SKY = "Top Ride: SKY"
-    TR_FIRE = "Top Ride: FIRE"
-    TR_LIGHT = "Top Ride: LIGHT"
-    TR_WATER = "Top Ride: WATER"
-    TR_METAL = "Top Ride: METAL"
-    TR_TA_GRASS = "Top Ride: Time Attack: GRASS"
-    TR_TA_SAND = "Top Ride: Time Attack: SAND"
-    TR_TA_SKY = "Top Ride: Time Attack: SKY"
-    TR_TA_FIRE = "Top Ride: Time Attack: FIRE"
-    TR_TA_LIGHT = "Top Ride: Time Attack: LIGHT"
-    TR_TA_WATER = "Top Ride: Time Attack: WATER"
-    TR_TA_METAL = "Top Ride: Time Attack: METAL"
-    TR_FR_GRASS = "Top Ride: Free Run: GRASS"
-    TR_FR_SAND = "Top Ride: Free Run: SAND"
-    TR_FR_SKY = "Top Ride: Free Run: SKY"
-    TR_FR_FIRE = "Top Ride: Free Run: FIRE"
-    TR_FR_LIGHT = "Top Ride: Free Run: LIGHT"
-    TR_FR_WATER = "Top Ride: Free Run: WATER"
-    TR_FR_METAL = "Top Ride: Free Run: METAL"
+    TOP_RIDE_TIME_ATTACK = "Top Ride: Time Attack"
+    TOP_RIDE_FREE_RUN = "Top Ride: Free Run"
+    TOP_RIDE_GRASS = "Top Ride: GRASS"
+    TOP_RIDE_SAND = "Top Ride: SAND"
+    TOP_RIDE_SKY = "Top Ride: SKY"
+    TOP_RIDE_FIRE = "Top Ride: FIRE"
+    TOP_RIDE_LIGHT = "Top Ride: LIGHT"
+    TOP_RIDE_WATER = "Top Ride: WATER"
+    TOP_RIDE_METAL = "Top Ride: METAL"
+    TOP_RIDE_TA_GRASS = "Top Ride: Time Attack: GRASS"
+    TOP_RIDE_TA_SAND = "Top Ride: Time Attack: SAND"
+    TOP_RIDE_TA_SKY = "Top Ride: Time Attack: SKY"
+    TOP_RIDE_TA_FIRE = "Top Ride: Time Attack: FIRE"
+    TOP_RIDE_TA_LIGHT = "Top Ride: Time Attack: LIGHT"
+    TOP_RIDE_TA_WATER = "Top Ride: Time Attack: WATER"
+    TOP_RIDE_TA_METAL = "Top Ride: Time Attack: METAL"
+    TOP_RIDE_FR_GRASS = "Top Ride: Free Run: GRASS"
+    TOP_RIDE_FR_SAND = "Top Ride: Free Run: SAND"
+    TOP_RIDE_FR_SKY = "Top Ride: Free Run: SKY"
+    TOP_RIDE_FR_FIRE = "Top Ride: Free Run: FIRE"
+    TOP_RIDE_FR_LIGHT = "Top Ride: Free Run: LIGHT"
+    TOP_RIDE_FR_WATER = "Top Ride: Free Run: WATER"
+    TOP_RIDE_FR_METAL = "Top Ride: Free Run: METAL"
 
-    # Archipelago checklist: a tab, not a place. Only mode-agnostic boxes live here - a box describing an
-    # activity in another mode sits in that mode's region instead. No sub-regions.
+    # Archipelago - technically not an in-game region but contains other regions
     ARCHIPELAGO = "Archipelago"
 
 
-# Ordered name-prefix table backing REGION_TO_MODE. First match wins, so exact mode-root names come
-# before their short prefixes. "ARCHIPELAGO" leads defensively - it does not collide with "AR_" today.
+# Name-prefix table backing REGION_TO_MODE.
 _REGION_MODE_NAME_PREFIXES: tuple[tuple[str, GameMode], ...] = (
-    ("ARCHIPELAGO", GameMode.ARCHIPELAGO),
     ("CITY_TRIAL", GameMode.CITYTRIAL),
-    ("CT_", GameMode.CITYTRIAL),
-    ("STADIUM_", GameMode.CITYTRIAL),
     ("AIR_RIDE", GameMode.AIRRIDE),
-    ("AR_", GameMode.AIRRIDE),
     ("TOP_RIDE", GameMode.TOPRIDE),
-    ("TR_", GameMode.TOPRIDE),
+    ("ARCHIPELAGO", GameMode.ARCHIPELAGO),
 )
 
 
 def _build_region_to_mode() -> dict[str, GameMode]:
     """Classify every KARRegion by the game mode it belongs to, keyed by region name. Derived from the
-    enum member names and checked exhaustive: a region matching no prefix raises at import instead of
-    silently stranding an Archipelago box in a tree that logic_modes never builds."""
+    enum member names and checked exhaustive.
+    """
     mapping: dict[str, GameMode] = {}
     for region in KARRegion:
         for prefix, mode in _REGION_MODE_NAME_PREFIXES:
@@ -152,27 +146,23 @@ def _build_region_to_mode() -> dict[str, GameMode]:
                 mapping[region.value] = mode
                 break
         else:
-            raise ValueError(
-                f"KARRegion.{region.name} matches no entry in _REGION_MODE_NAME_PREFIXES. "
-                f"Every region must map to a game mode; add a prefix for it."
-            )
+            raise ValueError(f"KARRegion.{region.name} matches no entry in _REGION_MODE_NAME_PREFIXES. ")
     return mapping
 
 
-# Which game mode each region belongs to. Static by construction and deliberately so: logic_modes derives
-# itself from this table, so inspecting built regions here would be circular.
+# Which game mode each region belongs to.
 REGION_TO_MODE: dict[str, GameMode] = _build_region_to_mode()
 
 
-# The AP Patch group regions in chain order, read off the enum so declaration order is the chain.
+# The AP Patch group regions in chain order
 AP_PATCH_GROUP_REGIONS: tuple[str, ...] = tuple(
-    region.value for region in KARRegion if region.name.startswith("CT_AP_PATCHES_")
+    region.value for region in KARRegion if region.name.startswith("CITY_TRIAL_AP_PATCHES_")
 )
 
 if len(AP_PATCH_GROUP_REGIONS) != AP_PATCH_GROUP_MAX:
     raise ValueError(
         f"KARRegion declares {len(AP_PATCH_GROUP_REGIONS)} AP Patch group regions, but the widest seed "
-        f"splits into {AP_PATCH_GROUP_MAX}. Add or remove CT_AP_PATCHES_* members to match."
+        f"splits into {AP_PATCH_GROUP_MAX}. Add or remove CITY_TRIAL_AP_PATCHES_* members to match."
     )
 
 
@@ -181,11 +171,134 @@ if typing.TYPE_CHECKING:
     from . import KARWorld
 
 
-def create_regions_batch(world: "KARWorld", *names: str) -> list[Region]:
-    """Create multiple regions and register them all with the multiworld at once."""
-    regions = [Region(name, world.player, world.multiworld) for name in names]
-    world.multiworld.regions += regions
-    return regions
+# Each mode's root region, entered from the origin region
+MODE_ROOT_REGION: dict[GameMode, str] = {
+    GameMode.CITYTRIAL: KARRegion.CITY_TRIAL,
+    GameMode.AIRRIDE: KARRegion.AIR_RIDE,
+    GameMode.TOPRIDE: KARRegion.TOP_RIDE,
+    GameMode.ARCHIPELAGO: KARRegion.ARCHIPELAGO,
+}
+
+# Course regions by variant. KARRules pairs them by index, so a mode's three tuples keep the same course order.
+AR_COURSE_REGIONS: tuple[str, ...] = (
+    KARRegion.AIR_RIDE_MAGMA_FLOWS,
+    KARRegion.AIR_RIDE_FANTASY_MEADOWS,
+    KARRegion.AIR_RIDE_CELESTIAL_VALLEY,
+    KARRegion.AIR_RIDE_BEANSTALK_PARK,
+    KARRegion.AIR_RIDE_FROZEN_HILLSIDE,
+    KARRegion.AIR_RIDE_MACHINE_PASSAGE,
+    KARRegion.AIR_RIDE_SKY_SANDS,
+    KARRegion.AIR_RIDE_CHECKER_KNIGHTS,
+    KARRegion.AIR_RIDE_NEBULA_BELT,
+)
+AR_TA_COURSE_REGIONS: tuple[str, ...] = (
+    KARRegion.AIR_RIDE_TA_MAGMA_FLOWS,
+    KARRegion.AIR_RIDE_TA_FANTASY_MEADOWS,
+    KARRegion.AIR_RIDE_TA_CELESTIAL_VALLEY,
+    KARRegion.AIR_RIDE_TA_BEANSTALK_PARK,
+    KARRegion.AIR_RIDE_TA_FROZEN_HILLSIDE,
+    KARRegion.AIR_RIDE_TA_MACHINE_PASSAGE,
+    KARRegion.AIR_RIDE_TA_SKY_SANDS,
+    KARRegion.AIR_RIDE_TA_CHECKER_KNIGHTS,
+    KARRegion.AIR_RIDE_TA_NEBULA_BELT,
+)
+AR_FR_COURSE_REGIONS: tuple[str, ...] = (
+    KARRegion.AIR_RIDE_FR_MAGMA_FLOWS,
+    KARRegion.AIR_RIDE_FR_FANTASY_MEADOWS,
+    KARRegion.AIR_RIDE_FR_CELESTIAL_VALLEY,
+    KARRegion.AIR_RIDE_FR_BEANSTALK_PARK,
+    KARRegion.AIR_RIDE_FR_FROZEN_HILLSIDE,
+    KARRegion.AIR_RIDE_FR_MACHINE_PASSAGE,
+    KARRegion.AIR_RIDE_FR_SKY_SANDS,
+    KARRegion.AIR_RIDE_FR_CHECKER_KNIGHTS,
+    KARRegion.AIR_RIDE_FR_NEBULA_BELT,
+)
+
+TR_COURSE_REGIONS: tuple[str, ...] = (
+    KARRegion.TOP_RIDE_GRASS,
+    KARRegion.TOP_RIDE_METAL,
+    KARRegion.TOP_RIDE_LIGHT,
+    KARRegion.TOP_RIDE_SAND,
+    KARRegion.TOP_RIDE_FIRE,
+    KARRegion.TOP_RIDE_WATER,
+    KARRegion.TOP_RIDE_SKY,
+)
+TR_TA_COURSE_REGIONS: tuple[str, ...] = (
+    KARRegion.TOP_RIDE_TA_GRASS,
+    KARRegion.TOP_RIDE_TA_METAL,
+    KARRegion.TOP_RIDE_TA_LIGHT,
+    KARRegion.TOP_RIDE_TA_SAND,
+    KARRegion.TOP_RIDE_TA_FIRE,
+    KARRegion.TOP_RIDE_TA_WATER,
+    KARRegion.TOP_RIDE_TA_SKY,
+)
+TR_FR_COURSE_REGIONS: tuple[str, ...] = (
+    KARRegion.TOP_RIDE_FR_GRASS,
+    KARRegion.TOP_RIDE_FR_METAL,
+    KARRegion.TOP_RIDE_FR_LIGHT,
+    KARRegion.TOP_RIDE_FR_SAND,
+    KARRegion.TOP_RIDE_FR_FIRE,
+    KARRegion.TOP_RIDE_FR_WATER,
+    KARRegion.TOP_RIDE_FR_SKY,
+)
+
+# Each region's child regions
+REGION_TREE: dict[str, tuple[str, ...]] = {
+    KARRegion.CITY_TRIAL: (
+        KARRegion.CITY_TRIAL_FREE_RUN,
+        KARRegion.CITY_TRIAL_STADIUM_DD_ALL,
+        KARRegion.CITY_TRIAL_STADIUM_DR_ALL,
+        KARRegion.CITY_TRIAL_STADIUM_HJ,
+        KARRegion.CITY_TRIAL_STADIUM_TF,
+        KARRegion.CITY_TRIAL_STADIUM_AG,
+        KARRegion.CITY_TRIAL_STADIUM_KM_ALL,
+        KARRegion.CITY_TRIAL_STADIUM_VSKD,
+        KARRegion.CITY_TRIAL_STADIUM_SR1,
+        KARRegion.CITY_TRIAL_STADIUM_SR2,
+        KARRegion.CITY_TRIAL_STADIUM_SR3,
+        KARRegion.CITY_TRIAL_STADIUM_SR4,
+        KARRegion.CITY_TRIAL_STADIUM_SR5,
+        KARRegion.CITY_TRIAL_STADIUM_SR6,
+        KARRegion.CITY_TRIAL_STADIUM_SR7,
+        KARRegion.CITY_TRIAL_STADIUM_SR8,
+        KARRegion.CITY_TRIAL_STADIUM_SR9,
+    ),
+    KARRegion.CITY_TRIAL_STADIUM_DD_ALL: (
+        KARRegion.CITY_TRIAL_STADIUM_DD1,
+        KARRegion.CITY_TRIAL_STADIUM_DD2,
+        KARRegion.CITY_TRIAL_STADIUM_DD3,
+        KARRegion.CITY_TRIAL_STADIUM_DD4,
+        KARRegion.CITY_TRIAL_STADIUM_DD5,
+    ),
+    KARRegion.CITY_TRIAL_STADIUM_DR_ALL: (
+        KARRegion.CITY_TRIAL_STADIUM_DR1,
+        KARRegion.CITY_TRIAL_STADIUM_DR2,
+        KARRegion.CITY_TRIAL_STADIUM_DR3,
+        KARRegion.CITY_TRIAL_STADIUM_DR4,
+    ),
+    KARRegion.CITY_TRIAL_STADIUM_KM_ALL: (KARRegion.CITY_TRIAL_STADIUM_KM1, KARRegion.CITY_TRIAL_STADIUM_KM2),
+    KARRegion.AIR_RIDE: (KARRegion.AIR_RIDE_TIME_ATTACK, KARRegion.AIR_RIDE_FREE_RUN, *AR_COURSE_REGIONS),
+    KARRegion.AIR_RIDE_TIME_ATTACK: AR_TA_COURSE_REGIONS,
+    KARRegion.AIR_RIDE_FREE_RUN: AR_FR_COURSE_REGIONS,
+    KARRegion.TOP_RIDE: (KARRegion.TOP_RIDE_TIME_ATTACK, KARRegion.TOP_RIDE_FREE_RUN, *TR_COURSE_REGIONS),
+    KARRegion.TOP_RIDE_TIME_ATTACK: TR_TA_COURSE_REGIONS,
+    KARRegion.TOP_RIDE_FREE_RUN: TR_FR_COURSE_REGIONS,
+}
+
+
+def _add_region(world: "KARWorld", name: str, parent: Region, rule: Rule | None = None) -> Region:
+    """Create region `name`, register it, and connect `parent` to it."""
+    region = Region(name, world.player, world.multiworld)
+    world.multiworld.regions.append(region)
+    parent.connect(region, rule=rule)
+    return region
+
+
+def _add_region_tree(world: "KARWorld", name: str, parent: Region) -> None:
+    """Create region `name` under `parent`, then its REGION_TREE descendants beneath it."""
+    region = _add_region(world, name, parent)
+    for child in REGION_TREE.get(name, ()):
+        _add_region_tree(world, child, region)
 
 
 def assign_locations_to_regions(
@@ -193,9 +306,8 @@ def assign_locations_to_regions(
     location_table: dict,
     default_locations: Iterable[str],
     excluded_locations: Iterable[str],
-    goal_locations_to_exclude: set[str],
 ) -> None:
-    """Assign locations to their regions with the appropriate progress type."""
+    """Assign locations to their regions with the appropriate progress type, skipping goal-replaced ones."""
     from .KARLocations import KARLocation
 
     for locations, progress_type in [
@@ -203,7 +315,7 @@ def assign_locations_to_regions(
         (excluded_locations, LocationProgressType.EXCLUDED),
     ]:
         for location_name in locations:
-            if location_name in goal_locations_to_exclude:
+            if location_name in world.goal_locations_to_exclude:
                 continue
             data = location_table[location_name]
             region = world.get_region(data.region)
@@ -225,78 +337,44 @@ def create_regions(world: "KARWorld"):
     menu_region = Region(world.origin_region_name, world.player, world.multiworld)
     world.multiworld.regions.append(menu_region)
 
-    # A mode's tree is BUILT when `mode in logic_modes` (it has a goal or hosts an Archipelago box); its
-    # OWN checklist locations are assigned (below) only when `*_enabled`. So a goal-less City Trial
-    # hosting one AP box gets all 28 CT regions with 27 empty - there are no partial trees.
-    if GameMode.CITYTRIAL in world.logic_modes:
-        city_trial_region = Region(KARRegion.CITY_TRIAL, world.player, world.multiworld)
-        world.multiworld.regions.append(city_trial_region)
-        menu_region.connect(city_trial_region)
-        connect_city_trial_region(world, city_trial_region)
+    # Every mode in `logic_modes` gets its full tree; its own locations are assigned below only when `*_enabled`.
+    for mode, root in MODE_ROOT_REGION.items():
+        if mode in world.logic_modes:
+            _add_region_tree(world, root, menu_region)
 
-    if GameMode.AIRRIDE in world.logic_modes:
-        air_ride_region = Region(KARRegion.AIR_RIDE, world.player, world.multiworld)
-        world.multiworld.regions.append(air_ride_region)
-        menu_region.connect(air_ride_region)
-        connect_air_ride_region(world, air_ride_region)
-
-    if GameMode.TOPRIDE in world.logic_modes:
-        top_ride_region = Region(KARRegion.TOP_RIDE, world.player, world.multiworld)
-        world.multiworld.regions.append(top_ride_region)
-        menu_region.connect(top_ride_region)
-        connect_top_ride_region(world, top_ride_region)
-
-    if GameMode.ARCHIPELAGO in world.logic_modes:
-        # Holds no locations - every Archipelago box lives in the region of the mode it describes. The
-        # region exists to host the Archipelago victory event. No sub-regions.
-        archipelago_region = Region(KARRegion.ARCHIPELAGO, world.player, world.multiworld)
-        world.multiworld.regions.append(archipelago_region)
-        menu_region.connect(archipelago_region)
-
-    if world.city_trial_enabled:
-        assign_locations_to_regions(
-            world,
+    for enabled, location_table, default_locations, excluded_locations in (
+        (
+            world.city_trial_enabled,
             CITY_TRIAL_LOCATION_TABLE,
             world.city_trial_default_locations,
             world.city_trial_excluded_locations,
-            world.goal_locations_to_exclude,
-        )
-
-    if world.air_ride_enabled:
-        assign_locations_to_regions(
-            world,
+        ),
+        (
+            world.air_ride_enabled,
             AIR_RIDE_LOCATION_TABLE,
             world.air_ride_default_locations,
             world.air_ride_excluded_locations,
-            world.goal_locations_to_exclude,
-        )
-
-    if world.top_ride_enabled:
-        assign_locations_to_regions(
-            world,
+        ),
+        (
+            world.top_ride_enabled,
             TOP_RIDE_LOCATION_TABLE,
             world.top_ride_default_locations,
             world.top_ride_excluded_locations,
-            world.goal_locations_to_exclude,
-        )
-
-    if world.archipelago_enabled:
-        assign_locations_to_regions(
-            world,
+        ),
+        (
+            world.archipelago_enabled,
             AP_CHECKLIST_LOCATION_TABLE,
             world.archipelago_default_locations,
             world.archipelago_excluded_locations,
-            world.goal_locations_to_exclude,
-        )
+        ),
+    ):
+        if enabled:
+            assign_locations_to_regions(world, location_table, default_locations, excluded_locations)
 
     if world.ap_patch_locations:
         connect_ap_patch_regions(world)
         assign_locations_to_regions(
-            world,
-            world.ap_patch_locations,
-            world.ap_patch_default_locations,
-            world.ap_patch_excluded_locations,
-            world.goal_locations_to_exclude,
+            world, world.ap_patch_locations, world.ap_patch_default_locations, world.ap_patch_excluded_locations
         )
 
     determine_goal(world)
@@ -304,320 +382,30 @@ def create_regions(world: "KARWorld"):
 
 def connect_ap_patch_regions(world: "KARWorld") -> None:
     """Chain the seed's AP Patch groups off City Trial, one region per group, each opened by an event in
-    the group before it. The mod claims the lowest unclaimed patch index, so the chain is the order the
-    block is really collected in; without it every patch is one flat sphere and fill has no reason to
-    keep a key out of the two-hundredth. The last group gates nothing and so carries no event.
-
-    The chain is structural, not option-driven gating, so its entrance rules are set here rather than
-    deferred to rule setup.
+    the group before it.
     """
     from .KARLocations import KARLocation
 
-    regions = create_regions_batch(world, *AP_PATCH_GROUP_REGIONS[: world.ap_patch_group_count])
-    world.get_region(KARRegion.CITY_TRIAL).connect(regions[0])
-    for index, region in enumerate(regions[:-1]):
-        event_item = AP_PATCH_GROUP_EVENT_ITEMS[index]
-        region.add_event(
-            f"{region.name} Cleared",
-            event_item,
-            location_type=KARLocation,
-            item_type=KARItem,
-        )
-        region.connect(regions[index + 1], rule=Has(event_item))
-
-
-def connect_city_trial_region(world: "KARWorld", city_trial_region: Region) -> None:
-    create_regions_batch(
-        world,
-        KARRegion.CT_FREE_RUN,
-        KARRegion.STADIUM_DD_ALL,
-        KARRegion.STADIUM_DD1,
-        KARRegion.STADIUM_DD2,
-        KARRegion.STADIUM_DD3,
-        KARRegion.STADIUM_DD4,
-        KARRegion.STADIUM_DD5,
-        KARRegion.STADIUM_DR1,
-        KARRegion.STADIUM_DR2,
-        KARRegion.STADIUM_DR3,
-        KARRegion.STADIUM_DR4,
-        KARRegion.STADIUM_HJ,
-        KARRegion.STADIUM_TF,
-        KARRegion.STADIUM_AG,
-        KARRegion.STADIUM_KM_ALL,
-        KARRegion.STADIUM_KM1,
-        KARRegion.STADIUM_KM2,
-        KARRegion.STADIUM_VSKD,
-        KARRegion.STADIUM_SR1,
-        KARRegion.STADIUM_SR2,
-        KARRegion.STADIUM_SR3,
-        KARRegion.STADIUM_SR4,
-        KARRegion.STADIUM_SR5,
-        KARRegion.STADIUM_SR6,
-        KARRegion.STADIUM_SR7,
-        KARRegion.STADIUM_SR8,
-        KARRegion.STADIUM_SR9,
-    )
-
-    # Entrance gating rules for these exits are applied later, during rule setup.
-    city_trial_region.add_exits(
-        [
-            KARRegion.CT_FREE_RUN,
-            KARRegion.STADIUM_DD_ALL,
-            KARRegion.STADIUM_DR1,
-            KARRegion.STADIUM_DR2,
-            KARRegion.STADIUM_DR3,
-            KARRegion.STADIUM_DR4,
-            KARRegion.STADIUM_HJ,
-            KARRegion.STADIUM_TF,
-            KARRegion.STADIUM_AG,
-            KARRegion.STADIUM_KM_ALL,
-            KARRegion.STADIUM_VSKD,
-            KARRegion.STADIUM_SR1,
-            KARRegion.STADIUM_SR2,
-            KARRegion.STADIUM_SR3,
-            KARRegion.STADIUM_SR4,
-            KARRegion.STADIUM_SR5,
-            KARRegion.STADIUM_SR6,
-            KARRegion.STADIUM_SR7,
-            KARRegion.STADIUM_SR8,
-            KARRegion.STADIUM_SR9,
-        ]
-    )
-
-    # DD_ALL and KM_ALL are parents nesting their numbered sub-stadiums.
-    world.get_region(KARRegion.STADIUM_DD_ALL).add_exits(
-        [
-            KARRegion.STADIUM_DD1,
-            KARRegion.STADIUM_DD2,
-            KARRegion.STADIUM_DD3,
-            KARRegion.STADIUM_DD4,
-            KARRegion.STADIUM_DD5,
-        ]
-    )
-
-    world.get_region(KARRegion.STADIUM_KM_ALL).add_exits(
-        [
-            KARRegion.STADIUM_KM1,
-            KARRegion.STADIUM_KM2,
-        ]
-    )
-
-
-AR_COURSE_REGIONS = [
-    KARRegion.AR_MAGMA_FLOWS,
-    KARRegion.AR_FANTASY_MEADOWS,
-    KARRegion.AR_CELESTIAL_VALLEY,
-    KARRegion.AR_BEANSTALK_PARK,
-    KARRegion.AR_FROZEN_HILLSIDE,
-    KARRegion.AR_MACHINE_PASSAGE,
-    KARRegion.AR_SKY_SANDS,
-    KARRegion.AR_CHECKER_KNIGHTS,
-    KARRegion.AR_NEBULA_BELT,
-]
-AR_TA_COURSE_REGIONS = [
-    KARRegion.AR_TA_MAGMA_FLOWS,
-    KARRegion.AR_TA_FANTASY_MEADOWS,
-    KARRegion.AR_TA_CELESTIAL_VALLEY,
-    KARRegion.AR_TA_BEANSTALK_PARK,
-    KARRegion.AR_TA_FROZEN_HILLSIDE,
-    KARRegion.AR_TA_MACHINE_PASSAGE,
-    KARRegion.AR_TA_SKY_SANDS,
-    KARRegion.AR_TA_CHECKER_KNIGHTS,
-    KARRegion.AR_TA_NEBULA_BELT,
-]
-AR_FR_COURSE_REGIONS = [
-    KARRegion.AR_FR_MAGMA_FLOWS,
-    KARRegion.AR_FR_FANTASY_MEADOWS,
-    KARRegion.AR_FR_CELESTIAL_VALLEY,
-    KARRegion.AR_FR_BEANSTALK_PARK,
-    KARRegion.AR_FR_FROZEN_HILLSIDE,
-    KARRegion.AR_FR_MACHINE_PASSAGE,
-    KARRegion.AR_FR_SKY_SANDS,
-    KARRegion.AR_FR_CHECKER_KNIGHTS,
-    KARRegion.AR_FR_NEBULA_BELT,
-]
-
-TR_COURSE_REGIONS = [
-    KARRegion.TR_GRASS,
-    KARRegion.TR_METAL,
-    KARRegion.TR_LIGHT,
-    KARRegion.TR_SAND,
-    KARRegion.TR_FIRE,
-    KARRegion.TR_WATER,
-    KARRegion.TR_SKY,
-]
-TR_TA_COURSE_REGIONS = [
-    KARRegion.TR_TA_GRASS,
-    KARRegion.TR_TA_METAL,
-    KARRegion.TR_TA_LIGHT,
-    KARRegion.TR_TA_SAND,
-    KARRegion.TR_TA_FIRE,
-    KARRegion.TR_TA_WATER,
-    KARRegion.TR_TA_SKY,
-]
-TR_FR_COURSE_REGIONS = [
-    KARRegion.TR_FR_GRASS,
-    KARRegion.TR_FR_METAL,
-    KARRegion.TR_FR_LIGHT,
-    KARRegion.TR_FR_SAND,
-    KARRegion.TR_FR_FIRE,
-    KARRegion.TR_FR_WATER,
-    KARRegion.TR_FR_SKY,
-]
-
-
-# Region-to-unlock-item mappings used for entrance gating during rule setup.
-
-STADIUM_REGION_TO_UNLOCK: dict[str, KARItemName] = {
-    KARRegion.STADIUM_DR1: KARItemName.UNLOCK_STADIUM_DRAG_RACE_1,
-    KARRegion.STADIUM_DR2: KARItemName.UNLOCK_STADIUM_DRAG_RACE_2,
-    KARRegion.STADIUM_DR3: KARItemName.UNLOCK_STADIUM_DRAG_RACE_3,
-    KARRegion.STADIUM_DR4: KARItemName.UNLOCK_STADIUM_DRAG_RACE_4,
-    KARRegion.STADIUM_HJ: KARItemName.UNLOCK_STADIUM_HIGH_JUMP,
-    KARRegion.STADIUM_TF: KARItemName.UNLOCK_STADIUM_TARGET_FLIGHT,
-    KARRegion.STADIUM_AG: KARItemName.UNLOCK_STADIUM_AIR_GLIDER,
-    KARRegion.STADIUM_KM1: KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1,
-    KARRegion.STADIUM_KM2: KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2,
-    KARRegion.STADIUM_DD1: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1,
-    KARRegion.STADIUM_DD2: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2,
-    KARRegion.STADIUM_DD3: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
-    KARRegion.STADIUM_DD4: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
-    KARRegion.STADIUM_DD5: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5,
-    KARRegion.STADIUM_SR1: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_1,
-    KARRegion.STADIUM_SR2: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_2,
-    KARRegion.STADIUM_SR3: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_3,
-    KARRegion.STADIUM_SR4: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_4,
-    KARRegion.STADIUM_SR5: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_5,
-    KARRegion.STADIUM_SR6: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_6,
-    KARRegion.STADIUM_SR7: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_7,
-    KARRegion.STADIUM_SR8: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_8,
-    KARRegion.STADIUM_SR9: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_9,
-    KARRegion.STADIUM_VSKD: KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE,
-}
-
-STADIUM_ALL_REGION_TO_UNLOCKS: dict[str, list[KARItemName]] = {
-    KARRegion.STADIUM_DD_ALL: [
-        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1,
-        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2,
-        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
-        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
-        KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5,
-    ],
-    KARRegion.STADIUM_KM_ALL: [
-        KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1,
-        KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2,
-    ],
-}
-
-AR_COURSE_REGION_TO_UNLOCK: dict[str, KARItemName] = {
-    KARRegion.AR_MAGMA_FLOWS: KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
-    KARRegion.AR_FANTASY_MEADOWS: KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
-    KARRegion.AR_CELESTIAL_VALLEY: KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
-    KARRegion.AR_BEANSTALK_PARK: KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
-    KARRegion.AR_FROZEN_HILLSIDE: KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
-    KARRegion.AR_MACHINE_PASSAGE: KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
-    KARRegion.AR_SKY_SANDS: KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
-    KARRegion.AR_CHECKER_KNIGHTS: KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
-    KARRegion.AR_NEBULA_BELT: KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
-    KARRegion.AR_TA_MAGMA_FLOWS: KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
-    KARRegion.AR_TA_FANTASY_MEADOWS: KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
-    KARRegion.AR_TA_CELESTIAL_VALLEY: KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
-    KARRegion.AR_TA_BEANSTALK_PARK: KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
-    KARRegion.AR_TA_FROZEN_HILLSIDE: KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
-    KARRegion.AR_TA_MACHINE_PASSAGE: KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
-    KARRegion.AR_TA_SKY_SANDS: KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
-    KARRegion.AR_TA_CHECKER_KNIGHTS: KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
-    KARRegion.AR_TA_NEBULA_BELT: KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
-    KARRegion.AR_FR_MAGMA_FLOWS: KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
-    KARRegion.AR_FR_FANTASY_MEADOWS: KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
-    KARRegion.AR_FR_CELESTIAL_VALLEY: KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
-    KARRegion.AR_FR_BEANSTALK_PARK: KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
-    KARRegion.AR_FR_FROZEN_HILLSIDE: KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
-    KARRegion.AR_FR_MACHINE_PASSAGE: KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
-    KARRegion.AR_FR_SKY_SANDS: KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
-    KARRegion.AR_FR_CHECKER_KNIGHTS: KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
-    KARRegion.AR_FR_NEBULA_BELT: KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
-}
-
-TR_COURSE_REGION_TO_UNLOCK: dict[str, KARItemName] = {
-    KARRegion.TR_GRASS: KARItemName.UNLOCK_TR_COURSE_GRASS,
-    KARRegion.TR_SAND: KARItemName.UNLOCK_TR_COURSE_SAND,
-    KARRegion.TR_SKY: KARItemName.UNLOCK_TR_COURSE_SKY,
-    KARRegion.TR_FIRE: KARItemName.UNLOCK_TR_COURSE_FIRE,
-    KARRegion.TR_LIGHT: KARItemName.UNLOCK_TR_COURSE_LIGHT,
-    KARRegion.TR_WATER: KARItemName.UNLOCK_TR_COURSE_WATER,
-    KARRegion.TR_METAL: KARItemName.UNLOCK_TR_COURSE_METAL,
-    KARRegion.TR_TA_GRASS: KARItemName.UNLOCK_TR_COURSE_GRASS,
-    KARRegion.TR_TA_SAND: KARItemName.UNLOCK_TR_COURSE_SAND,
-    KARRegion.TR_TA_SKY: KARItemName.UNLOCK_TR_COURSE_SKY,
-    KARRegion.TR_TA_FIRE: KARItemName.UNLOCK_TR_COURSE_FIRE,
-    KARRegion.TR_TA_LIGHT: KARItemName.UNLOCK_TR_COURSE_LIGHT,
-    KARRegion.TR_TA_WATER: KARItemName.UNLOCK_TR_COURSE_WATER,
-    KARRegion.TR_TA_METAL: KARItemName.UNLOCK_TR_COURSE_METAL,
-    KARRegion.TR_FR_GRASS: KARItemName.UNLOCK_TR_COURSE_GRASS,
-    KARRegion.TR_FR_SAND: KARItemName.UNLOCK_TR_COURSE_SAND,
-    KARRegion.TR_FR_SKY: KARItemName.UNLOCK_TR_COURSE_SKY,
-    KARRegion.TR_FR_FIRE: KARItemName.UNLOCK_TR_COURSE_FIRE,
-    KARRegion.TR_FR_LIGHT: KARItemName.UNLOCK_TR_COURSE_LIGHT,
-    KARRegion.TR_FR_WATER: KARItemName.UNLOCK_TR_COURSE_WATER,
-    KARRegion.TR_FR_METAL: KARItemName.UNLOCK_TR_COURSE_METAL,
-}
-
-
-def connect_air_ride_region(world: "KARWorld", air_ride_region: Region) -> None:
-    create_regions_batch(
-        world,
-        KARRegion.AR_TIME_ATTACK,
-        KARRegion.AR_FREE_RUN,
-        *AR_COURSE_REGIONS,
-        *AR_TA_COURSE_REGIONS,
-        *AR_FR_COURSE_REGIONS,
-    )
-
-    air_ride_region.add_exits([KARRegion.AR_TIME_ATTACK, KARRegion.AR_FREE_RUN])
-
-    # Course entrance rules (e.g. Nebula Belt) are applied later, during rule setup.
-    air_ride_region.add_exits(AR_COURSE_REGIONS)
-
-    world.get_region(KARRegion.AR_TIME_ATTACK).add_exits(AR_TA_COURSE_REGIONS)
-    world.get_region(KARRegion.AR_FREE_RUN).add_exits(AR_FR_COURSE_REGIONS)
-
-
-def connect_top_ride_region(world: "KARWorld", top_ride_region: Region) -> None:
-    create_regions_batch(
-        world,
-        KARRegion.TR_TIME_ATTACK,
-        KARRegion.TR_FREE_RUN,
-        *TR_COURSE_REGIONS,
-        *TR_TA_COURSE_REGIONS,
-        *TR_FR_COURSE_REGIONS,
-    )
-
-    top_ride_region.add_exits([KARRegion.TR_TIME_ATTACK, KARRegion.TR_FREE_RUN, *TR_COURSE_REGIONS])
-
-    world.get_region(KARRegion.TR_FREE_RUN).add_exits(TR_FR_COURSE_REGIONS)
-
-    world.get_region(KARRegion.TR_TIME_ATTACK).add_exits(TR_TA_COURSE_REGIONS)
+    names = AP_PATCH_GROUP_REGIONS[: world.ap_patch_group_count]
+    region = _add_region(world, names[0], world.get_region(KARRegion.CITY_TRIAL))
+    for event_item, name in zip(AP_PATCH_GROUP_EVENT_ITEMS, names[1:]):
+        region.add_event(f"{region.name} Cleared", event_item, location_type=KARLocation, item_type=KARItem)
+        region = _add_region(world, name, region, Has(event_item))
 
 
 def create_n_blocks_rule(
     world: "KARWorld", mode: GameMode, required_blocks: int, exclude_location_name: str | None = None
 ) -> Callable[[CollectionState], bool]:
-    """
-    A rule that passes once N of a mode's locations are reachable. Mode membership is the location's
-    code band (CT 1-120, AR 121-240, TR 241-360, AP 361-412), not the region name: an AP box lives in
-    the region where its activity happens, so one in "Air Ride: MAGMA FLOWS" would otherwise count
-    toward the Air Ride goal. `exclude_location_name` drops one location, so a cell gated on this rule
-    is not asked to reach itself and recurse.
-    """
+    """A rule that passes once `required_blocks` of `mode`'s locations are reachable."""
     player = world.player
 
     def can_access_n_blocks(state: CollectionState) -> bool:
         count = 0
-        # Skip event locations (address is None) - the victory event's rule is this function.
         for loc in state.multiworld.get_locations(player):
+            # Skip event locations (address is None) - the victory event's rule is this function.
             if loc.address is None:
                 continue
+            # So a cell gated on this rule is not asked to reach itself and recurse.
             if exclude_location_name is not None and loc.name == exclude_location_name:
                 continue
             decoded = location_code_to_mode_clear(loc.address)
@@ -634,9 +422,7 @@ def create_n_blocks_rule(
 
 def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     """
-    Build the access rule for the Max Stats Insanity goal event: all Patch Cap Increase items (only when
-    cap max > cap min, else none exist), plus a route to maxing all 9 stats - the 9 patch type unlocks or
-    the All-Up unlock, emitted only when both gates are on. None when every clause is trivial.
+    Build the access rule for the Max Stats CT goal event.
     """
     options = world.options
     rule_parts: list[Rule] = []
@@ -646,121 +432,68 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
         rule_parts.append(Has(KARItemName.PATCH_CAP_INCREASE, count=count))
 
     if options.city_trial_patches_gated and options.city_trial_items_gated:
-        # HasAll/HasAny only accept item names, not nested rules. Compose with the | operator
-        # (defined on Rule) to express "all 9 patches OR all-up unlock".
-        all_patch_unlocks = sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK])
-        rule_parts.append(HasAll(*all_patch_unlocks) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
+        rule_parts.append(HasAll(*sorted(CT_PATCH_UNLOCK_ITEMS)) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
 
-    if not rule_parts:
-        return None
-    rule = rule_parts[0]
-    for part in rule_parts[1:]:
-        rule = rule & part
-    return rule
+    return And(*rule_parts) if rule_parts else None
 
 
-def _create_goal_events(
+# Each assemble goal's piece unlocks.
+_ASSEMBLE_GOAL_UNLOCKS: dict[int, tuple[str, ...]] = {
+    GoalKind.HYDRA_AND_DRAGOON: LEGENDARY_PIECE_UNLOCK_ITEMS,
+    GoalKind.ASSEMBLE_AP_STAR: AP_STAR_PIECE_UNLOCK_ITEMS,
+    GoalKind.ALL_LEGENDARIES_CT: (*LEGENDARY_PIECE_UNLOCK_ITEMS, *AP_STAR_PIECE_UNLOCK_ITEMS),
+}
+
+
+def _create_goal_event(
     world: "KARWorld",
+    mode: GameMode,
     goal_option,
     checklist_amount_option,
     goal_locations_option,
-    mode: GameMode,
-    mode_prefix: str,
-    location_table: dict,
     goal_location_map: Mapping[int, str],
-    victory_event_type: str,
-) -> str | None:
+) -> None:
     """
-    Create goal event locations for a single game mode. `mode` identifies which locations count toward a
-    block goal (by code band); `mode_prefix` is the root region name where the victory event is hung.
-    Returns the victory event item name, or None when the mode has no goal.
+    Create the victory event for one mode's goal.
     """
-    if goal_option.value == goal_option.option_none:
-        return None
+    # Deferred to break the import cycle.
+    from .KARLocations import LOCATION_TABLE, KARLocation
 
-    # Deferred to break the import cycle; only needed for the add_event item_type/location_type.
-    from .KARLocations import KARLocation
-
-    region = world.get_region(mode_prefix)
+    region = world.get_region(MODE_ROOT_REGION[mode])
 
     if goal_option.value == goal_option.option_n_checklist_blocks:
-        n_blocks_rule = create_n_blocks_rule(world, mode, checklist_amount_option.value)
-        region.add_event(
-            f"{mode_prefix}: Complete {checklist_amount_option.value} Checklist Blocks",
-            victory_event_type,
-            n_blocks_rule,
-            location_type=KARLocation,
-            item_type=KARItem,
-        )
+        name = f"{region.name}: Complete {checklist_amount_option.value} Checklist Blocks"
+        rule = create_n_blocks_rule(world, mode, checklist_amount_option.value)
     elif goal_option.value == goal_option.option_checklist_list:
-        goal_locs = list(goal_locations_option.value)
-        rule: Rule | None = None
-        if goal_locs:
-            rule = CanReachLocation(goal_locs[0])
-            for loc in goal_locs[1:]:
-                rule = rule & CanReachLocation(loc)
-        region.add_event(
-            f"{mode_prefix}: Complete Required Checklist Locations",
-            victory_event_type,
-            rule,
-            location_type=KARLocation,
-            item_type=KARItem,
-        )
+        name = f"{region.name}: Complete Required Checklist Locations"
+        rule = And(*(CanReachLocation(location) for location in goal_locations_option.value))
     elif goal_option.value in goal_location_map:
         goal_location_name = goal_location_map[goal_option.value]
-        goal_location_data = location_table[goal_location_name]
-        goal_region = world.get_region(goal_location_data.region)
+        region = world.get_region(LOCATION_TABLE[goal_location_name].region)
+        name = f"{goal_location_name} (Victory)"
+        if goal_option.value == GoalKind.CHECKLIST_100:
+            rule = create_n_blocks_rule(world, mode, 100)
+        elif goal_option.value == GoalKind.BEAT_KING_DEDEDE:
+            # Dedede's stadium must come up; goal_forced_unlocks keeps its unlock in the pool even when ungated.
+            rule = Has(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
+        else:
+            # Every piece must spawn; goal_forced_unlocks keeps them in the pool even when items are ungated.
+            rule = HasAll(*_ASSEMBLE_GOAL_UNLOCKS[goal_option.value])
+            if "city_trial_boxes_gated" in world.effective_gates:
+                rule &= Has(KARItemName.UNLOCK_BOX_RED)
+    elif goal_option.value == GoalKind.MAX_STATS_CT:
+        # No checklist cell backs this goal; the mod sets max_stats_ct_achieved once every stat hits the patch cap.
+        name = f"{region.name}: Max Stats"
+        rule = _build_max_stats_goal_rule(world)
+    else:
+        raise ValueError(f"{mode.name} goal {goal_option.value} has no victory event")
 
-        blocks_rule = None
-        # getattr, not attribute access: ArchipelagoGoal has no 100_checklist_blocks (its checklist is
-        # under 100 boxes). Goal values are ints, so the None default can never compare equal.
-        if goal_option.value == getattr(goal_option, "option_100_checklist_blocks", None):
-            blocks_rule = create_n_blocks_rule(world, mode, 100)
-        elif goal_option.value == CityTrialGoal.option_hydra_and_dragoon:
-            # Assembling both legendary machines needs every piece to spawn, which the six piece-spawn
-            # unlocks control. They are in the pool either way - gated ships the whole category, ungated
-            # still ships these six as the goal's keys.
-            blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS)
-        elif goal_option.value == CityTrialGoal.option_beat_king_dedede:
-            # Dedede has to come up in the stadium rotation, which his stadium's unlock controls. Also
-            # in the pool either way - stadium gating on ships all 24, off still ships this one.
-            blocks_rule = Has(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
-        elif goal_option.value == ArchipelagoGoal.option_assemble_archipelago_star:
-            # Every sphere has to spawn, which the six sphere unlocks control. The machine unlock is
-            # not among them: assembling the star mounts it either way.
-            blocks_rule = HasAll(*AP_STAR_PIECE_UNLOCK_ITEMS)
-        elif goal_option.value == ArchipelagoGoal.option_all_three_legendaries_in_one_run:
-            blocks_rule = HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS, *AP_STAR_PIECE_UNLOCK_ITEMS)
-
-        goal_region.add_event(
-            f"{goal_location_name} (Victory)",
-            victory_event_type,
-            blocks_rule,
-            location_type=KARLocation,
-            item_type=KARItem,
-        )
-    elif goal_option.value == CityTrialGoal.option_max_stats_in_one_run:
-        # Synthetic goal event in the City Trial region - no checklist location to bind to. The mod sets
-        # max_stats_ct_achieved when every stat hits the per-slot patch-cap target.
-        region.add_event(
-            f"{mode_prefix}: Max Stats (Insanity)",
-            victory_event_type,
-            _build_max_stats_goal_rule(world),
-            location_type=KARLocation,
-            item_type=KARItem,
-        )
-
-    return victory_event_type
+    region.add_event(name, MODE_VICTORY_EVENTS[mode], rule, location_type=KARLocation, item_type=KARItem)
 
 
 def _build_ut_go_mode_rule(world: "KARWorld", goal_event_items: list[str]) -> Callable[[CollectionState], bool]:
     """
-    Universal Tracker's go-mode readout is `completion_condition`, evaluated against a state swept for
-    event reachability. The real rule ANDs every mode's victory, which in a multi-goal seed reads "No"
-    until the last mode comes into logic, and our block goals go reachable long before they are done -
-    so the honest answer for a tracker is "is there a goal you could go finish right now": some goal
-    still outstanding, and in logic. `ut_goals_completed` is what the game reports done, so unlike pure
-    logic (which never regresses) this turns back off once you actually finish the goal that lit it.
+    Universal Tracker's go-mode: whether some goal not yet reported done (`ut_goals_completed`) is in logic now.
     """
     player = world.player
 
@@ -782,71 +515,50 @@ def determine_goal(world: "KARWorld") -> None:
     # Deferred to break the import cycle.
     from .KARLocations import (
         AIR_RIDE_GOAL_TO_LOCATION,
-        AIR_RIDE_LOCATION_TABLE,
-        AP_CHECKLIST_LOCATION_TABLE,
         ARCHIPELAGO_GOAL_TO_LOCATION,
         CITY_TRIAL_GOAL_TO_LOCATION,
-        CITY_TRIAL_LOCATION_TABLE,
         TOP_RIDE_GOAL_TO_LOCATION,
-        TOP_RIDE_LOCATION_TABLE,
     )
 
-    goal_event_items = [
-        result
-        for result in [
-            _create_goal_events(
-                world,
-                world.options.city_trial_goal,
-                world.options.city_trial_checklist_amount,
-                world.options.city_trial_goal_locations,
-                GameMode.CITYTRIAL,
-                KARRegion.CITY_TRIAL,
-                CITY_TRIAL_LOCATION_TABLE,
-                CITY_TRIAL_GOAL_TO_LOCATION,
-                KARItemName.CITY_TRIAL_VICTORY,
-            ),
-            _create_goal_events(
-                world,
-                world.options.air_ride_goal,
-                world.options.air_ride_checklist_amount,
-                world.options.air_ride_goal_locations,
-                GameMode.AIRRIDE,
-                KARRegion.AIR_RIDE,
-                AIR_RIDE_LOCATION_TABLE,
-                AIR_RIDE_GOAL_TO_LOCATION,
-                KARItemName.AIR_RIDE_VICTORY,
-            ),
-            _create_goal_events(
-                world,
-                world.options.top_ride_goal,
-                world.options.top_ride_checklist_amount,
-                world.options.top_ride_goal_locations,
-                GameMode.TOPRIDE,
-                KARRegion.TOP_RIDE,
-                TOP_RIDE_LOCATION_TABLE,
-                TOP_RIDE_GOAL_TO_LOCATION,
-                KARItemName.TOP_RIDE_VICTORY,
-            ),
-            _create_goal_events(
-                world,
-                world.options.archipelago_goal,
-                world.options.archipelago_checklist_amount,
-                world.options.archipelago_goal_locations,
-                GameMode.ARCHIPELAGO,
-                KARRegion.ARCHIPELAGO,
-                AP_CHECKLIST_LOCATION_TABLE,
-                ARCHIPELAGO_GOAL_TO_LOCATION,
-                KARItemName.ARCHIPELAGO_VICTORY,
-            ),
-        ]
-        if result is not None
-    ]
+    options = world.options
+    goal_event_items: list[str] = []
+    for mode, goal_option, checklist_amount_option, goal_locations_option, goal_location_map in (
+        (
+            GameMode.CITYTRIAL,
+            options.city_trial_goal,
+            options.city_trial_checklist_amount,
+            options.city_trial_goal_locations,
+            CITY_TRIAL_GOAL_TO_LOCATION,
+        ),
+        (
+            GameMode.AIRRIDE,
+            options.air_ride_goal,
+            options.air_ride_checklist_amount,
+            options.air_ride_goal_locations,
+            AIR_RIDE_GOAL_TO_LOCATION,
+        ),
+        (
+            GameMode.TOPRIDE,
+            options.top_ride_goal,
+            options.top_ride_checklist_amount,
+            options.top_ride_goal_locations,
+            TOP_RIDE_GOAL_TO_LOCATION,
+        ),
+        (
+            GameMode.ARCHIPELAGO,
+            options.archipelago_goal,
+            options.archipelago_checklist_amount,
+            options.archipelago_goal_locations,
+            ARCHIPELAGO_GOAL_TO_LOCATION,
+        ),
+    ):
+        if goal_option.value != goal_option.option_none:
+            _create_goal_event(
+                world, mode, goal_option, checklist_amount_option, goal_locations_option, goal_location_map
+            )
+            goal_event_items.append(MODE_VICTORY_EVENTS[mode])
 
-    if not goal_event_items:
-        return
-
-    # re_gen_passthrough only exists on Universal Tracker's MultiWorld, and its generation stops before
-    # fill, so nothing but the go-mode label reads the completion condition there.
+    # Under Universal Tracker (re_gen_passthrough set) nothing fills, so the completion rule only drives go-mode.
     if getattr(world.multiworld, "re_gen_passthrough", None) is not None:
         world.set_completion_rule(_build_ut_go_mode_rule(world, goal_event_items))
     else:

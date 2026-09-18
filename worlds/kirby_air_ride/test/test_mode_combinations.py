@@ -1,12 +1,5 @@
-"""
-Mode-combination tests: the seven CT / AR / TR on-off combinations.
-
-Enabling a mode is enabling its goal, so `*_enabled` is derived from the goal option rather than set
-directly - these pin that derivation, and the two things that follow from it: a disabled mode
-contributes no locations, and its mode-specific checklist rewards leave the pool (the box that would
-award them does not exist). The Archipelago checklist is a fourth mode with its own semantics and is
-covered in test_archipelago_checklist.py; here it stays off, which every preset asserts.
-"""
+"""The seven CT / AR / TR on-off combinations: a mode is enabled by its goal option, and a disabled one
+contributes neither locations nor its mode-specific checklist rewards (no box exists to award them)."""
 
 from ..KARItems import KARItemGroup, item_name_groups
 from ..KARLocations import (
@@ -19,128 +12,61 @@ from ..KARLocations import (
 )
 from . import ALL_MODES, AR_AND_TR, AR_ONLY, CT_AND_AR, CT_AND_TR, CT_ONLY, TR_ONLY, KARTestBase
 
+# Per mode: the enabled-flag attribute, its location table, its reward group, and a sentinel box no
+# goal replaces, so it exists as a location whenever the mode is on.
+_MODES: dict[str, tuple[str, dict, str, str]] = {
+    "ct": ("city_trial_enabled", CITY_TRIAL_LOCATION_TABLE, KARItemGroup.CT_REWARDS, CTLocation.DESTROY_ALL_HOUSES),
+    "ar": ("air_ride_enabled", AIR_RIDE_LOCATION_TABLE, KARItemGroup.AR_REWARDS, ARLocation.RACE_100_LAPS),
+    "tr": (
+        "top_ride_enabled",
+        TOP_RIDE_LOCATION_TABLE,
+        KARItemGroup.TR_REWARDS,
+        TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS,
+    ),
+}
 
-class TestCTOnly(KARTestBase):
-    options = CT_ONLY
-
-    def test_flags(self):
-        self.assertTrue(self.world.city_trial_enabled)
-        self.assertFalse(self.world.air_ride_enabled)
-        self.assertFalse(self.world.top_ride_enabled)
-        self.assertFalse(self.world.archipelago_enabled)
-
-    def test_no_off_mode_locations(self):
-        loc_names = self.real_location_names()
-        self.assertFalse(loc_names & set(AIR_RIDE_LOCATION_TABLE))
-        self.assertFalse(loc_names & set(TOP_RIDE_LOCATION_TABLE))
-
-    def test_no_off_mode_rewards_in_pool(self):
-        pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups[KARItemGroup.AR_REWARDS])
-        self.assertFalse(pool & item_name_groups[KARItemGroup.TR_REWARDS])
-
-
-class TestAROnly(KARTestBase):
-    options = AR_ONLY
-
-    def test_flags(self):
-        self.assertFalse(self.world.city_trial_enabled)
-        self.assertTrue(self.world.air_ride_enabled)
-        self.assertFalse(self.world.top_ride_enabled)
-
-    def test_no_off_mode_locations(self):
-        loc_names = self.real_location_names()
-        self.assertFalse(loc_names & set(CITY_TRIAL_LOCATION_TABLE))
-        self.assertFalse(loc_names & set(TOP_RIDE_LOCATION_TABLE))
-
-    def test_no_off_mode_rewards_in_pool(self):
-        pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups[KARItemGroup.CT_REWARDS])
-        self.assertFalse(pool & item_name_groups[KARItemGroup.TR_REWARDS])
+_COMBINATIONS: list[tuple[str, dict, set[str]]] = [
+    ("ct", CT_ONLY, {"ct"}),
+    ("ar", AR_ONLY, {"ar"}),
+    ("tr", TR_ONLY, {"tr"}),
+    ("ct_ar", CT_AND_AR, {"ct", "ar"}),
+    ("ct_tr", CT_AND_TR, {"ct", "tr"}),
+    ("ar_tr", AR_AND_TR, {"ar", "tr"}),
+    ("all", ALL_MODES, {"ct", "ar", "tr"}),
+]
 
 
-class TestTROnly(KARTestBase):
-    options = TR_ONLY
+def _make_combination_test(label: str, preset: dict, enabled: set[str]) -> type:
+    class _Combination(KARTestBase):
+        options = preset
 
-    def test_flags(self):
-        self.assertFalse(self.world.city_trial_enabled)
-        self.assertFalse(self.world.air_ride_enabled)
-        self.assertTrue(self.world.top_ride_enabled)
+        def test_enabled_flags_match_the_preset(self):
+            for mode, (flag, _, _, _) in _MODES.items():
+                with self.subTest(mode=mode):
+                    self.assertEqual(getattr(self.world, flag), mode in enabled)
+            # The Archipelago checklist is opt-in on top of the three real modes, never implied by them.
+            self.assertFalse(self.world.archipelago_enabled)
 
-    def test_no_off_mode_locations(self):
-        loc_names = self.real_location_names()
-        self.assertFalse(loc_names & set(CITY_TRIAL_LOCATION_TABLE))
-        self.assertFalse(loc_names & set(AIR_RIDE_LOCATION_TABLE))
+        def test_only_enabled_modes_contribute_locations(self):
+            loc_names = self.real_location_names()
+            for mode, (_, table, _, sentinel) in _MODES.items():
+                with self.subTest(mode=mode):
+                    if mode in enabled:
+                        self.assertIn(sentinel, loc_names)
+                    else:
+                        self.assertFalse(loc_names & set(table))
 
-    def test_no_off_mode_rewards_in_pool(self):
-        pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups[KARItemGroup.CT_REWARDS])
-        self.assertFalse(pool & item_name_groups[KARItemGroup.AR_REWARDS])
+        def test_disabled_modes_mint_no_rewards(self):
+            pool = set(self.itempool_names())
+            for mode, (_, _, group, _) in _MODES.items():
+                if mode not in enabled:
+                    with self.subTest(mode=mode):
+                        self.assertFalse(pool & item_name_groups[group])
 
-
-class TestCTAndAR(KARTestBase):
-    options = CT_AND_AR
-
-    def test_flags(self):
-        self.assertTrue(self.world.city_trial_enabled)
-        self.assertTrue(self.world.air_ride_enabled)
-        self.assertFalse(self.world.top_ride_enabled)
-
-    def test_no_tr_rewards_in_pool(self):
-        pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups[KARItemGroup.TR_REWARDS])
-
-
-class TestCTAndTR(KARTestBase):
-    options = CT_AND_TR
-
-    def test_flags(self):
-        self.assertTrue(self.world.city_trial_enabled)
-        self.assertFalse(self.world.air_ride_enabled)
-        self.assertTrue(self.world.top_ride_enabled)
-
-    def test_no_ar_locations(self):
-        loc_names = self.real_location_names()
-        self.assertFalse(loc_names & set(AIR_RIDE_LOCATION_TABLE))
-
-    def test_no_ar_rewards_in_pool(self):
-        pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups[KARItemGroup.AR_REWARDS])
+    _Combination.__name__ = f"TestModes_{label}"
+    _Combination.__qualname__ = _Combination.__name__
+    return _Combination
 
 
-class TestARAndTR(KARTestBase):
-    options = AR_AND_TR
-
-    def test_flags(self):
-        self.assertFalse(self.world.city_trial_enabled)
-        self.assertTrue(self.world.air_ride_enabled)
-        self.assertTrue(self.world.top_ride_enabled)
-
-    def test_no_ct_locations(self):
-        loc_names = self.real_location_names()
-        self.assertFalse(loc_names & set(CITY_TRIAL_LOCATION_TABLE))
-
-    def test_no_ct_rewards_in_pool(self):
-        pool = set(self.itempool_names())
-        self.assertFalse(pool & item_name_groups[KARItemGroup.CT_REWARDS])
-
-
-class TestAllModes(KARTestBase):
-    options = ALL_MODES
-
-    def test_flags(self):
-        self.assertTrue(self.world.city_trial_enabled)
-        self.assertTrue(self.world.air_ride_enabled)
-        self.assertTrue(self.world.top_ride_enabled)
-
-    def test_archipelago_stays_off(self):
-        # ALL_MODES means the three real modes; the Archipelago checklist is opt-in on top of them.
-        self.assertFalse(self.world.archipelago_enabled)
-
-    def test_all_mode_locations_present(self):
-        loc_names = self.real_location_names()
-        # Use a sentinel non-excluded location per mode (excluded-by-default progression locations
-        # still exist as locations, so they wouldn't prove the mode is present).
-        self.assertIn(CTLocation.DESTROY_ALL_HOUSES, loc_names)
-        self.assertIn(ARLocation.RACE_100_LAPS, loc_names)
-        self.assertIn(TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS, loc_names)
+for _label, _preset, _enabled in _COMBINATIONS:
+    globals()[f"TestModes_{_label}"] = _make_combination_test(_label, _preset, _enabled)

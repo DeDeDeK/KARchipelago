@@ -3,6 +3,9 @@
 # Pass to the fuzzer:
 #   uv run python fuzz/fuzz.py -g kirby_air_ride -m worlds/kirby_air_ride/fuzz/fuzz_meta.yaml -r 200
 #
+# Every constraint here exists to prune a YAML the world rejects by design, and each one costs some
+# coverage of whatever it pins. Prefer the direction that pins the *rarer* roll: pinning the common
+# side of a conflict hides an option from most of the run.
 
 Kirby Air Ride:
   fuzz_constraints:
@@ -23,47 +26,70 @@ Kirby Air Ride:
       if_value: "n_checklist_blocks"
       then:
         top_ride_checkbox_fillers: 0
-    # The AP target needs a pin of its own: the option's range reaches 120 like every
-    # other mode's, while the AP checklist holds 52 boxes, so most rolls would reject.
+    # The AP checklist needs nothing beyond the same filler pin: ArchipelagoChecklistAmount's range
+    # ends at AP_CHECKLIST_CODE_NUM, so the amount can never exceed the boxes that exist and the
+    # filler comparison is the only way that goal rejects. Leaving the amount free keeps the whole
+    # 1..52 range in play, the upper end of which is where the capacity validator gets interesting.
     - option: archipelago_goal
       if_value: "n_checklist_blocks"
       then:
-        archipelago_checklist_amount: 25
         archipelago_checkbox_fillers: 0
 
     # checklist_list goal requires at least one location in *_goal_locations.
     # The fuzzer doesn't randomize LocationSet contents, so a random YAML that
     # rolls checklist_list always has an empty list and OptionErrors out. Seed
-    # one valid per-mode location when the goal is checklist_list so the
-    # generation can actually exercise that goal path.
+    # valid per-mode locations when the goal is checklist_list so the generation
+    # can actually exercise that goal path. Several per mode, not one: a single
+    # seeded location never exercises the multi-checkpoint rule, which is the
+    # part of the goal with any logic in it.
     - option: city_trial_goal
       if_value: "checklist_list"
       then_include:
         city_trial_goal_locations:
           - "City Trial: Knock down all of the trees in the forest!"
+          - "City Trial: Open up the pitfall in the forest!"
+          - "City Trial: Open up all the holes around the base of the volcano!"
     - option: air_ride_goal
       if_value: "checklist_list"
       then_include:
         air_ride_goal_locations:
           - "Air Ride: Race all of the standard Air Ride courses!"
+          - "Air Ride: Finish in 1st place while flying through the air!"
     - option: top_ride_goal
       if_value: "checklist_list"
       then_include:
         top_ride_goal_locations:
           - "Top Ride: Take 1st place while holding the Hammer!"
+          - "Top Ride: Take 1st place on all courses!"
     - option: archipelago_goal
       if_value: "checklist_list"
       then_include:
         archipelago_goal_locations:
-          - "Archipelago: City Trial: Go out of bounds!"
+          - "Archipelago: City Trial: Break all the coral in one game!"
+          - "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place!"
 
-    # A named starting unlock this seed's other options bar is an OptionError, so pin those two pairs
-    # back to the random draw and let the named picks fuzz freely everywhere else.
-    - option: city_trial_goal
-      if_value: "beat_king_dedede"
+    # _resolve_starter raises when a named starting unlock is one this seed's other options bar, which
+    # happens in exactly two places. Both are pinned from the *named pick* side rather than from the
+    # option that bars it, because the named picks are the rarer roll:
+    #
+    #   - beat_king_dedede is 1 of 7 City Trial goals, so pinning the goal away costs ~4% of seeds
+    #     while pinning starting_stadium would blank all 24 named stadiums in ~14% of them.
+    #   - base_abilities_gated is a coin flip, so pinning starting_machine to randomized on it - which
+    #     this file used to do - hid every named machine from half the run to prune the 3 of 19 picks
+    #     that actually conflict.
+    - option: starting_stadium
+      if_value: "vs_king_dedede"
       then:
-        starting_stadium: randomized
-    - option: base_abilities_gated
-      if_value: "true"
+        city_trial_goal: 100_checklist_blocks
+    - option: starting_machine
+      if_value: "bulk_star"
       then:
-        starting_machine: randomized
+        base_abilities_gated: false
+    - option: starting_machine
+      if_value: "slick_star"
+      then:
+        base_abilities_gated: false
+    - option: starting_machine
+      if_value: "turbo_star"
+      then:
+        base_abilities_gated: false

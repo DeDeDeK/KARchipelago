@@ -1,18 +1,11 @@
-"""
-Starter tests: which categories grant a precollected starter, which items are barred from the pick, how
-a starting_* option's named pick replaces the random draw, and how start_inventory suppresses both.
-
-`world_setup` takes a fresh random seed each run, so one generation observes exactly one draw out of a
-category of 8-24. "This run's pick was not X" would therefore catch a broken exclusion only as often as
-X happened to come up - a 1-in-24 detection rate for the VS King Dedede case, and a test that passes or
-fails on the seed rather than on the code. So nothing here asserts on a draw: `starter_candidates`
-re-runs the picker with `world.random` recording instead of drawing and returns the exact candidate
-list the world built, which turns every exclusion question into one deterministic set comparison.
-"""
+"""Starter picks: which categories grant a precollected unlock, what is barred from the draw, and how a
+named `starting_*` pick or a start_inventory preset replaces it. Nothing here asserts on a draw -
+`starter_candidates` records the candidate list instead, so an exclusion is one set comparison."""
 
 from Options import Toggle
 
 from ..KARItems import (
+    ASSEMBLED_MACHINE_UNLOCKS,
     CHARGE_DEPENDENT_MACHINES,
     STADIUM_UNLOCK_ITEMS,
     KARItemGroup,
@@ -20,10 +13,10 @@ from ..KARItems import (
     item_name_groups,
 )
 from ..KAROptions import CityTrialGoal
-from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, recording_random
+from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, names, recording_random
 
-# Every attribute _determine_starter_items assigns. Saved and restored around a recorded re-run so
-# the helper leaves the world exactly as it found it.
+# Every attribute _determine_starter_items assigns, saved and restored around a recorded re-run so the
+# helper leaves the world exactly as it found it.
 _STARTER_ATTRS = (
     "stadium_starter_choice",
     "machine_starter_choice",
@@ -33,18 +26,19 @@ _STARTER_ATTRS = (
     "color_starter_choice",
 )
 
+_ALL_STADIUMS = names(STADIUM_UNLOCK_ITEMS)
+_ALL_MACHINES = names(item_name_groups[KARItemGroup.MACHINE_UNLOCKS])
+_TR_MACHINES = names({KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR})
+# The legendaries are assembled from pieces rather than selected, so they are never a starter.
+_ASSEMBLED = names(ASSEMBLED_MACHINE_UNLOCKS)
+# The AR/CT starter must be rideable in Air Ride and City Trial, which the Top Ride controls are not.
+_ARCT_MACHINES = _ALL_MACHINES - _TR_MACHINES - _ASSEMBLED
+
 
 def starter_candidates(world, attr: str) -> set[str]:
-    """Every item the `attr` starter pick was willing to draw, captured exactly rather than sampled.
-
-    Re-runs `_determine_starter_items` once with a recording `world.random`, so what comes back is the
-    candidate list the world assembled - not a sample of its output. A category whose pick was skipped
-    (the player preset one in start_inventory) yields the empty set.
-
-    The recorder always returns the first entry it is offered, so the call that produced `attr` is the
-    one whose first entry is the chosen value; the categories draw from disjoint item groups, so that
-    identification is unambiguous and is asserted rather than assumed.
-    """
+    """Every item the `attr` pick was willing to draw, by re-running `_determine_starter_items` with a
+    recording `world.random`. The recorder returns the first entry offered, so the call that produced
+    `attr` is the one whose first entry is the chosen value - asserted, not assumed."""
     saved = {name: getattr(world, name) for name in _STARTER_ATTRS}
     try:
         with recording_random(world) as recorder:
@@ -61,258 +55,201 @@ def starter_candidates(world, attr: str) -> set[str]:
     matching = [offered for offered in recorder.offers if offered and offered[0] == chosen]
     if len(matching) != 1:
         raise AssertionError(f"could not identify the {attr} draw among {len(recorder.offers)} recorded picks")
-    return {str(name) for name in matching[0]}
+    return names(matching[0])
 
 
-class TestStadiumStarter(KARTestBase):
-    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true}
-
-    def test_exactly_one_stadium_precollected(self):
-        precollected = self.precollected_names()
-        stadium_starters = [n for n in precollected if n in STADIUM_UNLOCK_ITEMS]
-        self.assertEqual(len(stadium_starters), 1)
-
-    def test_starter_not_in_pool(self):
-        pool = self.itempool_names()
-        for name in self.precollected_names():
-            if name in STADIUM_UNLOCK_ITEMS:
-                self.assertNotIn(name, pool, f"{name} precollected but also in pool")
-
-    def test_the_chosen_stadium_is_the_precollected_one(self):
-        # Closes the loop between the pick and the push: whichever stadium the draw landed on is the one
-        # generate_early handed over. Holds for every seed, so it needs no assumption about the draw.
-        self.assertIsNotNone(self.world.stadium_starter_choice)
-        self.assertIn(str(self.world.stadium_starter_choice), self.precollected_names())
+def _register(cls: type, name: str) -> None:
+    cls.__name__ = name
+    cls.__qualname__ = name
+    globals()[name] = cls
 
 
-class TestStadiumStarterExcludesKingDedede(KARTestBase):
-    """beat_king_dedede goal: the VS King Dedede stadium is the goal's own key, so handing it over as the
-    free starter would hand over the goal. Every other stadium stays eligible."""
+# (label, options, starter attribute, item group, eligible candidate set). One starter is handed over per
+# gated category whose mode is in play, it is excluded from the pool, and the draw is taken from exactly
+# the listed set.
+_STARTER_CASES: list[tuple[str, dict, str, set[str], set[str]]] = [
+    (
+        "stadium",
+        {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true},
+        "stadium_starter_choice",
+        _ALL_STADIUMS,
+        # No stadium is barred while VS King Dedede is not the goal, secret ones included.
+        _ALL_STADIUMS,
+    ),
+    (
+        "stadium_with_dedede_goal",
+        {
+            **CT_ONLY,
+            "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
+            "city_trial_stadiums_gated": Toggle.option_true,
+        },
+        "stadium_starter_choice",
+        _ALL_STADIUMS,
+        # Handing over the goal's own stadium would hand over the goal.
+        _ALL_STADIUMS - {str(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)},
+    ),
+    (
+        "ar_course",
+        {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true},
+        "ar_course_starter_choice",
+        names(item_name_groups[KARItemGroup.AR_COURSE_UNLOCKS]),
+        names(item_name_groups[KARItemGroup.AR_COURSE_UNLOCKS]),
+    ),
+    (
+        "tr_course",
+        {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true},
+        "tr_course_starter_choice",
+        names(item_name_groups[KARItemGroup.TR_COURSE_UNLOCKS]),
+        names(item_name_groups[KARItemGroup.TR_COURSE_UNLOCKS]),
+    ),
+    (
+        # Colors are cross-mode: a starter is granted whenever colors_gated is on. Pink is eligible like
+        # any other, even though the mod falls back to it when nothing is unlocked.
+        "color",
+        {**CT_ONLY, "colors_gated": Toggle.option_true},
+        "color_starter_choice",
+        names(item_name_groups[KARItemGroup.COLOR_UNLOCKS]),
+        names(item_name_groups[KARItemGroup.COLOR_UNLOCKS]),
+    ),
+    (
+        # Top Ride is not one of machines_gated's required modes, so the TR control machine is only a
+        # starter when City Trial or Air Ride is also enabled to make the gate hold keys. The group is
+        # narrowed to the TR pair because such a seed also draws an Air Ride / City Trial machine.
+        "tr_machine",
+        {**ALL_MODES, "machines_gated": Toggle.option_true},
+        "tr_machine_starter_choice",
+        _TR_MACHINES,
+        _TR_MACHINES,
+    ),
+    (
+        "arct_machine",
+        {**AR_ONLY, "machines_gated": Toggle.option_true},
+        "machine_starter_choice",
+        _ALL_MACHINES,
+        _ARCT_MACHINES,
+    ),
+    (
+        # Both machine gates plus base abilities: the starter has to be steerable before Charge arrives.
+        "arct_machine_charge_gated",
+        {**AR_ONLY, "machines_gated": Toggle.option_true, "base_abilities_gated": Toggle.option_true},
+        "machine_starter_choice",
+        _ALL_MACHINES,
+        _ARCT_MACHINES - names(CHARGE_DEPENDENT_MACHINES),
+    ),
+]
 
-    options = {
-        **CT_ONLY,
-        "city_trial_goal": CityTrialGoal.option_beat_king_dedede,
-        "city_trial_stadiums_gated": Toggle.option_true,
-    }
 
-    def test_eligible_stadiums_are_every_one_but_dedede(self):
-        candidates = starter_candidates(self.world, "stadium_starter_choice")
-        expected = {str(s) for s in STADIUM_UNLOCK_ITEMS} - {str(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)}
-        self.assertEqual(
-            candidates,
-            expected,
-            "the beat_king_dedede starter pool must be every stadium except VS King Dedede itself",
-        )
+def _make_starter_test(opts: dict, attr: str, group: set[str], eligible: set[str]) -> type:
+    class _Starter(KARTestBase):
+        options = opts
 
+        def test_exactly_one_starter_from_the_group(self):
+            self.assertEqual(len(self.precollected_in(group)), 1)
 
-class TestStadiumStarterWithoutDededeGoal(KARTestBase):
-    """Counter-case: with any other goal the VS King Dedede stadium is an ordinary starter candidate, so
-    the exclusion above is goal-specific rather than a blanket ban."""
+        def test_the_chosen_item_is_the_precollected_one_and_left_the_pool(self):
+            chosen = getattr(self.world, attr)
+            self.assertIsNotNone(chosen)
+            self.assertIn(str(chosen), self.precollected_names())
+            self.assertNotIn(str(chosen), self.itempool_names())
 
-    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true}
+        def test_the_draw_was_offered_exactly_the_eligible_set(self):
+            # Set equality rather than disjointness: a "no overlap" assertion would also pass on an
+            # empty candidate list.
+            self.assertEqual(starter_candidates(self.world, attr), eligible)
 
-    def test_all_24_stadiums_eligible(self):
-        candidates = starter_candidates(self.world, "stadium_starter_choice")
-        self.assertEqual(candidates, {str(s) for s in STADIUM_UNLOCK_ITEMS})
+    return _Starter
 
 
-class TestStadiumStarterRespectsStartInventory(KARTestBase):
-    options = {
-        **CT_ONLY,
-        "city_trial_stadiums_gated": Toggle.option_true,
-        "start_inventory": {KARItemName.UNLOCK_STADIUM_AIR_GLIDER: 1},
-    }
-
-    def test_no_random_pick_when_preset(self):
-        # World skips its random pick when the player presets a stadium; the preset still lands in precollected.
-        self.assertIsNone(self.world.stadium_starter_choice)
-        self.assertIn(KARItemName.UNLOCK_STADIUM_AIR_GLIDER, self.precollected_names())
+for _label, _opts, _attr, _group, _eligible in _STARTER_CASES:
+    _register(_make_starter_test(_opts, _attr, _group, _eligible), f"TestStarter_{_label}")
 
 
-_TR_MACHINES = frozenset({KARItemName.UNLOCK_MACHINE_FREE_STAR, KARItemName.UNLOCK_MACHINE_STEER_STAR})
-_TR_MACHINE_NAMES = frozenset(str(m) for m in _TR_MACHINES)
+class TestMachineStarterAllModes(KARTestBase):
+    """All modes plus machine gating yields two machine starters - one Air Ride / City Trial machine and
+    one Top Ride control machine - because the two lobbies gate on disjoint sets."""
 
-
-class TestMachineStarter(KARTestBase):
     options = {**ALL_MODES, "machines_gated": Toggle.option_true}
 
-    def test_one_arct_and_one_tr_machine_precollected(self):
-        # All modes + machines_gated yields two machine starters: one Air Ride / City Trial machine and one
-        # Top Ride control machine (Free/Steer), since the mod hard-gates the Top Ride lobby on Free/Steer.
-        precollected = self.precollected_names()
-        machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
-        self.assertEqual(len(machine_starters), 2)
-        tr_starters = [n for n in machine_starters if n in _TR_MACHINES]
-        arct_starters = [n for n in machine_starters if n not in _TR_MACHINES]
-        self.assertEqual(len(tr_starters), 1)
-        self.assertEqual(len(arct_starters), 1)
-
-    def test_arct_eligible_set_excludes_tr_and_assembled_machines(self):
-        # The AR/CT machine starter must never be a Top Ride control machine (unrideable in AR and CT)
-        # nor one of the three legendaries, which are assembled from pieces rather than selected.
-        candidates = starter_candidates(self.world, "machine_starter_choice")
-        assembled = {
-            str(KARItemName.UNLOCK_MACHINE_HYDRA),
-            str(KARItemName.UNLOCK_MACHINE_DRAGOON),
-            str(KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR),
-        }
-        expected = {str(m) for m in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]} - _TR_MACHINE_NAMES - assembled
-        self.assertEqual(candidates, expected)
-
-    def test_tr_eligible_set_is_free_and_steer_only(self):
-        candidates = starter_candidates(self.world, "tr_machine_starter_choice")
-        self.assertEqual(candidates, _TR_MACHINE_NAMES)
+    def test_one_starter_from_each_half(self):
+        starters = [n for n in self.precollected_names() if n in _ALL_MACHINES]
+        self.assertEqual(len(starters), 2)
+        self.assertEqual(len([n for n in starters if n in _TR_MACHINES]), 1)
+        self.assertEqual(len([n for n in starters if n not in _TR_MACHINES]), 1)
 
 
-class TestMachineStarterChargeGated(KARTestBase):
-    # machines + base abilities both gated: the starter has to be a machine the player can steer before
-    # Charge arrives, so Bulk, Slick and Turbo Star join Hydra in being held out of the pick.
+class TestChargeDependentMachinesStayInThePool(KARTestBase):
+    """Held out of the starter pick only - they remain ordinary progression items."""
+
     options = {**ALL_MODES, "machines_gated": Toggle.option_true, "base_abilities_gated": Toggle.option_true}
 
-    def test_eligible_set_holds_out_every_charge_dependent_machine(self):
-        # Set equality rather than disjointness: it pins both halves at once, and a "no overlap"
-        # assertion alone would also pass on an empty candidate list.
-        candidates = starter_candidates(self.world, "machine_starter_choice")
-        assembled = {
-            str(KARItemName.UNLOCK_MACHINE_HYDRA),
-            str(KARItemName.UNLOCK_MACHINE_DRAGOON),
-            str(KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR),
-        }
-        charge_dependent = {str(m) for m in CHARGE_DEPENDENT_MACHINES}
-        expected = (
-            {str(m) for m in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]}
-            - _TR_MACHINE_NAMES
-            - assembled
-            - charge_dependent
-        )
-        self.assertEqual(candidates, expected)
-        self.assertFalse(candidates & charge_dependent)
-
-    def test_charge_dependent_machines_still_in_pool(self):
-        # Held out of the starter pick only - they stay normal progression items.
+    def test_still_in_pool(self):
         pool = self.itempool_names()
         for machine in CHARGE_DEPENDENT_MACHINES:
-            self.assertIn(machine, pool)
+            with self.subTest(machine=machine):
+                self.assertIn(machine, pool)
 
 
-class TestARCourseStarter(KARTestBase):
-    options = {**AR_ONLY, "air_ride_courses_gated": Toggle.option_true}
+class TestNoStarterForADisabledMode(KARTestBase):
+    """A starter is granted only when its owning mode is enabled: an Air-Ride-only seed picks a machine
+    but no stadium, even with stadium gating on."""
 
-    def test_exactly_one_ar_course_precollected(self):
-        precollected = self.precollected_names()
-        ar_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.AR_COURSE_UNLOCKS]]
-        self.assertEqual(len(ar_starters), 1)
-
-    def test_every_ar_course_is_a_candidate(self):
-        # No course is held back, secret ones included - unlike stadiums (VS King Dedede) and machines
-        # (the assembled legendaries), Air Ride courses have no barred member.
-        candidates = starter_candidates(self.world, "ar_course_starter_choice")
-        self.assertEqual(candidates, {str(c) for c in item_name_groups[KARItemGroup.AR_COURSE_UNLOCKS]})
-
-
-class TestTRCourseStarter(KARTestBase):
-    options = {**TR_ONLY, "top_ride_courses_gated": Toggle.option_true}
-
-    def test_exactly_one_tr_course_precollected(self):
-        precollected = self.precollected_names()
-        tr_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.TR_COURSE_UNLOCKS]]
-        self.assertEqual(len(tr_starters), 1)
-
-    def test_every_tr_course_is_a_candidate(self):
-        candidates = starter_candidates(self.world, "tr_course_starter_choice")
-        self.assertEqual(candidates, {str(c) for c in item_name_groups[KARItemGroup.TR_COURSE_UNLOCKS]})
-
-
-class TestColorStarter(KARTestBase):
-    # Colors are cross-mode: a random color starter is granted whenever colors_gated is on, regardless of
-    # which mode is enabled. Pink is eligible like any other color.
-    options = {**CT_ONLY, "colors_gated": Toggle.option_true}
-
-    def test_exactly_one_color_precollected(self):
-        precollected = self.precollected_names()
-        color_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.COLOR_UNLOCKS]]
-        self.assertEqual(len(color_starters), 1)
-
-    def test_pink_is_a_candidate_like_any_other_color(self):
-        # The deliberate cosmetic exception: the mod falls back to Pink when nothing is unlocked, so it
-        # would be reasonable to bar it from the pick. The world does not, and this pins that choice.
-        candidates = starter_candidates(self.world, "color_starter_choice")
-        self.assertEqual(candidates, {str(c) for c in item_name_groups[KARItemGroup.COLOR_UNLOCKS]})
-        self.assertIn(str(KARItemName.UNLOCK_COLOR_PINK), candidates)
-
-    def test_starter_not_in_pool(self):
-        pool = self.itempool_names()
-        for name in self.precollected_names():
-            if name in item_name_groups[KARItemGroup.COLOR_UNLOCKS]:
-                self.assertNotIn(name, pool, f"{name} precollected but also in pool")
-
-
-class TestAROnlyMachineStarter(KARTestBase):
-    # AR on, CT off. A machine starter is picked (machines apply to AR), but no stadium starter (CT-only).
-    # Covers both halves of "starter only when its owning mode is enabled".
     options = {**AR_ONLY, "machines_gated": Toggle.option_true, "city_trial_stadiums_gated": Toggle.option_true}
 
-    def test_machine_starter_picked(self):
-        precollected = self.precollected_names()
-        machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
-        self.assertEqual(len(machine_starters), 1)
-
-    def test_no_stadium_starter_when_ct_disabled(self):
-        precollected = self.precollected_names()
-        stadium_starters = [n for n in precollected if n in STADIUM_UNLOCK_ITEMS]
-        self.assertEqual(stadium_starters, [])
+    def test_machine_picked_but_no_stadium(self):
+        self.assertEqual(len(self.precollected_in(_ALL_MACHINES)), 1)
+        self.assertEqual(self.precollected_in(_ALL_STADIUMS), [])
+        self.assertIsNone(self.world.tr_machine_starter_choice)
 
 
-class TestTRMachineStarterWhenOnlyTREnabled(KARTestBase):
-    # TR on, CT+AR off. The mod hard-gates the Top Ride lobby on Free/Steer, so a Top Ride machine starter
-    # (one of Free/Steer) must be precollected even with no AR/CT machine - else a gated TR-only seed softlocks.
+class TestNoMachineStarterWhenOnlyTopRideIsEnabled(KARTestBase):
+    """`machines_gated` needs City Trial or Air Ride to hold keys, so a Top-Ride-only seed mints no
+    machine unlocks however the option is set - and must therefore hand out no machine starter. The
+    starter branch used to read the raw option and precollect a Free/Steer Star for a category the
+    mod opens wholesale at connect."""
+
     options = {**TR_ONLY, "machines_gated": Toggle.option_true}
 
-    def test_exactly_one_tr_machine_starter(self):
-        precollected = self.precollected_names()
-        machine_starters = [n for n in precollected if n in item_name_groups[KARItemGroup.MACHINE_UNLOCKS]]
-        self.assertEqual(len(machine_starters), 1)
-        # Exact rather than "the one drawn happened to be a TR machine": Free and Steer are the whole
-        # candidate list, so no seed can hand out anything else.
-        self.assertEqual(starter_candidates(self.world, "tr_machine_starter_choice"), _TR_MACHINE_NAMES)
-        self.assertIn(machine_starters[0], _TR_MACHINES)
+    def test_gate_does_not_hold_keys(self):
+        self.assertNotIn("machines_gated", self.world.effective_gates)
+        self.assertEqual(self.world.fill_slot_data()["machines_gated"], 0)
 
-    def test_no_arct_machine_starter(self):
-        # No Air Ride / City Trial machine starter in a Top-Ride-only seed.
+    def test_no_machine_starter_and_no_machine_items(self):
+        self.assertIsNone(self.world.tr_machine_starter_choice)
         self.assertIsNone(self.world.machine_starter_choice)
+        self.assertEqual(self.precollected_in(_ALL_MACHINES), [])
+        # Nothing to precollect precisely because nothing was minted.
+        self.assertEqual([n for n in self.itempool_names() if n in _ALL_MACHINES], [])
 
 
-class TestPresetUnlockNotDuplicatedInPool(KARTestBase):
-    # Unlock items are one-time, so presetting one in start_inventory must drop its pool copy. Copy abilities
-    # grant no starter, so they exercise the general (non-starter) dedup path.
-    options = {
-        **CT_ONLY,
-        "abilities_gated": Toggle.option_true,
-        "start_inventory": {KARItemName.UNLOCK_ABILITY_FIRE: 1},
-    }
+# Unlock items and checklist rewards are one-time, so presetting one in start_inventory must drop its
+# pool copy. Copy abilities and rewards grant no starter, so they exercise the general dedup path.
+def _make_preset_dedup_test(preset_item: str, opts: dict) -> type:
+    class _PresetDedup(KARTestBase):
+        options = {**opts, "start_inventory": {preset_item: 1}}
 
-    def test_preset_ability_precollected_and_absent_from_pool(self):
-        self.assertIn(KARItemName.UNLOCK_ABILITY_FIRE, self.precollected_names())
-        self.assertNotIn(KARItemName.UNLOCK_ABILITY_FIRE, self.itempool_names())
+        def test_precollected_and_absent_from_pool(self):
+            self.assertIn(preset_item, self.precollected_names())
+            self.assertNotIn(preset_item, self.itempool_names())
 
-
-class TestPresetRewardNotDuplicatedInPool(KARTestBase):
-    # Checklist rewards are one-time too, so a reward preset in start_inventory must be deduped out of the
-    # pool. CT_REWARD_MUSIC_CITY is a plain in-scope CT reward, so presetting it exercises reward_pool.
-    options = {
-        **CT_ONLY,
-        "start_inventory": {KARItemName.CT_REWARD_MUSIC_CITY: 1},
-    }
-
-    def test_preset_reward_precollected_and_absent_from_pool(self):
-        self.assertIn(KARItemName.CT_REWARD_MUSIC_CITY, self.precollected_names())
-        self.assertNotIn(KARItemName.CT_REWARD_MUSIC_CITY, self.itempool_names())
+    return _PresetDedup
 
 
-# Per starter category: presetting an item in start_inventory makes the world skip its random pick
-# (starter_choice attr is None) and the preset lands in precollected. Parametric so a new category is one row.
+for _label, _item, _opts in (
+    ("ability", KARItemName.UNLOCK_ABILITY_FIRE, {**CT_ONLY, "abilities_gated": Toggle.option_true}),
+    ("checklist_reward", KARItemName.CT_REWARD_MUSIC_CITY, CT_ONLY),
+):
+    _register(_make_preset_dedup_test(_item, _opts), f"TestPresetNotDuplicatedInPool_{_label}")
+
+
+# Per category: presetting an item in start_inventory makes the world skip its random pick, and the
+# preset still lands in precollected.
 _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
-    # (label, options, world starter_choice attribute, preset item name)
+    (
+        "stadium",
+        {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true},
+        "stadium_starter_choice",
+        KARItemName.UNLOCK_STADIUM_AIR_GLIDER,
+    ),
     (
         "machine",
         {**ALL_MODES, "machines_gated": Toggle.option_true},
@@ -321,7 +258,7 @@ _PRESET_RESPECT_CASES: list[tuple[str, dict, str, str]] = [
     ),
     (
         "tr_machine",
-        {**TR_ONLY, "machines_gated": Toggle.option_true},
+        {**ALL_MODES, "machines_gated": Toggle.option_true},
         "tr_machine_starter_choice",
         KARItemName.UNLOCK_MACHINE_FREE_STAR,
     ),
@@ -353,25 +290,21 @@ def _make_starter_preset_test(label: str, opts: dict, choice_attr: str, preset: 
         def test_no_random_pick_when_preset(self):
             self.assertIsNone(
                 getattr(self.world, choice_attr),
-                f"world should skip random {label} pick when player presets one in start_inventory",
+                f"world should skip its random {label} pick when the player presets one",
             )
-
-        def test_preset_item_in_precollected(self):
             self.assertIn(preset, self.precollected_names())
 
-    _StarterPresetRespect.__name__ = f"TestStarterRespectsStartInventory_{label}"
-    _StarterPresetRespect.__qualname__ = _StarterPresetRespect.__name__
     return _StarterPresetRespect
 
 
 for _label, _opts, _attr, _preset in _PRESET_RESPECT_CASES:
-    globals()[f"TestStarterRespectsStartInventory_{_label}"] = _make_starter_preset_test(_label, _opts, _attr, _preset)
+    _register(_make_starter_preset_test(_label, _opts, _attr, _preset), f"TestStarterRespectsStartInventory_{_label}")
 
 
-# Per starter category: naming an unlock in its starting_* option hands over exactly that one instead of
-# a random draw. Parametric so a new category is one row.
-_NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str]] = [
-    # (label, options, starting_* option, its choice key, world starter_choice attribute, named item)
+# Per category: naming an unlock in its starting_* option hands over exactly that one instead of a draw.
+# (label, options, starting_* option, its choice key, starter attribute, named item, item group, how
+# many starters that group should end up holding - the all-modes machine case hands out two.)
+_NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str, str, int]] = [
     (
         "stadium",
         {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true},
@@ -379,6 +312,8 @@ _NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str]] = [
         "air_glider",
         "stadium_starter_choice",
         KARItemName.UNLOCK_STADIUM_AIR_GLIDER,
+        KARItemGroup.CT_STADIUM_UNLOCKS,
+        1,
     ),
     (
         "machine",
@@ -387,14 +322,18 @@ _NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str]] = [
         "jet_star",
         "machine_starter_choice",
         KARItemName.UNLOCK_MACHINE_JET_STAR,
+        KARItemGroup.MACHINE_UNLOCKS,
+        2,
     ),
     (
         "tr_machine",
-        {**TR_ONLY, "machines_gated": Toggle.option_true},
+        {**ALL_MODES, "machines_gated": Toggle.option_true},
         "starting_top_ride_machine",
         "steer_star",
         "tr_machine_starter_choice",
         KARItemName.UNLOCK_MACHINE_STEER_STAR,
+        KARItemGroup.MACHINE_UNLOCKS,
+        2,
     ),
     (
         "ar_course",
@@ -403,6 +342,8 @@ _NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str]] = [
         "nebula_belt",
         "ar_course_starter_choice",
         KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
+        KARItemGroup.AR_COURSE_UNLOCKS,
+        1,
     ),
     (
         "tr_course",
@@ -411,6 +352,8 @@ _NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str]] = [
         "metal",
         "tr_course_starter_choice",
         KARItemName.UNLOCK_TR_COURSE_METAL,
+        KARItemGroup.TR_COURSE_UNLOCKS,
+        1,
     ),
     (
         "color",
@@ -419,50 +362,57 @@ _NAMED_STARTER_CASES: list[tuple[str, dict, str, str, str, str]] = [
         "white",
         "color_starter_choice",
         KARItemName.UNLOCK_COLOR_WHITE,
+        KARItemGroup.COLOR_UNLOCKS,
+        1,
+    ),
+    (
+        # The charge-dependent bar is specific to base_abilities_gated: with Charge free from the start,
+        # Slick Star is an ordinary named pick.
+        "charge_dependent_machine",
+        {**ALL_MODES, "machines_gated": Toggle.option_true},
+        "starting_machine",
+        "slick_star",
+        "machine_starter_choice",
+        KARItemName.UNLOCK_MACHINE_SLICK_STAR,
+        KARItemGroup.MACHINE_UNLOCKS,
+        2,
+    ),
+    (
+        # VS. KING DEDEDE is barred only when it is the goal; under any other goal it is nameable.
+        "dedede_stadium_without_that_goal",
+        {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true},
+        "starting_stadium",
+        "vs_king_dedede",
+        "stadium_starter_choice",
+        KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE,
+        KARItemGroup.CT_STADIUM_UNLOCKS,
+        1,
     ),
 ]
 
-# The item group each named-starter category draws from and how many starters that group should hold,
-# for the "nothing else came along" assertion. The machine group is the one that can hold two: the
-# all-modes machine case hands out an AR/CT machine and a Top Ride machine.
-_NAMED_STARTER_GROUPS: dict[str, tuple[str, int]] = {
-    "stadium": (KARItemGroup.CT_STADIUM_UNLOCKS, 1),
-    "machine": (KARItemGroup.MACHINE_UNLOCKS, 2),
-    "tr_machine": (KARItemGroup.MACHINE_UNLOCKS, 1),
-    "ar_course": (KARItemGroup.AR_COURSE_UNLOCKS, 1),
-    "tr_course": (KARItemGroup.TR_COURSE_UNLOCKS, 1),
-    "color": (KARItemGroup.COLOR_UNLOCKS, 1),
-}
 
-
-def _make_named_starter_test(label: str, opts: dict, option: str, key: str, choice_attr: str, named: str) -> type:
+def _make_named_starter_test(opts: dict, option: str, key: str, attr: str, named: str, group: str, count: int) -> type:
     class _NamedStarter(KARTestBase):
         options = {**opts, option: key}
 
-        def test_named_item_is_the_starter(self):
-            self.assertEqual(getattr(self.world, choice_attr), named)
+        def test_named_item_is_the_only_starter_from_its_category(self):
+            self.assertEqual(getattr(self.world, attr), named)
             self.assertIn(named, self.precollected_names())
-
-        def test_named_starter_not_in_pool(self):
             self.assertNotIn(named, self.itempool_names())
+            self.assertEqual(len(self.precollected_in(item_name_groups[group])), count)
 
-        def test_no_extra_starter_from_the_category(self):
-            group_name, expected = _NAMED_STARTER_GROUPS[label]
-            group = item_name_groups[group_name]
-            self.assertEqual(len([n for n in self.precollected_names() if n in group]), expected)
-
-    _NamedStarter.__name__ = f"TestNamedStarter_{label}"
-    _NamedStarter.__qualname__ = _NamedStarter.__name__
     return _NamedStarter
 
 
-for _label, _opts, _option, _key, _attr, _named in _NAMED_STARTER_CASES:
-    globals()[f"TestNamedStarter_{_label}"] = _make_named_starter_test(_label, _opts, _option, _key, _attr, _named)
+for _label, _opts, _option, _key, _attr, _named, _group, _count in _NAMED_STARTER_CASES:
+    _register(
+        _make_named_starter_test(_opts, _option, _key, _attr, _named, _group, _count), f"TestNamedStarter_{_label}"
+    )
 
 
 class TestNamedStarterAlsoPresetIsNotDuplicated(KARTestBase):
-    """Naming the same unlock the player already preset in start_inventory precollects it once: the world
-    hands over nothing on top of a pick start_inventory already covers."""
+    """Naming the unlock the player already preset precollects it once: the world hands over nothing on
+    top of a pick start_inventory already covers."""
 
     options = {
         **CT_ONLY,
@@ -476,7 +426,7 @@ class TestNamedStarterAlsoPresetIsNotDuplicated(KARTestBase):
         self.assertEqual(self.precollected_names().count(KARItemName.UNLOCK_COLOR_BLUE), 1)
 
 
-class TestNamedStarterOverridesUnrelatedPreset(KARTestBase):
+class TestNamedStarterStacksWithADifferentPreset(KARTestBase):
     """A preset from the same category suppresses the random draw but not an explicit pick, so a player
     who asks for both gets both."""
 
@@ -494,47 +444,39 @@ class TestNamedStarterOverridesUnrelatedPreset(KARTestBase):
         self.assertIn(KARItemName.UNLOCK_COLOR_BLUE, precollected)
 
 
-class TestNamedStarterIgnoredWhenGateOff(KARTestBase):
-    """An ungated category is fully unlocked at connect, so its starting_* option has nothing to hand
-    over and is ignored rather than rejected."""
+# A starting_* option with nothing to hand over is ignored rather than rejected: the category is either
+# ungated (fully unlocked at connect) or belongs to a mode this seed disabled.
+def _make_ignored_starter_test(opts: dict, attr: str, group: str) -> type:
+    class _Ignored(KARTestBase):
+        options = opts
 
-    options = {**CT_ONLY, "colors_gated": Toggle.option_false, "starting_kirby_color": "white"}
+        def test_nothing_precollected(self):
+            self.assertIsNone(getattr(self.world, attr))
+            self.assertEqual(self.precollected_in(item_name_groups[group]), [])
 
-    def test_no_color_precollected(self):
-        self.assertIsNone(self.world.color_starter_choice)
-        self.assertEqual(
-            [n for n in self.precollected_names() if n in item_name_groups[KARItemGroup.COLOR_UNLOCKS]], []
-        )
-
-
-class TestNamedStarterIgnoredWhenModeOff(KARTestBase):
-    """Same for a category whose mode this seed disabled: no Air Ride means no Air Ride course starter."""
-
-    options = {**CT_ONLY, "air_ride_courses_gated": Toggle.option_true, "starting_air_ride_course": "nebula_belt"}
-
-    def test_no_ar_course_precollected(self):
-        self.assertIsNone(self.world.ar_course_starter_choice)
-        self.assertEqual(
-            [n for n in self.precollected_names() if n in item_name_groups[KARItemGroup.AR_COURSE_UNLOCKS]], []
-        )
+    return _Ignored
 
 
-class TestChargeDependentMachineNameableWithoutBaseAbilityGate(KARTestBase):
-    """The charge-dependent bar is specific to base_abilities_gated: with Charge free from the start,
-    Slick Star is an ordinary named pick."""
-
-    options = {**ALL_MODES, "machines_gated": Toggle.option_true, "starting_machine": "slick_star"}
-
-    def test_slick_star_is_the_starter(self):
-        self.assertEqual(self.world.machine_starter_choice, KARItemName.UNLOCK_MACHINE_SLICK_STAR)
-        self.assertIn(KARItemName.UNLOCK_MACHINE_SLICK_STAR, self.precollected_names())
-
-
-class TestNamedStadiumIsDededeWithoutThatGoal(KARTestBase):
-    """VS. KING DEDEDE is barred only when it is the goal; under any other goal it is nameable."""
-
-    options = {**CT_ONLY, "city_trial_stadiums_gated": Toggle.option_true, "starting_stadium": "vs_king_dedede"}
-
-    def test_dedede_stadium_is_the_starter(self):
-        self.assertEqual(self.world.stadium_starter_choice, KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE)
-        self.assertIn(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE, self.precollected_names())
+for _label, _opts, _attr, _group in (
+    (
+        "gate_off",
+        {**CT_ONLY, "colors_gated": Toggle.option_false, "starting_kirby_color": "white"},
+        "color_starter_choice",
+        KARItemGroup.COLOR_UNLOCKS,
+    ),
+    (
+        "mode_off",
+        {**CT_ONLY, "air_ride_courses_gated": Toggle.option_true, "starting_air_ride_course": "nebula_belt"},
+        "ar_course_starter_choice",
+        KARItemGroup.AR_COURSE_UNLOCKS,
+    ),
+    (
+        # Top Ride is not one of machines_gated's required modes, so the gate holds no keys here even
+        # though the mode owning the named pick is enabled and the option is on.
+        "gate_holds_no_keys",
+        {**TR_ONLY, "machines_gated": Toggle.option_true, "starting_top_ride_machine": "steer_star"},
+        "tr_machine_starter_choice",
+        KARItemGroup.MACHINE_UNLOCKS,
+    ),
+):
+    _register(_make_ignored_starter_test(_opts, _attr, _group), f"TestNamedStarterIgnoredWhen_{_label}")

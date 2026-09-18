@@ -12,8 +12,6 @@ from .KARRegions import KARRegion
 class KARLocationData(NamedTuple):
     code: int
     region: str
-    # The checklist reward this box awards in the base game, or None. Reference data covering the
-    # complete vanilla map, in-scope and overlapping rewards alike; placement never consults it.
     native_reward: KARItemName | None = None
 
 
@@ -414,6 +412,69 @@ class TRLocation(StrEnum):
     FILL_IN_100_CHECKLIST_BLOCKS = "Top Ride: Fill in over 100 Checklist blocks!"
 
 
+class APLocation(StrEnum):
+    """Archipelago checklist location names."""
+
+    CASTLE_FLOWER_ON_FOOT = "Archipelago: City Trial: Visit the flower on top of Castle Hall on foot!"
+    BREAK_ALL_CORAL = "Archipelago: City Trial: Break all the coral in one game!"
+    GET_10_HP_PATCHES = "Archipelago: City Trial: In one game, get 10 or more HP Patches!"
+    COLLECT_5_ALL_UPS = "Archipelago: City Trial: Collect 5 All Ups in total!"
+    EAT_3_ICE_CREAMS = "Archipelago: City Trial: In one game, eat 3 or more Ice Creams!"
+    EAT_3_RICE_BALLS = "Archipelago: City Trial: In one game, eat 3 or more Rice Balls!"
+    EAT_3_CHICKENS = "Archipelago: City Trial: In one game, eat 3 or more Chickens!"
+    EAT_3_CURRIES = "Archipelago: City Trial: In one game, eat 3 or more plates of Curry!"
+    EAT_3_RAMENS = "Archipelago: City Trial: In one game, eat 3 or more bowls of Ramen!"
+    EAT_3_OMELETS = "Archipelago: City Trial: In one game, eat 3 or more Omelets!"
+    EAT_3_HAMBURGERS = "Archipelago: City Trial: In one game, eat 3 or more Hamburgers!"
+    EAT_3_APPLES = "Archipelago: City Trial: In one game, eat 3 or more Apples!"
+    SR1_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place!"
+    SR2_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 2 Finish in 1st place!"
+    SR3_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 3 Finish in 1st place!"
+    SR4_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 4 Finish in 1st place!"
+    SR5_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 5 Finish in 1st place!"
+    SR6_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 6 Finish in 1st place!"
+    SR7_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 7 Finish in 1st place!"
+    SR8_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 8 Finish in 1st place!"
+    SR9_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 9 Finish in 1st place!"
+    HJ_JUMP_HIGHER_THAN_1500_FEET = "Archipelago: Stadium: HIGH JUMP Jump higher than 1,500 feet!"
+    AG_FLY_2000_FEET = "Archipelago: Stadium: AIR GLIDER fly more than 2,000 feet!"
+    KM1_KO_100_ENEMIES_BY_YOURSELF = "Archipelago: Stadium: KIRBY MELEE 1 In one game, KO over 100 enemies by yourself!"
+    KM2_KO_60_ENEMIES_BY_YOURSELF = "Archipelago: Stadium: KIRBY MELEE 2 In one game, KO over 60 enemies by yourself!"
+    SR1_FINISH_1ST_ON_BULK_STAR = "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place on Bulk Star!"
+    SR1_FINISH_1ST_3X_AS_PURPLE = "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place 3 times as Purple Kirby!"
+    DR_PHOTO_FINISH = "Archipelago: Stadium: In any DRAG RACE, have 2 players finish within 0.10 seconds!"
+    AIR_RIDE_PHOTO_FINISH = "Archipelago: Air Ride: On any course, have 2 players finish within 0.10 seconds!"
+    AIR_RIDE_RACE_AS_EVERY_COLOR = "Archipelago: Air Ride: Finish a race as every Kirby color!"
+    MODEL_CITY_ON_FOOT = "Archipelago: City Trial: Visit the model city on foot!"
+    VOLCANO_FLOWER_ON_FOOT = "Archipelago: City Trial: Visit the flower on top of the volcanic cliffs on foot!"
+    SKY_GARDEN_TOP_ON_FOOT = "Archipelago: City Trial: Visit the top of the garden in the sky on foot!"
+    FLY_TO_HIGHEST_POINT = "Archipelago: City Trial: Fly to the highest point possible!"
+    AIR_RIDE_1ST_AS_META_KNIGHT = "Archipelago: Air Ride: Finish in 1st place as Meta Knight!"
+    AIR_RIDE_1ST_AS_KING_DEDEDE = "Archipelago: Air Ride: Finish in 1st place as King Dedede!"
+    NEBULA_BELT_FINISH_1ST = "Archipelago: Air Ride: NEBULA BELT Finish in 1st place!"
+    NEBULA_BELT_RACE_5500_FEET = "Archipelago: Air Ride: NEBULA BELT Race over 5,500 feet in 2 minutes!"
+    NEBULA_BELT_2_LAPS_UNDER_230 = "Archipelago: Air Ride: NEBULA BELT Finish 2 laps in under 02:30:00!"
+    NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER = "Archipelago: Air Ride: NEBULA BELT Finish in 1st place on Wheelie Scooter!"
+    NEBULA_BELT_AIRBORNE_10_SECONDS = (
+        "Archipelago: Air Ride: NEBULA BELT Fly 10 seconds on Dragoon, Flight or Winged Star!"
+    )
+    DD3_KO_A_RIVAL_10 = "Archipelago: Stadium: DESTRUCTION DERBY 3 In one game, KO a rival 10 times or more!"
+    DD_KO_10_KIRBYS_AS_KING_DEDEDE = (
+        "Archipelago: Stadium: DESTRUCTION DERBY (All) As King Dedede, KO 10 Kirbys in one game!"
+    )
+    GET_MIC_FROM_COPY_CHANCE = "Archipelago: City Trial: Get the Mic ability from the Copy Chance Wheel!"
+    KM_KO_10_ENEMIES_AS_MIC_KIRBY = "Archipelago: Stadium: KIRBY MELEE (All) In one game, KO 10 enemies as Mic Kirby!"
+    BREAK_20_BLUE_BOXES = "Archipelago: City Trial: In one game, break 20 or more blue boxes!"
+    BREAK_10_GREEN_BOXES = "Archipelago: City Trial: In one game, break 10 or more green boxes!"
+    BREAK_10_RED_BOXES = "Archipelago: City Trial: In one game, break 10 or more red boxes!"
+    FANTASY_MEADOWS_TAKE_SHORTCUT = "Archipelago: Air Ride: FANTASY MEADOWS Take the shortcut!"
+    ASSEMBLE_ARCHIPELAGO_STAR = "Archipelago: City Trial: Collect all 6 spheres and assemble the Archipelago Star!"
+    ASSEMBLE_ALL_THREE_LEGENDARIES = (
+        "Archipelago: City Trial: In one game, assemble Dragoon, Hydra and Archipelago Star!"
+    )
+    GET_10_OFFENSE_PATCHES = "Archipelago: City Trial: In one game, get 10 or more Offense Patches!"
+
+
 CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
     CTLocation.RACE_60_MILES: KARLocationData(1, KARRegion.CITY_TRIAL, KARItemName.CT_REWARD_FILLER_BOX_1),
     CTLocation.RACE_200_MILES: KARLocationData(2, KARRegion.CITY_TRIAL),
@@ -422,78 +483,80 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
     CTLocation.PICKUP_1000_ITEMS: KARLocationData(5, KARRegion.CITY_TRIAL, KARItemName.CT_REWARD_MUSIC_CITY),
     CTLocation.PICKUP_3000_ITEMS: KARLocationData(6, KARRegion.CITY_TRIAL),
     CTLocation.FR_CHANGE_AIR_RIDE_MACHINES_10X: KARLocationData(
-        7, KARRegion.CT_FREE_RUN, KARItemName.CT_REWARD_SOUND_TEST_LEGENDARY_MACHINE
+        7, KARRegion.CITY_TRIAL_FREE_RUN, KARItemName.CT_REWARD_SOUND_TEST_LEGENDARY_MACHINE
     ),
     CTLocation.BREAK_500_BOXES: KARLocationData(8, KARRegion.CITY_TRIAL, KARItemName.CT_REWARD_SOUND_TEST_DENSE_FOG),
     CTLocation.BREAK_1000_BOXES: KARLocationData(9, KARRegion.CITY_TRIAL, KARItemName.CT_REWARD_META_KNIGHT_FREE_RUN),
-    CTLocation.FR_DRIVE_FOR_10_MINUTES: KARLocationData(10, KARRegion.CT_FREE_RUN),
+    CTLocation.FR_DRIVE_FOR_10_MINUTES: KARLocationData(10, KARRegion.CITY_TRIAL_FREE_RUN),
     CTLocation.FR_DRIVE_FOR_30_MINUTES: KARLocationData(
-        11, KARRegion.CT_FREE_RUN, KARItemName.CT_REWARD_SOUND_TEST_CITY_TRIAL
+        11, KARRegion.CITY_TRIAL_FREE_RUN, KARItemName.CT_REWARD_SOUND_TEST_CITY_TRIAL
     ),
-    CTLocation.FR_DRIVE_FOR_2_HOURS: KARLocationData(12, KARRegion.CT_FREE_RUN, KARItemName.CT_REWARD_FILLER_BOX_2),
+    CTLocation.FR_DRIVE_FOR_2_HOURS: KARLocationData(
+        12, KARRegion.CITY_TRIAL_FREE_RUN, KARItemName.CT_REWARD_FILLER_BOX_2
+    ),
     CTLocation.STADIUM_PLAY_10_STADIUM_MODES: KARLocationData(
         13, KARRegion.CITY_TRIAL, KARItemName.CT_REWARD_SINGLE_RACE_NEBULA_STADIUM
     ),
     CTLocation.STADIUM_PLAY_20_STADIUM_MODES: KARLocationData(14, KARRegion.CITY_TRIAL),
-    CTLocation.STADIUM_DR1_FINISH_00_24_00: KARLocationData(15, KARRegion.STADIUM_DR1),
+    CTLocation.STADIUM_DR1_FINISH_00_24_00: KARLocationData(15, KARRegion.CITY_TRIAL_STADIUM_DR1),
     CTLocation.STADIUM_DR1_FINISH_00_20_00: KARLocationData(
-        16, KARRegion.STADIUM_DR1, KARItemName.CT_REWARD_SOUND_TEST_ROWDY_CHARGE_TANK
+        16, KARRegion.CITY_TRIAL_STADIUM_DR1, KARItemName.CT_REWARD_SOUND_TEST_ROWDY_CHARGE_TANK
     ),
-    CTLocation.STADIUM_DR2_FINISH_00_24_00: KARLocationData(17, KARRegion.STADIUM_DR2),
-    CTLocation.STADIUM_DR2_FINISH_00_20_00: KARLocationData(18, KARRegion.STADIUM_DR2),
-    CTLocation.STADIUM_DR3_FINISH_00_35_00: KARLocationData(19, KARRegion.STADIUM_DR3),
+    CTLocation.STADIUM_DR2_FINISH_00_24_00: KARLocationData(17, KARRegion.CITY_TRIAL_STADIUM_DR2),
+    CTLocation.STADIUM_DR2_FINISH_00_20_00: KARLocationData(18, KARRegion.CITY_TRIAL_STADIUM_DR2),
+    CTLocation.STADIUM_DR3_FINISH_00_35_00: KARLocationData(19, KARRegion.CITY_TRIAL_STADIUM_DR3),
     CTLocation.STADIUM_DR3_FINISH_00_27_00: KARLocationData(
-        20, KARRegion.STADIUM_DR3, KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM
+        20, KARRegion.CITY_TRIAL_STADIUM_DR3, KARItemName.CT_REWARD_DRAG_RACE_4_STADIUM
     ),
-    CTLocation.STADIUM_DR4_FINISH_00_24_00: KARLocationData(21, KARRegion.STADIUM_DR4),
+    CTLocation.STADIUM_DR4_FINISH_00_24_00: KARLocationData(21, KARRegion.CITY_TRIAL_STADIUM_DR4),
     CTLocation.STADIUM_DR4_FINISH_00_19_00: KARLocationData(
-        22, KARRegion.STADIUM_DR4, KARItemName.CT_REWARD_SOUND_TEST_DRAG_RACE
+        22, KARRegion.CITY_TRIAL_STADIUM_DR4, KARItemName.CT_REWARD_SOUND_TEST_DRAG_RACE
     ),
-    CTLocation.STADIUM_HJ_JUMP_HIGHER_THAN_500_FEET: KARLocationData(23, KARRegion.STADIUM_HJ),
+    CTLocation.STADIUM_HJ_JUMP_HIGHER_THAN_500_FEET: KARLocationData(23, KARRegion.CITY_TRIAL_STADIUM_HJ),
     CTLocation.STADIUM_HJ_JUMP_HIGHER_THAN_1000_FEET: KARLocationData(
-        24, KARRegion.STADIUM_HJ, KARItemName.CT_REWARD_DRAGOON_PART_A
+        24, KARRegion.CITY_TRIAL_STADIUM_HJ, KARItemName.CT_REWARD_DRAGOON_PART_A
     ),
-    CTLocation.STADIUM_HJ_AIRBORNE_10_SECONDS: KARLocationData(25, KARRegion.STADIUM_HJ),
-    CTLocation.STADIUM_TF_GET_150_POINTS: KARLocationData(26, KARRegion.STADIUM_TF),
-    CTLocation.STADIUM_TF_GET_EXACTLY_90_POINTS: KARLocationData(27, KARRegion.STADIUM_TF),
-    CTLocation.STADIUM_TF_PERFECT_200: KARLocationData(28, KARRegion.STADIUM_TF),
+    CTLocation.STADIUM_HJ_AIRBORNE_10_SECONDS: KARLocationData(25, KARRegion.CITY_TRIAL_STADIUM_HJ),
+    CTLocation.STADIUM_TF_GET_150_POINTS: KARLocationData(26, KARRegion.CITY_TRIAL_STADIUM_TF),
+    CTLocation.STADIUM_TF_GET_EXACTLY_90_POINTS: KARLocationData(27, KARRegion.CITY_TRIAL_STADIUM_TF),
+    CTLocation.STADIUM_TF_PERFECT_200: KARLocationData(28, KARRegion.CITY_TRIAL_STADIUM_TF),
     CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS: KARLocationData(
-        29, KARRegion.STADIUM_TF, KARItemName.CT_REWARD_SOUND_TEST_TARGET_FLIGHT
+        29, KARRegion.CITY_TRIAL_STADIUM_TF, KARItemName.CT_REWARD_SOUND_TEST_TARGET_FLIGHT
     ),
-    CTLocation.STADIUM_TF_PLAY_15X: KARLocationData(30, KARRegion.STADIUM_TF),
-    CTLocation.STADIUM_TF_GET_1500_POINTS: KARLocationData(31, KARRegion.STADIUM_TF),
-    CTLocation.STADIUM_AG_FLY_330_FEET: KARLocationData(32, KARRegion.STADIUM_AG),
-    CTLocation.STADIUM_AG_FLY_660_FEET: KARLocationData(33, KARRegion.STADIUM_AG),
+    CTLocation.STADIUM_TF_PLAY_15X: KARLocationData(30, KARRegion.CITY_TRIAL_STADIUM_TF),
+    CTLocation.STADIUM_TF_GET_1500_POINTS: KARLocationData(31, KARRegion.CITY_TRIAL_STADIUM_TF),
+    CTLocation.STADIUM_AG_FLY_330_FEET: KARLocationData(32, KARRegion.CITY_TRIAL_STADIUM_AG),
+    CTLocation.STADIUM_AG_FLY_660_FEET: KARLocationData(33, KARRegion.CITY_TRIAL_STADIUM_AG),
     CTLocation.STADIUM_AG_FLY_1300_FEET: KARLocationData(
-        34, KARRegion.STADIUM_AG, KARItemName.CT_REWARD_DRAGOON_PART_C
+        34, KARRegion.CITY_TRIAL_STADIUM_AG, KARItemName.CT_REWARD_DRAGOON_PART_C
     ),
     CTLocation.STADIUM_AG_AIRBORNE_30_SECONDS: KARLocationData(
-        35, KARRegion.STADIUM_AG, KARItemName.CT_REWARD_SOUND_TEST_AIR_GLIDER
+        35, KARRegion.CITY_TRIAL_STADIUM_AG, KARItemName.CT_REWARD_SOUND_TEST_AIR_GLIDER
     ),
-    CTLocation.STADIUM_DD1_KO_YOUR_RIVALS_5: KARLocationData(36, KARRegion.STADIUM_DD1),
-    CTLocation.STADIUM_DD2_KO_YOUR_RIVALS_5: KARLocationData(37, KARRegion.STADIUM_DD2),
+    CTLocation.STADIUM_DD1_KO_YOUR_RIVALS_5: KARLocationData(36, KARRegion.CITY_TRIAL_STADIUM_DD1),
+    CTLocation.STADIUM_DD2_KO_YOUR_RIVALS_5: KARLocationData(37, KARRegion.CITY_TRIAL_STADIUM_DD2),
     CTLocation.STADIUM_DD3_KO_YOUR_RIVALS_5: KARLocationData(
-        38, KARRegion.STADIUM_DD3, KARItemName.CT_REWARD_DESTRUCTION_DERBY_4_STADIUM
+        38, KARRegion.CITY_TRIAL_STADIUM_DD3, KARItemName.CT_REWARD_DESTRUCTION_DERBY_4_STADIUM
     ),
-    CTLocation.STADIUM_DD4_KO_YOUR_RIVALS_5: KARLocationData(39, KARRegion.STADIUM_DD4),
-    CTLocation.STADIUM_DD5_KO_YOUR_RIVALS_5: KARLocationData(40, KARRegion.STADIUM_DD5),
+    CTLocation.STADIUM_DD4_KO_YOUR_RIVALS_5: KARLocationData(39, KARRegion.CITY_TRIAL_STADIUM_DD4),
+    CTLocation.STADIUM_DD5_KO_YOUR_RIVALS_5: KARLocationData(40, KARRegion.CITY_TRIAL_STADIUM_DD5),
     CTLocation.STADIUM_DD1_BUST_ALL_ROCKS_ON_FIELD: KARLocationData(
-        41, KARRegion.STADIUM_DD1, KARItemName.CT_REWARD_FILLER_BOX_3
+        41, KARRegion.CITY_TRIAL_STADIUM_DD1, KARItemName.CT_REWARD_FILLER_BOX_3
     ),
-    CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X: KARLocationData(42, KARRegion.STADIUM_DD_ALL),
+    CTLocation.STADIUM_DD_ALL_KO_ENEMIES_50X: KARLocationData(42, KARRegion.CITY_TRIAL_STADIUM_DD_ALL),
     CTLocation.STADIUM_DD_ALL_KO_ENEMIES_150X: KARLocationData(
-        43, KARRegion.STADIUM_DD_ALL, KARItemName.CT_REWARD_HYDRA_PART_Y
+        43, KARRegion.CITY_TRIAL_STADIUM_DD_ALL, KARItemName.CT_REWARD_HYDRA_PART_Y
     ),
-    CTLocation.STADIUM_KM1_KO_ENEMIES_50X: KARLocationData(44, KARRegion.STADIUM_KM1),
+    CTLocation.STADIUM_KM1_KO_ENEMIES_50X: KARLocationData(44, KARRegion.CITY_TRIAL_STADIUM_KM1),
     CTLocation.STADIUM_KM2_KO_ENEMIES_30X: KARLocationData(
-        45, KARRegion.STADIUM_KM2, KARItemName.CT_REWARD_SOUND_TEST_WHATS_IN_THE_BOX
+        45, KARRegion.CITY_TRIAL_STADIUM_KM2, KARItemName.CT_REWARD_SOUND_TEST_WHATS_IN_THE_BOX
     ),
-    CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES: KARLocationData(46, KARRegion.STADIUM_KM_ALL),
+    CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES: KARLocationData(46, KARRegion.CITY_TRIAL_STADIUM_KM_ALL),
     CTLocation.STADIUM_KM_ALL_KO_1500_ENEMIES: KARLocationData(
-        47, KARRegion.STADIUM_KM_ALL, KARItemName.CT_REWARD_HYDRA_PART_Z
+        47, KARRegion.CITY_TRIAL_STADIUM_KM_ALL, KARItemName.CT_REWARD_HYDRA_PART_Z
     ),
     CTLocation.STADIUM_VSKD_KO_DEDEDE_1MIN: KARLocationData(
-        48, KARRegion.STADIUM_VSKD, KARItemName.CT_REWARD_KING_DEDEDE_FREE_RUN
+        48, KARRegion.CITY_TRIAL_STADIUM_VSKD, KARItemName.CT_REWARD_KING_DEDEDE_FREE_RUN
     ),
     CTLocation.DO_SOME_DAMAGE_TO_DYNA_BLADE: KARLocationData(
         49, KARRegion.CITY_TRIAL, KARItemName.CT_REWARD_SOUND_TEST_DYNA_BLADE_INTRO
@@ -540,24 +603,24 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
     CTLocation.DAMAGE_ALL_3_CPUS: KARLocationData(79, KARRegion.CITY_TRIAL),
     CTLocation.GET_50_ITEMS: KARLocationData(80, KARRegion.CITY_TRIAL),
     CTLocation.GET_10_BOOST_PATCHES: KARLocationData(81, KARRegion.CITY_TRIAL),
-    CTLocation.STADIUM_DD1_KO_A_RIVAL_10X: KARLocationData(82, KARRegion.STADIUM_DD1),
+    CTLocation.STADIUM_DD1_KO_A_RIVAL_10X: KARLocationData(82, KARRegion.CITY_TRIAL_STADIUM_DD1),
     CTLocation.GET_10_TOP_SPEED_PATCHES: KARLocationData(83, KARRegion.CITY_TRIAL),
     CTLocation.STADIUM_DD2_KO_A_RIVAL_10X: KARLocationData(
-        84, KARRegion.STADIUM_DD2, KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM
+        84, KARRegion.CITY_TRIAL_STADIUM_DD2, KARItemName.CT_REWARD_DESTRUCTION_DERBY_3_STADIUM
     ),
     CTLocation.GET_10_TURN_PATCHES: KARLocationData(85, KARRegion.CITY_TRIAL),
     CTLocation.STADIUM_DD4_KO_A_RIVAL_10X: KARLocationData(
-        86, KARRegion.STADIUM_DD4, KARItemName.CT_REWARD_DESTRUCTION_DERBY_5_STADIUM
+        86, KARRegion.CITY_TRIAL_STADIUM_DD4, KARItemName.CT_REWARD_DESTRUCTION_DERBY_5_STADIUM
     ),
     CTLocation.GET_10_CHARGE_PATCHES: KARLocationData(87, KARRegion.CITY_TRIAL),
-    CTLocation.STADIUM_DD5_KO_A_RIVAL_10X: KARLocationData(88, KARRegion.STADIUM_DD5),
+    CTLocation.STADIUM_DD5_KO_A_RIVAL_10X: KARLocationData(88, KARRegion.CITY_TRIAL_STADIUM_DD5),
     CTLocation.GET_10_WEIGHT_PATCHES: KARLocationData(89, KARRegion.CITY_TRIAL),
     CTLocation.STADIUM_KM1_KO_75_ENEMIES_BY_YOURSELF: KARLocationData(
-        90, KARRegion.STADIUM_KM1, KARItemName.CT_REWARD_KIRBY_MELEE_2_STADIUM
+        90, KARRegion.CITY_TRIAL_STADIUM_KM1, KARItemName.CT_REWARD_KIRBY_MELEE_2_STADIUM
     ),
     CTLocation.GET_10_DEFENSE_PATCHES: KARLocationData(91, KARRegion.CITY_TRIAL),
     CTLocation.STADIUM_KM2_KO_40_ENEMIES_BY_YOURSELF: KARLocationData(
-        92, KARRegion.STADIUM_KM2, KARItemName.CT_REWARD_SOUND_TEST_KIRBY_MELEE
+        92, KARRegion.CITY_TRIAL_STADIUM_KM2, KARItemName.CT_REWARD_SOUND_TEST_KIRBY_MELEE
     ),
     CTLocation.GET_10_GLIDE_PATCHES: KARLocationData(93, KARRegion.CITY_TRIAL),
     CTLocation.GET_30_GLIDE_PATCHES: KARLocationData(94, KARRegion.CITY_TRIAL),
@@ -568,14 +631,16 @@ CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
     ),
     CTLocation.EAT_2_MAXIM_TOMATOES: KARLocationData(98, KARRegion.CITY_TRIAL),
     CTLocation.DRINK_3_ENERGY_DRINKS: KARLocationData(99, KARRegion.CITY_TRIAL),
-    CTLocation.STADIUM_DR1_26_00_WARPSTAR: KARLocationData(100, KARRegion.STADIUM_DR1),
-    CTLocation.STADIUM_DR1_17_00_FORMULA: KARLocationData(101, KARRegion.STADIUM_DR1),
-    CTLocation.STADIUM_DR2_27_00_WAGON: KARLocationData(102, KARRegion.STADIUM_DR2),
-    CTLocation.STADIUM_DR2_29_00_WINGED: KARLocationData(103, KARRegion.STADIUM_DR2, KARItemName.CT_REWARD_BROWN_KIRBY),
-    CTLocation.STADIUM_DR3_28_00_SWERVE: KARLocationData(104, KARRegion.STADIUM_DR3),
-    CTLocation.STADIUM_DR3_31_00_WHEELIE_BIKE: KARLocationData(105, KARRegion.STADIUM_DR3),
-    CTLocation.STADIUM_DR4_33_00_TURBO: KARLocationData(106, KARRegion.STADIUM_DR4),
-    CTLocation.STADIUM_DR4_24_00_REX: KARLocationData(107, KARRegion.STADIUM_DR4),
+    CTLocation.STADIUM_DR1_26_00_WARPSTAR: KARLocationData(100, KARRegion.CITY_TRIAL_STADIUM_DR1),
+    CTLocation.STADIUM_DR1_17_00_FORMULA: KARLocationData(101, KARRegion.CITY_TRIAL_STADIUM_DR1),
+    CTLocation.STADIUM_DR2_27_00_WAGON: KARLocationData(102, KARRegion.CITY_TRIAL_STADIUM_DR2),
+    CTLocation.STADIUM_DR2_29_00_WINGED: KARLocationData(
+        103, KARRegion.CITY_TRIAL_STADIUM_DR2, KARItemName.CT_REWARD_BROWN_KIRBY
+    ),
+    CTLocation.STADIUM_DR3_28_00_SWERVE: KARLocationData(104, KARRegion.CITY_TRIAL_STADIUM_DR3),
+    CTLocation.STADIUM_DR3_31_00_WHEELIE_BIKE: KARLocationData(105, KARRegion.CITY_TRIAL_STADIUM_DR3),
+    CTLocation.STADIUM_DR4_33_00_TURBO: KARLocationData(106, KARRegion.CITY_TRIAL_STADIUM_DR4),
+    CTLocation.STADIUM_DR4_24_00_REX: KARLocationData(107, KARRegion.CITY_TRIAL_STADIUM_DR4),
     CTLocation.EAT_3_PLATES_OF_SUSHI: KARLocationData(108, KARRegion.CITY_TRIAL),
     CTLocation.EAT_3_HOT_DOGS: KARLocationData(109, KARRegion.CITY_TRIAL),
     CTLocation.UNLOCK_DRAGOON_CHECKLIST: KARLocationData(
@@ -614,122 +679,124 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
     ),
     ARLocation.SWALL_WHEELIE_3_AND_FIRST: KARLocationData(130, KARRegion.AIR_RIDE),
     ARLocation.REACH_GOAL_3X_NOT_FR: KARLocationData(131, KARRegion.AIR_RIDE, KARItemName.AR_REWARD_WAGON_STAR),
-    ARLocation.CK_RACE_5500_FEET: KARLocationData(132, KARRegion.AR_CHECKER_KNIGHTS),
+    ARLocation.CK_RACE_5500_FEET: KARLocationData(132, KARRegion.AIR_RIDE_CHECKER_KNIGHTS),
     ARLocation.MF_RACE_4800_FEET: KARLocationData(
-        133, KARRegion.AR_MAGMA_FLOWS, KARItemName.AR_REWARD_SOUND_TEST_MAGMA_FLOWS
+        133, KARRegion.AIR_RIDE_MAGMA_FLOWS, KARItemName.AR_REWARD_SOUND_TEST_MAGMA_FLOWS
     ),
-    ARLocation.MF_FINISH_2_LAPS_IN_UNDER_02_20_00: KARLocationData(134, KARRegion.AR_MAGMA_FLOWS),
+    ARLocation.MF_FINISH_2_LAPS_IN_UNDER_02_20_00: KARLocationData(134, KARRegion.AIR_RIDE_MAGMA_FLOWS),
     ARLocation.SWALL_200_ENEMIES: KARLocationData(135, KARRegion.AIR_RIDE, KARItemName.AR_REWARD_FILLER_BOX_1),
     ARLocation.DEFEAT_100_ENEMIES_WITH_EXHALED_STARS: KARLocationData(
         136, KARRegion.AIR_RIDE, KARItemName.AR_REWARD_REX_WHEELIE
     ),
     ARLocation.SWALL_5_GARBAGE_AND_FIRST: KARLocationData(137, KARRegion.AIR_RIDE),
     ARLocation.BP_FINISH_2_LAPS_IN_UNDER_02_18_00: KARLocationData(
-        138, KARRegion.AR_BEANSTALK_PARK, KARItemName.AR_REWARD_PURPLE_KIRBY
+        138, KARRegion.AIR_RIDE_BEANSTALK_PARK, KARItemName.AR_REWARD_PURPLE_KIRBY
     ),
-    ARLocation.MP_FINISH_2_LAPS_IN_UNDER_02_10_00: KARLocationData(139, KARRegion.AR_MACHINE_PASSAGE),
+    ARLocation.MP_FINISH_2_LAPS_IN_UNDER_02_10_00: KARLocationData(139, KARRegion.AIR_RIDE_MACHINE_PASSAGE),
     ARLocation.CK_FINISH_2_LAPS_IN_UNDER_03_05_00: KARLocationData(
-        140, KARRegion.AR_CHECKER_KNIGHTS, KARItemName.AR_REWARD_SLICK_STAR
+        140, KARRegion.AIR_RIDE_CHECKER_KNIGHTS, KARItemName.AR_REWARD_SLICK_STAR
     ),
-    ARLocation.FM_RACE_4500_FEET: KARLocationData(141, KARRegion.AR_FANTASY_MEADOWS),
-    ARLocation.CV_RACE_6000_FEET: KARLocationData(142, KARRegion.AR_CELESTIAL_VALLEY),
-    ARLocation.SS_RACE_4000_FEET: KARLocationData(143, KARRegion.AR_SKY_SANDS),
-    ARLocation.FH_RACE_5300_FEET: KARLocationData(144, KARRegion.AR_FROZEN_HILLSIDE),
+    ARLocation.FM_RACE_4500_FEET: KARLocationData(141, KARRegion.AIR_RIDE_FANTASY_MEADOWS),
+    ARLocation.CV_RACE_6000_FEET: KARLocationData(142, KARRegion.AIR_RIDE_CELESTIAL_VALLEY),
+    ARLocation.SS_RACE_4000_FEET: KARLocationData(143, KARRegion.AIR_RIDE_SKY_SANDS),
+    ARLocation.FH_RACE_5300_FEET: KARLocationData(144, KARRegion.AIR_RIDE_FROZEN_HILLSIDE),
     ARLocation.FILL_IN_100_CHECKLIST_BLOCKS: KARLocationData(145, KARRegion.AIR_RIDE, KARItemName.AR_REWARD_ENDING),
-    ARLocation.FM_FINISH_3_LAPS_IN_UNDER_01_20_00: KARLocationData(146, KARRegion.AR_FANTASY_MEADOWS),
+    ARLocation.FM_FINISH_3_LAPS_IN_UNDER_01_20_00: KARLocationData(146, KARRegion.AIR_RIDE_FANTASY_MEADOWS),
     ARLocation.CV_FINISH_2_LAPS_IN_UNDER_02_20_00: KARLocationData(
-        147, KARRegion.AR_CELESTIAL_VALLEY, KARItemName.AR_REWARD_WHITE_KIRBY
+        147, KARRegion.AIR_RIDE_CELESTIAL_VALLEY, KARItemName.AR_REWARD_WHITE_KIRBY
     ),
     ARLocation.SS_FINISH_2_LAPS_IN_UNDER_02_05_00: KARLocationData(
-        148, KARRegion.AR_SKY_SANDS, KARItemName.AR_REWARD_SWERVE_STAR
+        148, KARRegion.AIR_RIDE_SKY_SANDS, KARItemName.AR_REWARD_SWERVE_STAR
     ),
     ARLocation.SWORD_CHALLENGE_10_SWINGS: KARLocationData(149, KARRegion.AIR_RIDE),
-    ARLocation.FH_RACE_2_LAPS_IN_UNDER_02_20_00: KARLocationData(150, KARRegion.AR_FROZEN_HILLSIDE),
+    ARLocation.FH_RACE_2_LAPS_IN_UNDER_02_20_00: KARLocationData(150, KARRegion.AIR_RIDE_FROZEN_HILLSIDE),
     ARLocation.TORNADO_CHALLENGE_15_KO: KARLocationData(151, KARRegion.AIR_RIDE),
     ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN: KARLocationData(
         152, KARRegion.AIR_RIDE, KARItemName.AR_REWARD_SHADOW_STAR
     ),
     ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN: KARLocationData(153, KARRegion.AIR_RIDE),
-    ARLocation.MP_RACE_4500_FEET: KARLocationData(154, KARRegion.AR_MACHINE_PASSAGE, KARItemName.AR_REWARD_JET_STAR),
-    ARLocation.BP_RACE_5500_FEET: KARLocationData(155, KARRegion.AR_BEANSTALK_PARK),
-    ARLocation.FM_FINISH_3_LAPS_IN_UNDER_01_03_00: KARLocationData(156, KARRegion.AR_FANTASY_MEADOWS),
-    ARLocation.CV_FINISH_2_LAPS_IN_UNDER_01_56_00: KARLocationData(157, KARRegion.AR_CELESTIAL_VALLEY),
-    ARLocation.SS_FINISH_2_LAPS_IN_UNDER_01_45_00: KARLocationData(158, KARRegion.AR_SKY_SANDS),
+    ARLocation.MP_RACE_4500_FEET: KARLocationData(
+        154, KARRegion.AIR_RIDE_MACHINE_PASSAGE, KARItemName.AR_REWARD_JET_STAR
+    ),
+    ARLocation.BP_RACE_5500_FEET: KARLocationData(155, KARRegion.AIR_RIDE_BEANSTALK_PARK),
+    ARLocation.FM_FINISH_3_LAPS_IN_UNDER_01_03_00: KARLocationData(156, KARRegion.AIR_RIDE_FANTASY_MEADOWS),
+    ARLocation.CV_FINISH_2_LAPS_IN_UNDER_01_56_00: KARLocationData(157, KARRegion.AIR_RIDE_CELESTIAL_VALLEY),
+    ARLocation.SS_FINISH_2_LAPS_IN_UNDER_01_45_00: KARLocationData(158, KARRegion.AIR_RIDE_SKY_SANDS),
     ARLocation.FH_FINISH_2_LAPS_IN_UNDER_01_56_00: KARLocationData(
-        159, KARRegion.AR_FROZEN_HILLSIDE, KARItemName.AR_REWARD_MUSIC_HILLSIDE
+        159, KARRegion.AIR_RIDE_FROZEN_HILLSIDE, KARItemName.AR_REWARD_MUSIC_HILLSIDE
     ),
-    ARLocation.MF_FINISH_2_LAPS_IN_UNDER_02_01_00: KARLocationData(160, KARRegion.AR_MAGMA_FLOWS),
-    ARLocation.BP_FINISH_2_LAPS_IN_UNDER_01_56_00: KARLocationData(161, KARRegion.AR_BEANSTALK_PARK),
-    ARLocation.MP_FINISH_2_LAPS_IN_UNDER_01_48_00: KARLocationData(162, KARRegion.AR_MACHINE_PASSAGE),
+    ARLocation.MF_FINISH_2_LAPS_IN_UNDER_02_01_00: KARLocationData(160, KARRegion.AIR_RIDE_MAGMA_FLOWS),
+    ARLocation.BP_FINISH_2_LAPS_IN_UNDER_01_56_00: KARLocationData(161, KARRegion.AIR_RIDE_BEANSTALK_PARK),
+    ARLocation.MP_FINISH_2_LAPS_IN_UNDER_01_48_00: KARLocationData(162, KARRegion.AIR_RIDE_MACHINE_PASSAGE),
     ARLocation.CK_FINISH_2_LAPS_IN_UNDER_02_40_00: KARLocationData(
-        163, KARRegion.AR_CHECKER_KNIGHTS, KARItemName.AR_REWARD_SOUND_TEST_CHECKER_KNIGHTS
+        163, KARRegion.AIR_RIDE_CHECKER_KNIGHTS, KARItemName.AR_REWARD_SOUND_TEST_CHECKER_KNIGHTS
     ),
-    ARLocation.TA_FM_FINISH_01_12_00: KARLocationData(164, KARRegion.AR_TA_FANTASY_MEADOWS),
+    ARLocation.TA_FM_FINISH_01_12_00: KARLocationData(164, KARRegion.AIR_RIDE_TA_FANTASY_MEADOWS),
     ARLocation.TA_FM_FINISH_01_00_00: KARLocationData(
-        165, KARRegion.AR_TA_FANTASY_MEADOWS, KARItemName.AR_REWARD_MUSIC_MEADOWS
+        165, KARRegion.AIR_RIDE_TA_FANTASY_MEADOWS, KARItemName.AR_REWARD_MUSIC_MEADOWS
     ),
     ARLocation.TA_CV_FINISH_03_20_00: KARLocationData(
-        166, KARRegion.AR_TA_CELESTIAL_VALLEY, KARItemName.AR_REWARD_BULK_STAR
+        166, KARRegion.AIR_RIDE_TA_CELESTIAL_VALLEY, KARItemName.AR_REWARD_BULK_STAR
     ),
-    ARLocation.TA_CV_FINISH_02_56_00: KARLocationData(167, KARRegion.AR_TA_CELESTIAL_VALLEY),
+    ARLocation.TA_CV_FINISH_02_56_00: KARLocationData(167, KARRegion.AIR_RIDE_TA_CELESTIAL_VALLEY),
     ARLocation.TA_SS_FINISH_03_10_00: KARLocationData(
-        168, KARRegion.AR_TA_SKY_SANDS, KARItemName.AR_REWARD_SOUND_TEST_SKY_SANDS
+        168, KARRegion.AIR_RIDE_TA_SKY_SANDS, KARItemName.AR_REWARD_SOUND_TEST_SKY_SANDS
     ),
-    ARLocation.TA_SS_FINISH_02_40_00: KARLocationData(169, KARRegion.AR_TA_SKY_SANDS),
+    ARLocation.TA_SS_FINISH_02_40_00: KARLocationData(169, KARRegion.AIR_RIDE_TA_SKY_SANDS),
     ARLocation.TA_FH_FINISH_03_14_00: KARLocationData(
-        170, KARRegion.AR_TA_FROZEN_HILLSIDE, KARItemName.AR_REWARD_FORMULA_STAR
+        170, KARRegion.AIR_RIDE_TA_FROZEN_HILLSIDE, KARItemName.AR_REWARD_FORMULA_STAR
     ),
-    ARLocation.TA_FH_FINISH_02_50_00: KARLocationData(171, KARRegion.AR_TA_FROZEN_HILLSIDE),
+    ARLocation.TA_FH_FINISH_02_50_00: KARLocationData(171, KARRegion.AIR_RIDE_TA_FROZEN_HILLSIDE),
     ARLocation.TA_MF_FINISH_03_20_00: KARLocationData(
-        172, KARRegion.AR_TA_MAGMA_FLOWS, KARItemName.AR_REWARD_MUSIC_MAGMA
+        172, KARRegion.AIR_RIDE_TA_MAGMA_FLOWS, KARItemName.AR_REWARD_MUSIC_MAGMA
     ),
-    ARLocation.TA_MF_FINISH_03_04_00: KARLocationData(173, KARRegion.AR_TA_MAGMA_FLOWS),
-    ARLocation.TA_BP_FINISH_03_10_00: KARLocationData(174, KARRegion.AR_TA_BEANSTALK_PARK),
+    ARLocation.TA_MF_FINISH_03_04_00: KARLocationData(173, KARRegion.AIR_RIDE_TA_MAGMA_FLOWS),
+    ARLocation.TA_BP_FINISH_03_10_00: KARLocationData(174, KARRegion.AIR_RIDE_TA_BEANSTALK_PARK),
     ARLocation.TA_BP_FINISH_02_55_00: KARLocationData(
-        175, KARRegion.AR_TA_BEANSTALK_PARK, KARItemName.AR_REWARD_MUSIC_BEANSTALK
+        175, KARRegion.AIR_RIDE_TA_BEANSTALK_PARK, KARItemName.AR_REWARD_MUSIC_BEANSTALK
     ),
     ARLocation.TA_MP_FINISH_03_10_00: KARLocationData(
-        176, KARRegion.AR_TA_MACHINE_PASSAGE, KARItemName.AR_REWARD_SOUND_TEST_MACHINE_PASSAGE
+        176, KARRegion.AIR_RIDE_TA_MACHINE_PASSAGE, KARItemName.AR_REWARD_SOUND_TEST_MACHINE_PASSAGE
     ),
-    ARLocation.TA_MP_FINISH_02_48_00: KARLocationData(177, KARRegion.AR_TA_MACHINE_PASSAGE),
-    ARLocation.TA_CK_FINISH_04_30_00: KARLocationData(178, KARRegion.AR_TA_CHECKER_KNIGHTS),
-    ARLocation.TA_CK_FINISH_04_00_00: KARLocationData(179, KARRegion.AR_TA_CHECKER_KNIGHTS),
-    ARLocation.FR_FM_LAP_00_24_00: KARLocationData(180, KARRegion.AR_FR_FANTASY_MEADOWS),
+    ARLocation.TA_MP_FINISH_02_48_00: KARLocationData(177, KARRegion.AIR_RIDE_TA_MACHINE_PASSAGE),
+    ARLocation.TA_CK_FINISH_04_30_00: KARLocationData(178, KARRegion.AIR_RIDE_TA_CHECKER_KNIGHTS),
+    ARLocation.TA_CK_FINISH_04_00_00: KARLocationData(179, KARRegion.AIR_RIDE_TA_CHECKER_KNIGHTS),
+    ARLocation.FR_FM_LAP_00_24_00: KARLocationData(180, KARRegion.AIR_RIDE_FR_FANTASY_MEADOWS),
     ARLocation.FR_FM_LAP_00_21_00: KARLocationData(
-        181, KARRegion.AR_FR_FANTASY_MEADOWS, KARItemName.AR_REWARD_SOUND_TEST_FANTASY_MEADOWS
+        181, KARRegion.AIR_RIDE_FR_FANTASY_MEADOWS, KARItemName.AR_REWARD_SOUND_TEST_FANTASY_MEADOWS
     ),
-    ARLocation.FR_FM_LAP_00_23_00_ON_WAGON_STAR: KARLocationData(182, KARRegion.AR_FR_FANTASY_MEADOWS),
-    ARLocation.FR_CV_LAP_01_10_00: KARLocationData(183, KARRegion.AR_FR_CELESTIAL_VALLEY),
+    ARLocation.FR_FM_LAP_00_23_00_ON_WAGON_STAR: KARLocationData(182, KARRegion.AIR_RIDE_FR_FANTASY_MEADOWS),
+    ARLocation.FR_CV_LAP_01_10_00: KARLocationData(183, KARRegion.AIR_RIDE_FR_CELESTIAL_VALLEY),
     ARLocation.FR_CV_LAP_00_57_00: KARLocationData(
-        184, KARRegion.AR_FR_CELESTIAL_VALLEY, KARItemName.AR_REWARD_SOUND_TEST_CELESTIAL_VALLEY
+        184, KARRegion.AIR_RIDE_FR_CELESTIAL_VALLEY, KARItemName.AR_REWARD_SOUND_TEST_CELESTIAL_VALLEY
     ),
-    ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR: KARLocationData(185, KARRegion.AR_FR_CELESTIAL_VALLEY),
-    ARLocation.FR_SS_LAP_01_05_00: KARLocationData(186, KARRegion.AR_FR_SKY_SANDS),
-    ARLocation.FR_SS_LAP_00_53_00: KARLocationData(187, KARRegion.AR_FR_SKY_SANDS),
+    ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR: KARLocationData(185, KARRegion.AIR_RIDE_FR_CELESTIAL_VALLEY),
+    ARLocation.FR_SS_LAP_01_05_00: KARLocationData(186, KARRegion.AIR_RIDE_FR_SKY_SANDS),
+    ARLocation.FR_SS_LAP_00_53_00: KARLocationData(187, KARRegion.AIR_RIDE_FR_SKY_SANDS),
     ARLocation.FR_SS_LAP_01_05_00_ON_BULK_STAR: KARLocationData(
-        188, KARRegion.AR_FR_SKY_SANDS, KARItemName.AR_REWARD_BROWN_KIRBY
+        188, KARRegion.AIR_RIDE_FR_SKY_SANDS, KARItemName.AR_REWARD_BROWN_KIRBY
     ),
-    ARLocation.FR_FH_LAP_01_10_00: KARLocationData(189, KARRegion.AR_FR_FROZEN_HILLSIDE),
+    ARLocation.FR_FH_LAP_01_10_00: KARLocationData(189, KARRegion.AIR_RIDE_FR_FROZEN_HILLSIDE),
     ARLocation.FR_FH_LAP_00_58_00: KARLocationData(
-        190, KARRegion.AR_FR_FROZEN_HILLSIDE, KARItemName.AR_REWARD_SOUND_TEST_FROZEN_HILLSIDE
+        190, KARRegion.AIR_RIDE_FR_FROZEN_HILLSIDE, KARItemName.AR_REWARD_SOUND_TEST_FROZEN_HILLSIDE
     ),
-    ARLocation.FR_FH_LAP_01_10_00_ON_FORMULA_STAR: KARLocationData(191, KARRegion.AR_FR_FROZEN_HILLSIDE),
-    ARLocation.FR_MF_LAP_01_10_00: KARLocationData(192, KARRegion.AR_FR_MAGMA_FLOWS),
-    ARLocation.FR_MF_LAP_01_01_00: KARLocationData(193, KARRegion.AR_FR_MAGMA_FLOWS),
-    ARLocation.FR_MF_LAP_01_02_00_ON_TURBO_STAR: KARLocationData(194, KARRegion.AR_FR_MAGMA_FLOWS),
-    ARLocation.FR_BP_LAP_01_07_00: KARLocationData(195, KARRegion.AR_FR_BEANSTALK_PARK),
-    ARLocation.FR_BP_LAP_00_58_00: KARLocationData(196, KARRegion.AR_FR_BEANSTALK_PARK),
+    ARLocation.FR_FH_LAP_01_10_00_ON_FORMULA_STAR: KARLocationData(191, KARRegion.AIR_RIDE_FR_FROZEN_HILLSIDE),
+    ARLocation.FR_MF_LAP_01_10_00: KARLocationData(192, KARRegion.AIR_RIDE_FR_MAGMA_FLOWS),
+    ARLocation.FR_MF_LAP_01_01_00: KARLocationData(193, KARRegion.AIR_RIDE_FR_MAGMA_FLOWS),
+    ARLocation.FR_MF_LAP_01_02_00_ON_TURBO_STAR: KARLocationData(194, KARRegion.AIR_RIDE_FR_MAGMA_FLOWS),
+    ARLocation.FR_BP_LAP_01_07_00: KARLocationData(195, KARRegion.AIR_RIDE_FR_BEANSTALK_PARK),
+    ARLocation.FR_BP_LAP_00_58_00: KARLocationData(196, KARRegion.AIR_RIDE_FR_BEANSTALK_PARK),
     ARLocation.FR_BP_LAP_00_58_00_ON_WINGED_STAR: KARLocationData(
-        197, KARRegion.AR_FR_BEANSTALK_PARK, KARItemName.AR_REWARD_SOUND_TEST_BEANSTALK_PARK
+        197, KARRegion.AIR_RIDE_FR_BEANSTALK_PARK, KARItemName.AR_REWARD_SOUND_TEST_BEANSTALK_PARK
     ),
     ARLocation.FR_MP_LAP_01_05_00: KARLocationData(
-        198, KARRegion.AR_FR_MACHINE_PASSAGE, KARItemName.AR_REWARD_ROCKET_STAR
+        198, KARRegion.AIR_RIDE_FR_MACHINE_PASSAGE, KARItemName.AR_REWARD_ROCKET_STAR
     ),
-    ARLocation.FR_MP_LAP_00_56_00: KARLocationData(199, KARRegion.AR_FR_MACHINE_PASSAGE),
-    ARLocation.FR_MP_LAP_00_57_00_ON_SWERVE_STAR: KARLocationData(200, KARRegion.AR_FR_MACHINE_PASSAGE),
-    ARLocation.FR_CK_LAP_01_35_00: KARLocationData(201, KARRegion.AR_FR_CHECKER_KNIGHTS),
-    ARLocation.FR_CK_LAP_01_20_00: KARLocationData(202, KARRegion.AR_FR_CHECKER_KNIGHTS),
-    ARLocation.FR_CK_LAP_01_25_00_ON_ROCKET_STAR: KARLocationData(203, KARRegion.AR_FR_CHECKER_KNIGHTS),
+    ARLocation.FR_MP_LAP_00_56_00: KARLocationData(199, KARRegion.AIR_RIDE_FR_MACHINE_PASSAGE),
+    ARLocation.FR_MP_LAP_00_57_00_ON_SWERVE_STAR: KARLocationData(200, KARRegion.AIR_RIDE_FR_MACHINE_PASSAGE),
+    ARLocation.FR_CK_LAP_01_35_00: KARLocationData(201, KARRegion.AIR_RIDE_FR_CHECKER_KNIGHTS),
+    ARLocation.FR_CK_LAP_01_20_00: KARLocationData(202, KARRegion.AIR_RIDE_FR_CHECKER_KNIGHTS),
+    ARLocation.FR_CK_LAP_01_25_00_ON_ROCKET_STAR: KARLocationData(203, KARRegion.AIR_RIDE_FR_CHECKER_KNIGHTS),
     ARLocation.MAKE_YOUR_LAP_X_LAST_TWO_DIGITS_SAME: KARLocationData(
         204, KARRegion.AIR_RIDE, KARItemName.AR_REWARD_SOUND_TEST_RESULTS_SCREEN
     ),
@@ -746,51 +813,51 @@ AIR_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
     ARLocation.FIRST_WITH_FIRE_ABILITY: KARLocationData(211, KARRegion.AIR_RIDE),
     ARLocation.FIRST_WITH_NEEDLE_ABILITY: KARLocationData(212, KARRegion.AIR_RIDE),
     ARLocation.FIRST_WITH_WING_ABILITY: KARLocationData(213, KARRegion.AIR_RIDE),
-    ARLocation.TA_FM_FINISH_01_05_00_ON_SLICK_STAR: KARLocationData(214, KARRegion.AR_TA_FANTASY_MEADOWS),
+    ARLocation.TA_FM_FINISH_01_05_00_ON_SLICK_STAR: KARLocationData(214, KARRegion.AIR_RIDE_TA_FANTASY_MEADOWS),
     ARLocation.DROP_FROM_CLIFFS_3X: KARLocationData(215, KARRegion.AIR_RIDE, KARItemName.AR_REWARD_FILLER_BOX_2),
-    ARLocation.FM_SWALL_20_AND_FIRST: KARLocationData(216, KARRegion.AR_FANTASY_MEADOWS),
-    ARLocation.FM_LAP_ABOVE_20_MPH: KARLocationData(217, KARRegion.AR_FANTASY_MEADOWS),
-    ARLocation.BP_3_LAPS_NO_FERRIS_WHEEL: KARLocationData(218, KARRegion.AR_BEANSTALK_PARK),
-    ARLocation.BP_SWALL_20_AND_FIRST: KARLocationData(219, KARRegion.AR_BEANSTALK_PARK),
+    ARLocation.FM_SWALL_20_AND_FIRST: KARLocationData(216, KARRegion.AIR_RIDE_FANTASY_MEADOWS),
+    ARLocation.FM_LAP_ABOVE_20_MPH: KARLocationData(217, KARRegion.AIR_RIDE_FANTASY_MEADOWS),
+    ARLocation.BP_3_LAPS_NO_FERRIS_WHEEL: KARLocationData(218, KARRegion.AIR_RIDE_BEANSTALK_PARK),
+    ARLocation.BP_SWALL_20_AND_FIRST: KARLocationData(219, KARRegion.AIR_RIDE_BEANSTALK_PARK),
     ARLocation.CK_USE_SPIN_PANELS_7_X_AND_FIRST: KARLocationData(
-        220, KARRegion.AR_CHECKER_KNIGHTS, KARItemName.AR_REWARD_MUSIC_CHECKER
+        220, KARRegion.AIR_RIDE_CHECKER_KNIGHTS, KARItemName.AR_REWARD_MUSIC_CHECKER
     ),
-    ARLocation.CK_BREAK_2_WALLS_AND_FIRST: KARLocationData(221, KARRegion.AR_CHECKER_KNIGHTS),
-    ARLocation.CK_SWALL_20_AND_FIRST: KARLocationData(222, KARRegion.AR_CHECKER_KNIGHTS),
-    ARLocation.FH_SPLIT_20_ICE_AND_FIRST: KARLocationData(223, KARRegion.AR_FROZEN_HILLSIDE),
+    ARLocation.CK_BREAK_2_WALLS_AND_FIRST: KARLocationData(221, KARRegion.AIR_RIDE_CHECKER_KNIGHTS),
+    ARLocation.CK_SWALL_20_AND_FIRST: KARLocationData(222, KARRegion.AIR_RIDE_CHECKER_KNIGHTS),
+    ARLocation.FH_SPLIT_20_ICE_AND_FIRST: KARLocationData(223, KARRegion.AIR_RIDE_FROZEN_HILLSIDE),
     ARLocation.SS_BREAK_ALL_CORAL_AND_FIRST: KARLocationData(
-        224, KARRegion.AR_SKY_SANDS, KARItemName.AR_REWARD_FILLER_BOX_3
+        224, KARRegion.AIR_RIDE_SKY_SANDS, KARItemName.AR_REWARD_FILLER_BOX_3
     ),
-    ARLocation.SS_ENTER_QUICKSAND_3_X_AND_FIRST: KARLocationData(225, KARRegion.AR_SKY_SANDS),
-    ARLocation.TA_CV_FINISH_02_58_00_ON_JET_STAR: KARLocationData(226, KARRegion.AR_TA_CELESTIAL_VALLEY),
+    ARLocation.SS_ENTER_QUICKSAND_3_X_AND_FIRST: KARLocationData(225, KARRegion.AIR_RIDE_SKY_SANDS),
+    ARLocation.TA_CV_FINISH_02_58_00_ON_JET_STAR: KARLocationData(226, KARRegion.AIR_RIDE_TA_CELESTIAL_VALLEY),
     ARLocation.SS_TRAPDOOR_3X_AND_FIRST: KARLocationData(
-        227, KARRegion.AR_SKY_SANDS, KARItemName.AR_REWARD_MUSIC_SKY_SANDS
+        227, KARRegion.AIR_RIDE_SKY_SANDS, KARItemName.AR_REWARD_MUSIC_SKY_SANDS
     ),
     ARLocation.MP_CANNON_SHOOT_3: KARLocationData(
-        228, KARRegion.AR_MACHINE_PASSAGE, KARItemName.AR_REWARD_MUSIC_MACHINE
+        228, KARRegion.AIR_RIDE_MACHINE_PASSAGE, KARItemName.AR_REWARD_MUSIC_MACHINE
     ),
-    ARLocation.TA_SS_FINISH_02_40_00_ON_WAGON_STAR: KARLocationData(229, KARRegion.AR_TA_SKY_SANDS),
-    ARLocation.MP_FIRST_NO_WALL_TOUCH: KARLocationData(230, KARRegion.AR_MACHINE_PASSAGE),
+    ARLocation.TA_SS_FINISH_02_40_00_ON_WAGON_STAR: KARLocationData(229, KARRegion.AIR_RIDE_TA_SKY_SANDS),
+    ARLocation.MP_FIRST_NO_WALL_TOUCH: KARLocationData(230, KARRegion.AIR_RIDE_MACHINE_PASSAGE),
     ARLocation.MF_USE_ALL_VOLCANO_RAILS_AND_FIRST: KARLocationData(
-        231, KARRegion.AR_MAGMA_FLOWS, KARItemName.AR_REWARD_TURBO_STAR
+        231, KARRegion.AIR_RIDE_MAGMA_FLOWS, KARItemName.AR_REWARD_TURBO_STAR
     ),
     ARLocation.MF_BUMP_INTO_A_FLAMING_DRAGON: KARLocationData(
-        232, KARRegion.AR_MAGMA_FLOWS, KARItemName.AR_REWARD_FILLER_BOX_4
+        232, KARRegion.AIR_RIDE_MAGMA_FLOWS, KARItemName.AR_REWARD_FILLER_BOX_4
     ),
-    ARLocation.MF_ALL_BOOST_PANELS_AND_FIRST: KARLocationData(233, KARRegion.AR_MAGMA_FLOWS),
-    ARLocation.TA_FH_FINISH_03_10_00_ON_TURBO_STAR: KARLocationData(234, KARRegion.AR_TA_FROZEN_HILLSIDE),
+    ARLocation.MF_ALL_BOOST_PANELS_AND_FIRST: KARLocationData(233, KARRegion.AIR_RIDE_MAGMA_FLOWS),
+    ARLocation.TA_FH_FINISH_03_10_00_ON_TURBO_STAR: KARLocationData(234, KARRegion.AIR_RIDE_TA_FROZEN_HILLSIDE),
     ARLocation.CV_RIDE_BOTH_BRIDGE_RAILS: KARLocationData(
-        235, KARRegion.AR_CELESTIAL_VALLEY, KARItemName.AR_REWARD_MUSIC_CELESTIAL
+        235, KARRegion.AIR_RIDE_CELESTIAL_VALLEY, KARItemName.AR_REWARD_MUSIC_CELESTIAL
     ),
-    ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR: KARLocationData(236, KARRegion.AR_TA_MAGMA_FLOWS),
+    ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR: KARLocationData(236, KARRegion.AIR_RIDE_TA_MAGMA_FLOWS),
     ARLocation.CV_COPY_CHANCE_WHEEL_TREE: KARLocationData(
-        237, KARRegion.AR_CELESTIAL_VALLEY, KARItemName.AR_REWARD_FILLER_BOX_5
+        237, KARRegion.AIR_RIDE_CELESTIAL_VALLEY, KARItemName.AR_REWARD_FILLER_BOX_5
     ),
     ARLocation.TA_BP_FINISH_03_00_00_ON_ROCKET_STAR: KARLocationData(
-        238, KARRegion.AR_TA_BEANSTALK_PARK, KARItemName.AR_REWARD_SOUND_TEST_NEBULA_BELT
+        238, KARRegion.AIR_RIDE_TA_BEANSTALK_PARK, KARItemName.AR_REWARD_SOUND_TEST_NEBULA_BELT
     ),
-    ARLocation.TA_MP_FINISH_02_50_00_ON_REX_WHEELIE: KARLocationData(239, KARRegion.AR_TA_MACHINE_PASSAGE),
-    ARLocation.TA_CK_FINISH_03_55_00_ON_WARPSTAR: KARLocationData(240, KARRegion.AR_TA_CHECKER_KNIGHTS),
+    ARLocation.TA_MP_FINISH_02_50_00_ON_REX_WHEELIE: KARLocationData(239, KARRegion.AIR_RIDE_TA_MACHINE_PASSAGE),
+    ARLocation.TA_CK_FINISH_03_55_00_ON_WARPSTAR: KARLocationData(240, KARRegion.AIR_RIDE_TA_CHECKER_KNIGHTS),
 }
 
 
@@ -801,8 +868,8 @@ TOP_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
     TRLocation.COMPETE_IN_50_MULTIPLAYER_RACES: KARLocationData(
         244, KARRegion.TOP_RIDE, KARItemName.TR_REWARD_PURPLE_KIRBY
     ),
-    TRLocation.FR_RACE_100_LAPS: KARLocationData(245, KARRegion.TR_FREE_RUN),
-    TRLocation.TA_CROSS_GOAL_30: KARLocationData(246, KARRegion.TR_TIME_ATTACK),
+    TRLocation.FR_RACE_100_LAPS: KARLocationData(245, KARRegion.TOP_RIDE_FREE_RUN),
+    TRLocation.TA_CROSS_GOAL_30: KARLocationData(246, KARRegion.TOP_RIDE_TIME_ATTACK),
     TRLocation.FIRST_ON_ALL_COURSES: KARLocationData(
         247, KARRegion.TOP_RIDE, KARItemName.TR_REWARD_DIAGONAL_CAMERA_RULE
     ),
@@ -829,337 +896,202 @@ TOP_RIDE_LOCATION_TABLE: dict[str, KARLocationData] = {
     TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS: KARLocationData(
         266, KARRegion.TOP_RIDE, KARItemName.TR_REWARD_CHICKIE_ITEM
     ),
-    TRLocation.GRASS_NOITEMS_FIRST: KARLocationData(267, KARRegion.TR_GRASS, KARItemName.TR_REWARD_SOUND_TEST_GRASS),
-    TRLocation.GRASS_FIRST_WITHOUT_USING_BOOST: KARLocationData(268, KARRegion.TR_GRASS),
-    TRLocation.GRASS_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(269, KARRegion.TR_GRASS),
-    TRLocation.GRASS_FIRST_10X: KARLocationData(270, KARRegion.TR_GRASS),
-    TRLocation.GRASS_FINISH_7_LAPS_IN_UNDER_00_43_00: KARLocationData(271, KARRegion.TR_GRASS),
-    TRLocation.GRASS_RACE_100_LAPS: KARLocationData(272, KARRegion.TR_GRASS),
+    TRLocation.GRASS_NOITEMS_FIRST: KARLocationData(
+        267, KARRegion.TOP_RIDE_GRASS, KARItemName.TR_REWARD_SOUND_TEST_GRASS
+    ),
+    TRLocation.GRASS_FIRST_WITHOUT_USING_BOOST: KARLocationData(268, KARRegion.TOP_RIDE_GRASS),
+    TRLocation.GRASS_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(269, KARRegion.TOP_RIDE_GRASS),
+    TRLocation.GRASS_FIRST_10X: KARLocationData(270, KARRegion.TOP_RIDE_GRASS),
+    TRLocation.GRASS_FINISH_7_LAPS_IN_UNDER_00_43_00: KARLocationData(271, KARRegion.TOP_RIDE_GRASS),
+    TRLocation.GRASS_RACE_100_LAPS: KARLocationData(272, KARRegion.TOP_RIDE_GRASS),
     TRLocation.GRASS_FIRST_AND_HIT_5_DASH_PANELS: KARLocationData(
-        273, KARRegion.TR_GRASS, KARItemName.TR_REWARD_MUSIC_GRASS
+        273, KARRegion.TOP_RIDE_GRASS, KARItemName.TR_REWARD_MUSIC_GRASS
     ),
-    TRLocation.GRASS_IN_ONE_RACE_DROP_30_TREE_BOMBS: KARLocationData(274, KARRegion.TR_GRASS),
-    TRLocation.GRASS_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(275, KARRegion.TR_GRASS),
-    TRLocation.SAND_NOITEMS_FIRST: KARLocationData(276, KARRegion.TR_SAND),
+    TRLocation.GRASS_IN_ONE_RACE_DROP_30_TREE_BOMBS: KARLocationData(274, KARRegion.TOP_RIDE_GRASS),
+    TRLocation.GRASS_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(275, KARRegion.TOP_RIDE_GRASS),
+    TRLocation.SAND_NOITEMS_FIRST: KARLocationData(276, KARRegion.TOP_RIDE_SAND),
     TRLocation.SAND_FIRST_WITHOUT_USING_BOOST: KARLocationData(
-        277, KARRegion.TR_SAND, KARItemName.TR_REWARD_SOUND_TEST_SAND
+        277, KARRegion.TOP_RIDE_SAND, KARItemName.TR_REWARD_SOUND_TEST_SAND
     ),
-    TRLocation.SAND_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(278, KARRegion.TR_SAND),
-    TRLocation.SAND_FIRST_10X: KARLocationData(279, KARRegion.TR_SAND),
-    TRLocation.SAND_FINISH_7_LAPS_IN_UNDER_00_52_00: KARLocationData(280, KARRegion.TR_SAND),
-    TRLocation.SAND_RACE_100_LAPS: KARLocationData(281, KARRegion.TR_SAND),
-    TRLocation.SAND_FIRST_AND_CATCH_WORM_3: KARLocationData(282, KARRegion.TR_SAND),
-    TRLocation.SAND_DROP_INTO_ANT_DOOM_50X: KARLocationData(283, KARRegion.TR_SAND, KARItemName.TR_REWARD_FILLER_BOX_2),
-    TRLocation.SAND_ANT_DOOM_20X: KARLocationData(284, KARRegion.TR_SAND),
-    TRLocation.SAND_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(285, KARRegion.TR_SAND),
-    TRLocation.SKY_NOITEMS_FIRST: KARLocationData(286, KARRegion.TR_SKY),
-    TRLocation.SKY_FIRST_WITHOUT_USING_BOOST: KARLocationData(287, KARRegion.TR_SKY),
+    TRLocation.SAND_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(278, KARRegion.TOP_RIDE_SAND),
+    TRLocation.SAND_FIRST_10X: KARLocationData(279, KARRegion.TOP_RIDE_SAND),
+    TRLocation.SAND_FINISH_7_LAPS_IN_UNDER_00_52_00: KARLocationData(280, KARRegion.TOP_RIDE_SAND),
+    TRLocation.SAND_RACE_100_LAPS: KARLocationData(281, KARRegion.TOP_RIDE_SAND),
+    TRLocation.SAND_FIRST_AND_CATCH_WORM_3: KARLocationData(282, KARRegion.TOP_RIDE_SAND),
+    TRLocation.SAND_DROP_INTO_ANT_DOOM_50X: KARLocationData(
+        283, KARRegion.TOP_RIDE_SAND, KARItemName.TR_REWARD_FILLER_BOX_2
+    ),
+    TRLocation.SAND_ANT_DOOM_20X: KARLocationData(284, KARRegion.TOP_RIDE_SAND),
+    TRLocation.SAND_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(285, KARRegion.TOP_RIDE_SAND),
+    TRLocation.SKY_NOITEMS_FIRST: KARLocationData(286, KARRegion.TOP_RIDE_SKY),
+    TRLocation.SKY_FIRST_WITHOUT_USING_BOOST: KARLocationData(287, KARRegion.TOP_RIDE_SKY),
     TRLocation.SKY_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(
-        288, KARRegion.TR_SKY, KARItemName.TR_REWARD_BROWN_KIRBY
+        288, KARRegion.TOP_RIDE_SKY, KARItemName.TR_REWARD_BROWN_KIRBY
     ),
-    TRLocation.SKY_FIRST_10X: KARLocationData(289, KARRegion.TR_SKY),
-    TRLocation.SKY_FINISH_6_LAPS_IN_UNDER_01_02_00: KARLocationData(290, KARRegion.TR_SKY),
-    TRLocation.SKY_RACE_100_LAPS: KARLocationData(291, KARRegion.TR_SKY),
+    TRLocation.SKY_FIRST_10X: KARLocationData(289, KARRegion.TOP_RIDE_SKY),
+    TRLocation.SKY_FINISH_6_LAPS_IN_UNDER_01_02_00: KARLocationData(290, KARRegion.TOP_RIDE_SKY),
+    TRLocation.SKY_RACE_100_LAPS: KARLocationData(291, KARRegion.TOP_RIDE_SKY),
     TRLocation.SKY_FIRST_AND_HIT_ISLE_KNOB_5: KARLocationData(
-        292, KARRegion.TR_SKY, KARItemName.TR_REWARD_SOUND_TEST_SKY
+        292, KARRegion.TOP_RIDE_SKY, KARItemName.TR_REWARD_SOUND_TEST_SKY
     ),
-    TRLocation.SKY_FIRST_WITHOUT_USING_JUMP_PLATE: KARLocationData(293, KARRegion.TR_SKY),
-    TRLocation.SKY_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(294, KARRegion.TR_SKY),
-    TRLocation.FIRE_NOITEMS_FIRST: KARLocationData(295, KARRegion.TR_FIRE),
-    TRLocation.FIRE_FIRST_WITHOUT_USING_BOOST: KARLocationData(296, KARRegion.TR_FIRE),
-    TRLocation.FIRE_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(297, KARRegion.TR_FIRE),
-    TRLocation.FIRE_FIRST_10X: KARLocationData(298, KARRegion.TR_FIRE, KARItemName.TR_REWARD_SOUND_TEST_FIRE),
-    TRLocation.FIRE_FINISH_6_LAPS_IN_UNDER_00_53_00: KARLocationData(299, KARRegion.TR_FIRE),
-    TRLocation.FIRE_RACE_100_LAPS: KARLocationData(300, KARRegion.TR_FIRE),
+    TRLocation.SKY_FIRST_WITHOUT_USING_JUMP_PLATE: KARLocationData(293, KARRegion.TOP_RIDE_SKY),
+    TRLocation.SKY_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(294, KARRegion.TOP_RIDE_SKY),
+    TRLocation.FIRE_NOITEMS_FIRST: KARLocationData(295, KARRegion.TOP_RIDE_FIRE),
+    TRLocation.FIRE_FIRST_WITHOUT_USING_BOOST: KARLocationData(296, KARRegion.TOP_RIDE_FIRE),
+    TRLocation.FIRE_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(297, KARRegion.TOP_RIDE_FIRE),
+    TRLocation.FIRE_FIRST_10X: KARLocationData(298, KARRegion.TOP_RIDE_FIRE, KARItemName.TR_REWARD_SOUND_TEST_FIRE),
+    TRLocation.FIRE_FINISH_6_LAPS_IN_UNDER_00_53_00: KARLocationData(299, KARRegion.TOP_RIDE_FIRE),
+    TRLocation.FIRE_RACE_100_LAPS: KARLocationData(300, KARRegion.TOP_RIDE_FIRE),
     TRLocation.FIRE_CAUSE_A_HUGE_ERUPTION_3X: KARLocationData(
-        301, KARRegion.TR_FIRE, KARItemName.TR_REWARD_FILLER_BOX_3
+        301, KARRegion.TOP_RIDE_FIRE, KARItemName.TR_REWARD_FILLER_BOX_3
     ),
     TRLocation.FIRE_FIRST_WHILE_HOLDING_FIRE_ITEM: KARLocationData(
-        302, KARRegion.TR_FIRE, KARItemName.TR_REWARD_MUSIC_FIRE
+        302, KARRegion.TOP_RIDE_FIRE, KARItemName.TR_REWARD_MUSIC_FIRE
     ),
-    TRLocation.FIRE_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(303, KARRegion.TR_FIRE),
-    TRLocation.WATER_NOITEMS_FIRST: KARLocationData(304, KARRegion.TR_WATER),
-    TRLocation.WATER_FIRST_WITHOUT_USING_BOOST: KARLocationData(305, KARRegion.TR_WATER),
-    TRLocation.WATER_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(306, KARRegion.TR_WATER),
-    TRLocation.WATER_FIRST_10X: KARLocationData(307, KARRegion.TR_WATER),
+    TRLocation.FIRE_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(303, KARRegion.TOP_RIDE_FIRE),
+    TRLocation.WATER_NOITEMS_FIRST: KARLocationData(304, KARRegion.TOP_RIDE_WATER),
+    TRLocation.WATER_FIRST_WITHOUT_USING_BOOST: KARLocationData(305, KARRegion.TOP_RIDE_WATER),
+    TRLocation.WATER_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(306, KARRegion.TOP_RIDE_WATER),
+    TRLocation.WATER_FIRST_10X: KARLocationData(307, KARRegion.TOP_RIDE_WATER),
     TRLocation.WATER_FINISH_5_LAPS_IN_UNDER_01_02_00: KARLocationData(
-        308, KARRegion.TR_WATER, KARItemName.TR_REWARD_SOUND_TEST_WATER
+        308, KARRegion.TOP_RIDE_WATER, KARItemName.TR_REWARD_SOUND_TEST_WATER
     ),
-    TRLocation.WATER_RACE_100_LAPS: KARLocationData(309, KARRegion.TR_WATER),
+    TRLocation.WATER_RACE_100_LAPS: KARLocationData(309, KARRegion.TOP_RIDE_WATER),
     TRLocation.WATER_FIRST_AND_ENTER_FALLS_5X: KARLocationData(
-        310, KARRegion.TR_WATER, KARItemName.TR_REWARD_DEVICE_QUANTITY_RULE
+        310, KARRegion.TOP_RIDE_WATER, KARItemName.TR_REWARD_DEVICE_QUANTITY_RULE
     ),
     TRLocation.WATER_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(
-        311, KARRegion.TR_WATER, KARItemName.TR_REWARD_MUSIC_WATER
+        311, KARRegion.TOP_RIDE_WATER, KARItemName.TR_REWARD_MUSIC_WATER
     ),
-    TRLocation.LIGHT_NOITEMS_FIRST: KARLocationData(312, KARRegion.TR_LIGHT),
-    TRLocation.LIGHT_FIRST_WITHOUT_USING_BOOST: KARLocationData(313, KARRegion.TR_LIGHT),
-    TRLocation.LIGHT_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(314, KARRegion.TR_LIGHT),
-    TRLocation.LIGHT_FIRST_10X: KARLocationData(315, KARRegion.TR_LIGHT),
-    TRLocation.LIGHT_FINISH_6_LAPS_IN_UNDER_00_43_00: KARLocationData(316, KARRegion.TR_LIGHT),
-    TRLocation.LIGHT_RACE_100_LAPS: KARLocationData(317, KARRegion.TR_LIGHT, KARItemName.TR_REWARD_SOUND_TEST_LIGHT),
-    TRLocation.LIGHT_RIDE_GRIND_RAIL_50X: KARLocationData(318, KARRegion.TR_LIGHT),
+    TRLocation.LIGHT_NOITEMS_FIRST: KARLocationData(312, KARRegion.TOP_RIDE_LIGHT),
+    TRLocation.LIGHT_FIRST_WITHOUT_USING_BOOST: KARLocationData(313, KARRegion.TOP_RIDE_LIGHT),
+    TRLocation.LIGHT_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(314, KARRegion.TOP_RIDE_LIGHT),
+    TRLocation.LIGHT_FIRST_10X: KARLocationData(315, KARRegion.TOP_RIDE_LIGHT),
+    TRLocation.LIGHT_FINISH_6_LAPS_IN_UNDER_00_43_00: KARLocationData(316, KARRegion.TOP_RIDE_LIGHT),
+    TRLocation.LIGHT_RACE_100_LAPS: KARLocationData(
+        317, KARRegion.TOP_RIDE_LIGHT, KARItemName.TR_REWARD_SOUND_TEST_LIGHT
+    ),
+    TRLocation.LIGHT_RIDE_GRIND_RAIL_50X: KARLocationData(318, KARRegion.TOP_RIDE_LIGHT),
     TRLocation.LIGHT_FIRST_AND_GRIND_RAIL_5X: KARLocationData(
-        319, KARRegion.TR_LIGHT, KARItemName.TR_REWARD_FILLER_BOX_4
+        319, KARRegion.TOP_RIDE_LIGHT, KARItemName.TR_REWARD_FILLER_BOX_4
     ),
-    TRLocation.LIGHT_FIRST_AND_BUST_6_COLUMNS: KARLocationData(320, KARRegion.TR_LIGHT),
-    TRLocation.LIGHT_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(321, KARRegion.TR_LIGHT),
-    TRLocation.METAL_NOITEMS_FIRST: KARLocationData(322, KARRegion.TR_METAL),
+    TRLocation.LIGHT_FIRST_AND_BUST_6_COLUMNS: KARLocationData(320, KARRegion.TOP_RIDE_LIGHT),
+    TRLocation.LIGHT_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(321, KARRegion.TOP_RIDE_LIGHT),
+    TRLocation.METAL_NOITEMS_FIRST: KARLocationData(322, KARRegion.TOP_RIDE_METAL),
     TRLocation.METAL_FIRST_WITHOUT_USING_BOOST: KARLocationData(
-        323, KARRegion.TR_METAL, KARItemName.TR_REWARD_MUSIC_METAL
+        323, KARRegion.TOP_RIDE_METAL, KARItemName.TR_REWARD_MUSIC_METAL
     ),
-    TRLocation.METAL_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(324, KARRegion.TR_METAL),
-    TRLocation.METAL_FIRST_10X: KARLocationData(325, KARRegion.TR_METAL),
-    TRLocation.METAL_FINISH_5_LAPS_IN_UNDER_00_58_00: KARLocationData(326, KARRegion.TR_METAL),
-    TRLocation.METAL_RACE_100_LAPS: KARLocationData(327, KARRegion.TR_METAL),
-    TRLocation.METAL_FIRST_NO_GEAR_WALLS: KARLocationData(328, KARRegion.TR_METAL),
-    TRLocation.METAL_FIRST_AND_HIT_SWITCH_10X: KARLocationData(329, KARRegion.TR_METAL),
+    TRLocation.METAL_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARLocationData(324, KARRegion.TOP_RIDE_METAL),
+    TRLocation.METAL_FIRST_10X: KARLocationData(325, KARRegion.TOP_RIDE_METAL),
+    TRLocation.METAL_FINISH_5_LAPS_IN_UNDER_00_58_00: KARLocationData(326, KARRegion.TOP_RIDE_METAL),
+    TRLocation.METAL_RACE_100_LAPS: KARLocationData(327, KARRegion.TOP_RIDE_METAL),
+    TRLocation.METAL_FIRST_NO_GEAR_WALLS: KARLocationData(328, KARRegion.TOP_RIDE_METAL),
+    TRLocation.METAL_FIRST_AND_HIT_SWITCH_10X: KARLocationData(329, KARRegion.TOP_RIDE_METAL),
     TRLocation.METAL_FIRST_AND_BREAK_5_GEAR_WALLS: KARLocationData(
-        330, KARRegion.TR_METAL, KARItemName.TR_REWARD_SOUND_TEST_METAL
+        330, KARRegion.TOP_RIDE_METAL, KARItemName.TR_REWARD_SOUND_TEST_METAL
     ),
     TRLocation.METAL_FIRST_5_SECONDS_FASTER_THAN_NO2: KARLocationData(
-        331, KARRegion.TR_METAL, KARItemName.TR_REWARD_WHITE_KIRBY
+        331, KARRegion.TOP_RIDE_METAL, KARItemName.TR_REWARD_WHITE_KIRBY
     ),
     TRLocation.TA_GRASS_FINISH_00_33_00: KARLocationData(
-        332, KARRegion.TR_TA_GRASS, KARItemName.TR_REWARD_FILLER_BOX_5
+        332, KARRegion.TOP_RIDE_TA_GRASS, KARItemName.TR_REWARD_FILLER_BOX_5
     ),
-    TRLocation.TA_SAND_FINISH_00_35_00: KARLocationData(333, KARRegion.TR_TA_SAND),
-    TRLocation.TA_LIGHT_FINISH_00_38_00: KARLocationData(334, KARRegion.TR_TA_LIGHT),
-    TRLocation.TA_SKY_FINISH_00_57_00: KARLocationData(335, KARRegion.TR_TA_SKY),
-    TRLocation.TA_WATER_FINISH_01_06_00: KARLocationData(336, KARRegion.TR_TA_WATER),
-    TRLocation.TA_FIRE_FINISH_00_46_00: KARLocationData(337, KARRegion.TR_TA_FIRE),
-    TRLocation.TA_METAL_FINISH_00_57_00: KARLocationData(338, KARRegion.TR_TA_METAL),
-    TRLocation.TA_GRASS_FINISH_00_28_00: KARLocationData(339, KARRegion.TR_TA_GRASS),
-    TRLocation.TA_SAND_FINISH_00_29_00: KARLocationData(340, KARRegion.TR_TA_SAND, KARItemName.TR_REWARD_MUSIC_SAND),
-    TRLocation.TA_LIGHT_FINISH_00_33_00: KARLocationData(341, KARRegion.TR_TA_LIGHT, KARItemName.TR_REWARD_MUSIC_LIGHT),
-    TRLocation.TA_SKY_FINISH_00_47_00: KARLocationData(342, KARRegion.TR_TA_SKY),
+    TRLocation.TA_SAND_FINISH_00_35_00: KARLocationData(333, KARRegion.TOP_RIDE_TA_SAND),
+    TRLocation.TA_LIGHT_FINISH_00_38_00: KARLocationData(334, KARRegion.TOP_RIDE_TA_LIGHT),
+    TRLocation.TA_SKY_FINISH_00_57_00: KARLocationData(335, KARRegion.TOP_RIDE_TA_SKY),
+    TRLocation.TA_WATER_FINISH_01_06_00: KARLocationData(336, KARRegion.TOP_RIDE_TA_WATER),
+    TRLocation.TA_FIRE_FINISH_00_46_00: KARLocationData(337, KARRegion.TOP_RIDE_TA_FIRE),
+    TRLocation.TA_METAL_FINISH_00_57_00: KARLocationData(338, KARRegion.TOP_RIDE_TA_METAL),
+    TRLocation.TA_GRASS_FINISH_00_28_00: KARLocationData(339, KARRegion.TOP_RIDE_TA_GRASS),
+    TRLocation.TA_SAND_FINISH_00_29_00: KARLocationData(
+        340, KARRegion.TOP_RIDE_TA_SAND, KARItemName.TR_REWARD_MUSIC_SAND
+    ),
+    TRLocation.TA_LIGHT_FINISH_00_33_00: KARLocationData(
+        341, KARRegion.TOP_RIDE_TA_LIGHT, KARItemName.TR_REWARD_MUSIC_LIGHT
+    ),
+    TRLocation.TA_SKY_FINISH_00_47_00: KARLocationData(342, KARRegion.TOP_RIDE_TA_SKY),
     TRLocation.TA_WATER_FINISH_00_56_00: KARLocationData(
-        343, KARRegion.TR_TA_WATER, KARItemName.TR_REWARD_ATTACK_ITEM_SET_RULE
+        343, KARRegion.TOP_RIDE_TA_WATER, KARItemName.TR_REWARD_ATTACK_ITEM_SET_RULE
     ),
-    TRLocation.TA_FIRE_FINISH_00_39_00: KARLocationData(344, KARRegion.TR_TA_FIRE),
-    TRLocation.TA_METAL_FINISH_00_51_00: KARLocationData(345, KARRegion.TR_TA_METAL),
-    TRLocation.FR_GRASS_LAP_00_06_00: KARLocationData(346, KARRegion.TR_FR_GRASS),
-    TRLocation.FR_SAND_LAP_00_06_50: KARLocationData(347, KARRegion.TR_FR_SAND),
+    TRLocation.TA_FIRE_FINISH_00_39_00: KARLocationData(344, KARRegion.TOP_RIDE_TA_FIRE),
+    TRLocation.TA_METAL_FINISH_00_51_00: KARLocationData(345, KARRegion.TOP_RIDE_TA_METAL),
+    TRLocation.FR_GRASS_LAP_00_06_00: KARLocationData(346, KARRegion.TOP_RIDE_FR_GRASS),
+    TRLocation.FR_SAND_LAP_00_06_50: KARLocationData(347, KARRegion.TOP_RIDE_FR_SAND),
     TRLocation.FR_LIGHT_LAP_00_07_50: KARLocationData(
-        348, KARRegion.TR_FR_LIGHT, KARItemName.TR_REWARD_SOUND_TEST_RESULTS_SCREEN
+        348, KARRegion.TOP_RIDE_FR_LIGHT, KARItemName.TR_REWARD_SOUND_TEST_RESULTS_SCREEN
     ),
-    TRLocation.FR_SKY_LAP_00_11_00: KARLocationData(349, KARRegion.TR_FR_SKY),
-    TRLocation.FR_WATER_LAP_00_12_00: KARLocationData(350, KARRegion.TR_FR_WATER),
-    TRLocation.FR_FIRE_LAP_00_08_00: KARLocationData(351, KARRegion.TR_FR_FIRE),
-    TRLocation.FR_METAL_LAP_00_11_50: KARLocationData(352, KARRegion.TR_FR_METAL),
-    TRLocation.FR_GRASS_LAP_00_04_50: KARLocationData(353, KARRegion.TR_FR_GRASS),
-    TRLocation.FR_SAND_LAP_00_05_00: KARLocationData(354, KARRegion.TR_FR_SAND),
-    TRLocation.FR_LIGHT_LAP_00_06_00: KARLocationData(355, KARRegion.TR_FR_LIGHT),
-    TRLocation.FR_SKY_LAP_00_09_00: KARLocationData(356, KARRegion.TR_FR_SKY, KARItemName.TR_REWARD_MUSIC_SKY),
+    TRLocation.FR_SKY_LAP_00_11_00: KARLocationData(349, KARRegion.TOP_RIDE_FR_SKY),
+    TRLocation.FR_WATER_LAP_00_12_00: KARLocationData(350, KARRegion.TOP_RIDE_FR_WATER),
+    TRLocation.FR_FIRE_LAP_00_08_00: KARLocationData(351, KARRegion.TOP_RIDE_FR_FIRE),
+    TRLocation.FR_METAL_LAP_00_11_50: KARLocationData(352, KARRegion.TOP_RIDE_FR_METAL),
+    TRLocation.FR_GRASS_LAP_00_04_50: KARLocationData(353, KARRegion.TOP_RIDE_FR_GRASS),
+    TRLocation.FR_SAND_LAP_00_05_00: KARLocationData(354, KARRegion.TOP_RIDE_FR_SAND),
+    TRLocation.FR_LIGHT_LAP_00_06_00: KARLocationData(355, KARRegion.TOP_RIDE_FR_LIGHT),
+    TRLocation.FR_SKY_LAP_00_09_00: KARLocationData(356, KARRegion.TOP_RIDE_FR_SKY, KARItemName.TR_REWARD_MUSIC_SKY),
     TRLocation.FR_WATER_LAP_00_10_50: KARLocationData(
-        357, KARRegion.TR_FR_WATER, KARItemName.TR_REWARD_SIDE_CAMERA_RULE
+        357, KARRegion.TOP_RIDE_FR_WATER, KARItemName.TR_REWARD_SIDE_CAMERA_RULE
     ),
-    TRLocation.FR_FIRE_LAP_00_06_50: KARLocationData(358, KARRegion.TR_FR_FIRE),
-    TRLocation.FR_METAL_LAP_00_09_50: KARLocationData(359, KARRegion.TR_FR_METAL),
+    TRLocation.FR_FIRE_LAP_00_06_50: KARLocationData(358, KARRegion.TOP_RIDE_FR_FIRE),
+    TRLocation.FR_METAL_LAP_00_09_50: KARLocationData(359, KARRegion.TOP_RIDE_FR_METAL),
     TRLocation.FILL_IN_100_CHECKLIST_BLOCKS: KARLocationData(360, KARRegion.TOP_RIDE, KARItemName.TR_REWARD_ENDING),
 }
 
-
-class APLocation(StrEnum):
-    """Archipelago checklist location names - the synthetic 4th checklist mode, describing objectives
-    across City Trial, Air Ride and Top Ride.
-
-    The location code is 361 + clear_kind (AP band 361-412), and each clear_kind MUST match the mod's
-    ap_checks[] order: a cross-repo wire contract nothing catches a desync in. Renumbering is allowed -
-    players reinstall fresh - but only with both repos moved together.
-
-    Every name is prefixed "Archipelago: ", since LOCATION_TABLE merges all four mode tables by name and
-    a collision would silently drop one. After the prefix the name is the mod's in-game cell text
-    verbatim (its line break written as a space), which the mod restates by hand in ap_checks[].
-    """
-
-    # City Trial exploration
-    CASTLE_FLOWER_ON_FOOT = "Archipelago: City Trial: Visit the flower on top of Castle Hall on foot!"  # 0
-    BREAK_ALL_CORAL = "Archipelago: City Trial: Break all the coral in one game!"  # 1
-    GO_OUT_OF_BOUNDS = "Archipelago: City Trial: Go out of bounds!"  # 2
-
-    # City Trial patches / items
-    GET_10_HP_PATCHES = "Archipelago: City Trial: In one game, get 10 or more HP Patches!"  # 3
-    COLLECT_5_ALL_UPS = "Archipelago: City Trial: Collect 5 All Ups in total!"  # 4
-
-    # City Trial foods. The vanilla checklist already covers Hot Dog, Sushi, Maxim Tomato and Energy
-    # Drink; these are the 8 it leaves out. Candy is deliberately absent - it is invincibility, not food.
-    EAT_3_ICE_CREAMS = "Archipelago: City Trial: In one game, eat 3 or more Ice Creams!"  # 5
-    EAT_3_RICE_BALLS = "Archipelago: City Trial: In one game, eat 3 or more Rice Balls!"  # 6
-    EAT_3_CHICKENS = "Archipelago: City Trial: In one game, eat 3 or more Chickens!"  # 7
-    EAT_3_CURRIES = "Archipelago: City Trial: In one game, eat 3 or more plates of Curry!"  # 8
-    EAT_3_RAMENS = "Archipelago: City Trial: In one game, eat 3 or more bowls of Ramen!"  # 9
-    EAT_3_OMELETS = "Archipelago: City Trial: In one game, eat 3 or more Omelets!"  # 10
-    EAT_3_HAMBURGERS = "Archipelago: City Trial: In one game, eat 3 or more Hamburgers!"  # 11
-    EAT_3_APPLES = "Archipelago: City Trial: In one game, eat 3 or more Apples!"  # 12
-
-    # City Trial single races. One box per Single Race stadium; each inherits its stadium unlock from
-    # the region's entrance rule rather than restating it as a Has(...) rule.
-    SR1_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place!"  # 13
-    SR2_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 2 Finish in 1st place!"  # 14
-    SR3_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 3 Finish in 1st place!"  # 15
-    SR4_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 4 Finish in 1st place!"  # 16
-    SR5_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 5 Finish in 1st place!"  # 17
-    SR6_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 6 Finish in 1st place!"  # 18
-    SR7_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 7 Finish in 1st place!"  # 19
-    SR8_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 8 Finish in 1st place!"  # 20
-    SR9_FINISH_1ST = "Archipelago: Stadium: SINGLE RACE 9 Finish in 1st place!"  # 21
-
-    # City Trial higher tiers - each threshold sits above the vanilla checklist's hardest.
-    HJ_JUMP_HIGHER_THAN_1500_FEET = "Archipelago: Stadium: HIGH JUMP Jump higher than 1,500 feet!"  # 22
-    AG_FLY_2000_FEET = "Archipelago: Stadium: AIR GLIDER fly more than 2,000 feet!"  # 23
-    KM1_KO_100_ENEMIES_BY_YOURSELF = (
-        "Archipelago: Stadium: KIRBY MELEE 1 In one game, KO over 100 enemies by yourself!"  # 24
-    )
-    KM2_KO_60_ENEMIES_BY_YOURSELF = (
-        "Archipelago: Stadium: KIRBY MELEE 2 In one game, KO over 60 enemies by yourself!"  # 25
-    )
-
-    # "Useless progression" checks: give colors and off-meta machines a real reason to be progression.
-    SR1_FINISH_1ST_ON_BULK_STAR = "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place on Bulk Star!"  # 26
-    SR1_FINISH_1ST_3X_AS_PURPLE = (
-        "Archipelago: Stadium: SINGLE RACE 1 Finish in 1st place 3 times as Purple Kirby!"  # 27
-    )
-
-    # Photo finishes, one per mode rather than per stadium/course: any DRAG RACE stadium counts for the
-    # first, any Air Ride course for the second. Solo-achievable - CPU racers count as players.
-    DR_PHOTO_FINISH = "Archipelago: Stadium: In any DRAG RACE, have 2 players finish within 0.10 seconds!"  # 28
-    AIR_RIDE_PHOTO_FINISH = "Archipelago: Air Ride: On any course, have 2 players finish within 0.10 seconds!"  # 29
-
-    # Colors as real progression, continued: this one needs all eight, one finished race each.
-    AIR_RIDE_RACE_AS_EVERY_COLOR = "Archipelago: Air Ride: Finish a race as every Kirby color!"  # 30
-
-    # City Trial landmarks reached on foot.
-    MODEL_CITY_ON_FOOT = "Archipelago: City Trial: Visit the model city on foot!"  # 31
-    VOLCANO_FLOWER_ON_FOOT = "Archipelago: City Trial: Visit the flower on top of the volcanic cliffs on foot!"  # 32
-    SKY_GARDEN_TOP_ON_FOOT = "Archipelago: City Trial: Visit the top of the garden in the sky on foot!"  # 33
-
-    # The city's ceiling: the mod wants a rider above Y 1000, twice the height of the sky garden.
-    FLY_TO_HIGHEST_POINT = "Archipelago: City Trial: Fly to the highest point possible!"  # 34
-
-    # Meta Knight and King Dedede are only ever checklist rewards in vanilla, never objectives.
-    # Any Air Ride course counts, and the win needs at least one opponent in the field.
-    AIR_RIDE_1ST_AS_META_KNIGHT = "Archipelago: Air Ride: Finish in 1st place as Meta Knight!"  # 35
-    AIR_RIDE_1ST_AS_KING_DEDEDE = "Archipelago: Air Ride: Finish in 1st place as King Dedede!"  # 36
-
-    # Nebula Belt, the one Air Ride course with no vanilla checklist cell of its own. It has no
-    # enemies, breakables, rails or animated props, so its boxes are about racing and flying it.
-    NEBULA_BELT_FINISH_1ST = "Archipelago: Air Ride: NEBULA BELT Finish in 1st place!"  # 37
-    NEBULA_BELT_RACE_5500_FEET = "Archipelago: Air Ride: NEBULA BELT Race over 5,500 feet in 2 minutes!"  # 38
-    NEBULA_BELT_2_LAPS_UNDER_230 = "Archipelago: Air Ride: NEBULA BELT Finish 2 laps in under 02:30:00!"  # 39
-    NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER = (
-        "Archipelago: Air Ride: NEBULA BELT Finish in 1st place on Wheelie Scooter!"  # 40
-    )
-    NEBULA_BELT_AIRBORNE_10_SECONDS = (
-        "Archipelago: Air Ride: NEBULA BELT Fly 10 seconds on Dragoon, Flight or Winged Star!"  # 41
-    )
-
-    # Destruction Derby. Vanilla gives DD 1/2/4/5 both a 5-KO and a 10-KO cell but leaves DD 3 with only
-    # the 5-KO, so the first fills that tier. The second asks the KO'd rivals to be Kirbys, which is not
-    # free: a stadium CPU can itself be Meta Knight or King Dedede once those are unlocked.
-    DD3_KO_A_RIVAL_10 = "Archipelago: Stadium: DESTRUCTION DERBY 3 In one game, KO a rival 10 times or more!"  # 42
-    DD_KO_10_KIRBYS_AS_KING_DEDEDE = (
-        "Archipelago: Stadium: DESTRUCTION DERBY (All) As King Dedede, KO 10 Kirbys in one game!"  # 43
-    )
-
-    # Mic is the one copy ability the vanilla checklist never writes a cell for. The first restates the
-    # Copy Chance Wheel cells vanilla gives Bomb and Sleep; the second takes vanilla's "(All)" heading.
-    GET_MIC_FROM_COPY_CHANCE = "Archipelago: City Trial: Get the Mic ability from the Copy Chance Wheel!"  # 44
-    KM_KO_10_ENEMIES_AS_MIC_KIRBY = (
-        "Archipelago: Stadium: KIRBY MELEE (All) In one game, KO 10 enemies as Mic Kirby!"  # 45
-    )
-
-    # Vanilla counts boxes only as an all-colors lifetime total, so a per-color count is open. The
-    # thresholds differ with spawn odds: City Trial's box table rolls blue 63%, red 20%, green 17%.
-    BREAK_20_BLUE_BOXES = "Archipelago: City Trial: In one game, break 20 or more blue boxes!"  # 46
-    BREAK_10_GREEN_BOXES = "Archipelago: City Trial: In one game, break 10 or more green boxes!"  # 47
-    BREAK_10_RED_BOXES = "Archipelago: City Trial: In one game, break 10 or more red boxes!"  # 48
-
-    # Fantasy Meadows' shortcut is an elevated arc over the normal racing line. The mod samples it in
-    # every Air Ride mode, since the label carries no mode prefix the way vanilla's TA and FR cells do.
-    FANTASY_MEADOWS_TAKE_SHORTCUT = "Archipelago: Air Ride: FANTASY MEADOWS Take the shortcut!"  # 49
-
-    ASSEMBLE_ARCHIPELAGO_STAR = (
-        "Archipelago: City Trial: Collect all 6 spheres and assemble the Archipelago Star!"  # 50
-    )
-
-    # The three-machine version of vanilla's "complete both Dragoon and Hydra in one match" box.
-    ASSEMBLE_ALL_THREE_LEGENDARIES = (
-        "Archipelago: City Trial: In one game, assemble Dragoon, Hydra and Archipelago Star!"  # 51
-    )
-
-
-# Every entry has native_reward=None - the Archipelago checklist awards no native rewards. Each box
-# lives in the region where its activity happens, so it inherits that region's entrance chain instead
-# of hand-copied Has(...) rules that drift; naming a mode's region here is what pulls that mode into
-# logic_modes, goal or no goal. The ARCHIPELAGO region itself holds only the victory event.
+# The Archipelago checklist awards no native rewards. Each box lives in the region where its activity happens,
+# so inherits that region's chain. The ARCHIPELAGO region itself holds only the victory event.
 AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.CASTLE_FLOWER_ON_FOOT: KARLocationData(361, KARRegion.CITY_TRIAL),
     APLocation.BREAK_ALL_CORAL: KARLocationData(362, KARRegion.CITY_TRIAL),
-    APLocation.GO_OUT_OF_BOUNDS: KARLocationData(363, KARRegion.CITY_TRIAL),
-    APLocation.GET_10_HP_PATCHES: KARLocationData(364, KARRegion.CITY_TRIAL),
-    APLocation.COLLECT_5_ALL_UPS: KARLocationData(365, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_ICE_CREAMS: KARLocationData(366, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_RICE_BALLS: KARLocationData(367, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_CHICKENS: KARLocationData(368, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_CURRIES: KARLocationData(369, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_RAMENS: KARLocationData(370, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_OMELETS: KARLocationData(371, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_HAMBURGERS: KARLocationData(372, KARRegion.CITY_TRIAL),
-    APLocation.EAT_3_APPLES: KARLocationData(373, KARRegion.CITY_TRIAL),
-    APLocation.SR1_FINISH_1ST: KARLocationData(374, KARRegion.STADIUM_SR1),
-    APLocation.SR2_FINISH_1ST: KARLocationData(375, KARRegion.STADIUM_SR2),
-    APLocation.SR3_FINISH_1ST: KARLocationData(376, KARRegion.STADIUM_SR3),
-    APLocation.SR4_FINISH_1ST: KARLocationData(377, KARRegion.STADIUM_SR4),
-    APLocation.SR5_FINISH_1ST: KARLocationData(378, KARRegion.STADIUM_SR5),
-    APLocation.SR6_FINISH_1ST: KARLocationData(379, KARRegion.STADIUM_SR6),
-    APLocation.SR7_FINISH_1ST: KARLocationData(380, KARRegion.STADIUM_SR7),
-    APLocation.SR8_FINISH_1ST: KARLocationData(381, KARRegion.STADIUM_SR8),
-    APLocation.SR9_FINISH_1ST: KARLocationData(382, KARRegion.STADIUM_SR9),
-    APLocation.HJ_JUMP_HIGHER_THAN_1500_FEET: KARLocationData(383, KARRegion.STADIUM_HJ),
-    APLocation.AG_FLY_2000_FEET: KARLocationData(384, KARRegion.STADIUM_AG),
-    APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF: KARLocationData(385, KARRegion.STADIUM_KM1),
-    # STADIUM_KM2 sits behind the KM_ALL -> KM2 prerequisite chain, which this box inherits.
-    APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF: KARLocationData(386, KARRegion.STADIUM_KM2),
-    APLocation.SR1_FINISH_1ST_ON_BULK_STAR: KARLocationData(387, KARRegion.STADIUM_SR1),
-    APLocation.SR1_FINISH_1ST_3X_AS_PURPLE: KARLocationData(388, KARRegion.STADIUM_SR1),
-    # Any of the four DRAG RACE stadiums satisfies this box, but a location names one region, so it takes
-    # DRAG RACE 1: sufficient alone and the cheapest to reach (DR4 also sits behind a prerequisite chain).
-    APLocation.DR_PHOTO_FINISH: KARLocationData(389, KARRegion.STADIUM_DR1),
-    APLocation.AIR_RIDE_PHOTO_FINISH: KARLocationData(390, KARRegion.AIR_RIDE),
-    APLocation.AIR_RIDE_RACE_AS_EVERY_COLOR: KARLocationData(391, KARRegion.AIR_RIDE),
-    APLocation.MODEL_CITY_ON_FOOT: KARLocationData(392, KARRegion.CITY_TRIAL),
-    APLocation.VOLCANO_FLOWER_ON_FOOT: KARLocationData(393, KARRegion.CITY_TRIAL),
-    APLocation.SKY_GARDEN_TOP_ON_FOOT: KARLocationData(394, KARRegion.CITY_TRIAL),
-    APLocation.FLY_TO_HIGHEST_POINT: KARLocationData(395, KARRegion.CITY_TRIAL),
-    APLocation.AIR_RIDE_1ST_AS_META_KNIGHT: KARLocationData(396, KARRegion.AIR_RIDE),
-    APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE: KARLocationData(397, KARRegion.AIR_RIDE),
-    # AR_NEBULA_BELT's entrance rule already gates on the course unlock, so these inherit it.
-    APLocation.NEBULA_BELT_FINISH_1ST: KARLocationData(398, KARRegion.AR_NEBULA_BELT),
-    APLocation.NEBULA_BELT_RACE_5500_FEET: KARLocationData(399, KARRegion.AR_NEBULA_BELT),
-    APLocation.NEBULA_BELT_2_LAPS_UNDER_230: KARLocationData(400, KARRegion.AR_NEBULA_BELT),
-    APLocation.NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER: KARLocationData(401, KARRegion.AR_NEBULA_BELT),
-    APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS: KARLocationData(402, KARRegion.AR_NEBULA_BELT),
-    APLocation.DD3_KO_A_RIVAL_10: KARLocationData(403, KARRegion.STADIUM_DD3),
-    # Any Destruction Derby stadium satisfies this box, which is exactly what STADIUM_DD_ALL's
-    # entrance rule already asks for - the same region the vanilla "(All)" DD boxes take.
-    APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE: KARLocationData(404, KARRegion.STADIUM_DD_ALL),
-    APLocation.GET_MIC_FROM_COPY_CHANCE: KARLocationData(405, KARRegion.CITY_TRIAL),
-    # KM2, not KM_ALL: neither melee stage spawns copy panels, and Walky (ACTORID_T1_WALKY) is in
-    # GrColosseum5's spawn table but not GrPasture1's, so only KIRBY MELEE 2 can supply the ability.
-    APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY: KARLocationData(406, KARRegion.STADIUM_KM2),
-    APLocation.BREAK_20_BLUE_BOXES: KARLocationData(407, KARRegion.CITY_TRIAL),
-    APLocation.BREAK_10_GREEN_BOXES: KARLocationData(408, KARRegion.CITY_TRIAL),
-    APLocation.BREAK_10_RED_BOXES: KARLocationData(409, KARRegion.CITY_TRIAL),
-    # Time Attack and Free Run on the course satisfy this box too, but all three mode regions
-    # gate on the same course unlock, so the Race one is sufficient and is the cheapest to reach.
-    APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT: KARLocationData(410, KARRegion.AR_FANTASY_MEADOWS),
-    # The six spheres are red-box drops in a City Trial round, scheduled against match progress the
-    # way the Hydra and Dragoon parts are, and each enters the pool only once its own item lands.
-    APLocation.ASSEMBLE_ARCHIPELAGO_STAR: KARLocationData(411, KARRegion.CITY_TRIAL),
-    # All twelve pieces have to be delivered and collected inside one round, so this needs every
-    # sphere item and every Hydra/Dragoon part item at once.
-    APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES: KARLocationData(412, KARRegion.CITY_TRIAL),
+    APLocation.GET_10_HP_PATCHES: KARLocationData(363, KARRegion.CITY_TRIAL),
+    APLocation.COLLECT_5_ALL_UPS: KARLocationData(364, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_ICE_CREAMS: KARLocationData(365, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_RICE_BALLS: KARLocationData(366, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_CHICKENS: KARLocationData(367, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_CURRIES: KARLocationData(368, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_RAMENS: KARLocationData(369, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_OMELETS: KARLocationData(370, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_HAMBURGERS: KARLocationData(371, KARRegion.CITY_TRIAL),
+    APLocation.EAT_3_APPLES: KARLocationData(372, KARRegion.CITY_TRIAL),
+    APLocation.SR1_FINISH_1ST: KARLocationData(373, KARRegion.CITY_TRIAL_STADIUM_SR1),
+    APLocation.SR2_FINISH_1ST: KARLocationData(374, KARRegion.CITY_TRIAL_STADIUM_SR2),
+    APLocation.SR3_FINISH_1ST: KARLocationData(375, KARRegion.CITY_TRIAL_STADIUM_SR3),
+    APLocation.SR4_FINISH_1ST: KARLocationData(376, KARRegion.CITY_TRIAL_STADIUM_SR4),
+    APLocation.SR5_FINISH_1ST: KARLocationData(377, KARRegion.CITY_TRIAL_STADIUM_SR5),
+    APLocation.SR6_FINISH_1ST: KARLocationData(378, KARRegion.CITY_TRIAL_STADIUM_SR6),
+    APLocation.SR7_FINISH_1ST: KARLocationData(379, KARRegion.CITY_TRIAL_STADIUM_SR7),
+    APLocation.SR8_FINISH_1ST: KARLocationData(380, KARRegion.CITY_TRIAL_STADIUM_SR8),
+    APLocation.SR9_FINISH_1ST: KARLocationData(381, KARRegion.CITY_TRIAL_STADIUM_SR9),
+    APLocation.HJ_JUMP_HIGHER_THAN_1500_FEET: KARLocationData(382, KARRegion.CITY_TRIAL_STADIUM_HJ),
+    APLocation.AG_FLY_2000_FEET: KARLocationData(383, KARRegion.CITY_TRIAL_STADIUM_AG),
+    APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF: KARLocationData(384, KARRegion.CITY_TRIAL_STADIUM_KM1),
+    APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF: KARLocationData(385, KARRegion.CITY_TRIAL_STADIUM_KM2),
+    APLocation.SR1_FINISH_1ST_ON_BULK_STAR: KARLocationData(386, KARRegion.CITY_TRIAL_STADIUM_SR1),
+    APLocation.SR1_FINISH_1ST_3X_AS_PURPLE: KARLocationData(387, KARRegion.CITY_TRIAL_STADIUM_SR1),
+    APLocation.DR_PHOTO_FINISH: KARLocationData(388, KARRegion.CITY_TRIAL_STADIUM_DR_ALL),
+    APLocation.AIR_RIDE_PHOTO_FINISH: KARLocationData(389, KARRegion.AIR_RIDE),
+    APLocation.AIR_RIDE_RACE_AS_EVERY_COLOR: KARLocationData(390, KARRegion.AIR_RIDE),
+    APLocation.MODEL_CITY_ON_FOOT: KARLocationData(391, KARRegion.CITY_TRIAL),
+    APLocation.VOLCANO_FLOWER_ON_FOOT: KARLocationData(392, KARRegion.CITY_TRIAL),
+    APLocation.SKY_GARDEN_TOP_ON_FOOT: KARLocationData(393, KARRegion.CITY_TRIAL),
+    APLocation.FLY_TO_HIGHEST_POINT: KARLocationData(394, KARRegion.CITY_TRIAL),
+    APLocation.AIR_RIDE_1ST_AS_META_KNIGHT: KARLocationData(395, KARRegion.AIR_RIDE),
+    APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE: KARLocationData(396, KARRegion.AIR_RIDE),
+    APLocation.NEBULA_BELT_FINISH_1ST: KARLocationData(397, KARRegion.AIR_RIDE_NEBULA_BELT),
+    APLocation.NEBULA_BELT_RACE_5500_FEET: KARLocationData(398, KARRegion.AIR_RIDE_NEBULA_BELT),
+    APLocation.NEBULA_BELT_2_LAPS_UNDER_230: KARLocationData(399, KARRegion.AIR_RIDE_NEBULA_BELT),
+    APLocation.NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER: KARLocationData(400, KARRegion.AIR_RIDE_NEBULA_BELT),
+    APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS: KARLocationData(401, KARRegion.AIR_RIDE_NEBULA_BELT),
+    APLocation.DD3_KO_A_RIVAL_10: KARLocationData(402, KARRegion.CITY_TRIAL_STADIUM_DD3),
+    APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE: KARLocationData(403, KARRegion.CITY_TRIAL_STADIUM_DD_ALL),
+    APLocation.GET_MIC_FROM_COPY_CHANCE: KARLocationData(404, KARRegion.CITY_TRIAL),
+    # Walky is only in KM2
+    APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY: KARLocationData(405, KARRegion.CITY_TRIAL_STADIUM_KM2),
+    APLocation.BREAK_20_BLUE_BOXES: KARLocationData(406, KARRegion.CITY_TRIAL),
+    APLocation.BREAK_10_GREEN_BOXES: KARLocationData(407, KARRegion.CITY_TRIAL),
+    APLocation.BREAK_10_RED_BOXES: KARLocationData(408, KARRegion.CITY_TRIAL),
+    APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT: KARLocationData(409, KARRegion.AIR_RIDE_FANTASY_MEADOWS),
+    APLocation.ASSEMBLE_ARCHIPELAGO_STAR: KARLocationData(410, KARRegion.CITY_TRIAL),
+    APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES: KARLocationData(411, KARRegion.CITY_TRIAL),
+    APLocation.GET_10_OFFENSE_PATCHES: KARLocationData(412, KARRegion.CITY_TRIAL),
 }
 
 
@@ -1178,7 +1110,6 @@ AP_PATCH_LOCATION_TABLE: dict[str, KARLocationData] = {
 # The AP Patch block starts where the Archipelago checklist band ends, and the decode in KARData
 # splits them at exactly that point.
 assert len(AP_CHECKLIST_LOCATION_TABLE) == AP_CHECKLIST_CODE_NUM
-
 
 # Merged view across all modes for lookups by location name.
 LOCATION_TABLE: dict[str, KARLocationData] = (
@@ -1234,6 +1165,18 @@ class KARLocationGroup(StrEnum):
     TR_METAL = "Top Ride: METAL"
     TR_HIGH_EFFORT = "Top Ride: High Effort"
     TR_MULTIPLAYER = "Top Ride: Multiplayer"
+    AP_CITY_TRIAL = "Archipelago: City Trial"
+    AP_STADIUMS = "Archipelago: Stadiums"
+    AP_AIR_RIDE = "Archipelago: Air Ride"
+    AP_EXPLORATION = "Archipelago: Exploration"
+    AP_PATCHES = "Archipelago: Patches"
+    AP_FOODS = "Archipelago: Foods"
+    AP_BOX_COLORS = "Archipelago: Box Colors"
+    AP_SINGLE_RACES = "Archipelago: Single Races"
+    AP_NEBULA_BELT = "Archipelago: NEBULA BELT"
+    AP_CHARACTERS = "Archipelago: Characters"
+    AP_KIRBY_COLORS = "Archipelago: Kirby Colors"
+    AP_LEGENDARY_MACHINES = "Archipelago: Legendary Machines"
 
 
 location_name_groups: dict[str, set[str]] = {
@@ -1339,6 +1282,7 @@ location_name_groups: dict[str, set[str]] = {
     KARLocationGroup.CT_HIGH_EFFORT: {
         CTLocation.BREAK_500_BOXES,
         CTLocation.BREAK_1000_BOXES,
+        CTLocation.PICKUP_500_ITEMS,
         CTLocation.PICKUP_1000_ITEMS,
         CTLocation.PICKUP_3000_ITEMS,
         CTLocation.FR_DRIVE_FOR_2_HOURS,
@@ -1348,12 +1292,9 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.FILL_IN_100_CHECKLIST_BLOCKS,
         CTLocation.GET_10_ITEMS_IN_20S,
         CTLocation.GET_50_ITEMS,
+        CTLocation.RACE_60_MILES,
         CTLocation.RACE_200_MILES,
-        # 150 KOs is a grind on any setup: the per-match KO count is capped by how fast rivals respawn,
-        # so no unlock shortens it enough to be worth counting on.
         CTLocation.STADIUM_DD_ALL_KO_ENEMIES_150X,
-        # Both KO counts accrue across every Kirby Melee run, so they land many matches apart from the
-        # per-match boxes and no unlock speeds them up.
         CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES,
         CTLocation.STADIUM_KM_ALL_KO_1500_ENEMIES,
     },
@@ -1364,7 +1305,7 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.DRINK_3_ENERGY_DRINKS,
         CTLocation.COPY_CHANCE_WHEEL_BOMB,
         CTLocation.COPY_CHANCE_WHEEL_SLEEP,
-        # CT_EVENTS is unioned in after this table - those boxes wait on a random city event too.
+        # CT_EVENTS is unioned in after this table - events are considered RNG
     },
     KARLocationGroup.CT_PVP: {
         CTLocation.USE_FIREWORKS_TO_KO_RIVALS_10X,
@@ -1576,8 +1517,6 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.RACE_100_LAPS,
     },
     KARLocationGroup.AR_RNG: {
-        # Nothing in a race deals damage on demand: the hazards, the rivals and the falling debris all
-        # act on their own schedule, so being hit at the moment you cross the line in 1st is luck.
         ARLocation.FIRST_WHILE_TAKING_DAMAGE,
     },
     KARLocationGroup.TR_TIME_ATTACK: {
@@ -1720,19 +1659,135 @@ location_name_groups: dict[str, set[str]] = {
         TRLocation.LIGHT_RIDE_GRIND_RAIL_50X,
         TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
         TRLocation.RACE_300_LAPS,
-        # Time Attack runs one course at a time with no lap-count rule to lean on, so 30 goal crossings
-        # is a straight grind (unlike the plain "cross the goal 20 times", which ticks over on its own).
         TRLocation.TA_CROSS_GOAL_30,
     },
     KARLocationGroup.TR_MULTIPLAYER: {
         TRLocation.COMPETE_IN_50_MULTIPLAYER_RACES,
         TRLocation.COMPETE_IN_10_MULTIPLAYER_RACES,
     },
+    KARLocationGroup.AP_CITY_TRIAL: {
+        APLocation.CASTLE_FLOWER_ON_FOOT,
+        APLocation.BREAK_ALL_CORAL,
+        APLocation.GET_10_HP_PATCHES,
+        APLocation.GET_10_OFFENSE_PATCHES,
+        APLocation.COLLECT_5_ALL_UPS,
+        APLocation.EAT_3_ICE_CREAMS,
+        APLocation.EAT_3_RICE_BALLS,
+        APLocation.EAT_3_CHICKENS,
+        APLocation.EAT_3_CURRIES,
+        APLocation.EAT_3_RAMENS,
+        APLocation.EAT_3_OMELETS,
+        APLocation.EAT_3_HAMBURGERS,
+        APLocation.EAT_3_APPLES,
+        APLocation.MODEL_CITY_ON_FOOT,
+        APLocation.VOLCANO_FLOWER_ON_FOOT,
+        APLocation.SKY_GARDEN_TOP_ON_FOOT,
+        APLocation.FLY_TO_HIGHEST_POINT,
+        APLocation.GET_MIC_FROM_COPY_CHANCE,
+        APLocation.BREAK_20_BLUE_BOXES,
+        APLocation.BREAK_10_GREEN_BOXES,
+        APLocation.BREAK_10_RED_BOXES,
+        APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
+        APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+    },
+    KARLocationGroup.AP_STADIUMS: {
+        APLocation.SR1_FINISH_1ST,
+        APLocation.SR2_FINISH_1ST,
+        APLocation.SR3_FINISH_1ST,
+        APLocation.SR4_FINISH_1ST,
+        APLocation.SR5_FINISH_1ST,
+        APLocation.SR6_FINISH_1ST,
+        APLocation.SR7_FINISH_1ST,
+        APLocation.SR8_FINISH_1ST,
+        APLocation.SR9_FINISH_1ST,
+        APLocation.HJ_JUMP_HIGHER_THAN_1500_FEET,
+        APLocation.AG_FLY_2000_FEET,
+        APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF,
+        APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF,
+        APLocation.SR1_FINISH_1ST_ON_BULK_STAR,
+        APLocation.SR1_FINISH_1ST_3X_AS_PURPLE,
+        APLocation.DR_PHOTO_FINISH,
+        APLocation.DD3_KO_A_RIVAL_10,
+        APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE,
+        APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY,
+    },
+    KARLocationGroup.AP_AIR_RIDE: {
+        APLocation.AIR_RIDE_PHOTO_FINISH,
+        APLocation.AIR_RIDE_RACE_AS_EVERY_COLOR,
+        APLocation.AIR_RIDE_1ST_AS_META_KNIGHT,
+        APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE,
+        APLocation.NEBULA_BELT_FINISH_1ST,
+        APLocation.NEBULA_BELT_RACE_5500_FEET,
+        APLocation.NEBULA_BELT_2_LAPS_UNDER_230,
+        APLocation.NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER,
+        APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS,
+        APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT,
+    },
+    KARLocationGroup.AP_EXPLORATION: {
+        APLocation.CASTLE_FLOWER_ON_FOOT,
+        APLocation.BREAK_ALL_CORAL,
+        APLocation.MODEL_CITY_ON_FOOT,
+        APLocation.VOLCANO_FLOWER_ON_FOOT,
+        APLocation.SKY_GARDEN_TOP_ON_FOOT,
+        APLocation.FLY_TO_HIGHEST_POINT,
+    },
+    KARLocationGroup.AP_PATCHES: {
+        APLocation.GET_10_HP_PATCHES,
+        APLocation.GET_10_OFFENSE_PATCHES,
+        APLocation.COLLECT_5_ALL_UPS,
+    },
+    KARLocationGroup.AP_FOODS: {
+        APLocation.EAT_3_ICE_CREAMS,
+        APLocation.EAT_3_RICE_BALLS,
+        APLocation.EAT_3_CHICKENS,
+        APLocation.EAT_3_CURRIES,
+        APLocation.EAT_3_RAMENS,
+        APLocation.EAT_3_OMELETS,
+        APLocation.EAT_3_HAMBURGERS,
+        APLocation.EAT_3_APPLES,
+    },
+    KARLocationGroup.AP_BOX_COLORS: {
+        APLocation.BREAK_20_BLUE_BOXES,
+        APLocation.BREAK_10_GREEN_BOXES,
+        APLocation.BREAK_10_RED_BOXES,
+    },
+    KARLocationGroup.AP_SINGLE_RACES: {
+        APLocation.SR1_FINISH_1ST,
+        APLocation.SR2_FINISH_1ST,
+        APLocation.SR3_FINISH_1ST,
+        APLocation.SR4_FINISH_1ST,
+        APLocation.SR5_FINISH_1ST,
+        APLocation.SR6_FINISH_1ST,
+        APLocation.SR7_FINISH_1ST,
+        APLocation.SR8_FINISH_1ST,
+        APLocation.SR9_FINISH_1ST,
+        APLocation.SR1_FINISH_1ST_ON_BULK_STAR,
+        APLocation.SR1_FINISH_1ST_3X_AS_PURPLE,
+    },
+    KARLocationGroup.AP_NEBULA_BELT: {
+        APLocation.NEBULA_BELT_FINISH_1ST,
+        APLocation.NEBULA_BELT_RACE_5500_FEET,
+        APLocation.NEBULA_BELT_2_LAPS_UNDER_230,
+        APLocation.NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER,
+        APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS,
+    },
+    KARLocationGroup.AP_CHARACTERS: {
+        APLocation.AIR_RIDE_1ST_AS_META_KNIGHT,
+        APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE,
+        APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE,
+    },
+    KARLocationGroup.AP_KIRBY_COLORS: {
+        APLocation.AIR_RIDE_RACE_AS_EVERY_COLOR,
+        APLocation.SR1_FINISH_1ST_3X_AS_PURPLE,
+    },
+    KARLocationGroup.AP_LEGENDARY_MACHINES: {
+        APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
+        APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+    },
 }
 
-# A city event has to spawn on its own before its box can be worked on, so events ride the RNG toggle.
+# events are RNG
 location_name_groups[KARLocationGroup.CT_RNG] |= location_name_groups[KARLocationGroup.CT_EVENTS]
-
 
 # Maps a goal option value to the location representing that goal - used both to exclude that location
 # from generation and to attach the victory event to its region.
@@ -1747,8 +1802,6 @@ AIR_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
 TOP_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
     TopRideGoal.option_100_checklist_blocks: TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
 }
-# The Archipelago checklist has no "Fill in 100" cell, so no goal maps to it. n_checklist_blocks and
-# checklist_list use their own event rules; the two assembly goals bind to their own box.
 ARCHIPELAGO_GOAL_TO_LOCATION: dict[int, str] = {
     ArchipelagoGoal.option_assemble_archipelago_star: APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
     ArchipelagoGoal.option_all_three_legendaries_in_one_run: APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,

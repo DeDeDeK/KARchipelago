@@ -1,6 +1,6 @@
 import typing
 
-from rule_builder.rules import Has, HasAll, HasAny, HasFromListUnique, Rule
+from rule_builder.rules import And, Has, HasAll, HasAny, HasFromListUnique, Or, Rule
 
 from .KARData import GameMode
 from .KARItems import (
@@ -8,6 +8,7 @@ from .KARItems import (
     CHARACTER_MACHINE_UNLOCKS,
     CHARGE_DEPENDENT_MACHINES,
     DAMAGING_ABILITY_UNLOCKS,
+    DD5_DAMAGING_ABILITY_UNLOCKS,
     ITEM_TABLE,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     STADIUM_UNLOCK_ITEMS,
@@ -24,10 +25,13 @@ from .KARLocations import (
     TRLocation,
 )
 from .KARRegions import (
-    AR_COURSE_REGION_TO_UNLOCK,
-    STADIUM_ALL_REGION_TO_UNLOCKS,
-    STADIUM_REGION_TO_UNLOCK,
-    TR_COURSE_REGION_TO_UNLOCK,
+    AR_COURSE_REGIONS,
+    AR_FR_COURSE_REGIONS,
+    AR_TA_COURSE_REGIONS,
+    REGION_TREE,
+    TR_COURSE_REGIONS,
+    TR_FR_COURSE_REGIONS,
+    TR_TA_COURSE_REGIONS,
     KARRegion,
     create_n_blocks_rule,
 )
@@ -35,7 +39,78 @@ from .KARRegions import (
 if typing.TYPE_CHECKING:
     from . import KARWorld
 
-# Event-dependent CT locations (when city_trial_events_gated is ON)
+# Stadium regions, by the unlock that puts each stadium in the rotation
+STADIUM_REGION_TO_UNLOCK: dict[str, KARItemName] = {
+    KARRegion.CITY_TRIAL_STADIUM_DR1: KARItemName.UNLOCK_STADIUM_DRAG_RACE_1,
+    KARRegion.CITY_TRIAL_STADIUM_DR2: KARItemName.UNLOCK_STADIUM_DRAG_RACE_2,
+    KARRegion.CITY_TRIAL_STADIUM_DR3: KARItemName.UNLOCK_STADIUM_DRAG_RACE_3,
+    KARRegion.CITY_TRIAL_STADIUM_DR4: KARItemName.UNLOCK_STADIUM_DRAG_RACE_4,
+    KARRegion.CITY_TRIAL_STADIUM_HJ: KARItemName.UNLOCK_STADIUM_HIGH_JUMP,
+    KARRegion.CITY_TRIAL_STADIUM_TF: KARItemName.UNLOCK_STADIUM_TARGET_FLIGHT,
+    KARRegion.CITY_TRIAL_STADIUM_AG: KARItemName.UNLOCK_STADIUM_AIR_GLIDER,
+    KARRegion.CITY_TRIAL_STADIUM_KM1: KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_1,
+    KARRegion.CITY_TRIAL_STADIUM_KM2: KARItemName.UNLOCK_STADIUM_KIRBY_MELEE_2,
+    KARRegion.CITY_TRIAL_STADIUM_DD1: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_1,
+    KARRegion.CITY_TRIAL_STADIUM_DD2: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_2,
+    KARRegion.CITY_TRIAL_STADIUM_DD3: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_3,
+    KARRegion.CITY_TRIAL_STADIUM_DD4: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_4,
+    KARRegion.CITY_TRIAL_STADIUM_DD5: KARItemName.UNLOCK_STADIUM_DESTRUCTION_DERBY_5,
+    KARRegion.CITY_TRIAL_STADIUM_SR1: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_1,
+    KARRegion.CITY_TRIAL_STADIUM_SR2: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_2,
+    KARRegion.CITY_TRIAL_STADIUM_SR3: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_3,
+    KARRegion.CITY_TRIAL_STADIUM_SR4: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_4,
+    KARRegion.CITY_TRIAL_STADIUM_SR5: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_5,
+    KARRegion.CITY_TRIAL_STADIUM_SR6: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_6,
+    KARRegion.CITY_TRIAL_STADIUM_SR7: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_7,
+    KARRegion.CITY_TRIAL_STADIUM_SR8: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_8,
+    KARRegion.CITY_TRIAL_STADIUM_SR9: KARItemName.UNLOCK_STADIUM_SINGLE_RACE_9,
+    KARRegion.CITY_TRIAL_STADIUM_VSKD: KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE,
+}
+
+# DD_ALL, DR_ALL and KM_ALL open once any of their numbered sub-stadiums is unlocked.
+STADIUM_ALL_REGION_TO_UNLOCKS: dict[str, list[KARItemName]] = {
+    parent: [STADIUM_REGION_TO_UNLOCK[child] for child in REGION_TREE[parent]]
+    for parent in (
+        KARRegion.CITY_TRIAL_STADIUM_DD_ALL,
+        KARRegion.CITY_TRIAL_STADIUM_DR_ALL,
+        KARRegion.CITY_TRIAL_STADIUM_KM_ALL,
+    )
+}
+
+# A course's unlock opens its standard, Time Attack and Free Run regions alike.
+_AR_COURSE_UNLOCKS: dict[str, KARItemName] = {
+    KARRegion.AIR_RIDE_MAGMA_FLOWS: KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
+    KARRegion.AIR_RIDE_FANTASY_MEADOWS: KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
+    KARRegion.AIR_RIDE_CELESTIAL_VALLEY: KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
+    KARRegion.AIR_RIDE_BEANSTALK_PARK: KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
+    KARRegion.AIR_RIDE_FROZEN_HILLSIDE: KARItemName.UNLOCK_AR_COURSE_FROZEN_HILLSIDE,
+    KARRegion.AIR_RIDE_MACHINE_PASSAGE: KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
+    KARRegion.AIR_RIDE_SKY_SANDS: KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
+    KARRegion.AIR_RIDE_CHECKER_KNIGHTS: KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
+    KARRegion.AIR_RIDE_NEBULA_BELT: KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
+}
+AR_COURSE_REGION_TO_UNLOCK: dict[str, KARItemName] = {
+    region: _AR_COURSE_UNLOCKS[course]
+    for variant in (AR_COURSE_REGIONS, AR_TA_COURSE_REGIONS, AR_FR_COURSE_REGIONS)
+    for course, region in zip(AR_COURSE_REGIONS, variant, strict=True)
+}
+
+_TR_COURSE_UNLOCKS: dict[str, KARItemName] = {
+    KARRegion.TOP_RIDE_GRASS: KARItemName.UNLOCK_TR_COURSE_GRASS,
+    KARRegion.TOP_RIDE_SAND: KARItemName.UNLOCK_TR_COURSE_SAND,
+    KARRegion.TOP_RIDE_SKY: KARItemName.UNLOCK_TR_COURSE_SKY,
+    KARRegion.TOP_RIDE_FIRE: KARItemName.UNLOCK_TR_COURSE_FIRE,
+    KARRegion.TOP_RIDE_LIGHT: KARItemName.UNLOCK_TR_COURSE_LIGHT,
+    KARRegion.TOP_RIDE_WATER: KARItemName.UNLOCK_TR_COURSE_WATER,
+    KARRegion.TOP_RIDE_METAL: KARItemName.UNLOCK_TR_COURSE_METAL,
+}
+TR_COURSE_REGION_TO_UNLOCK: dict[str, KARItemName] = {
+    region: _TR_COURSE_UNLOCKS[course]
+    for variant in (TR_COURSE_REGIONS, TR_TA_COURSE_REGIONS, TR_FR_COURSE_REGIONS)
+    for course, region in zip(TR_COURSE_REGIONS, variant, strict=True)
+}
+
+# Event-dependent CT locations
 _EVENT_LOCATION_RULES: dict[str, str] = {
     CTLocation.DO_SOME_DAMAGE_TO_DYNA_BLADE: KARItemName.UNLOCK_EVENT_DYNA_BLADE,
     CTLocation.GET_TRAMPLED_BY_DYNA_BLADE: KARItemName.UNLOCK_EVENT_DYNA_BLADE,
@@ -47,29 +122,27 @@ _EVENT_LOCATION_RULES: dict[str, str] = {
     CTLocation.ENTER_CASTLE_CHAMBER: KARItemName.UNLOCK_EVENT_SECRET_CHAMBER,
 }
 
-# Ability-dependent locations (when abilities_gated is ON)
+# Ability-dependent locations
 _ABILITY_LOCATION_RULES: dict[str, str] = {
     # City Trial
     CTLocation.COPY_CHANCE_WHEEL_BOMB: KARItemName.UNLOCK_ABILITY_BOMB,
     CTLocation.COPY_CHANCE_WHEEL_SLEEP: KARItemName.UNLOCK_ABILITY_SLEEP,
-    # Air Ride: finish/challenge checkboxes that name a copy ability
+    # Air Ride
     ARLocation.FIRST_WITH_WING_ABILITY: KARItemName.UNLOCK_ABILITY_WING,
     ARLocation.FIRST_WITH_SLEEP_ABILITY: KARItemName.UNLOCK_ABILITY_SLEEP,
     ARLocation.FIRST_WITH_FIRE_ABILITY: KARItemName.UNLOCK_ABILITY_FIRE,
     ARLocation.FIRST_WITH_NEEDLE_ABILITY: KARItemName.UNLOCK_ABILITY_NEEDLE,
     ARLocation.TORNADO_CHALLENGE_15_KO: KARItemName.UNLOCK_ABILITY_TORNADO,
     ARLocation.SWORD_CHALLENGE_10_SWINGS: KARItemName.UNLOCK_ABILITY_SWORD,
-    # Air Ride: swallowing a named enemy needs its ability. That is only half the requirement -- the
-    # enemy must also spawn, see _SWALLOW_ENEMY_COURSE_RULES.
     ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_SWORD,
     ARLocation.SWALL_WHEELIE_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_WHEEL,
     ARLocation.SWALL_CHILLY_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_FREEZE,
     ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_ABILITY_PLASMA,
 }
 
-# Base-ability-dependent locations (when base_abilities_gated is ON).
+# Base-ability-dependent locations
 _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
-    # Air Ride "Swallow ..." cells
+    # Air Ride "Swallow ..."
     ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.SWALL_5_GARBAGE_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.SWALL_WHEELIE_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
@@ -79,17 +152,13 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     ARLocation.BP_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.SWALL_PLASMA_WISP_3_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
     ARLocation.FM_SWALL_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_INHALE,
-    # The Air Ride cells naming a copy ability are not here: a ground copy panel grants one without
-    # inhaling, so their Inhale requirement is conditional -- see _AR_ABILITY_PANEL_COURSES.
-    # Air Ride + Top Ride quick-spin cells. "Cross the finish line while spinning" names the animation,
-    # but Quick Spin is the only way to be mid-spin on the line.
+    # Quick Spin
     ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     ARLocation.FINISH_SPINNING_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     TRLocation.QUICK_SPIN_20_AND_FIRST: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
     TRLocation.FIRST_WHILE_DOING_A_QUICK_SPIN: KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN,
-    # Cells ridden on a machine Charge makes usable: Slick and Turbo Star only turn by charge-drifting,
-    # and Bulk Star has almost no speed of its own - a lap time on it is a chain of charge releases.
+    # Require machines that need charge
     ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     ARLocation.TA_FM_FINISH_01_05_00_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     ARLocation.FR_MF_LAP_01_02_00_ON_TURBO_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
@@ -97,8 +166,7 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     ARLocation.FR_SS_LAP_01_05_00_ON_BULK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     CTLocation.STADIUM_DR4_33_00_TURBO: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     CTLocation.BUST_ROCKET_STAR_ON_SLICK_STAR: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
-    # Top Ride cells naming level-5 CPUs: those outrun a Kirby who cannot boost, so 1st needs Charge.
-    # Plain "take 1st" cells leave the CPU level to the player, and "without Boost" rules it out anyway.
+    # Level-5 CPUs are very difficult without charge
     TRLocation.GRASS_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     TRLocation.SAND_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
     TRLocation.SKY_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
@@ -108,9 +176,9 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     TRLocation.METAL_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
 }
 
-# Machine-dependent locations requiring a SINGLE specific machine (when machines_gated is ON)
+# Machine-dependent locations needing one specific machine
 _MACHINE_SINGLE_RULES: dict[str, str] = {
-    # CT stadium locations requiring specific machines
+    # City Trial
     CTLocation.STADIUM_DR1_17_00_FORMULA: KARItemName.UNLOCK_MACHINE_FORMULA_STAR,
     CTLocation.STADIUM_DR3_31_00_WHEELIE_BIKE: KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE,
     CTLocation.STADIUM_DR2_27_00_WAGON: KARItemName.UNLOCK_MACHINE_WAGON_STAR,
@@ -119,7 +187,7 @@ _MACHINE_SINGLE_RULES: dict[str, str] = {
     CTLocation.STADIUM_DR4_24_00_REX: KARItemName.UNLOCK_MACHINE_REX_WHEELIE,
     CTLocation.STADIUM_DR1_26_00_WARPSTAR: KARItemName.UNLOCK_MACHINE_WARP_STAR,
     CTLocation.STADIUM_DR3_28_00_SWERVE: KARItemName.UNLOCK_MACHINE_SWERVE_STAR,
-    # AR locations requiring specific machines
+    # Air Ride
     ARLocation.TA_MF_FINISH_03_15_00_ON_SHADOW_STAR: KARItemName.UNLOCK_MACHINE_SHADOW_STAR,
     ARLocation.TA_SS_FINISH_02_40_00_ON_WAGON_STAR: KARItemName.UNLOCK_MACHINE_WAGON_STAR,
     ARLocation.FR_FM_LAP_00_23_00_ON_WAGON_STAR: KARItemName.UNLOCK_MACHINE_WAGON_STAR,
@@ -138,7 +206,7 @@ _MACHINE_SINGLE_RULES: dict[str, str] = {
     ARLocation.TA_CK_FINISH_03_55_00_ON_WARPSTAR: KARItemName.UNLOCK_MACHINE_WARP_STAR,
 }
 
-# Machine-dependent locations requiring TWO specific machines (bust X while riding Y)
+# Machine-dependent locations needing two specific machines
 _MACHINE_PAIR_RULES: dict[str, tuple[str, str]] = {
     CTLocation.BUST_WHEELIE_BIKE_ON_WARPSTAR: (
         KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE,
@@ -174,7 +242,7 @@ _MACHINE_PAIR_RULES: dict[str, tuple[str, str]] = {
     ),
 }
 
-# Item-dependent CT locations (when city_trial_items_gated is ON)
+# Item-dependent CT locations
 _ITEM_LOCATION_RULES: dict[str, str] = {
     CTLocation.EAT_3_HOT_DOGS: KARItemName.UNLOCK_ITEM_HOT_DOG,
     CTLocation.EAT_3_PLATES_OF_SUSHI: KARItemName.UNLOCK_ITEM_SUSHI,
@@ -185,8 +253,7 @@ _ITEM_LOCATION_RULES: dict[str, str] = {
     CTLocation.USE_GOLD_SPIKES_TO_KO_RIVALS_3X: KARItemName.UNLOCK_ITEM_GORDO,
 }
 
-# Item-dependent Archipelago checklist locations: the 8 foods the vanilla checklist leaves uncovered,
-# plus the All Up counter.
+# Item-dependent Archipelago checklist locations
 _AP_ITEM_LOCATION_RULES: dict[str, str] = {
     APLocation.COLLECT_5_ALL_UPS: KARItemName.UNLOCK_ITEM_ALL_UP,
     APLocation.EAT_3_ICE_CREAMS: KARItemName.UNLOCK_ITEM_ICE_CREAM,
@@ -199,21 +266,30 @@ _AP_ITEM_LOCATION_RULES: dict[str, str] = {
     APLocation.EAT_3_APPLES: KARItemName.UNLOCK_ITEM_APPLE,
 }
 
-# Machines rideable in the City Trial city, derived from source_modes so a new machine is classified by
-# the same field the item pool uses. Free Star and Steer Star are Top Ride controls and drop out here.
+# Machines rideable in City Trial
 _CT_MACHINE_UNLOCKS: list[str] = sorted(
     name for name in items_by_type[KARItemType.MACHINE_UNLOCK] if GameMode.CITYTRIAL in ITEM_TABLE[name].source_modes
 )
-
-# The same list split by whether Charge is what makes the machine rideable, for the "some machine to
-# ride" rules while base abilities are gated.
+# The same list split by whether the machine needs Charge to ride
 _CHARGE_DEPENDENT_CT_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name in CHARGE_DEPENDENT_MACHINES]
 _STEERABLE_CT_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in CHARGE_DEPENDENT_MACHINES]
 
-# Target Flight scores the flight off its launch ramp, so "stay airborne longer than 15 seconds" is a
-# glide check. The wheelie/bike class holds no air at all and drops straight off the ramp, Dedede's
-# ride included, and Formula, Wagon, Bulk, Rocket Star and Hydra glide too poorly to hold the launch
-# that long. The stadium grid offers every unlocked machine, so any other one clears it.
+# Locations needing any rideable City Trial machine
+_CT_ANY_MACHINE_LOCATIONS: tuple[str, ...] = (
+    APLocation.BREAK_ALL_CORAL,
+    APLocation.CASTLE_FLOWER_ON_FOOT,
+    APLocation.SKY_GARDEN_TOP_ON_FOOT,
+    CTLocation.RACE_60_MILES,
+    CTLocation.RACE_200_MILES,
+)
+
+_CT_FLIGHT_MACHINES: tuple[str, ...] = (
+    KARItemName.UNLOCK_MACHINE_DRAGOON,
+    KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR,
+    KARItemName.UNLOCK_MACHINE_WINGED_STAR,
+)
+
+# Machines that glide too poorly to stay airborne 15 seconds in TF
 _TF_AIRBORNE_EXCLUDED_MACHINES: frozenset[str] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE,
@@ -230,9 +306,7 @@ _TF_AIRBORNE_EXCLUDED_MACHINES: frozenset[str] = frozenset(
 
 _TF_AIRBORNE_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in _TF_AIRBORNE_EXCLUDED_MACHINES]
 
-# Machines that cannot hold Fantasy Meadows' 20 mph floor for a whole lap. The cell polls per-frame
-# displacement, so it wants sustained speed, not a lap time. Shadow Star (19.9 mph), Compact Star (18.0)
-# and Rocket Star (15.5) never reach it; Swerve Star clears it (31.2) but stops dead to steer.
+# Machines that can't hold 20 mph for a whole Fantasy Meadows lap
 _FM_20MPH_EXCLUDED_MACHINES: frozenset[str] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_SWERVE_STAR,
@@ -242,15 +316,13 @@ _FM_20MPH_EXCLUDED_MACHINES: frozenset[str] = frozenset(
     }
 )
 
-# Every Air Ride machine that can actually complete that cell.
 _FM_20MPH_MACHINES: list[str] = sorted(
     name
     for name in items_by_type[KARItemType.MACHINE_UNLOCK]
     if GameMode.AIRRIDE in ITEM_TABLE[name].source_modes and name not in _FM_20MPH_EXCLUDED_MACHINES
 )
 
-# Machines that cannot take Fantasy Meadows' shortcut: an elevated arc 40 to 60 units above the racing
-# line, so reaching it means holding a glide - the wheelie/bike class cannot, and Dedede rides one.
+# Machines that can't glide up to Fantasy Meadows' shortcut easily
 _FM_SHORTCUT_EXCLUDED_MACHINES: frozenset[str] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE,
@@ -260,21 +332,13 @@ _FM_SHORTCUT_EXCLUDED_MACHINES: frozenset[str] = frozenset(
     }
 )
 
-# Every Air Ride machine that can glide onto the shortcut.
 _FM_SHORTCUT_MACHINES: list[str] = sorted(
     name
     for name in items_by_type[KARItemType.MACHINE_UNLOCK]
     if GameMode.AIRRIDE in ITEM_TABLE[name].source_modes and name not in _FM_SHORTCUT_EXCLUDED_MACHINES
 )
 
-# Item types Tac can carry off in the city: every City Trial item unlock except All Up, whose city fall
-# chance is zero. The legendary pieces stay in - their carrier box is a real pickup.
-_TAC_STEALABLE_ITEM_UNLOCKS: list[str] = sorted(
-    items_by_type[KARItemType.CT_ITEM_UNLOCK] - {KARItemName.UNLOCK_ITEM_ALL_UP}
-)
-
-# Item-count CT locations. The in-game pickup counter tallies every itemkind EXCEPT the three box types,
-# so a cell here just needs one counting type able to spawn -- types respawn, so one unlock suffices.
+# Item-count CT locations
 _ITEM_PICKUP_LOCATIONS: tuple[str, ...] = (
     CTLocation.GET_50_ITEMS,
     CTLocation.GET_10_ITEMS_IN_20S,
@@ -284,7 +348,7 @@ _ITEM_PICKUP_LOCATIONS: tuple[str, ...] = (
     CTLocation.PICKUP_3000_ITEMS,
 )
 
-# Patch-dependent CT locations (when city_trial_patches_gated is ON)
+# Patch-dependent CT locations
 _PATCH_LOCATION_RULES: dict[str, str] = {
     CTLocation.GET_10_BOOST_PATCHES: KARItemName.UNLOCK_PATCH_BOOST,
     CTLocation.GET_10_TURN_PATCHES: KARItemName.UNLOCK_PATCH_TURN,
@@ -296,26 +360,19 @@ _PATCH_LOCATION_RULES: dict[str, str] = {
     CTLocation.GET_10_DEFENSE_PATCHES: KARItemName.UNLOCK_PATCH_DEFENSE,
 }
 
-# Box-break CT locations: breaking boxes needs some box color able to spawn.
+# Box-break CT locations
 _BOX_BREAK_LOCATIONS: tuple[str, ...] = (
     CTLocation.BREAK_500_BOXES,
     CTLocation.BREAK_1000_BOXES,
 )
 
-# The per-color Archipelago counts: a locked color never spawns, so each needs its own color rather
-# than any of the three.
+# Per-color Archipelago box counts
 _AP_BOX_COLOR_RULES: dict[str, str] = {
     APLocation.BREAK_20_BLUE_BOXES: KARItemName.UNLOCK_BOX_BLUE,
     APLocation.BREAK_10_GREEN_BOXES: KARItemName.UNLOCK_BOX_GREEN,
     APLocation.BREAK_10_RED_BOXES: KARItemName.UNLOCK_BOX_RED,
 }
 
-# A box color spawns only when it is unlocked AND its contents pool still holds something: the three
-# colors draw from disjoint pools, and the mod drops a color whose whole pool is locked out. Blue holds
-# the patches plus the 12 foods (only the patch and item gates together empty it), green the special
-# items (item gate), red the 11 copy abilities (ability gate) plus the ungated legendary-piece carrier
-# box, which keeps red coming while any piece is unlocked. All Up never joins blue - its fall chance
-# in the city is zero.
 _GREEN_BOX_ITEMS: tuple[str, ...] = (
     KARItemName.UNLOCK_ITEM_SPEED_MAX,
     KARItemName.UNLOCK_ITEM_SPEED_MIN,
@@ -345,31 +402,31 @@ _BLUE_BOX_FOOD_ITEMS: tuple[str, ...] = (
     KARItemName.UNLOCK_ITEM_APPLE,
 )
 
+# The only loot Tac drops: the twelve foods, All Up, Sleep and the nine patches
+_TAC_LOOT_ITEM_UNLOCKS: tuple[str, ...] = (*_BLUE_BOX_FOOD_ITEMS, KARItemName.UNLOCK_ITEM_ALL_UP)
+_TAC_LOOT_ABILITY_UNLOCK: str = KARItemName.UNLOCK_ABILITY_SLEEP
 
-def _box_color_requirements(gated: typing.Callable[[str], bool]) -> dict[str, list[Rule]]:
-    """
-    What each box color needs before one can spawn, as a list of rules to AND; `gated(option)` answers
-    whether that category holds keys this seed. Both halves are conditional - the color's own unlock only
-    while the box gate is on, its contents only while the gates that can empty the pool are - so an empty
-    list means the color spawns unconditionally.
-    """
+_CT_LOOT_GATES: frozenset[str] = frozenset({"city_trial_items_gated", "city_trial_patches_gated", "abilities_gated"})
+
+
+def _box_color_requirements(effective_gates: set[str]) -> dict[str, list[Rule]]:
     requirements: dict[str, list[Rule]] = {
         KARItemName.UNLOCK_BOX_BLUE: [],
         KARItemName.UNLOCK_BOX_GREEN: [],
         KARItemName.UNLOCK_BOX_RED: [],
     }
 
-    if gated("city_trial_boxes_gated"):
+    if "city_trial_boxes_gated" in effective_gates:
         for color, rules in requirements.items():
             rules.append(Has(color))
 
-    if gated("city_trial_items_gated"):
+    if "city_trial_items_gated" in effective_gates:
         requirements[KARItemName.UNLOCK_BOX_GREEN].append(HasAny(*_GREEN_BOX_ITEMS))
-        if gated("city_trial_patches_gated"):
+        if "city_trial_patches_gated" in effective_gates:
             requirements[KARItemName.UNLOCK_BOX_BLUE].append(
                 HasAny(*sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK]), *_BLUE_BOX_FOOD_ITEMS)
             )
-        if gated("abilities_gated"):
+        if "abilities_gated" in effective_gates:
             requirements[KARItemName.UNLOCK_BOX_RED].append(
                 HasAny(*sorted(items_by_type[KARItemType.ABILITY_UNLOCK]), *LEGENDARY_PIECE_UNLOCK_ITEMS)
             )
@@ -377,52 +434,33 @@ def _box_color_requirements(gated: typing.Callable[[str], bool]) -> dict[str, li
     return requirements
 
 
-def _all_of(rules: list[Rule]) -> Rule:
-    """AND a non-empty list of rules together."""
-    combined = rules[0]
-    for rule in rules[1:]:
-        combined &= rule
-    return combined
+# The ability-themed Top Ride items
+_TR_ABILITY_ITEM_KEYS: dict[str, str] = {
+    KARItemName.UNLOCK_TR_ITEM_FREEZE_FAN: KARItemName.UNLOCK_ABILITY_FREEZE,
+    KARItemName.UNLOCK_TR_ITEM_FIRE: KARItemName.UNLOCK_ABILITY_FIRE,
+    KARItemName.UNLOCK_TR_ITEM_BOMB: KARItemName.UNLOCK_ABILITY_BOMB,
+    KARItemName.UNLOCK_TR_ITEM_WALKY: KARItemName.UNLOCK_ABILITY_MIC,
+}
 
-
-# TR item-dependent locations (when top_ride_items_gated is ON). The four ability-themed TR items accept
-# a second key and live in _TR_ABILITY_ITEM_LOCATION_RULES.
+# TR item-dependent locations
 _TR_ITEM_LOCATION_RULES: dict[str, str] = {
     TRLocation.FIRST_WHILE_HOLDING_HAMMER: KARItemName.UNLOCK_TR_ITEM_HAMMER,
     TRLocation.GET_20_INVINCIBLE_CANDY_ITEMS: KARItemName.UNLOCK_TR_ITEM_INVINCIBLE_CANDY,
     TRLocation.BUZZ_SAW_SEND_3_RIVALS: KARItemName.UNLOCK_TR_ITEM_BUZZ_SAW,
     TRLocation.GET_20_SPINNER_ITEMS: KARItemName.UNLOCK_TR_ITEM_SPINNER,
+    TRLocation.FIRE_FIRST_WHILE_HOLDING_FIRE_ITEM: KARItemName.UNLOCK_TR_ITEM_FIRE,
+    TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM: KARItemName.UNLOCK_TR_ITEM_FIRE,
+    TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS: KARItemName.UNLOCK_TR_ITEM_BOMB,
+    TRLocation.GET_20_WALKY_ITEMS: KARItemName.UNLOCK_TR_ITEM_WALKY,
 }
 
-# Generic item-count TR locations: completing them only needs SOME Top Ride item type able to spawn.
+# Generic item-count TR locations
 _TR_ANY_ITEM_LOCATIONS: tuple[str, ...] = (
     TRLocation.COLLECT_500_ITEMS,
     TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE,
 )
 
-# TR locations that depend on an ability-themed TR item spawning, mapped to that item's two keys:
-# (TR item unlock, copy ability unlock).
-_TR_ABILITY_ITEM_LOCATION_RULES: dict[str, tuple[str, str]] = {
-    TRLocation.FIRE_FIRST_WHILE_HOLDING_FIRE_ITEM: (
-        KARItemName.UNLOCK_TR_ITEM_FIRE,
-        KARItemName.UNLOCK_ABILITY_FIRE,
-    ),
-    TRLocation.TORCH_3_RIVALS_USING_ONE_FIRE_ITEM: (
-        KARItemName.UNLOCK_TR_ITEM_FIRE,
-        KARItemName.UNLOCK_ABILITY_FIRE,
-    ),
-    TRLocation.HIT_ENEMIES_3_X_WITH_BOMB_ITEMS: (
-        KARItemName.UNLOCK_TR_ITEM_BOMB,
-        KARItemName.UNLOCK_ABILITY_BOMB,
-    ),
-    TRLocation.GET_20_WALKY_ITEMS: (
-        KARItemName.UNLOCK_TR_ITEM_WALKY,
-        KARItemName.UNLOCK_ABILITY_MIC,
-    ),
-}
-
-# The eight standard Air Ride courses. Nebula Belt (the secret course) is excluded: the cell is worded
-# "standard" courses, so requiring it would be too strict.
+# The eight standard Air Ride courses
 _AR_STANDARD_COURSE_UNLOCKS: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
     KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
@@ -434,8 +472,7 @@ _AR_STANDARD_COURSE_UNLOCKS: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
 )
 
-# Swallow-a-named-enemy checkboxes: the course(s) each enemy spawns on, from the vanilla stage spawn
-# tables. Independent of the ability half in _ABILITY_LOCATION_RULES; the two compose with AND.
+# which courses the swallow enemy checks have those enemies actually spawn in
 _SWALLOW_ENEMY_COURSE_RULES: dict[str, tuple[str, ...]] = {
     ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST: (
         KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
@@ -463,11 +500,7 @@ _SWALLOW_ENEMY_COURSE_RULES: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Nebula Belt ships no enemy spawn table at all, so nothing that needs an enemy can be done there.
-# Every other course spawns enemies.
-_AR_ENEMY_COURSE_UNLOCKS: tuple[str, ...] = _AR_STANDARD_COURSE_UNLOCKS
-
-# Mode-root cells that just need enemies on the course - some to inhale, or some to run a count up on.
+# Mode-root cells that only need enemies on the course, which every standard course spawns
 _AR_ENEMY_DEPENDENT_LOCATIONS: tuple[str, ...] = (
     ARLocation.SWALL_5_GARBAGE_AND_FIRST,
     ARLocation.SWALL_200_ENEMIES,
@@ -477,12 +510,8 @@ _AR_ENEMY_DEPENDENT_LOCATIONS: tuple[str, ...] = (
     ARLocation.DEFEAT_10_ENEMIES_USING_QUICK_SPIN,
 )
 
-# Courses each ability's source enemy spawns on. Swallowing that one enemy is one of the two ways to an
-# ability in Air Ride (the other is a ground copy panel below); the mode ships no item spawns, and the
-# random wheel a multi-enemy swallow opens is not logic. Sword Knight's list is shared with its swallow cell.
-_SWORD_KNIGHT_COURSES: tuple[str, ...] = _SWALLOW_ENEMY_COURSE_RULES[ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST]
-
-# Phan Phan and Dayl - every course but Celestial Valley.
+# The courses each ability's enemy spawns on
+# Phan Phan and Dayl
 _FIRE_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
     KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
@@ -493,7 +522,7 @@ _FIRE_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
 )
 
-# Noddy.
+# Noddy
 _SLEEP_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
     KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
@@ -503,7 +532,7 @@ _SLEEP_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
 )
 
-# Flappy.
+# Flappy
 _WING_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_MAGMA_FLOWS,
     KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
@@ -511,8 +540,7 @@ _WING_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
 )
 
-# Pichikuri. Beanstalk Park is left out although it spawns them: its enemies sit too late on a track too
-# short to take the ability to the line in 1st.
+# Pichikuri, except on Beanstalk Park, where they spawn too late to carry Needle to the line in 1st
 _NEEDLE_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
     KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
@@ -521,7 +549,7 @@ _NEEDLE_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_MACHINE_PASSAGE,
 )
 
-# Caller.
+# Caller
 _TORNADO_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_SKY_SANDS,
     KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
@@ -529,17 +557,13 @@ _TORNADO_ENEMY_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_CHECKER_KNIGHTS,
 )
 
-# Courses carrying a ground copy panel. Driving over one spins the wheel for a random unlocked ability
-# with no enemy and no inhale involved, so it reaches any ability given retries. Nebula Belt ships four -
-# its only ability source, since it spawns no enemies at all - and Celestial Valley the single one on top
-# of the tree. No other course ships any.
+# The only courses with a ground copy panel
 _AR_COPY_PANEL_COURSES: tuple[str, ...] = (
     KARItemName.UNLOCK_AR_COURSE_NEBULA_BELT,
     KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
 )
 
-# Per ability cell, the panel courses that can finish it. Tornado's cell also wants 15 enemies defeated,
-# which rules out enemy-less Nebula Belt however the ability was obtained.
+# The panel courses that can finish each ability cell
 _AR_ABILITY_PANEL_COURSES: dict[str, tuple[str, ...]] = {
     ARLocation.FIRST_WITH_FIRE_ABILITY: _AR_COPY_PANEL_COURSES,
     ARLocation.FIRST_WITH_SLEEP_ABILITY: _AR_COPY_PANEL_COURSES,
@@ -549,32 +573,31 @@ _AR_ABILITY_PANEL_COURSES: dict[str, tuple[str, ...]] = {
     ARLocation.TORNADO_CHALLENGE_15_KO: (KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,),
 }
 
+_AR_ABILITY_ENEMY_COURSES: dict[str, tuple[str, ...]] = {
+    ARLocation.FIRST_WITH_FIRE_ABILITY: _FIRE_ENEMY_COURSES,
+    ARLocation.FIRST_WITH_SLEEP_ABILITY: _SLEEP_ENEMY_COURSES,
+    ARLocation.FIRST_WITH_WING_ABILITY: _WING_ENEMY_COURSES,
+    ARLocation.FIRST_WITH_NEEDLE_ABILITY: _NEEDLE_ENEMY_COURSES,
+    ARLocation.TORNADO_CHALLENGE_15_KO: _TORNADO_ENEMY_COURSES,
+    ARLocation.SWORD_CHALLENGE_10_SWINGS: _SWALLOW_ENEMY_COURSE_RULES[ARLocation.SWALL_SWORD_KNIGHT_3_AND_FIRST],
+}
 
-def _with_panels(enemy_courses: tuple[str, ...], location: str) -> tuple[str, ...]:
-    """Enemy courses for an ability cell plus the panel courses that can stand in for them."""
-    panels = _AR_ABILITY_PANEL_COURSES[location]
-    return enemy_courses + tuple(c for c in panels if c not in enemy_courses)
 
-
-# Air Ride cells that live in the mode-root region but only complete on a subset of courses. Without a
-# rule here the blanket "any course unlocked" rule below would call them reachable on any single course.
+# Air Ride mode-root cells only some courses can complete
 _AR_COURSE_SUBSET_RULES: dict[str, tuple[str, ...]] = {
     **_SWALLOW_ENEMY_COURSE_RULES,
-    **dict.fromkeys(_AR_ENEMY_DEPENDENT_LOCATIONS, _AR_ENEMY_COURSE_UNLOCKS),
+    **dict.fromkeys(_AR_ENEMY_DEPENDENT_LOCATIONS, _AR_STANDARD_COURSE_UNLOCKS),
     # Cells naming a copy ability: the course has to spawn that ability's enemy or carry a copy panel.
-    ARLocation.FIRST_WITH_FIRE_ABILITY: _with_panels(_FIRE_ENEMY_COURSES, ARLocation.FIRST_WITH_FIRE_ABILITY),
-    ARLocation.FIRST_WITH_SLEEP_ABILITY: _with_panels(_SLEEP_ENEMY_COURSES, ARLocation.FIRST_WITH_SLEEP_ABILITY),
-    ARLocation.FIRST_WITH_WING_ABILITY: _with_panels(_WING_ENEMY_COURSES, ARLocation.FIRST_WITH_WING_ABILITY),
-    ARLocation.FIRST_WITH_NEEDLE_ABILITY: _with_panels(_NEEDLE_ENEMY_COURSES, ARLocation.FIRST_WITH_NEEDLE_ABILITY),
-    ARLocation.TORNADO_CHALLENGE_15_KO: _with_panels(_TORNADO_ENEMY_COURSES, ARLocation.TORNADO_CHALLENGE_15_KO),
-    ARLocation.SWORD_CHALLENGE_10_SWINGS: _with_panels(_SWORD_KNIGHT_COURSES, ARLocation.SWORD_CHALLENGE_10_SWINGS),
-    # Celestial Valley and Beanstalk Park are the only courses with a cliff that drops you.
+    **{
+        loc: enemy + tuple(c for c in _AR_ABILITY_PANEL_COURSES[loc] if c not in enemy)
+        for loc, enemy in _AR_ABILITY_ENEMY_COURSES.items()
+    },
+    # The only courses with a cliff to drop from
     ARLocation.DROP_FROM_CLIFFS_3X: (
         KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
         KARItemName.UNLOCK_AR_COURSE_BEANSTALK_PARK,
     ),
-    # Crossing the line airborne needs something to launch off near the finish. Checker Knights and
-    # Frozen Hillside have nothing usable there; Magma Flows only works with a patch stack, which is not logic.
+    # Courses with a launch near the finish line
     ARLocation.FIRST_WHILE_FLYING_THROUGH_AIR: (
         KARItemName.UNLOCK_AR_COURSE_FANTASY_MEADOWS,
         KARItemName.UNLOCK_AR_COURSE_CELESTIAL_VALLEY,
@@ -585,22 +608,12 @@ _AR_COURSE_SUBSET_RULES: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# All seven Top Ride courses -- Top Ride has no secret course, so "all courses" means every one.
-_TR_COURSE_UNLOCKS: tuple[str, ...] = (
-    KARItemName.UNLOCK_TR_COURSE_GRASS,
-    KARItemName.UNLOCK_TR_COURSE_SAND,
-    KARItemName.UNLOCK_TR_COURSE_SKY,
-    KARItemName.UNLOCK_TR_COURSE_FIRE,
-    KARItemName.UNLOCK_TR_COURSE_WATER,
-    KARItemName.UNLOCK_TR_COURSE_LIGHT,
-    KARItemName.UNLOCK_TR_COURSE_METAL,
-)
+# Air Ride locations that need every standard course
+_AR_ALL_COURSES_LOCATIONS: tuple[str, ...] = (ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,)
 
-# Top Ride cells in the mode-root region that only complete on a subset of courses - the twin of
-# _AR_COURSE_SUBSET_RULES. Without a rule the blanket "any course unlocked" rule would call them reachable.
+# Top Ride's counterpart to _AR_COURSE_SUBSET_RULES
 _TR_COURSE_SUBSET_RULES: dict[str, tuple[str, ...]] = {
-    # Four of the seven. Sky, Water and Fire are clearable but grind long enough that logic should not
-    # require them (Fire only comes close with the handicap slider at 1). Metal is the hardest one kept.
+    # chosen to be easily completable
     TRLocation.LAP_NO_WALLS_AND_FIRST: (
         KARItemName.UNLOCK_TR_COURSE_GRASS,
         KARItemName.UNLOCK_TR_COURSE_SAND,
@@ -609,7 +622,7 @@ _TR_COURSE_SUBSET_RULES: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Top Ride checkboxes that require finishing/placing on every course.
+# Top Ride locations that need every course
 _TR_ALL_COURSES_LOCATIONS: tuple[str, ...] = (
     TRLocation.FIRST_ON_ALL_COURSES,
     TRLocation.ALL_COURSES_NO_BOOST,
@@ -618,30 +631,15 @@ _TR_ALL_COURSES_LOCATIONS: tuple[str, ...] = (
     TRLocation.NOITEMS_FIRST_ALL_COURSES,
 )
 
-# The four ability-themed Top Ride items, TR item unlock -> copy ability unlock. The mod enables the
-# item when either is held; the other 17 TR item types are keyed solely by their TR item unlock.
-_TR_ABILITY_ITEM_KEYS: dict[str, str] = {
-    KARItemName.UNLOCK_TR_ITEM_FREEZE_FAN: KARItemName.UNLOCK_ABILITY_FREEZE,
-    KARItemName.UNLOCK_TR_ITEM_FIRE: KARItemName.UNLOCK_ABILITY_FIRE,
-    KARItemName.UNLOCK_TR_ITEM_BOMB: KARItemName.UNLOCK_ABILITY_BOMB,
-    KARItemName.UNLOCK_TR_ITEM_WALKY: KARItemName.UNLOCK_ABILITY_MIC,
-}
-
 
 def set_rules(world: "KARWorld"):
     """Define the logic rules, skipping locations and regions absent from this world."""
 
-    # Accumulate rules per entrance/location, then apply once at the end: world.set_rule() resolves a
-    # Rule into a Rule.Resolved that is not a Rule, so composing afterwards would overwrite, not AND.
+    # Collect rules and set them once at the end
     entrance_rules: dict[str, Rule] = {}
     location_rules: dict[str, Rule] = {}
 
-    def add_entrance_rule(entrance_name: str, rule: Rule) -> None:
-        existing = entrance_rules.get(entrance_name)
-        entrance_rules[entrance_name] = existing & rule if existing is not None else rule
-
     def add_location_rule(location_name: str, rule: Rule) -> None:
-        # Skip silently if the location doesn't exist (mode disabled, location excluded, etc.).
         try:
             world.get_location(location_name)
         except KeyError:
@@ -650,72 +648,73 @@ def set_rules(world: "KARWorld"):
         location_rules[location_name] = existing & rule if existing is not None else rule
 
     def add_region_entrance_rule(region_name: str, rule: Rule) -> None:
-        # Skip silently if the region wasn't built (its mode is absent from logic_modes).
+        """Gate a region on `rule`, keyed by its sole entrance. A no-op when the region is absent this seed."""
         try:
             region = world.get_region(region_name)
         except KeyError:
             return
-        if region.entrances:
-            add_entrance_rule(region.entrances[0].name, rule)
+        if not region.entrances:
+            return
+        entrance_name = region.entrances[0].name
+        existing = entrance_rules.get(entrance_name)
+        entrance_rules[entrance_name] = existing & rule if existing is not None else rule
 
-    # Entrance rules: progressive stadiums. Gating OFF needs none - the mod unlocks all 24 at connect.
-    # The guard is effective_gates, not the raw option: a goal-less logic mode holds no keys, so its
-    # Archipelago boxes would sit behind an unguarded entrance for fill to hide progression behind.
+    # Every gate below reads effective_gates rather than the raw option
     if "city_trial_stadiums_gated" in world.effective_gates:
-        for region in world.get_regions():
-            if region.name in STADIUM_REGION_TO_UNLOCK and region.entrances:
-                unlock = STADIUM_REGION_TO_UNLOCK[region.name]
-                add_entrance_rule(region.entrances[0].name, Has(unlock))
-            elif region.name in STADIUM_ALL_REGION_TO_UNLOCKS and region.entrances:
-                unlocks = STADIUM_ALL_REGION_TO_UNLOCKS[region.name]
-                add_entrance_rule(region.entrances[0].name, HasAny(*unlocks))
+        for region_name, unlock in STADIUM_REGION_TO_UNLOCK.items():
+            add_region_entrance_rule(region_name, Has(unlock))
+        for region_name, unlocks in STADIUM_ALL_REGION_TO_UNLOCKS.items():
+            add_region_entrance_rule(region_name, HasAny(*unlocks))
     elif KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE in world.goal_forced_unlocks:
-        # Gating off, but the beat_king_dedede goal keeps this one unlock in the pool, so its stadium is
-        # the only one in the rotation that still needs a key. Every cell in there is behind it.
-        add_region_entrance_rule(KARRegion.STADIUM_VSKD, Has(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE))
+        add_region_entrance_rule(KARRegion.CITY_TRIAL_STADIUM_VSKD, Has(KARItemName.UNLOCK_STADIUM_VS_KING_DEDEDE))
 
-    # Entrance rules: AR course unlocks (effective_gates guard - see above)
+    # Air Ride course entrances
     if "air_ride_courses_gated" in world.effective_gates:
-        for region in world.get_regions():
-            if region.name in AR_COURSE_REGION_TO_UNLOCK and region.entrances:
-                add_entrance_rule(region.entrances[0].name, Has(AR_COURSE_REGION_TO_UNLOCK[region.name]))
+        for region_name, unlock in AR_COURSE_REGION_TO_UNLOCK.items():
+            add_region_entrance_rule(region_name, Has(unlock))
 
-    # Entrance rules: TR course unlocks (effective_gates guard - see above)
+    # Top Ride course entrances
     if "top_ride_courses_gated" in world.effective_gates:
-        for region in world.get_regions():
-            if region.name in TR_COURSE_REGION_TO_UNLOCK and region.entrances:
-                add_entrance_rule(region.entrances[0].name, Has(TR_COURSE_REGION_TO_UNLOCK[region.name]))
+        for region_name, unlock in TR_COURSE_REGION_TO_UNLOCK.items():
+            add_region_entrance_rule(region_name, Has(unlock))
 
-    # Entrance rules: the combat stadiums need some way to deal damage - every cell there is a KO count.
-    # Only while both gates hold keys: machines OFF hands over Dedede and Meta Knight, base abilities OFF
-    # hands over quick spin. Ramming does not count; a machine is transport here, not a weapon.
+    # Every combat stadium cell is a KO count, needing a damage source.
     if {"machines_gated", "base_abilities_gated"} <= world.effective_gates:
         combat_keys = (KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN, *CHARACTER_MACHINE_UNLOCKS)
 
-        # Neither melee stage ships an ItemNode, so no copy panel spawns and a copy ability is no answer
-        # whatever the ability gate. Inhale is: an inhaled enemy is spat back at the rest.
+        # Kirby Melee's two stages ship no item node, so no copy panels spawn there and Inhale is
+        # the only ability route.
         add_region_entrance_rule(
-            KARRegion.STADIUM_KM_ALL,
+            KARRegion.CITY_TRIAL_STADIUM_KM_ALL,
             HasAny(*combat_keys, KARItemName.UNLOCK_BASE_ABILITY_INHALE),
         )
 
-        # The derby arena and the Dedede arena both spawn copy panels, so abilities OFF is a third way
-        # to have a damage source and drops the rule entirely.
+        # Every Destruction Derby stadium and VS King Dedede spawns copy panels, so ungated abilities
+        # are a damage source
         if "abilities_gated" in world.effective_gates:
             add_region_entrance_rule(
-                KARRegion.STADIUM_DD_ALL,
+                KARRegion.CITY_TRIAL_STADIUM_DD_ALL,
                 # Hydra is the one machine heavy enough to KO by ramming, and it only moves on a boost.
                 HasAny(*combat_keys, *DAMAGING_ABILITY_UNLOCKS)
                 | HasAll(KARItemName.UNLOCK_MACHINE_HYDRA, KARItemName.UNLOCK_BASE_ABILITY_CHARGE),
             )
-            # VS King Dedede is fought on foot, so no machine is an answer there.
+            # Derby 5 panel pool is only Ice, Plasma, Sword and Needle.
             add_region_entrance_rule(
-                KARRegion.STADIUM_VSKD,
+                KARRegion.CITY_TRIAL_STADIUM_DD5,
+                HasAny(*combat_keys, *DD5_DAMAGING_ABILITY_UNLOCKS)
+                | HasAll(KARItemName.UNLOCK_MACHINE_HYDRA, KARItemName.UNLOCK_BASE_ABILITY_CHARGE),
+            )
+            # Dedede's arena spawns copy panels and food and nothing else.
+            add_region_entrance_rule(
+                KARRegion.CITY_TRIAL_STADIUM_VSKD,
                 HasAny(*combat_keys, *DAMAGING_ABILITY_UNLOCKS),
             )
 
-    # "Unlock Hydra/Dragoon Parts ... on the Checklist!" completes only once the player has received the
-    # three corresponding CT_REWARD_*_PART_* items -- each performs the in-game part unlock on delivery.
+    # Free run needs any machine
+    if "machines_gated" in world.effective_gates:
+        add_region_entrance_rule(KARRegion.CITY_TRIAL_FREE_RUN, HasAny(*_CT_MACHINE_UNLOCKS))
+
+    # The unlock-parts cells complete once all three of their part rewards have been received.
     add_location_rule(
         CTLocation.UNLOCK_HYDRA_CHECKLIST,
         HasAll(
@@ -734,79 +733,63 @@ def set_rules(world: "KARWorld"):
         ),
     )
 
-    if world.options.city_trial_events_gated:
+    if "city_trial_events_gated" in world.effective_gates:
         for loc, item in _EVENT_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    if world.options.abilities_gated:
+    if "abilities_gated" in world.effective_gates:
         for loc, item in _ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    if world.options.base_abilities_gated:
+    if "base_abilities_gated" in world.effective_gates:
         for loc, item in _BASE_ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-        # The Air Ride cells naming a copy ability have two sources: swallow that ability's enemy, which
-        # needs Inhale, or drive over a ground copy panel, which needs neither Inhale nor an enemy. Which
-        # courses offer which is the course rule's job; this only drops the Inhale half once a panel
-        # course is in play. With courses ungated every course is open, so a panel always is too and the
-        # cells need no Inhale at all.
-        if world.air_ride_enabled and world.options.air_ride_courses_gated:
+        # Air Ride ability cells need Inhale unless a copy panel course is unlocked.
+        if "air_ride_courses_gated" in world.effective_gates:
             inhale = Has(KARItemName.UNLOCK_BASE_ABILITY_INHALE)
             for loc, panels in _AR_ABILITY_PANEL_COURSES.items():
                 add_location_rule(loc, inhale | HasAny(*panels))
 
-    # Course-subset cells sit in the generic Air Ride region, so without this they would be reachable
-    # with no course that can actually complete them unlocked.
-    if world.air_ride_enabled and world.options.air_ride_courses_gated:
-        for loc, courses in _AR_COURSE_SUBSET_RULES.items():
-            add_location_rule(loc, HasAny(*courses))
-
-    # machines_gated OFF needs no machine rules: the mod unlocks every machine at connect, in all modes.
-    if world.options.machines_gated:
+    if "machines_gated" in world.effective_gates:
         for loc, item in _MACHINE_SINGLE_RULES.items():
             add_location_rule(loc, Has(item))
         for loc, (item_a, item_b) in _MACHINE_PAIR_RULES.items():
             add_location_rule(loc, HasAll(item_a, item_b))
-        # Unlike the "on <machine>" cells this one names no machine, but it still needs a specific
-        # kind of one - see _FM_20MPH_EXCLUDED_MACHINES.
         add_location_rule(ARLocation.FM_LAP_ABOVE_20_MPH, HasAny(*_FM_20MPH_MACHINES))
-        # Same shape in the Target Flight stadium - see _TF_AIRBORNE_EXCLUDED_MACHINES.
         add_location_rule(CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS, HasAny(*_TF_AIRBORNE_MACHINES))
 
-    if world.options.city_trial_items_gated:
+    if "city_trial_items_gated" in world.effective_gates:
         for loc, item in _ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
-        # "Steal over 8 items from Tac" needs something in the city for Tac to steal. Composes with the
-        # Tac event unlock above when the event gate is on as well: Tac has to show up AND have loot.
-        add_location_rule(CTLocation.STEAL_8_FROM_TAC, HasAny(*_TAC_STEALABLE_ITEM_UNLOCKS))
-        # "In one match, complete both Dragoon and Hydra!" needs every piece to spawn. (As the
-        # hydra_and_dragoon goal the cell is excluded here and its victory event is gated instead.)
-        add_location_rule(CTLocation.COMPLETE_DRAGOON_AND_HYDRA, HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS))
 
-    if world.options.city_trial_patches_gated:
+    # Pieces and spheres arrive in a red box, so the assemble cells also need Red while boxes are gated.
+    if "city_trial_boxes_gated" in world.effective_gates:
+        add_location_rule(CTLocation.COMPLETE_DRAGOON_AND_HYDRA, Has(KARItemName.UNLOCK_BOX_RED))
+        add_location_rule(APLocation.ASSEMBLE_ARCHIPELAGO_STAR, Has(KARItemName.UNLOCK_BOX_RED))
+        add_location_rule(APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES, Has(KARItemName.UNLOCK_BOX_RED))
+
+    if "city_trial_patches_gated" in world.effective_gates:
         for loc, item in _PATCH_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    # Breaking boxes needs one color both unlocked and still holding contents. effective_gates and the
-    # raw options agree here (the cells only exist with a City Trial goal); sharing the helper keeps the
-    # per-color halves in one place.
-    box_requirements = _box_color_requirements(lambda option: option in world.effective_gates)
+    # Tac needs loot to spawn
+    if _CT_LOOT_GATES <= world.effective_gates:
+        add_location_rule(
+            CTLocation.STEAL_8_FROM_TAC,
+            HasAny(*_TAC_LOOT_ITEM_UNLOCKS)
+            | HasAny(*sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK]))
+            | Has(_TAC_LOOT_ABILITY_UNLOCK),
+        )
+
+    # Box-break cells need some color able to spawn
+    box_requirements = _box_color_requirements(world.effective_gates)
     if all(box_requirements.values()):
-        colors = [_all_of(rules) for rules in box_requirements.values()]
-        any_box = colors[0]
-        for color in colors[1:]:
-            any_box |= color
+        any_box = Or(*(And(*rules) for rules in box_requirements.values()))
         for loc in _BOX_BREAK_LOCATIONS:
             add_location_rule(loc, any_box)
 
-    if (
-        world.options.city_trial_items_gated
-        and world.options.city_trial_patches_gated
-        and world.options.abilities_gated
-    ):
-        # Three gates split the counting types between them -- items, patches, and abilities (copy
-        # panels) -- so a rule is only needed when all three are on; otherwise some type always spawns.
+    if _CT_LOOT_GATES <= world.effective_gates:
         any_ct_counting_item = HasAny(
             *sorted(items_by_type[KARItemType.CT_ITEM_UNLOCK]),
             *sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK]),
@@ -815,22 +798,11 @@ def set_rules(world: "KARWorld"):
         for loc in _ITEM_PICKUP_LOCATIONS:
             add_location_rule(loc, any_ct_counting_item)
 
-    if world.options.top_ride_items_gated:
-        for loc, item in _TR_ITEM_LOCATION_RULES.items():
-            add_location_rule(loc, Has(item))
-        # The copy ability counts as a second key only while abilities are gated -- otherwise they are
-        # handed out at connect and the mod ignores them here.
-        for loc, (tr_item, ability) in _TR_ABILITY_ITEM_LOCATION_RULES.items():
-            add_location_rule(loc, HasAny(tr_item, ability) if world.options.abilities_gated else Has(tr_item))
-
-    if world.air_ride_enabled and world.options.air_ride_courses_gated:
-        # Mode-root cells still need SOME course to race on; course-specific ones already gate on their
-        # course entrance. FILL_100 is skipped because its count rule, applied later, would overwrite this
-        # one; RACE_ALL gets the stronger all-eight rule; course-subset cells carry a stricter one already.
+    if "air_ride_courses_gated" in world.effective_gates:
         any_ar_course = HasAny(*sorted(items_by_type[KARItemType.AR_COURSE_UNLOCK]))
         ar_course_skip = (
             ARLocation.FILL_IN_100_CHECKLIST_BLOCKS,
-            ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,
+            *_AR_ALL_COURSES_LOCATIONS,
             *_AR_COURSE_SUBSET_RULES,
         )
         for name, data in AIR_RIDE_LOCATION_TABLE.items():
@@ -839,15 +811,14 @@ def set_rules(world: "KARWorld"):
             if name in ar_course_skip:
                 continue
             add_location_rule(name, any_ar_course)
-        add_location_rule(
-            ARLocation.RACE_ALL_OF_STANDARD_AIR_RIDE_COURSES,
-            HasAll(*_AR_STANDARD_COURSE_UNLOCKS),
-        )
+        for loc in _AR_ALL_COURSES_LOCATIONS:
+            add_location_rule(loc, HasAll(*_AR_STANDARD_COURSE_UNLOCKS))
+        for loc, courses in _AR_COURSE_SUBSET_RULES.items():
+            add_location_rule(loc, HasAny(*courses))
 
-    if world.top_ride_enabled and world.options.top_ride_courses_gated:
-        # As with Air Ride: mode-root cells need one course, FILL_100 is skipped (count rule set later),
-        # the all-courses cells need all seven, and course-subset cells already carry a stricter rule.
-        any_tr_course = HasAny(*sorted(items_by_type[KARItemType.TR_COURSE_UNLOCK]))
+    if "top_ride_courses_gated" in world.effective_gates:
+        tr_courses = sorted(items_by_type[KARItemType.TR_COURSE_UNLOCK])
+        any_tr_course = HasAny(*tr_courses)
         tr_course_skip = (
             TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
             *_TR_ALL_COURSES_LOCATIONS,
@@ -860,55 +831,54 @@ def set_rules(world: "KARWorld"):
                 continue
             add_location_rule(name, any_tr_course)
         for loc in _TR_ALL_COURSES_LOCATIONS:
-            add_location_rule(loc, HasAll(*_TR_COURSE_UNLOCKS))
+            add_location_rule(loc, HasAll(*tr_courses))
         for loc, courses in _TR_COURSE_SUBSET_RULES.items():
             add_location_rule(loc, HasAny(*courses))
 
-    if world.city_trial_enabled and world.options.city_trial_stadiums_gated:
-        # "Play in over N stadium modes!" needs strictly more than N unlocked (a locked stadium can't be
-        # entered), so "over 10"/"over 20" require 11/21 of the 24.
+    if "city_trial_stadiums_gated" in world.effective_gates:
+        # "Play in over 10/20 stadium modes" needs 11/21 stadiums unlocked.
         add_location_rule(CTLocation.STADIUM_PLAY_10_STADIUM_MODES, HasFromListUnique(*STADIUM_UNLOCK_ITEMS, count=11))
         add_location_rule(CTLocation.STADIUM_PLAY_20_STADIUM_MODES, HasFromListUnique(*STADIUM_UNLOCK_ITEMS, count=21))
 
-    if world.top_ride_enabled and world.options.top_ride_items_gated:
+    if "top_ride_items_gated" in world.effective_gates:
+        abilities_keyed = "abilities_gated" in world.effective_gates
         tr_unlocks = sorted(items_by_type[KARItemType.TR_ITEM_UNLOCK])
 
-        # "Get over 18 different types of items!" needs 19 of the 21 distinct TR item types able to spawn.
-        # The ability-themed types' second key is left out - HasFromListUnique counts distinct held
-        # items, so listing both would score one type twice - which only makes the rule stricter.
+        for loc, tr_item in _TR_ITEM_LOCATION_RULES.items():
+            ability = _TR_ABILITY_ITEM_KEYS.get(tr_item) if abilities_keyed else None
+            add_location_rule(loc, HasAny(tr_item, ability) if ability else Has(tr_item))
+
+        # "Get over 18 different types of items" needs 19 of the 21 types.
         add_location_rule(
             TRLocation.GET_18_DIFFERENT_TYPES_OF_ITEMS,
             HasFromListUnique(*tr_unlocks, count=19),
         )
 
-        # "Collect N items" / "get the same item 3 times" only need ONE type able to spawn, so any of
-        # the 21 TR item unlocks does -- plus the four copy abilities when abilities are gated.
+        # The other item-count cells need any one type, by its item or, while abilities are gated, its ability.
         any_item_keys = list(tr_unlocks)
-        if world.options.abilities_gated:
+        if abilities_keyed:
             any_item_keys += sorted(_TR_ABILITY_ITEM_KEYS.values())
         any_tr_item = HasAny(*any_item_keys)
         for loc in _TR_ANY_ITEM_LOCATIONS:
             add_location_rule(loc, any_tr_item)
 
-    # Archipelago checklist rules read effective_gates, not the raw options: the mode blocks above can
-    # use the raw option because a goal-less mode assigns none of its own boxes, but Archipelago boxes
-    # exist in every AP seed and the raw option would gate one on an unlock that was never minted.
+    # Archipelago rules read effective_gates: Archipelago boxes exist even when a gate's
+    # modes have no goal
     if "city_trial_items_gated" in world.effective_gates:
         for loc, item in _AP_ITEM_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
 
-    # The two "assemble" boxes need every piece of their set able to spawn: a piece is spawn-gated when
-    # its whole category is, or - with that gate off - when it is one of this seed's goal keys and the
-    # mod is withholding just those bits.
+    # Assemble cells need their pieces
     ct_items_keyed = "city_trial_items_gated" in world.effective_gates
     star_pieces_keyed = ct_items_keyed or set(AP_STAR_PIECE_UNLOCK_ITEMS) <= world.goal_forced_unlocks
     legendary_pieces_keyed = ct_items_keyed or set(LEGENDARY_PIECE_UNLOCK_ITEMS) <= world.goal_forced_unlocks
+    if legendary_pieces_keyed:
+        # Under the hydra_and_dragoon goal this cell is the victory event, which gets the rule instead.
+        add_location_rule(CTLocation.COMPLETE_DRAGOON_AND_HYDRA, HasAll(*LEGENDARY_PIECE_UNLOCK_ITEMS))
     if star_pieces_keyed:
-        # The machine item is not required: assembling the star mounts it, the same way assembling
-        # Hydra from parts hands over Hydra.
+        # Not the machine unlock: assembling the star mounts it.
         add_location_rule(APLocation.ASSEMBLE_ARCHIPELAGO_STAR, HasAll(*AP_STAR_PIECE_UNLOCK_ITEMS))
-    # Twelve pieces inside one round: both vanilla sets plus the whole Archipelago set. The two halves
-    # are gated independently - a City Trial goal can key the vanilla pieces while the spheres stay free.
+    # All twelve pieces in one round
     all_three_keys = (
         *(AP_STAR_PIECE_UNLOCK_ITEMS if star_pieces_keyed else ()),
         *(LEGENDARY_PIECE_UNLOCK_ITEMS if legendary_pieces_keyed else ()),
@@ -917,45 +887,41 @@ def set_rules(world: "KARWorld"):
         add_location_rule(APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES, HasAll(*all_three_keys))
 
     if "abilities_gated" in world.effective_gates:
-        # Both Mic boxes need the ability itself. The wheel one does not need inhale - the Copy Chance
-        # Wheel hands the ability over in the city.
+        # Both Mic cells need Mic, which you can also get from the copy chance wheel
         add_location_rule(APLocation.GET_MIC_FROM_COPY_CHANCE, Has(KARItemName.UNLOCK_ABILITY_MIC))
         add_location_rule(APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY, Has(KARItemName.UNLOCK_ABILITY_MIC))
 
     if "base_abilities_gated" in world.effective_gates:
         # A melee stadium spawns no copy panels, so the only Mic there is a swallowed Walky.
         add_location_rule(APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY, Has(KARItemName.UNLOCK_BASE_ABILITY_INHALE))
-        # Bulk Star gets its speed from charge releases, so 1st place on it needs Charge. Independent of
-        # machines_gated, which only decides whether the machine itself is a key.
+        # Bulk Star needs charge
         add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_BASE_ABILITY_CHARGE))
 
     if "city_trial_patches_gated" in world.effective_gates:
         add_location_rule(APLocation.GET_10_HP_PATCHES, Has(KARItemName.UNLOCK_PATCH_HP))
+        add_location_rule(APLocation.GET_10_OFFENSE_PATCHES, Has(KARItemName.UNLOCK_PATCH_OFFENSE))
 
     for loc, box_item in _AP_BOX_COLOR_RULES.items():
         if box_requirements[box_item]:
-            add_location_rule(loc, _all_of(box_requirements[box_item]))
+            add_location_rule(loc, And(*box_requirements[box_item]))
 
     if "machines_gated" in world.effective_gates:
-        # Breaking the coral, leaving the map, riding up to the sky garden or Castle Hall's roof, and
-        # climbing to the city's ceiling all need a machine; any City Trial one does. The rooftop boxes
-        # ask for a dismount up top, but only a machine gets there - low spots stay region-only.
-        any_ct_machine = HasAny(*_CT_MACHINE_UNLOCKS)
         if "base_abilities_gated" in world.effective_gates:
-            # Hydra and Bulk Star cannot move and Slick / Turbo Star cannot be steered until Charge is
-            # in, so those only count as a ride alongside it.
+            # charge-dependent machines need charge
             any_ct_machine = HasAny(*_STEERABLE_CT_MACHINES) | (
                 Has(KARItemName.UNLOCK_BASE_ABILITY_CHARGE) & HasAny(*_CHARGE_DEPENDENT_CT_MACHINES)
             )
-        add_location_rule(APLocation.BREAK_ALL_CORAL, any_ct_machine)
-        add_location_rule(APLocation.GO_OUT_OF_BOUNDS, any_ct_machine)
-        add_location_rule(APLocation.CASTLE_FLOWER_ON_FOOT, any_ct_machine)
-        add_location_rule(APLocation.SKY_GARDEN_TOP_ON_FOOT, any_ct_machine)
-        add_location_rule(APLocation.FLY_TO_HIGHEST_POINT, any_ct_machine)
+        else:
+            any_ct_machine = HasAny(*_CT_MACHINE_UNLOCKS)
+        for loc in _CT_ANY_MACHINE_LOCATIONS:
+            add_location_rule(loc, any_ct_machine)
+        add_location_rule(APLocation.FLY_TO_HIGHEST_POINT, HasAny(*_CT_FLIGHT_MACHINES))
+        # Free Run only places machines other than the rider's starting one, so ten swaps need two unlocked.
+        add_location_rule(
+            CTLocation.FR_CHANGE_AIR_RIDE_MACHINES_10X,
+            HasFromListUnique(*_CT_MACHINE_UNLOCKS, count=2),
+        )
         add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_MACHINE_BULK_STAR))
-        # The AR character gate resolves a character through its machine, so Meta Knight's / Dedede's
-        # machine unlock is what makes them selectable. The vanilla reward granting the same machine is
-        # not a second key - machines_gated lists those as overlapping_rewards.
         add_location_rule(APLocation.AIR_RIDE_1ST_AS_META_KNIGHT, Has(KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT))
         add_location_rule(APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE, Has(KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE))
         add_location_rule(
@@ -970,11 +936,7 @@ def set_rules(world: "KARWorld"):
                 KARItemName.UNLOCK_MACHINE_WINGED_STAR,
             ),
         )
-        # The City Trial stadium character grid resolves a character through its machine the same way
-        # the Air Ride one does, so Dedede's machine is what makes him selectable for a derby.
         add_location_rule(APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE, Has(KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE))
-        # Like the 20 mph cell this one names no machine but still needs a specific kind of one -
-        # see _FM_SHORTCUT_EXCLUDED_MACHINES.
         add_location_rule(APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT, HasAny(*_FM_SHORTCUT_MACHINES))
 
     if "colors_gated" in world.effective_gates:
@@ -990,9 +952,8 @@ def set_rules(world: "KARWorld"):
     for location_name, rule in location_rules.items():
         world.set_rule(world.get_location(location_name), rule)
 
-    # "Fill in over 100 Checklist blocks!" auto-completes once 100 of that mode's OTHER boxes are filled;
-    # without the rule, fill could strand an early item behind ~100 checks. The count excludes the cell
-    # itself, else it recurses. Raw callable, so it bypasses the compose pass above.
+    # Each "Fill in over 100 Checklist blocks" cell needs 100 of its mode's other cells, excluding itself to avoid
+    # recursion.
     for enabled, mode, fill_100_location in (
         (world.city_trial_enabled, GameMode.CITYTRIAL, CTLocation.FILL_IN_100_CHECKLIST_BLOCKS),
         (world.air_ride_enabled, GameMode.AIRRIDE, ARLocation.FILL_IN_100_CHECKLIST_BLOCKS),
