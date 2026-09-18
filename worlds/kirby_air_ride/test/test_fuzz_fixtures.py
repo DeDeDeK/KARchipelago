@@ -136,15 +136,30 @@ class TestFuzzMetaIsCurrent(unittest.TestCase):
                 )
 
     def test_seeded_goal_locations_are_valid_for_their_mode(self):
-        # `checklist_list` always OptionErrors on an empty list, so the meta seeds one location per mode.
-        seeded = 0
+        # `checklist_list` always OptionErrors on an empty list, so the meta seeds locations per mode.
+        seeded: dict[str, int] = {}
         for index, constraint in enumerate(self.constraints):
             for target, names in constraint.get("then_include", {}).items():
                 table = _GOAL_LOCATION_OPTIONS.get(target)
                 if table is None:
                     continue
                 for name in names:
-                    seeded += 1
+                    seeded[target] = seeded.get(target, 0) + 1
                     with self.subTest(constraint=index, option=target, location=name):
                         self.assertIn(name, table)
-        self.assertEqual(seeded, len(_GOAL_LOCATION_OPTIONS), "every mode's checklist_list goal needs a seed")
+        # Per option, not a total: a total would be satisfied by four seeds for one mode and none for
+        # the other three, which is exactly the drift this guards against.
+        for target in _GOAL_LOCATION_OPTIONS:
+            with self.subTest(option=target):
+                self.assertGreater(seeded.get(target, 0), 0, "every mode's checklist_list goal needs a seed")
+
+    def test_constraint_values_are_legal_for_their_option(self):
+        # A `then` value the option no longer accepts makes every YAML the constraint touches fail to
+        # parse, which reads as a total collapse of the run rather than as a stale meta file.
+        for index, constraint in enumerate(self.constraints):
+            for target, value in constraint.get("then", {}).items():
+                option = KAROptions.type_hints.get(target)
+                if option is None:
+                    continue  # reported by test_constraints_name_real_options
+                with self.subTest(constraint=index, option=target, value=value):
+                    option.from_any(value).verify(KARWorld, _GAME, _ALL_PLANDO)
