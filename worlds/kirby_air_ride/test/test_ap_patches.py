@@ -17,6 +17,7 @@ from ..KARData import (
     AP_PATCH_GROUP_SIZE,
     AP_PATCH_MOD_MAX,
     AP_PATCH_WORDS,
+    GameMode,
     ap_patch_group_sizes,
     location_code_to_mode_clear,
 )
@@ -30,7 +31,7 @@ from ..KARLocations import (
 )
 from ..KAROptions import APPatches, APPatchPlacement, ArchipelagoGoal, CityTrialGoal
 from ..KARRegions import AP_PATCH_GROUP_REGIONS, KARRegion
-from . import CT_ONLY, KARTestBase
+from . import CT_ONLY, TR_ONLY, KARTestBase
 
 
 class TestAPPatchTable(KARTestBase):
@@ -93,6 +94,28 @@ class TestAPPatchesOff(KARTestBase):
         self.assertFalse(self.real_location_names() & set(AP_PATCH_LOCATION_TABLE))
 
 
+class TestAPPatchesNeedCityTrial(KARTestBase):
+    """AP Patches drop from Archipelago boxes in the city, so they need City Trial among the modes this
+    seed plays. The option defaults to 20 and is a location-count knob rather than a mode opt-in, so a
+    seed without one zeroes it instead of erroring - a Top-Ride-only player is not sent to drive the
+    city. TestAPPatchesWithoutACityTrialGoal is the other side: an Archipelago checklist counts."""
+
+    options = {**TR_ONLY, "ap_patches": 30}
+
+    def test_count_is_zeroed(self):
+        self.assertEqual(self.world.ap_patch_count, 0)
+
+    def test_no_patch_locations_exist(self):
+        self.assertFalse(self.real_location_names() & set(AP_PATCH_LOCATION_TABLE))
+
+    def test_city_trial_is_not_a_played_mode(self):
+        self.assertNotIn(GameMode.CITYTRIAL, self.world.logic_modes)
+
+    def test_slot_data_ships_the_zero(self):
+        # The mod sizes its claim loop off this; the raw 30 would leave 30 checks that can never come in.
+        self.assertEqual(self.world.fill_slot_data()["ap_patches"], 0)
+
+
 class TestAPPatchesCreatesThatMany(KARTestBase):
     options = {**CT_ONLY, "ap_patches": 20}
 
@@ -145,7 +168,9 @@ class TestAPPatchExcludedPlacement(KARTestBase):
 
 
 class TestAPPatchesWithoutACityTrialGoal(KARTestBase):
-    """They are City Trial content, so their region's tree has to exist even with no City Trial goal."""
+    """They are City Trial content, so their region's tree has to exist even with no City Trial goal.
+    An Archipelago checklist is enough to put City Trial in logic_modes - its boxes are city activities -
+    so the patches survive the City-Trial-is-played gate that TestAPPatchesNeedCityTrial covers."""
 
     options = {
         "city_trial_goal": CityTrialGoal.option_none,

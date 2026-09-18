@@ -9,12 +9,11 @@ from .KARData import AP_PATCH_GROUP_MAX, GameMode, GoalKind, location_code_to_mo
 from .KARItems import (
     AP_PATCH_GROUP_EVENT_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
+    CT_PATCH_UNLOCK_ITEMS,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     MODE_VICTORY_EVENTS,
     KARItem,
     KARItemName,
-    KARItemType,
-    items_by_type,
 )
 
 
@@ -127,8 +126,7 @@ class KARRegion(StrEnum):
     ARCHIPELAGO = "Archipelago"
 
 
-# Name-prefix table backing REGION_TO_MODE. Every member name starts with its mode spelled out in full, so each
-# mode has exactly one prefix and none overlaps another.
+# Name-prefix table backing REGION_TO_MODE.
 _REGION_MODE_NAME_PREFIXES: tuple[tuple[str, GameMode], ...] = (
     ("CITY_TRIAL", GameMode.CITYTRIAL),
     ("AIR_RIDE", GameMode.AIRRIDE),
@@ -148,15 +146,11 @@ def _build_region_to_mode() -> dict[str, GameMode]:
                 mapping[region.value] = mode
                 break
         else:
-            raise ValueError(
-                f"KARRegion.{region.name} matches no entry in _REGION_MODE_NAME_PREFIXES. "
-                f"Every region must map to a game mode; start its name with that mode's prefix."
-            )
+            raise ValueError(f"KARRegion.{region.name} matches no entry in _REGION_MODE_NAME_PREFIXES. ")
     return mapping
 
 
-# Which game mode each region belongs to. Static by construction and deliberately so: logic_modes derives
-# itself from this table, so inspecting built regions here would be circular.
+# Which game mode each region belongs to.
 REGION_TO_MODE: dict[str, GameMode] = _build_region_to_mode()
 
 
@@ -248,7 +242,7 @@ TR_FR_COURSE_REGIONS: tuple[str, ...] = (
     KARRegion.TOP_RIDE_FR_SKY,
 )
 
-# Each region's child regions. create_regions builds a mode's tree from its root; set_rules gates the entrances.
+# Each region's child regions
 REGION_TREE: dict[str, tuple[str, ...]] = {
     KARRegion.CITY_TRIAL: (
         KARRegion.CITY_TRIAL_FREE_RUN,
@@ -269,7 +263,6 @@ REGION_TREE: dict[str, tuple[str, ...]] = {
         KARRegion.CITY_TRIAL_STADIUM_SR8,
         KARRegion.CITY_TRIAL_STADIUM_SR9,
     ),
-    # DD_ALL, DR_ALL and KM_ALL are parents nesting their numbered sub-stadiums.
     KARRegion.CITY_TRIAL_STADIUM_DD_ALL: (
         KARRegion.CITY_TRIAL_STADIUM_DD1,
         KARRegion.CITY_TRIAL_STADIUM_DD2,
@@ -429,9 +422,7 @@ def create_n_blocks_rule(
 
 def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
     """
-    Build the access rule for the Max Stats CT goal event: all Patch Cap Increase items (only when
-    cap max > cap min, else none exist), plus a route to maxing all 9 stats - the 9 patch type unlocks or
-    the All-Up unlock, emitted only when both gates are on. None when every clause is trivial.
+    Build the access rule for the Max Stats CT goal event.
     """
     options = world.options
     rule_parts: list[Rule] = []
@@ -441,13 +432,12 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
         rule_parts.append(Has(KARItemName.PATCH_CAP_INCREASE, count=count))
 
     if options.city_trial_patches_gated and options.city_trial_items_gated:
-        all_patch_unlocks = sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK])
-        rule_parts.append(HasAll(*all_patch_unlocks) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
+        rule_parts.append(HasAll(*sorted(CT_PATCH_UNLOCK_ITEMS)) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
 
     return And(*rule_parts) if rule_parts else None
 
 
-# Each assemble goal's piece unlocks. The Archipelago Star's machine unlock isn't one: assembling the star mounts it.
+# Each assemble goal's piece unlocks.
 _ASSEMBLE_GOAL_UNLOCKS: dict[int, tuple[str, ...]] = {
     GoalKind.HYDRA_AND_DRAGOON: LEGENDARY_PIECE_UNLOCK_ITEMS,
     GoalKind.ASSEMBLE_AP_STAR: AP_STAR_PIECE_UNLOCK_ITEMS,
@@ -464,8 +454,7 @@ def _create_goal_event(
     goal_location_map: Mapping[int, str],
 ) -> None:
     """
-    Create the victory event for one mode's goal: in the region of the checklist cell backing the goal, or the
-    mode's root region when no cell does.
+    Create the victory event for one mode's goal.
     """
     # Deferred to break the import cycle.
     from .KARLocations import LOCATION_TABLE, KARLocation
@@ -505,7 +494,6 @@ def _create_goal_event(
 def _build_ut_go_mode_rule(world: "KARWorld", goal_event_items: list[str]) -> Callable[[CollectionState], bool]:
     """
     Universal Tracker's go-mode: whether some goal not yet reported done (`ut_goals_completed`) is in logic now.
-    The real completion rule ANDs every mode's victory, so it would read "No" until the last goal is in logic.
     """
     player = world.player
 

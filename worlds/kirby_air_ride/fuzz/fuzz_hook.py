@@ -18,7 +18,7 @@ from collections import Counter
 
 from BaseClasses import ItemClassification
 
-from worlds.kirby_air_ride.KARData import checklist_reward_placed_bit
+from worlds.kirby_air_ride.KARData import GameMode, checklist_reward_placed_bit
 from worlds.kirby_air_ride.KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
@@ -38,6 +38,7 @@ from worlds.kirby_air_ride.KARItems import (
     TR_MACHINE_UNLOCK_ITEMS,
     KARItemGroup,
     KARItemName,
+    KARItemType,
     item_name_groups,
     items_by_type,
 )
@@ -48,6 +49,10 @@ from worlds.kirby_air_ride.KARLocations import (
     TOP_RIDE_LOCATION_TABLE,
 )
 from worlds.kirby_air_ride.KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
+from worlds.kirby_air_ride.KARRules import _EVENT_LOCATION_RULES
+
+# The City Trial events a location rule keys; only these ship as progression.
+_KEYED_EVENT_UNLOCKS: frozenset[str] = frozenset(str(name) for name in _EVENT_LOCATION_RULES.values())
 
 
 class HookError(AssertionError):
@@ -130,7 +135,7 @@ class KARHook:
             owned_by_id[id(it)] = it
         owned_counts = Counter(it.name for it in owned_by_id.values())
 
-        self._check_item_counts(tag, opts, pool_counts, ct_on, ar_on, tr_on, ap_on)
+        self._check_item_counts(tag, opts, pool_counts, world, ct_on, ar_on, tr_on, ap_on)
         self._check_generic_filler_present(tag, world)
         self._check_unlock_classifications(tag, pool_items)
         self._check_excluded_items_absent(tag, pool_counts, precollected_counts, opts, ct_on, ar_on, tr_on)
@@ -148,7 +153,7 @@ class KARHook:
         self._check_priority_locations(tag, opts, our_locations)
         self._check_exclude_locations(tag, opts, our_locations)
 
-    def _check_item_counts(self, tag, opts, pool_counts, ct_on, ar_on, tr_on, ap_on):
+    def _check_item_counts(self, tag, opts, pool_counts, world, ct_on, ar_on, tr_on, ap_on):
         # PATCH_CAP_INCREASE = max - min when CT enabled, else 0
         if ct_on:
             expected = max(0, opts.city_trial_patch_cap_max.value - opts.city_trial_patch_cap_min.value)
@@ -163,8 +168,10 @@ class KARHook:
             )
 
         # SPAWN_RATE_UP = (max - min) // 10, else 0. Its source_modes are {CITYTRIAL, TOPRIDE}, so the
-        # world's source-mode backstop drops it entirely when neither is enabled. Mirror that here.
-        if ct_on or tr_on:
+        # world's source-mode backstop drops it entirely when neither is in logic_modes. Mirror that
+        # here off logic_modes, not the goal flags: AP Patches and Archipelago boxes are City Trial
+        # content, so a goal-less City Trial still gets played and its spawn rate still matters.
+        if world.logic_modes & {GameMode.CITYTRIAL, GameMode.TOPRIDE}:
             expected = max(0, (opts.spawn_rate_max.value - opts.spawn_rate_min.value) // 10)
         else:
             expected = 0
@@ -304,12 +311,20 @@ class KARHook:
                 )
 
     def _check_unlock_classifications(self, tag, pool_items):
-        # All UNLOCK-type items in the pool must be progression-classified. Every gated unlock type comes
-        # from GATING_CATEGORIES, stadiums included.
+        # Every UNLOCK-type item in the pool that logic keys must be progression-classified. Gated unlock
+        # types come from GATING_CATEGORIES, stadiums included. The ten City Trial event unlocks no
+        # location rule names are the documented exception: they gate nothing, so they ship useful.
         unlock_types = {cat.item_type for cat in GATING_CATEGORIES}
         for it in pool_items:
             data = ITEM_TABLE.get(it.name)
             if data is None or data.type not in unlock_types:
+                continue
+            if data.type == KARItemType.CT_EVENT_UNLOCK and it.name not in _KEYED_EVENT_UNLOCKS:
+                if it.classification & ItemClassification.progression:
+                    raise HookError(
+                        f"{tag} event unlock {it.name!r} is progression but no location rule keys it; "
+                        f"either add the rule or leave it useful"
+                    )
                 continue
             if not (it.classification & ItemClassification.progression):
                 raise HookError(
