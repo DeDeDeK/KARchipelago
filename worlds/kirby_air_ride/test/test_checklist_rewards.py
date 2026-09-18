@@ -1,21 +1,5 @@
-"""
-Tests for the checklist_rewards option.
-
-Empty by default: the generator removes every non-progression checklist reward from the pool and the mod
-unlocks them all at connect. The 6 progression Dragoon/Hydra part markers stay and float as ordinary
-progression.
-
-These tests pin:
-  - every category selected => non-progression rewards present (the opt-in behavior);
-  - none selected => none in pool or precollected, reward_pool empty, only part markers left, and the
-    pool still exactly fills placeable locations (the generic backfill absorbs the freed boxes);
-  - a partial selection places exactly the chosen categories and drops the rest;
-  - the shipped bitmask names exactly the (mode, reward type) pairs that reached the pool, so a mode the
-    seed disabled ships no bits and the mod unlocks its rewards outright;
-  - dropping categories relaxes capacity (a tight config that OptionErrors with every category on
-    generates with them off);
-  - a full distribute_items_restrictive places no non-progression reward and stays beatable.
-"""
+"""The `checklist_rewards` option: which native rewards become AP items and which the mod unlocks itself.
+Empty by default, but the six progression Dragoon/Hydra part markers stay whatever it says."""
 
 from typing import TYPE_CHECKING
 
@@ -30,22 +14,22 @@ from ..KARItems import (
     ITEM_TABLE,
     ItemClassification,
 )
-from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
+from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, names
 
-# Type-check time: mixin inherits KARTestBase so self.* resolves. Runtime: `object`, so concrete
-# `class X(Mixin, KARTestBase)` keeps the correct MRO.
+# Type-check time the mixin inherits KARTestBase so `self.*` resolves; at runtime it is `object`, so a
+# concrete `class X(Mixin, KARTestBase)` keeps the correct MRO.
 _MixinBase = KARTestBase if TYPE_CHECKING else object
 
-NONPROG_REWARDS = {
-    str(name)
+NONPROG_REWARDS = names(
+    name
     for name, data in ITEM_TABLE.items()
     if data.type in CHECKLIST_REWARD_TYPES and not (data.classification & ItemClassification.progression)
-}
-PROG_REWARD_MARKERS = {
-    str(name)
+)
+PROG_REWARD_MARKERS = names(
+    name
     for name, data in ITEM_TABLE.items()
     if data.type in CHECKLIST_REWARD_TYPES and (data.classification & ItemClassification.progression)
-}
+)
 
 _NONE_SELECTED = {"checklist_rewards": []}
 _ALL_SELECTED = {"checklist_rewards": sorted(CHECKLIST_REWARD_CATEGORIES)}
@@ -77,25 +61,15 @@ class _MaskMatchesPoolMixin(_MixinBase):
         )
 
 
-class TestAllCategoriesBaseline(_MaskMatchesPoolMixin, KARTestBase):
-    """Opt-in (every category): non-progression rewards are in the pool."""
-
+class TestAllCategoriesSelected(_MaskMatchesPoolMixin, KARTestBase):
     options = {**ALL_MODES, **_ALL_SELECTED}
 
-    def test_rewards_present(self):
-        self.assertTrue(self.world.reward_pool, "reward_pool should be non-empty with every category selected")
-        self.assertTrue(
-            NONPROG_REWARDS & self.world_item_names(),
-            "expected non-progression rewards in the pool with every category selected",
-        )
-
-    def test_every_category_represented(self):
+    def test_every_category_reaches_the_pool(self):
         present = self.world_item_names()
-        for category, names in CHECKLIST_REWARD_CATEGORIES.items():
-            self.assertTrue(
-                {str(n) for n in names} & present,
-                f"category {category!r} selected but none of its rewards reached the pool",
-            )
+        self.assertTrue(NONPROG_REWARDS & present, "no non-progression reward reached the pool")
+        for category, category_names in CHECKLIST_REWARD_CATEGORIES.items():
+            with self.subTest(category=category):
+                self.assertTrue(names(category_names) & present, f"{category!r} selected but placed nothing")
 
     def test_mask_names_each_mode_own_reward_types(self):
         # Three reward types are exclusive to one mode: the Special Machine Intros movie to Air Ride,
@@ -108,51 +82,36 @@ class TestAllCategoriesBaseline(_MaskMatchesPoolMixin, KARTestBase):
 
 
 class _NoneSelectedInvariantMixin(_MixinBase):
-    """Shared invariants for any mode combination with no checklist_rewards category selected."""
+    """Invariants for any mode combination with no checklist_rewards category selected."""
 
     def test_no_nonprog_rewards_anywhere(self):
         present = NONPROG_REWARDS & self.world_item_names()
-        self.assertFalse(present, f"non-progression rewards leaked into the seed: {sorted(present)[:5]}")
-
-    def test_reward_pool_empty(self):
-        self.assertEqual(self.world.reward_pool, [], "reward_pool must be empty with no category selected")
-
-    def test_only_progression_reward_markers_remain(self):
-        all_reward_names = NONPROG_REWARDS | PROG_REWARD_MARKERS
-        present_rewards = all_reward_names & self.world_item_names()
-        self.assertTrue(
-            present_rewards <= PROG_REWARD_MARKERS,
-            f"only progression part markers may remain; found {sorted(present_rewards - PROG_REWARD_MARKERS)[:5]}",
-        )
-
-    def test_mask_empty(self):
+        self.assertFalse(present, f"non-progression rewards leaked: {sorted(present)[:5]}")
+        self.assertEqual(self.world.reward_pool, [])
         self.assertEqual(self.world.fill_slot_data()["checklist_rewards"], 0)
 
-    def test_pool_fills_placeable_locations(self):
-        placeable = [
-            loc for loc in self.multiworld.get_locations(self.player) if loc.address is not None and not loc.locked
-        ]
-        self.assertEqual(len(self.itempool_items()), len(placeable))
+    def test_progression_part_markers_are_the_only_rewards_left(self):
+        present_rewards = (NONPROG_REWARDS | PROG_REWARD_MARKERS) & self.world_item_names()
+        self.assertTrue(
+            present_rewards <= PROG_REWARD_MARKERS,
+            f"only part markers may remain; found {sorted(present_rewards - PROG_REWARD_MARKERS)[:5]}",
+        )
+
+    def test_the_freed_boxes_are_backfilled(self):
+        self.assertEqual(len(self.itempool_items()), len(self.placeable_locations()))
 
 
-class TestNoneSelectedAllModes(_NoneSelectedInvariantMixin, KARTestBase):
-    options = {**ALL_MODES, **_NONE_SELECTED}
+def _make_none_selected_test(label: str, preset: dict) -> None:
+    class _NoneSelected(_NoneSelectedInvariantMixin, KARTestBase):
+        options = {**preset, **_NONE_SELECTED}
 
-    def test_part_markers_retained(self):
-        # City Trial is enabled here, so all 6 progression part markers stay in the pool untouched.
-        self.assertEqual(PROG_REWARD_MARKERS & self.world_item_names(), PROG_REWARD_MARKERS)
-
-
-class TestNoneSelectedCTOnly(_NoneSelectedInvariantMixin, KARTestBase):
-    options = {**CT_ONLY, **_NONE_SELECTED}
+    _NoneSelected.__name__ = f"TestNoneSelected_{label}"
+    _NoneSelected.__qualname__ = _NoneSelected.__name__
+    globals()[_NoneSelected.__name__] = _NoneSelected
 
 
-class TestNoneSelectedAROnly(_NoneSelectedInvariantMixin, KARTestBase):
-    options = {**AR_ONLY, **_NONE_SELECTED}
-
-
-class TestNoneSelectedTROnly(_NoneSelectedInvariantMixin, KARTestBase):
-    options = {**TR_ONLY, **_NONE_SELECTED}
+for _label, _preset in (("all_modes", ALL_MODES), ("ct_only", CT_ONLY), ("ar_only", AR_ONLY), ("tr_only", TR_ONLY)):
+    _make_none_selected_test(_label, _preset)
 
 
 class TestPartialSelection(_MaskMatchesPoolMixin, KARTestBase):
@@ -161,23 +120,17 @@ class TestPartialSelection(_MaskMatchesPoolMixin, KARTestBase):
     _KEPT = ["Filler Boxes", "Gameplay Extras"]
     options = {**ALL_MODES, "checklist_rewards": _KEPT}
 
-    def test_kept_categories_present(self):
+    def test_only_kept_categories_reach_the_pool(self):
         present = self.world_item_names()
-        for category in self._KEPT:
-            self.assertTrue(
-                {str(n) for n in CHECKLIST_REWARD_CATEGORIES[category]} & present,
-                f"category {category!r} selected but none of its rewards reached the pool",
-            )
+        for category, category_names in CHECKLIST_REWARD_CATEGORIES.items():
+            with self.subTest(category=category):
+                overlap = names(category_names) & present
+                if category in self._KEPT:
+                    self.assertTrue(overlap, f"{category!r} selected but placed nothing")
+                else:
+                    self.assertFalse(overlap, f"{category!r} not selected but leaked {sorted(overlap)[:5]}")
 
-    def test_dropped_categories_absent(self):
-        present = self.world_item_names()
-        for category, names in CHECKLIST_REWARD_CATEGORIES.items():
-            if category in self._KEPT:
-                continue
-            leaked = {str(n) for n in names} & present
-            self.assertFalse(leaked, f"category {category!r} not selected but leaked {sorted(leaked)[:5]}")
-
-    def test_reward_pool_only_kept_categories(self):
+    def test_reward_pool_holds_only_kept_categories(self):
         kept_names = {str(n) for category in self._KEPT for n in CHECKLIST_REWARD_CATEGORIES[category]}
         self.assertTrue(self.world.reward_pool)
         self.assertTrue(set(self.world.reward_pool) <= kept_names)
@@ -190,9 +143,9 @@ class TestPartialSelection(_MaskMatchesPoolMixin, KARTestBase):
 
 
 class TestDisabledModeShipsNoBits(_MaskMatchesPoolMixin, KARTestBase):
-    """Every category selected, but only City Trial enabled. Air Ride and Top Ride rewards are never
-    placed, so their bits must stay clear and the mod unlocks that content at connect - otherwise the
-    16 music tracks, 18 sound test entries and the rest of their rewards would be unreachable."""
+    """Every category selected but only City Trial enabled: Air Ride and Top Ride rewards are never
+    placed, so their bits must stay clear and the mod unlocks that content at connect - otherwise their
+    16 music tracks, 18 sound test entries and the rest would be unreachable."""
 
     options = {**CT_ONLY, **_ALL_SELECTED}
 
@@ -200,9 +153,6 @@ class TestDisabledModeShipsNoBits(_MaskMatchesPoolMixin, KARTestBase):
         mask = self.world.fill_slot_data()["checklist_rewards"]
         self.assertEqual(mode_bits(mask, GameMode.AIRRIDE), set())
         self.assertEqual(mode_bits(mask, GameMode.TOPRIDE), set())
-
-    def test_enabled_mode_ships_its_types(self):
-        mask = self.world.fill_slot_data()["checklist_rewards"]
         self.assertEqual(
             mode_bits(mask, GameMode.CITYTRIAL),
             {
@@ -216,7 +166,7 @@ class TestDisabledModeShipsNoBits(_MaskMatchesPoolMixin, KARTestBase):
 
 
 class TestNoneSelectedFullFill(KARTestBase):
-    """A full fill succeeds, places no non-progression reward anywhere, and stays beatable."""
+    """A full distribute_items_restrictive places no non-progression reward and stays beatable."""
 
     options = {**ALL_MODES, **_NONE_SELECTED}
 
@@ -236,11 +186,10 @@ class TestNoneSelectedFullFill(KARTestBase):
         self.assertBeatable(True)
 
 
-# CT-only config tuned so the 7 useful City Trial checklist rewards decide the needs-default budget:
-# 75 base CT progression + 2 Patch Cap Increases + 5 checkbox fillers = 82 with rewards off (exactly the
-# 82 default locations City Trial has once multiplayer counts as progression) vs 89 with the rewards on
-# (overflows). AP Patches are held out so the budget is the checklist's alone - any count of them just
-# adds default locations to absorb it.
+# Tuned so the useful City Trial rewards alone decide the needs-default budget: 65 progression + 15
+# counted-useful = exactly the 80 default boxes City Trial has once multiplayer counts as progression,
+# which the 6 useful rewards then overflow to 86. AP Patches are held out so the budget is the
+# checklist's alone - any count of them just adds default locations to absorb it.
 _REWARD_RELAX_OPTIONS = {
     **CT_ONLY,
     "ap_patches": 0,
@@ -251,13 +200,11 @@ _REWARD_RELAX_OPTIONS = {
 
 
 class TestAllCategoriesTightPoolRaises(KARTestBase):
-    """With every category selected, the tight fixture's useful rewards tip the needs-default budget over."""
-
     options = {**_REWARD_RELAX_OPTIONS, **_ALL_SELECTED}
     auto_construct = False
 
     def test_raises_option_error(self):
-        with self.assertRaises(OptionError):
+        with self.assertRaisesRegex(OptionError, r"needs \d+ non-excluded locations"):
             self.world_setup()
 
 
@@ -268,8 +215,5 @@ class TestNoneSelectedRelaxesCapacity(KARTestBase):
     options = {**_REWARD_RELAX_OPTIONS, **_NONE_SELECTED}
 
     def test_generates(self):
-        placeable = [
-            loc for loc in self.multiworld.get_locations(self.player) if loc.address is not None and not loc.locked
-        ]
-        self.assertEqual(len(self.itempool_items()), len(placeable))
+        self.assertEqual(len(self.itempool_items()), len(self.placeable_locations()))
         self.assertFalse(NONPROG_REWARDS & self.world_item_names())
