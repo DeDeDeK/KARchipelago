@@ -1,17 +1,6 @@
-"""
-Progress-type tests for the *_progression_* location-category toggles.
-
-Each mode exposes several toggles (high effort, multiplayer, free run, RNG, bust-vehicle, time attack)
-deciding whether a whole category of checklist locations counts toward progression: OFF (the default)
-EXCLUDES the group, ON makes it DEFAULT. The result lands in the per-mode location name sets.
-
-These tests pin both directions:
-  - all toggles off: the excluded set is exactly the union of the categories, nothing more;
-  - one toggle on: only that category leaves the excluded set, proving each option is wired to its own
-    group and not a sibling's.
-
-run_default_tests is off: these assert static categorization only, so a full fill would be wasted here.
-"""
+"""The *_progression_* toggles decide whether a category of checklist boxes counts toward progression:
+OFF - the default - EXCLUDES the group, ON makes it DEFAULT. Both directions are pinned, so each option
+is shown wired to its own group. run_default_tests is off: a fill would be wasted on static state."""
 
 from Options import Toggle
 
@@ -24,9 +13,9 @@ from ..KARLocations import (
     location_name_groups,
 )
 from ..KAROptions import ArchipelagoGoal, CityTrialGoal
-from . import AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
+from . import AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, names
 
-# (label, mode preset, default-set attr, excluded-set attr, location table, [(option, group), ...]).
+# (label, preset, default-set attr, excluded-set attr, location table, [(option, group), ...]).
 _MODES: list[tuple[str, dict, str, str, dict, list[tuple[str, KARLocationGroup]]]] = [
     (
         "city_trial",
@@ -71,7 +60,13 @@ _MODES: list[tuple[str, dict, str, str, dict, list[tuple[str, KARLocationGroup]]
 ]
 
 
-def _make_default_off_test(label, preset, default_attr, excluded_attr, table, toggles):
+def _register(cls: type, name: str) -> None:
+    cls.__name__ = name
+    cls.__qualname__ = name
+    globals()[name] = cls
+
+
+def _make_default_off_test(preset, default_attr, excluded_attr, table, toggles) -> type:
     class _DefaultOff(KARTestBase):
         options = preset
         run_default_tests = False
@@ -79,26 +74,15 @@ def _make_default_off_test(label, preset, default_attr, excluded_attr, table, to
         def test_default_excludes_every_category(self):
             default = getattr(self.world, default_attr)
             excluded = getattr(self.world, excluded_attr)
-            table_names = {str(name) for name in table}
-            # The two sets partition the whole mode table.
-            self.assertEqual(default | excluded, table_names, "default/excluded must partition the table")
+            self.assertEqual(default | excluded, names(table), "default/excluded must partition the table")
             self.assertEqual(default & excluded, set(), "a location cannot be both default and excluded")
-            # All toggles off: excluded set is exactly the union of the progression categories.
             union: set[str] = set().union(*(location_name_groups[group] for _, group in toggles))
             self.assertEqual(excluded, union, "default-off excluded set must equal the union of all categories")
-            for option, group in toggles:
-                with self.subTest(option=option):
-                    self.assertTrue(
-                        location_name_groups[group] <= excluded,
-                        f"{option} off should exclude its whole category",
-                    )
 
-    _DefaultOff.__name__ = f"TestProgressionDefaultOff_{label}"
-    _DefaultOff.__qualname__ = _DefaultOff.__name__
     return _DefaultOff
 
 
-def _make_toggle_isolation_test(label, preset, default_attr, excluded_attr, table, toggles, option, group):
+def _make_toggle_isolation_test(preset, default_attr, excluded_attr, table, toggles, option, group) -> type:
     class _ToggleOn(KARTestBase):
         options = {**preset, option: Toggle.option_true}
         run_default_tests = False
@@ -106,38 +90,34 @@ def _make_toggle_isolation_test(label, preset, default_attr, excluded_attr, tabl
         def test_only_this_category_becomes_default(self):
             default = getattr(self.world, default_attr)
             excluded = getattr(self.world, excluded_attr)
-            table_names = {str(name) for name in table}
             others: set[str] = set().union(*(location_name_groups[g] for opt, g in toggles if opt != option), set())
-            # Turning this one toggle on removes exactly its category's contribution: only the
-            # still-off categories remain excluded.
             self.assertEqual(excluded, others, f"{option} on should leave only the other categories excluded")
-            self.assertEqual(default, table_names - others)
-            # Locations unique to this category must have moved to default; also guards against a
-            # vacuous test (a group fully shadowed by its siblings).
+            self.assertEqual(default, names(table) - others)
+            # The locations unique to this category must have moved; this also guards against a vacuous
+            # test, where a group is fully shadowed by its siblings.
             unique = location_name_groups[group] - others
             self.assertTrue(unique, f"{option}'s category has no locations of its own; effect is unobservable")
             self.assertTrue(unique <= default, f"{option} on should make its own-category locations default")
-            self.assertTrue(unique.isdisjoint(excluded))
 
-    _ToggleOn.__name__ = f"TestProgressionToggleOn_{option}"
-    _ToggleOn.__qualname__ = _ToggleOn.__name__
     return _ToggleOn
 
 
 for _label, _preset, _default_attr, _excluded_attr, _table, _toggles in _MODES:
-    _default_cls = _make_default_off_test(_label, _preset, _default_attr, _excluded_attr, _table, _toggles)
-    globals()[_default_cls.__name__] = _default_cls
+    _register(
+        _make_default_off_test(_preset, _default_attr, _excluded_attr, _table, _toggles),
+        f"TestProgressionDefaultOff_{_label}",
+    )
     for _option, _group in _toggles:
-        _iso_cls = _make_toggle_isolation_test(
-            _label, _preset, _default_attr, _excluded_attr, _table, _toggles, _option, _group
+        _register(
+            _make_toggle_isolation_test(_preset, _default_attr, _excluded_attr, _table, _toggles, _option, _group),
+            f"TestProgressionToggleOn_{_option}",
         )
-        globals()[_iso_cls.__name__] = _iso_cls
 
 
 class TestArchipelagoHasNoProgressionFlags(KARTestBase):
     """The Archipelago checklist exposes no progression sub-toggles, so every AP box is DEFAULT and none
-    is ever excluded. That is what lets an AP-enabled seed absorb the cross-mode color keys, so if a
-    flag is ever added its excluded set has to be budgeted for in _compute_capacity."""
+    is ever excluded. That is what lets an AP-enabled seed absorb the cross-mode color keys, so if a flag
+    is ever added its excluded set has to be budgeted for in _compute_capacity."""
 
     options = {
         "city_trial_goal": CityTrialGoal.option_none,
