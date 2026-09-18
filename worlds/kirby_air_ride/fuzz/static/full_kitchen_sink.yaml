@@ -25,6 +25,30 @@ Kirby Air Ride:
   trap_chance: 25
   spawn_rate_min: 100
   spawn_rate_max: 300
+  # The AP Patch band at its default placement, the counterpart to ap_patches.yaml's excluded one:
+  # 60 patches split into three chained group regions that can hold progression like any other box.
+  ap_patches: 60
+  ap_patch_placement: default
+  # The progression sub-flags no other fixture turns on, so every one of the thirteen is exercised
+  # somewhere. The six left out here (high effort / free run in City Trial, high effort / free run /
+  # time attack in Air Ride, high effort in Top Ride) stay off on purpose, so this seed still carries
+  # a mix of DEFAULT and EXCLUDED boxes rather than flattening into all-default.
+  city_trial_progression_multiplayer: true
+  city_trial_progression_rng: true
+  city_trial_progression_bust_vehicles: true
+  air_ride_progression_rng: true
+  top_ride_progression_free_run: true
+  top_ride_progression_time_attack: true
+  top_ride_progression_multiplayer: true
+  # Pure slot_data passthrough, but nothing else ships them as non-defaults, so a rename would go
+  # unnoticed by every fixture.
+  city_trial_reveal_checklist: true
+  air_ride_reveal_checklist: true
+  top_ride_reveal_checklist: true
+  archipelago_reveal_checklist: true
+  death_link: true
+  energy_link: true
+  trap_link: true
   start_inventory:
     "Unlock Stadium: HIGH JUMP": 1
     "Unlock Patch: Top Speed": 1
@@ -36,9 +60,11 @@ Kirby Air Ride:
     - "City Trial: Bust the star pole!"
   priority_locations:
     - "Air Ride: Race all of the standard Air Ride courses!"
+  # Not the box the item gates, and force: true so an impossible pin fails loudly instead of being
+  # quietly re-homed - see the note in plando_items.yaml.
   plando_items:
     - item: "Unlock Event: Tac"
-      location: "City Trial: Steal over 8 items from Tac by yourself!"
+      location: "City Trial: During one game, fly through the rings in the sky 5 times or more!"
       from_pool: true
-      force: silent
+      force: true
       percentage: 100

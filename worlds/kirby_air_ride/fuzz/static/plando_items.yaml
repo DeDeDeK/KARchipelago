@@ -15,20 +15,25 @@ Kirby Air Ride:
   air_ride_courses_gated: true
   colors_gated: true
   trap_chance: 10
+  # `force: true` on purpose. Under `force: silent` an impossible pin is swallowed and filler lands on
+  # the box instead, so the fixture keeps generating and the audit keeps passing while testing nothing -
+  # which is exactly what these first two pins used to do, by naming the location each item gates
+  # (`Steal over 8 items from Tac` keys on Unlock Event: Tac, `Get the Bomb ability` keys on Unlock Copy
+  # Ability: Bomb). Both targets below are boxes those items do not gate, so a failure here is real.
   plando_items:
     - item: "Unlock Event: Tac"
-      location: "City Trial: Steal over 8 items from Tac by yourself!"
+      location: "City Trial: During one game, fly through the rings in the sky 5 times or more!"
       from_pool: true
-      force: silent
+      force: true
       percentage: 100
     - item: "Unlock Copy Ability: Bomb"
-      location: "City Trial: Get the Bomb ability from the Copy Chance Wheel!"
+      location: "City Trial: Use the grind rail to break into the crater!"
       from_pool: true
-      force: silent
+      force: true
       percentage: 100
     - items:
         Machine Unlocks: 1
       locations:
         - "City Trial: Bust the star pole!"
       from_pool: true
-      force: silent
+      force: true

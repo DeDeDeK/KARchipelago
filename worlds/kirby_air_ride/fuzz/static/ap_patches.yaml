@@ -1,0 +1,43 @@
+name: APPatchSlot
+description: The AP Patch band at full width with ap_patch_placement excluded — 200 synthetic City Trial checks split into ten chained group regions, every one of them EXCLUDED, so the seed leans entirely on the excluded half of the capacity budget
+game: Kirby Air Ride
+requires:
+  version: 0.5.0
+Kirby Air Ride:
+  city_trial_goal: n_checklist_blocks
+  city_trial_checklist_amount: 50
+  city_trial_checkbox_fillers: 0
+  # Air Ride carries its share of the needs-default budget: with all 200 patches excluded, City Trial's
+  # boxes alone cannot seat the unlocks all the gates below mint.
+  air_ride_goal: n_checklist_blocks
+  air_ride_checklist_amount: 40
+  air_ride_checkbox_fillers: 0
+  air_ride_courses_gated: true
+  top_ride_goal: none
+  archipelago_goal: none
+  # On so City Trial contributes its full 120 boxes to the default budget rather than a third of them.
+  city_trial_progression_high_effort: true
+  city_trial_progression_free_run: true
+  city_trial_progression_multiplayer: true
+  city_trial_progression_rng: true
+  city_trial_progression_bust_vehicles: true
+  # The widest band the codec allows (AP_PATCH_CODE_MAX), which splits into the full ten
+  # CITY_TRIAL_AP_PATCHES_* group regions chained off City Trial, each opened by the previous
+  # group's clear event. Anything narrower leaves the tail of that chain unbuilt.
+  ap_patches: 200
+  # The non-default placement, and the only fixture that takes it: every patch becomes EXCLUDED, so
+  # all 200 draw generic filler and none may hold progression. That puts the whole band on the
+  # `total_excluded` side of _compute_capacity, which no other fixture stresses.
+  ap_patch_placement: excluded
+  # Gates on so the seed still has real progression competing for the non-excluded City Trial boxes.
+  city_trial_stadiums_gated: true
+  city_trial_events_gated: true
+  abilities_gated: true
+  city_trial_patches_gated: true
+  city_trial_items_gated: true
+  machines_gated: true
+  city_trial_boxes_gated: true
+  colors_gated: true
+  # Traps are drawn per filler slot, so a band of 200 excluded boxes is also the densest trap sample
+  # any fixture produces.
+  trap_chance: 30
