@@ -12,8 +12,7 @@ from ..KARLocations import (
     KARLocationGroup,
     location_name_groups,
 )
-from ..KAROptions import ArchipelagoGoal, CityTrialGoal
-from . import AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, names
+from . import AP_ONLY, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, names
 
 # (label, preset, default-set attr, excluded-set attr, location table, [(option, group), ...]).
 _MODES: list[tuple[str, dict, str, str, dict, list[tuple[str, KARLocationGroup]]]] = [
@@ -55,6 +54,16 @@ _MODES: list[tuple[str, dict, str, str, dict, list[tuple[str, KARLocationGroup]]
             ("top_ride_progression_free_run", KARLocationGroup.TR_FREE_RUN),
             ("top_ride_progression_time_attack", KARLocationGroup.TR_TIME_ATTACK),
             ("top_ride_progression_multiplayer", KARLocationGroup.TR_MULTIPLAYER),
+        ],
+    ),
+    (
+        "archipelago",
+        AP_ONLY,
+        "archipelago_default_locations",
+        "archipelago_excluded_locations",
+        AP_CHECKLIST_LOCATION_TABLE,
+        [
+            ("archipelago_progression_high_effort", KARLocationGroup.AP_HIGH_EFFORT),
         ],
     ),
 ]
@@ -114,18 +123,16 @@ for _label, _preset, _default_attr, _excluded_attr, _table, _toggles in _MODES:
         )
 
 
-class TestArchipelagoHasNoProgressionFlags(KARTestBase):
-    """The Archipelago checklist exposes no progression sub-toggles, so every AP box is DEFAULT and none
-    is ever excluded. That is what lets an AP-enabled seed absorb the cross-mode color keys, so if a flag
-    is ever added its excluded set has to be budgeted for in _compute_capacity."""
+class TestArchipelagoExcludedIsBudgeted(KARTestBase):
+    """An AP-enabled seed absorbs the cross-mode color keys, so the boxes the high-effort flag excludes
+    have to stay placeable: _compute_capacity counts them toward the excluded budget, never the default
+    one. Anything that grows AP_HIGH_EFFORT shrinks that default budget."""
 
-    options = {
-        "city_trial_goal": CityTrialGoal.option_none,
-        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
-        "archipelago_checklist_amount": 5,
-    }
+    options = AP_ONLY
     run_default_tests = False
 
-    def test_every_ap_location_is_default(self):
-        self.assertEqual(self.world.archipelago_excluded_locations, set())
-        self.assertEqual(self.world.archipelago_default_locations, set(AP_CHECKLIST_LOCATION_TABLE))
+    def test_excluded_locations_still_exist(self):
+        excluded = self.world.archipelago_excluded_locations
+        self.assertEqual(excluded, location_name_groups[KARLocationGroup.AP_HIGH_EFFORT])
+        for name in excluded:
+            self.assertIsNotNone(self.multiworld.get_location(name, self.player))

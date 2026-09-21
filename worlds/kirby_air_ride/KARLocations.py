@@ -1177,6 +1177,7 @@ class KARLocationGroup(StrEnum):
     AP_CHARACTERS = "Archipelago: Characters"
     AP_KIRBY_COLORS = "Archipelago: Kirby Colors"
     AP_LEGENDARY_MACHINES = "Archipelago: Legendary Machines"
+    AP_HIGH_EFFORT = "Archipelago: High Effort"
 
 
 location_name_groups: dict[str, set[str]] = {
@@ -1518,6 +1519,7 @@ location_name_groups: dict[str, set[str]] = {
     },
     KARLocationGroup.AR_RNG: {
         ARLocation.FIRST_WHILE_TAKING_DAMAGE,
+        ARLocation.MP_CANNON_SHOOT_3,
     },
     KARLocationGroup.TR_TIME_ATTACK: {
         TRLocation.TA_SAND_FINISH_00_35_00,
@@ -1782,6 +1784,10 @@ location_name_groups: dict[str, set[str]] = {
     },
     KARLocationGroup.AP_LEGENDARY_MACHINES: {
         APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
+        APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+    },
+    KARLocationGroup.AP_HIGH_EFFORT: {
+        APLocation.COLLECT_5_ALL_UPS,
         APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
     },
 }

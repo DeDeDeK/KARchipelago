@@ -605,6 +605,16 @@ class ArchipelagoGoalLocations(LocationSet):
     verify_location_name = True
 
 
+class ArchipelagoProgressionHighEffort(Toggle):
+    """
+    This controls whether difficult or extremely high effort checkboxes are counted in progression.
+    This applies to the Archipelago checklist only.
+    """
+
+    default = 0
+    display_name = "Archipelago Long/High effort checkboxes are progression"
+
+
 class ArchipelagoCheckboxFillers(NamedRange):
     """
     Number of "checkbox filler" items added to the pool for the Archipelago checklist.
@@ -929,6 +939,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     archipelago_goal: ArchipelagoGoal
     archipelago_checklist_amount: ArchipelagoChecklistAmount
     archipelago_goal_locations: ArchipelagoGoalLocations
+    archipelago_progression_high_effort: ArchipelagoProgressionHighEffort
     archipelago_checkbox_fillers: ArchipelagoCheckboxFillers
     archipelago_reveal_checklist: ArchipelagoRevealChecklist
 
@@ -1030,6 +1041,7 @@ kar_option_groups = [
             ArchipelagoGoal,
             ArchipelagoChecklistAmount,
             ArchipelagoGoalLocations,
+            ArchipelagoProgressionHighEffort,
             ArchipelagoCheckboxFillers,
             ArchipelagoRevealChecklist,
         ],
