@@ -13,6 +13,7 @@ from ..KARItems import (
     CHECKLIST_REWARD_TYPES,
     ITEM_TABLE,
     STADIUM_CHECKLIST_REWARDS,
+    TRAP_CATEGORIES,
     KARItemGroup,
     KARItemName,
     KARItemType,
@@ -172,7 +173,7 @@ class TestAllowedItemsTrapsOrthogonal(KARTestBase):
         **ALL_MODES,
         "allowed_items": [],
         "trap_chance": 100,
-        "traps": ["Direct Damage", "Stat Debuff", "Fake Patches"],
+        "traps": sorted(TRAP_CATEGORIES),
     }
 
     def test_non_trap_gives_absent_but_traps_eligible(self):
@@ -188,6 +189,46 @@ class TestAllowedItemsTrapsOrthogonal(KARTestBase):
         ):
             with self.subTest(trap=trap_name):
                 self.assertIn(trap_name, self.world.trap_pool)
+
+
+_TR_TRAP_CATEGORY = next(
+    category for category, names in TRAP_CATEGORIES.items() if KARItemName.GIVE_TR_ITEM_SPEED_DOWN in names
+)
+
+
+class TestTopRideTrapsNeedTopRide(KARTestBase):
+    """`traps` governs which categories may be drawn, not whether a category's items do anything here.
+    The Top Ride give is Top-Ride-only, so with the mode off it has no in-game effect and the
+    source_modes backstop in _build_item_pools has to keep it out however the category is selected."""
+
+    options = {**CT_ONLY, "trap_chance": 100, "traps": sorted(TRAP_CATEGORIES)}
+
+    def test_top_ride_only_traps_stay_out_with_top_ride_off(self):
+        self.assertFalse(self.world.top_ride_enabled, "this case needs Top Ride disabled")
+        self.assertNotIn(KARItemName.GIVE_TR_ITEM_SPEED_DOWN, self.world.trap_pool)
+        self.assertNotIn(KARItemName.GIVE_TR_ITEM_SPEED_DOWN, self.itempool_names())
+
+    def test_a_city_trial_trap_from_the_same_category_still_lands(self):
+        # Guards against the above passing because the category was dropped wholesale. Read off the
+        # category rather than named, so moving an item between categories cannot defeat the guard.
+        siblings = {
+            name
+            for name in TRAP_CATEGORIES[_TR_TRAP_CATEGORY]
+            if name != KARItemName.GIVE_TR_ITEM_SPEED_DOWN and GameMode.CITYTRIAL in ITEM_TABLE[name].source_modes
+        }
+        self.assertTrue(siblings, f"{_TR_TRAP_CATEGORY!r} has no City Trial member left to prove it survived")
+        for name in sorted(siblings):
+            with self.subTest(trap=name):
+                self.assertIn(name, self.world.trap_pool)
+
+
+class TestTopRideTrapsPresentWithTopRide(KARTestBase):
+    """The mirror: with Top Ride on, the same give is trap-eligible."""
+
+    options = {**TR_ONLY, "trap_chance": 100, "traps": sorted(TRAP_CATEGORIES)}
+
+    def test_top_ride_trap_is_eligible(self):
+        self.assertIn(KARItemName.GIVE_TR_ITEM_SPEED_DOWN, self.world.trap_pool)
 
 
 # Two ways to end up with no traps: the chance is zero, or no `traps` category is selected.
