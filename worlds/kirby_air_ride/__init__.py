@@ -275,10 +275,14 @@ class KARWorld(World):
             ],
         )
 
-        # The Archipelago checklist has no progression sub-flags, so every AP location is DEFAULT.
         self.archipelago_default_locations, self.archipelago_excluded_locations = self._categorize_locations(
             AP_CHECKLIST_LOCATION_TABLE,
-            [],
+            [
+                (
+                    not self.options.archipelago_progression_high_effort,
+                    location_name_groups[KARLocationGroup.AP_HIGH_EFFORT],
+                ),
+            ],
         )
 
         # One switch over the whole AP Patch category

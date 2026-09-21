@@ -7,7 +7,7 @@ from BaseClasses import CollectionState
 from test.bases import WorldTestBase
 
 from ..KARItems import GATING_CATEGORIES, KARItemName, KARItemType, items_by_type
-from ..KAROptions import AirRideGoal, CityTrialGoal, TopRideGoal
+from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 
 if TYPE_CHECKING:
     from .. import KARWorld
@@ -136,6 +136,13 @@ AR_ONLY: dict = {
 TR_ONLY: dict = {
     "city_trial_goal": CityTrialGoal.option_none,
     "top_ride_goal": TopRideGoal.option_100_checklist_blocks,
+}
+
+# The AP checklist holds 52 boxes, so its goal amount is well under what the other modes ask for.
+AP_ONLY: dict = {
+    "city_trial_goal": CityTrialGoal.option_none,
+    "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+    "archipelago_checklist_amount": 5,
 }
 
 CT_AND_AR: dict = {
