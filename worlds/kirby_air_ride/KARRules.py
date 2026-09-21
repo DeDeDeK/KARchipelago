@@ -289,8 +289,8 @@ _CT_FLIGHT_MACHINES: tuple[str, ...] = (
     KARItemName.UNLOCK_MACHINE_WINGED_STAR,
 )
 
-# Machines that glide too poorly to stay airborne 15 seconds in TF
-_TF_AIRBORNE_EXCLUDED_MACHINES: frozenset[str] = frozenset(
+# Machines that glide too poorly to stay airborne 15 seconds in TF or carry an AIR GLIDER launch
+_POOR_GLIDE_MACHINES: frozenset[str] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE,
         KARItemName.UNLOCK_MACHINE_REX_WHEELIE,
@@ -304,7 +304,7 @@ _TF_AIRBORNE_EXCLUDED_MACHINES: frozenset[str] = frozenset(
     }
 )
 
-_TF_AIRBORNE_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in _TF_AIRBORNE_EXCLUDED_MACHINES]
+_GOOD_GLIDE_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in _POOR_GLIDE_MACHINES]
 
 # Machines that can't hold 20 mph for a whole Fantasy Meadows lap
 _FM_20MPH_EXCLUDED_MACHINES: frozenset[str] = frozenset(
@@ -710,6 +710,13 @@ def set_rules(world: "KARWorld"):
                 HasAny(*combat_keys, *DAMAGING_ABILITY_UNLOCKS),
             )
 
+    # Air Glider requires glide machines or glide patches unlocked
+    if {"machines_gated", "city_trial_patches_gated"} <= world.effective_gates:
+        add_region_entrance_rule(
+            KARRegion.CITY_TRIAL_STADIUM_AG,
+            HasAny(*_GOOD_GLIDE_MACHINES) | Has(KARItemName.UNLOCK_PATCH_GLIDE),
+        )
+
     # Free run needs any machine
     if "machines_gated" in world.effective_gates:
         add_region_entrance_rule(KARRegion.CITY_TRIAL_FREE_RUN, HasAny(*_CT_MACHINE_UNLOCKS))
@@ -757,7 +764,7 @@ def set_rules(world: "KARWorld"):
         for loc, (item_a, item_b) in _MACHINE_PAIR_RULES.items():
             add_location_rule(loc, HasAll(item_a, item_b))
         add_location_rule(ARLocation.FM_LAP_ABOVE_20_MPH, HasAny(*_FM_20MPH_MACHINES))
-        add_location_rule(CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS, HasAny(*_TF_AIRBORNE_MACHINES))
+        add_location_rule(CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS, HasAny(*_GOOD_GLIDE_MACHINES))
 
     if "city_trial_items_gated" in world.effective_gates:
         for loc, item in _ITEM_LOCATION_RULES.items():
