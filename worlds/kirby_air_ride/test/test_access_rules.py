@@ -36,14 +36,14 @@ from ..KARRules import (
     _FM_20MPH_MACHINES,
     _FM_SHORTCUT_EXCLUDED_MACHINES,
     _FM_SHORTCUT_MACHINES,
+    _GOOD_GLIDE_MACHINES,
     _GREEN_BOX_ITEMS,
     _PATCH_LOCATION_RULES,
+    _POOR_GLIDE_MACHINES,
     _STEERABLE_CT_MACHINES,
     _SWALLOW_ENEMY_COURSE_RULES,
     _TAC_LOOT_ABILITY_UNLOCK,
     _TAC_LOOT_ITEM_UNLOCKS,
-    _TF_AIRBORNE_EXCLUDED_MACHINES,
-    _TF_AIRBORNE_MACHINES,
     _TR_ABILITY_ITEM_KEYS,
     _TR_COURSE_SUBSET_RULES,
     _TR_ITEM_LOCATION_RULES,
@@ -1523,10 +1523,10 @@ class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
     def test_unreachable_on_the_excluded_machines_alone(self):
         # Every excluded machine at once still is not enough - this is not just "some machine".
         state = self.state_with()
-        for name in sorted(_TF_AIRBORNE_EXCLUDED_MACHINES):
+        for name in sorted(_POOR_GLIDE_MACHINES):
             if not state.has(name, self.player):  # the pinned starter is already in
                 state.collect(self.get_item_by_name(name), prevent_sweep=True)
-        for name in _TF_AIRBORNE_MACHINES:
+        for name in _GOOD_GLIDE_MACHINES:
             self.assertFalse(
                 state.has(name, self.player),
                 f"{name} leaked into the state, making this test vacuous",
@@ -1537,7 +1537,7 @@ class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
         )
 
     def test_reachable_on_each_gliding_machine(self):
-        for machine in _TF_AIRBORNE_MACHINES:
+        for machine in _GOOD_GLIDE_MACHINES:
             with self.subTest(machine=machine):
                 state = self.state_with()
                 state.collect(self.get_item_by_name(machine), prevent_sweep=True)
@@ -1548,10 +1548,70 @@ class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
 
     def test_excluded_machines_are_city_trial_machines(self):
         # Guards against a typo'd or non-City-Trial name silently excluding nothing.
-        for name in _TF_AIRBORNE_EXCLUDED_MACHINES:
+        for name in _POOR_GLIDE_MACHINES:
             self.assertIn(name, _CT_MACHINE_UNLOCKS)
-        self.assertEqual(len(_TF_AIRBORNE_EXCLUDED_MACHINES), 9)
-        self.assertFalse(set(_TF_AIRBORNE_MACHINES) & _TF_AIRBORNE_EXCLUDED_MACHINES)
+        self.assertEqual(len(_POOR_GLIDE_MACHINES), 9)
+        self.assertFalse(set(_GOOD_GLIDE_MACHINES) & _POOR_GLIDE_MACHINES)
+
+
+class TestAirGliderNeedsGlideOrPatches(KARTestBase):
+    """Every AIR GLIDER cell scores one launch off the ramp on the machine built in the city, so a seed
+    handing out only poor gliders and no Glide Patches would leave the whole stadium unwinnable. The
+    Wheelie Bike pin is itself a poor glider, so it suppresses the machine starter draw without
+    satisfying the rule. The AP checklist is on so the 2,000-foot cell is covered too."""
+
+    options = {
+        **CT_ONLY,
+        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+        "archipelago_checklist_amount": 3,
+        "machines_gated": Toggle.option_true,
+        "city_trial_patches_gated": Toggle.option_true,
+        "city_trial_stadiums_gated": Toggle.option_false,
+        "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
+    }
+
+    # Every cell the region holds, so a newly added AIR GLIDER box fails here rather than shipping ungated.
+    _CELLS = (
+        CTLocation.STADIUM_AG_FLY_330_FEET,
+        CTLocation.STADIUM_AG_FLY_660_FEET,
+        CTLocation.STADIUM_AG_FLY_1300_FEET,
+        CTLocation.STADIUM_AG_AIRBORNE_30_SECONDS,
+        APLocation.AG_FLY_2000_FEET,
+    )
+
+    def test_the_cell_list_is_the_whole_region(self):
+        region = self.world.get_region(KARRegion.CITY_TRIAL_STADIUM_AG)
+        self.assertEqual({loc.name for loc in region.locations}, set(self._CELLS))
+
+    def _poor_glider_state(self):
+        """Every poor glider held at once and nothing that glides - not just "some machine"."""
+        state = self.state_with()
+        for name in sorted(_POOR_GLIDE_MACHINES):
+            if not state.has(name, self.player):  # the pinned starter is already in
+                state.collect(self.world.create_item(name), prevent_sweep=True)
+        for name in (*_GOOD_GLIDE_MACHINES, KARItemName.UNLOCK_PATCH_GLIDE):
+            self.assertFalse(state.has(name, self.player), f"{name} leaked in, making this test vacuous")
+        return state
+
+    def test_unreachable_on_the_poor_gliders_alone(self):
+        state = self._poor_glider_state()
+        for cell in self._CELLS:
+            with self.subTest(location=cell):
+                self.assertFalse(self.reaches(state, cell), "a machine that cannot glide should not open AIR GLIDER")
+
+    def test_reachable_on_each_gliding_machine(self):
+        for machine in _GOOD_GLIDE_MACHINES:
+            state = self.state_with(machine)
+            for cell in self._CELLS:
+                with self.subTest(machine=machine, location=cell):
+                    self.assertTrue(self.reaches(state, cell), f"{cell} should be reachable on {machine} alone")
+
+    def test_the_glide_patch_carries_a_poor_glider(self):
+        state = self._poor_glider_state()
+        state.collect(self.world.create_item(KARItemName.UNLOCK_PATCH_GLIDE), prevent_sweep=True)
+        for cell in self._CELLS:
+            with self.subTest(location=cell):
+                self.assertTrue(self.reaches(state, cell), f"{cell} should be reachable on Glide Patches alone")
 
 
 # Every named TR cell whose item has a copy-ability stand-in, read off the production tables so a new
