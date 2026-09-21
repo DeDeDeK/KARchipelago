@@ -2038,7 +2038,14 @@ TRAP_CATEGORIES: dict[str, frozenset[str]] = {
             KARItemName.ONE_HP_TRAP,
         }
     ),
-    "Stat Debuff": frozenset(
+    "Debuff": frozenset(
+        {
+            KARItemName.SPEED_MIN_PATCH,
+            KARItemName.CHARGE_NONE_PATCH,
+            KARItemName.GIVE_TR_ITEM_SPEED_DOWN,
+        }
+    ),
+    "Down Patches": frozenset(
         {
             KARItemName.ALL_DOWN,
             KARItemName.BOOST_DOWN_PATCH,
@@ -2049,11 +2056,16 @@ TRAP_CATEGORIES: dict[str, frozenset[str]] = {
             KARItemName.GLIDE_DOWN_PATCH,
             KARItemName.CHARGE_DOWN_PATCH,
             KARItemName.WEIGHT_DOWN_PATCH,
-            KARItemName.SPEED_MIN_PATCH,
-            KARItemName.CHARGE_NONE_PATCH,
+        }
+    ),
+    "Drop Patches": frozenset(
+        {
             KARItemName.DROP_PATCHES_TRAP,
+        }
+    ),
+    "Sleep Ability": frozenset(
+        {
             KARItemName.COPY_ABILITY_SLEEP,
-            KARItemName.GIVE_TR_ITEM_SPEED_DOWN,
         }
     ),
     "Fake Patches": frozenset(

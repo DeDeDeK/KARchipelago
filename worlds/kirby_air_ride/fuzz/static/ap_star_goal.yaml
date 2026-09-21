@@ -22,8 +22,9 @@ Kirby Air Ride:
   machines_gated: true
   city_trial_boxes_gated: true
   colors_gated: true
-  # Traps narrowed to a single category: only Fake Patches items may be drawn, so any Direct Damage or
-  # Stat Debuff trap in the spoiler means `traps` stopped governing trap membership.
+  # Traps narrowed to a single category: only Fake Patches items may be drawn, so any Direct Damage,
+  # Debuff, Down Patches, Drop Patches or Sleep Ability trap in the spoiler means `traps` stopped
+  # governing trap membership.
   trap_chance: 40
   traps:
     - Fake Patches
