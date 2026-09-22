@@ -365,9 +365,9 @@ class TestBaseAbilitiesGatingArchipelagoOnlyInhale(KARTestBase):
     def test_inhale_in_pool(self):
         self.assertIn(KARItemName.UNLOCK_BASE_ABILITY_INHALE, self.world_item_names())
 
-    def test_mic_kirby_box_needs_inhale(self):
+    def test_melee_ability_boxes_need_inhale(self):
         self.assertAccessDependency(
-            [APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY],
+            [APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY, APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF],
             [[KARItemName.UNLOCK_BASE_ABILITY_INHALE]],
             only_check_listed=True,
         )
@@ -2324,6 +2324,52 @@ class TestAPMicKirbyMeleeBoxNeedsBothKeys(KARTestBase):
         self.assertFalse(reachable(KARItemName.UNLOCK_ABILITY_MIC), "reachable with Mic but no Inhale")
         self.assertFalse(reachable(KARItemName.UNLOCK_BASE_ABILITY_INHALE), "reachable with Inhale but no Mic")
         self.assertTrue(reachable(*keys), "not reachable with both keys")
+
+
+class TestAPKirbyMelee1HundredKOBox(KARTestBase):
+    """The KIRBY MELEE 1 100-KO box needs one of Sword, Needle, Tornado or Plasma, and Inhale to swallow its
+    enemy, as KM1 spawns no copy panels. machines_gated is OFF so the combat-damage entrance rule on KIRBY
+    MELEE drops out and the box's own rule is isolated."""
+
+    options = {
+        **CT_ONLY,
+        **_AP_ON,
+        "abilities_gated": Toggle.option_true,
+        "base_abilities_gated": Toggle.option_true,
+        "machines_gated": Toggle.option_false,
+        "city_trial_stadiums_gated": Toggle.option_false,
+    }
+
+    abilities = (
+        KARItemName.UNLOCK_ABILITY_SWORD,
+        KARItemName.UNLOCK_ABILITY_NEEDLE,
+        KARItemName.UNLOCK_ABILITY_TORNADO,
+        KARItemName.UNLOCK_ABILITY_PLASMA,
+    )
+
+    def test_needs_any_of_the_four_abilities(self):
+        self.assertAccessDependency(
+            [APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF],
+            [[ability] for ability in self.abilities],
+            only_check_listed=True,
+        )
+
+    def test_needs_inhale_alongside_the_ability(self):
+        location = APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF
+        inhale = KARItemName.UNLOCK_BASE_ABILITY_INHALE
+        base = self.state_without([*self.abilities, inhale])
+
+        def reachable(*items: str) -> bool:
+            state = base.copy()
+            for name in items:
+                state.collect(self.world.create_item(name))
+            return self.reaches(state, location)
+
+        self.assertFalse(reachable(inhale), "reachable with Inhale but no ability")
+        for ability in self.abilities:
+            with self.subTest(ability=ability):
+                self.assertFalse(reachable(ability), "reachable with the ability but no Inhale")
+                self.assertTrue(reachable(ability, inhale), "not reachable with the ability and Inhale")
 
 
 class TestAPPurpleKirbyBox(KARTestBase):

@@ -1787,6 +1787,7 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
     },
     KARLocationGroup.AP_HIGH_EFFORT: {
+        APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF,
         APLocation.COLLECT_5_ALL_UPS,
         APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
     },
