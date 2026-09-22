@@ -266,6 +266,15 @@ _AP_ITEM_LOCATION_RULES: dict[str, str] = {
     APLocation.EAT_3_APPLES: KARItemName.UNLOCK_ITEM_APPLE,
 }
 
+# Abilities that KO fast enough for 100 solo KOs in KIRBY MELEE 1. All four spawn there, on Sword Knight,
+# Pichikuri, Caller and Plasma Wisp.
+_KM1_100_KO_ABILITY_UNLOCKS: tuple[str, ...] = (
+    KARItemName.UNLOCK_ABILITY_SWORD,
+    KARItemName.UNLOCK_ABILITY_NEEDLE,
+    KARItemName.UNLOCK_ABILITY_TORNADO,
+    KARItemName.UNLOCK_ABILITY_PLASMA,
+)
+
 # Machines rideable in City Trial
 _CT_MACHINE_UNLOCKS: list[str] = sorted(
     name for name in items_by_type[KARItemType.MACHINE_UNLOCK] if GameMode.CITYTRIAL in ITEM_TABLE[name].source_modes
@@ -897,10 +906,12 @@ def set_rules(world: "KARWorld"):
         # Both Mic cells need Mic, which you can also get from the copy chance wheel
         add_location_rule(APLocation.GET_MIC_FROM_COPY_CHANCE, Has(KARItemName.UNLOCK_ABILITY_MIC))
         add_location_rule(APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY, Has(KARItemName.UNLOCK_ABILITY_MIC))
+        add_location_rule(APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF, HasAny(*_KM1_100_KO_ABILITY_UNLOCKS))
 
     if "base_abilities_gated" in world.effective_gates:
-        # A melee stadium spawns no copy panels, so the only Mic there is a swallowed Walky.
+        # A melee stadium spawns no copy panels, so every ability there comes from a swallowed enemy.
         add_location_rule(APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY, Has(KARItemName.UNLOCK_BASE_ABILITY_INHALE))
+        add_location_rule(APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF, Has(KARItemName.UNLOCK_BASE_ABILITY_INHALE))
         # Bulk Star needs charge
         add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_BASE_ABILITY_CHARGE))
 
