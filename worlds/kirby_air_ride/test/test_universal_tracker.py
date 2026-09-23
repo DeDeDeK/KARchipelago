@@ -16,6 +16,7 @@ from worlds.AutoWorld import call_all
 from .. import UT_OPTIONS_KEY, UT_PASSTHROUGH_OPTIONS, KARWorld
 from ..KARData import GameMode
 from ..KARItems import MODE_VICTORY_EVENTS, KARItemName
+from ..KARLocations import ProgressionCategory
 from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, KAROptions, TopRideGoal
 from . import ALL_MODES, CT_ONLY, KARTestBase
 
@@ -43,10 +44,10 @@ DISTINCTIVE_OPTIONS: dict = {
     "top_ride_items_gated": False,
     "city_trial_patch_cap_min": 7,
     "city_trial_patch_cap_max": 24,
-    "city_trial_progression_high_effort": True,
-    "city_trial_progression_rng": True,
-    "air_ride_progression_time_attack": True,
-    "top_ride_progression_multiplayer": True,
+    "city_trial_progression": [ProgressionCategory.HIGH_EFFORT, ProgressionCategory.RNG_EVENTS],
+    "air_ride_progression": [ProgressionCategory.TIME_ATTACK],
+    "top_ride_progression": [ProgressionCategory.MULTIPLAYER],
+    "non_progression_checkboxes": "removed",
 }
 
 

@@ -15,12 +15,16 @@ Kirby Air Ride:
   air_ride_courses_gated: true
   top_ride_goal: none
   archipelago_goal: none
-  # On so City Trial contributes its full 120 boxes to the default budget rather than a third of them.
-  city_trial_progression_high_effort: true
-  city_trial_progression_free_run: true
-  city_trial_progression_multiplayer: true
-  city_trial_progression_rng: true
-  city_trial_progression_bust_vehicles: true
+  # Every category selected, so City Trial contributes its full 120 boxes to the default budget
+  # rather than a third of them.
+  city_trial_progression:
+    - High Effort
+    - Free Run
+    - Multiplayer
+    - Bust Vehicle on Vehicle
+    - "RNG: Events"
+    - "RNG: Food"
+    - "RNG: Copy Chance Wheel"
   # The widest band the codec allows (AP_PATCH_CODE_MAX), which splits into the full ten
   # CITY_TRIAL_AP_PATCHES_* group regions chained off City Trial, each opened by the previous
   # group's clear event. Anything narrower leaves the tail of that chain unbuilt.
