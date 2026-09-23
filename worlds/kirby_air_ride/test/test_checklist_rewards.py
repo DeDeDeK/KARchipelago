@@ -3,7 +3,7 @@ Empty by default, but the six progression Dragoon/Hydra part markers stay whatev
 
 from typing import TYPE_CHECKING
 
-from Options import OptionError, Toggle
+from Options import OptionError
 
 from ..KARData import GameMode, RewardType, checklist_reward_placed_bit
 from ..KARItems import (
@@ -14,6 +14,7 @@ from ..KARItems import (
     ITEM_TABLE,
     ItemClassification,
 )
+from ..KARLocations import ProgressionCategory
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase, names
 
 # Type-check time the mixin inherits KARTestBase so `self.*` resolves; at runtime it is `object`, so a
@@ -193,7 +194,7 @@ class TestNoneSelectedFullFill(KARTestBase):
 _REWARD_RELAX_OPTIONS = {
     **CT_ONLY,
     "ap_patches": 0,
-    "city_trial_progression_multiplayer": Toggle.option_true,
+    "city_trial_progression": [ProgressionCategory.MULTIPLAYER],
     "city_trial_patch_cap_min": 18,
     "city_trial_patch_cap_max": 18,
 }

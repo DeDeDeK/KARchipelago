@@ -21,7 +21,7 @@ from ..KARItems import (
     KARItemName,
     KARItemType,
 )
-from ..KARLocations import APLocation, ARLocation, CTLocation, TRLocation
+from ..KARLocations import CITY_TRIAL_PROGRESSION_GROUPS, APLocation, ARLocation, CTLocation, TRLocation
 from ..KAROptions import ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from ..KARRegions import KARRegion
 from ..KARRules import (
@@ -1996,13 +1996,7 @@ class TestTRRootCourseGating(KARTestBase):
                 self.assertTrue(self.can_reach_location(loc))
 
 
-_CT_ALL_PROGRESSION_LOCATIONS = {
-    "city_trial_progression_high_effort": Toggle.option_true,
-    "city_trial_progression_multiplayer": Toggle.option_true,
-    "city_trial_progression_free_run": Toggle.option_true,
-    "city_trial_progression_rng": Toggle.option_true,
-    "city_trial_progression_bust_vehicles": Toggle.option_true,
-}
+_CT_ALL_PROGRESSION_LOCATIONS = {"city_trial_progression": sorted(CITY_TRIAL_PROGRESSION_GROUPS)}
 
 
 _TR_GENERIC_ITEM_CELLS = (TRLocation.COLLECT_500_ITEMS, TRLocation.GET_SAME_ITEM_3_X_IN_ONE_RACE)

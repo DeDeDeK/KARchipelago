@@ -63,6 +63,7 @@ from worlds.kirby_air_ride.KAROptions import (
     CityTrialGoal,
     TopRideGoal,
 )
+from worlds.kirby_air_ride.KARRegions import REMOVED_CHECKBOX_SUFFIX
 from worlds.kirby_air_ride.KARRules import _EVENT_LOCATION_RULES
 
 # The City Trial events a location rule keys; only these ship as progression.
@@ -756,9 +757,9 @@ class KARHook:
 
     def _check_location_progress_types(self, tag, world, opts, our_locations, ct_on, ar_on, tr_on, ap_on):
         """
-        The progression sub-flags and ap_patch_placement do all their work by sorting each mode's boxes
-        into DEFAULT or EXCLUDED, which nothing downstream re-derives. Checking the placed locations
-        against the world's own split covers all fourteen of those options in one pass.
+        The per-mode progression categories and ap_patch_placement do all their work by sorting each
+        mode's boxes into DEFAULT, EXCLUDED or removed, which nothing downstream re-derives. Checking
+        the placed locations against the world's own split covers all five of those options in one pass.
         """
         # Archipelago applies the player's own lists after create_regions, excludes first and then
         # priority, so a name in priority_locations wins whatever the world assigned.
@@ -809,6 +810,31 @@ class KARHook:
                             f"{tag} {label} location {name!r} has progress_type {loc.progress_type!r} but "
                             f"the world sorted it into the {'excluded' if want_excluded else 'default'} set",
                         )
+
+        # A removed box is not a location at all; its rules live on a stand-in event instead, which the
+        # block-count goals reach for. Both halves have to hold, or the goal count silently shifts.
+        removed_bands = [
+            (ct_on, world.city_trial_removed_locations, "City Trial"),
+            (ar_on, world.air_ride_removed_locations, "Air Ride"),
+            (tr_on, world.top_ride_removed_locations, "Top Ride"),
+            (ap_on, world.archipelago_removed_locations, "Archipelago"),
+        ]
+        for enabled, removed_locs, label in removed_bands:
+            if not enabled:
+                continue
+            for name in removed_locs:
+                if name in by_name:
+                    raise HookError(
+                        "removed_location_present",
+                        f"{tag} {label} location {name!r} was removed but still exists as a location",
+                    )
+                stand_in = by_name.get(f"{name}{REMOVED_CHECKBOX_SUFFIX}")
+                if stand_in is None or stand_in.address is not None:
+                    raise HookError(
+                        "removed_location_stand_in_missing",
+                        f"{tag} {label} location {name!r} was removed without leaving a stand-in event, "
+                        f"so it no longer counts toward a block goal",
+                    )
 
     def _check_non_local_items(self, tag, opts, player, items_at_our_locations):
         non_local: set[str] = set(opts.non_local_items.value)

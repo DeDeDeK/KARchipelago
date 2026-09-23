@@ -11,6 +11,7 @@ from ..KARLocations import (
     AIR_RIDE_GOAL_TO_LOCATION,
     ARCHIPELAGO_GOAL_TO_LOCATION,
     CITY_TRIAL_GOAL_TO_LOCATION,
+    CITY_TRIAL_PROGRESSION_GROUPS,
     TOP_RIDE_GOAL_TO_LOCATION,
     APLocation,
     ARLocation,
@@ -263,12 +264,8 @@ class TestCTGoalMaxStatsStatRoute(KARTestBase):
         "city_trial_patch_cap_max": 18,
         "city_trial_patches_gated": Toggle.option_true,
         "city_trial_items_gated": Toggle.option_true,
-        # Every CT progression flag opened to make room for the 36 item unlocks the item gate adds.
-        "city_trial_progression_high_effort": Toggle.option_true,
-        "city_trial_progression_multiplayer": Toggle.option_true,
-        "city_trial_progression_free_run": Toggle.option_true,
-        "city_trial_progression_rng": Toggle.option_true,
-        "city_trial_progression_bust_vehicles": Toggle.option_true,
+        # Every CT category selected to make room for the 36 item unlocks the item gate adds.
+        "city_trial_progression": sorted(CITY_TRIAL_PROGRESSION_GROUPS),
         "city_trial_events_gated": Toggle.option_false,
         "abilities_gated": Toggle.option_false,
         "machines_gated": Toggle.option_false,

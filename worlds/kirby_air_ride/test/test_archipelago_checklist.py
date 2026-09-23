@@ -4,8 +4,6 @@ test_goals.py and its validation branches in test_validation.py."""
 
 import unittest
 
-from Options import Toggle
-
 from ..KARData import (
     AP_CHECKLIST_CODE_BASE,
     AP_CHECKLIST_CODE_NUM,
@@ -24,6 +22,7 @@ from ..KARLocations import (
     LOCATION_TABLE,
     TOP_RIDE_LOCATION_TABLE,
     KARLocationGroup,
+    ProgressionCategory,
     location_name_groups,
 )
 from ..KAROptions import (
@@ -159,9 +158,9 @@ class TestArchipelagoEnabled(KARTestBase):
 
     def test_boxes_accept_another_mode_checklist_reward(self):
         # create_items is mode-agnostic and AP boxes are ordinary fill targets. Asserted through
-        # can_fill rather than by sampling a seed- and order-dependent fill. The high-effort boxes are
-        # EXCLUDED while their flag is off, so a useful reward is barred from them by design.
-        high_effort = location_name_groups[KARLocationGroup.AP_HIGH_EFFORT]
+        # can_fill rather than by sampling a seed- and order-dependent fill. Boxes in an unselected
+        # category are EXCLUDED, so a useful reward is barred from them by design.
+        categorised = self.world.archipelago_excluded_locations
         reward_name = next(
             name for name, data in ITEM_TABLE.items() if data.type in CHECKLIST_REWARD_TYPES and data.code is not None
         )
@@ -170,7 +169,7 @@ class TestArchipelagoEnabled(KARTestBase):
         for name in AP_CHECKLIST_LOCATION_TABLE:
             with self.subTest(location=name):
                 can_fill = self.world.get_location(name).can_fill(state, item, check_access=False)
-                self.assertEqual(can_fill, name not in high_effort)
+                self.assertEqual(can_fill, name not in categorised)
 
     def test_beatable(self):
         self.collect_all_but_victories()
@@ -178,9 +177,9 @@ class TestArchipelagoEnabled(KARTestBase):
 
 
 class TestArchipelagoHighEffortProgression(KARTestBase):
-    """With the flag on, the high-effort boxes are DEFAULT and take a useful reward like any other box."""
+    """Selected, the high-effort boxes are DEFAULT and take a useful reward like any other box."""
 
-    options = {**AP_WITH_CT, "archipelago_progression_high_effort": Toggle.option_true}
+    options = {**AP_WITH_CT, "archipelago_progression": [ProgressionCategory.HIGH_EFFORT]}
 
     def test_high_effort_boxes_accept_a_useful_reward(self):
         reward_name = next(
