@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from collections.abc import Set as AbstractSet
 from types import MappingProxyType
 from typing import Any, ClassVar, NamedTuple
 
@@ -46,15 +47,18 @@ from .KARItems import (
 from .KARLocations import (
     AIR_RIDE_GOAL_TO_LOCATION,
     AIR_RIDE_LOCATION_TABLE,
+    AIR_RIDE_PROGRESSION_GROUPS,
     AP_CHECKLIST_LOCATION_TABLE,
     AP_PATCH_LOCATION_TABLE,
     ARCHIPELAGO_GOAL_TO_LOCATION,
+    ARCHIPELAGO_PROGRESSION_GROUPS,
     CITY_TRIAL_GOAL_TO_LOCATION,
     CITY_TRIAL_LOCATION_TABLE,
+    CITY_TRIAL_PROGRESSION_GROUPS,
     LOCATION_TABLE,
     TOP_RIDE_GOAL_TO_LOCATION,
     TOP_RIDE_LOCATION_TABLE,
-    KARLocationGroup,
+    TOP_RIDE_PROGRESSION_GROUPS,
     location_name_groups,
 )
 from .KAROptions import (
@@ -63,6 +67,7 @@ from .KAROptions import (
     ArchipelagoGoal,
     CityTrialGoal,
     KAROptions,
+    NonProgressionCheckboxes,
     TopRideGoal,
     kar_option_groups,
 )
@@ -122,6 +127,14 @@ _COUNTED_USEFUL_TYPES: frozenset[KARItemType] = frozenset(
 )
 
 
+class _LocationSplit(NamedTuple):
+    """One mode's boxes, sorted by what this seed does with them."""
+
+    default: set[str]
+    excluded: set[str]
+    removed: set[str]
+
+
 class _CapacityModel(NamedTuple):
     """Location budget and reward demand, as the capacity validator sees it."""
 
@@ -171,15 +184,19 @@ class KARWorld(World):
         self.city_trial_enabled: bool = False
         self.city_trial_default_locations: set[str] = set()
         self.city_trial_excluded_locations: set[str] = set()
+        self.city_trial_removed_locations: set[str] = set()
         self.air_ride_enabled: bool = False
         self.air_ride_default_locations: set[str] = set()
         self.air_ride_excluded_locations: set[str] = set()
+        self.air_ride_removed_locations: set[str] = set()
         self.top_ride_enabled: bool = False
         self.top_ride_default_locations: set[str] = set()
         self.top_ride_excluded_locations: set[str] = set()
+        self.top_ride_removed_locations: set[str] = set()
         self.archipelago_enabled: bool = False
         self.archipelago_default_locations: set[str] = set()
         self.archipelago_excluded_locations: set[str] = set()
+        self.archipelago_removed_locations: set[str] = set()
         self.ap_patch_count: int = 0
         self.ap_patch_locations: dict[str, Any] = {}
         self.ap_patch_default_locations: set[str] = set()
@@ -196,6 +213,7 @@ class KARWorld(World):
         self.progression_pool: list[str] = []
         self.counted_useful_pool: list[str] = []
         self.goal_locations_to_exclude: set[str] = set()
+        self.removed_checkbox_events: dict[str, str] = {}
         self.ut_goals_completed: set[str] | None = None
         self.stadium_starter_choice: str | None = None
         self.machine_starter_choice: str | None = None
@@ -204,97 +222,97 @@ class KARWorld(World):
         self.tr_course_starter_choice: str | None = None
         self.color_starter_choice: str | None = None
 
-    @staticmethod
     def _categorize_locations(
-        location_table: dict[str, Any],
-        exclusion_groups: list[tuple[bool, set[str]]],
-    ) -> tuple[set[str], set[str]]:
-        """Split a location table into default and excluded sets based on options."""
-        default_locations: set[str] = set()
-        excluded_locations: set[str] = set()
+        self,
+        location_table: Mapping[str, Any],
+        category_groups: Mapping[str, str],
+        selected: AbstractSet[str],
+        protected: AbstractSet[str],
+    ) -> _LocationSplit:
+        """Split a mode's boxes three ways. A box is progression only when every category it falls under
+        is selected; the rest are excluded, or removed outright when the player asked for that. A
+        `protected` box is never removed, because something else this seed needs it to be a real location.
+        """
+        removing = self.options.non_progression_checkboxes.value == NonProgressionCheckboxes.option_removed
+        split = _LocationSplit(set(), set(), set())
         for location in location_table:
-            if any(should_exclude and location in group for should_exclude, group in exclusion_groups):
-                excluded_locations.add(location)
+            unselected = any(
+                key not in selected and location in location_name_groups[group]
+                for key, group in category_groups.items()
+            )
+            if not unselected:
+                split.default.add(location)
+            elif removing and location not in protected:
+                split.removed.add(location)
             else:
-                default_locations.add(location)
-        return default_locations, excluded_locations
+                split.excluded.add(location)
+        return split
+
+    def _protected_locations(self, goal_option: Any, goal_locations_option: Any) -> set[str]:
+        """Boxes this mode cannot remove: the cell its goal replaced with an event, which is not a
+        location either way, and the cells a checklist_list goal names, which have to hold a local item.
+        """
+        protected = set(self.goal_locations_to_exclude)
+        if goal_option.value == goal_option.option_checklist_list:
+            protected |= set(goal_locations_option.value)
+        return protected
 
     def _determine_locations_progress_type(self) -> None:
-        self.city_trial_default_locations, self.city_trial_excluded_locations = self._categorize_locations(
-            CITY_TRIAL_LOCATION_TABLE,
-            [
-                (
-                    not self.options.city_trial_progression_high_effort,
-                    location_name_groups[KARLocationGroup.CT_HIGH_EFFORT],
-                ),
-                (
-                    not self.options.city_trial_progression_multiplayer,
-                    location_name_groups[KARLocationGroup.CT_MULTIPLAYER],
-                ),
-                (not self.options.city_trial_progression_free_run, location_name_groups[KARLocationGroup.CT_FREE_RUN]),
-                (not self.options.city_trial_progression_rng, location_name_groups[KARLocationGroup.CT_RNG]),
-                (
-                    not self.options.city_trial_progression_bust_vehicles,
-                    location_name_groups[KARLocationGroup.CT_BUST_VEHICLE_ON_VEHICLE],
-                ),
-            ],
-        )
+        options = self.options
+        for location_table, category_groups, progression_option, goal_option, goal_locations_option, attr_prefix in (
+            (
+                CITY_TRIAL_LOCATION_TABLE,
+                CITY_TRIAL_PROGRESSION_GROUPS,
+                options.city_trial_progression,
+                options.city_trial_goal,
+                options.city_trial_goal_locations,
+                "city_trial",
+            ),
+            (
+                AIR_RIDE_LOCATION_TABLE,
+                AIR_RIDE_PROGRESSION_GROUPS,
+                options.air_ride_progression,
+                options.air_ride_goal,
+                options.air_ride_goal_locations,
+                "air_ride",
+            ),
+            (
+                TOP_RIDE_LOCATION_TABLE,
+                TOP_RIDE_PROGRESSION_GROUPS,
+                options.top_ride_progression,
+                options.top_ride_goal,
+                options.top_ride_goal_locations,
+                "top_ride",
+            ),
+            (
+                AP_CHECKLIST_LOCATION_TABLE,
+                ARCHIPELAGO_PROGRESSION_GROUPS,
+                options.archipelago_progression,
+                options.archipelago_goal,
+                options.archipelago_goal_locations,
+                "archipelago",
+            ),
+        ):
+            split = self._categorize_locations(
+                location_table,
+                category_groups,
+                progression_option.value,
+                self._protected_locations(goal_option, goal_locations_option),
+            )
+            setattr(self, f"{attr_prefix}_default_locations", split.default)
+            setattr(self, f"{attr_prefix}_excluded_locations", split.excluded)
+            setattr(self, f"{attr_prefix}_removed_locations", split.removed)
 
-        self.air_ride_default_locations, self.air_ride_excluded_locations = self._categorize_locations(
-            AIR_RIDE_LOCATION_TABLE,
-            [
-                (
-                    not self.options.air_ride_progression_high_effort,
-                    location_name_groups[KARLocationGroup.AR_HIGH_EFFORT],
-                ),
-                (not self.options.air_ride_progression_free_run, location_name_groups[KARLocationGroup.AR_FREE_RUN]),
-                (
-                    not self.options.air_ride_progression_time_attack,
-                    location_name_groups[KARLocationGroup.AR_TIME_ATTACK],
-                ),
-                (not self.options.air_ride_progression_rng, location_name_groups[KARLocationGroup.AR_RNG]),
-            ],
-        )
+        patch_names = set(self.ap_patch_locations)
+        if self.options.ap_patch_placement.value == APPatchPlacement.option_excluded:
+            self.ap_patch_default_locations, self.ap_patch_excluded_locations = set(), patch_names
+        else:
+            self.ap_patch_default_locations, self.ap_patch_excluded_locations = patch_names, set()
 
-        self.top_ride_default_locations, self.top_ride_excluded_locations = self._categorize_locations(
-            TOP_RIDE_LOCATION_TABLE,
-            [
-                (
-                    not self.options.top_ride_progression_high_effort,
-                    location_name_groups[KARLocationGroup.TR_HIGH_EFFORT],
-                ),
-                (not self.options.top_ride_progression_free_run, location_name_groups[KARLocationGroup.TR_FREE_RUN]),
-                (
-                    not self.options.top_ride_progression_time_attack,
-                    location_name_groups[KARLocationGroup.TR_TIME_ATTACK],
-                ),
-                (
-                    not self.options.top_ride_progression_multiplayer,
-                    location_name_groups[KARLocationGroup.TR_MULTIPLAYER],
-                ),
-            ],
-        )
-
-        self.archipelago_default_locations, self.archipelago_excluded_locations = self._categorize_locations(
-            AP_CHECKLIST_LOCATION_TABLE,
-            [
-                (
-                    not self.options.archipelago_progression_high_effort,
-                    location_name_groups[KARLocationGroup.AP_HIGH_EFFORT],
-                ),
-            ],
-        )
-
-        # One switch over the whole AP Patch category
-        self.ap_patch_default_locations, self.ap_patch_excluded_locations = self._categorize_locations(
-            self.ap_patch_locations,
-            [
-                (
-                    self.options.ap_patch_placement.value == APPatchPlacement.option_excluded,
-                    set(self.ap_patch_locations),
-                ),
-            ],
-        )
+    def checkbox_location_name(self, box_name: str) -> str:
+        """The location standing in for `box_name` this seed. A removed box keeps its rules on a hidden
+        event in the same region, so callers that only know the box name find it here."""
+        return self.removed_checkbox_events.get(box_name, box_name)
 
     def _determine_goal_locations_to_exclude(self) -> None:
         """Goal locations backed by a specific checklist entry are replaced by event locations, so the
@@ -859,12 +877,13 @@ class KARWorld(World):
         if needs_default > default_count:
             raise OptionError(
                 f"The item pool needs {needs_default} non-excluded locations but only {default_count} are "
-                "available. Reduce option values, exclude fewer locations, or enable more modes / progression "
-                "flags to make room."
+                "available. Reduce option values, exclude fewer locations, or enable more modes / "
+                "progression categories to make room."
             )
         raise OptionError(
             f"The item pool holds {total_guaranteed} guaranteed items but only {total_count} locations are "
-            "placeable. Reduce option values, or enable more modes / progression flags to make room."
+            "placeable. Reduce option values, or enable more modes / progression categories to make room. "
+            "Removed checkboxes are not placeable."
         )
 
     def create_regions(self) -> None:
@@ -1002,18 +1021,22 @@ class KARWorld(World):
                 "city_trial_checklist_amount",
                 "city_trial_goal_locations",
                 "city_trial_reveal_checklist",
+                "city_trial_progression",
                 "air_ride_goal",
                 "air_ride_checklist_amount",
                 "air_ride_goal_locations",
                 "air_ride_reveal_checklist",
+                "air_ride_progression",
                 "top_ride_goal",
                 "top_ride_checklist_amount",
                 "top_ride_goal_locations",
                 "top_ride_reveal_checklist",
+                "top_ride_progression",
                 "archipelago_goal",
                 "archipelago_checklist_amount",
                 "archipelago_goal_locations",
                 "archipelago_reveal_checklist",
+                "archipelago_progression",
                 "city_trial_patch_cap_min",
                 "city_trial_patch_cap_max",
                 "city_trial_stadiums_gated",
@@ -1030,6 +1053,7 @@ class KARWorld(World):
                 "colors_gated",
                 "top_ride_courses_gated",
                 "top_ride_items_gated",
+                "non_progression_checkboxes",
             )
         )
 

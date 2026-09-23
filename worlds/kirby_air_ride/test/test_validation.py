@@ -4,7 +4,7 @@ deliberately no longer raise. Co-located so the exercised error branches stay au
 from Options import OptionError, Toggle
 
 from ..KARItems import KARItemName
-from ..KARLocations import ARLocation, CTLocation
+from ..KARLocations import ARLocation, CTLocation, ProgressionCategory
 from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from . import ALL_MODES, AR_ONLY, CT_ONLY, TR_ONLY, KARTestBase
 
@@ -155,11 +155,17 @@ _make_raises_test(
 # a default location, against the 91 City Trial has once RNG boxes count as progression. Filler rewards
 # are not counted - they may sit on excluded boxes. AP Patches are held out, or their locations would
 # absorb the excludes the paired test relies on.
+_CT_RNG_CATEGORIES = [
+    ProgressionCategory.RNG_EVENTS,
+    ProgressionCategory.RNG_FOOD,
+    ProgressionCategory.RNG_COPY_CHANCE_WHEEL,
+]
+
 _TIGHT_POOL = {
     **CT_ONLY,
     "ap_patches": 0,
     "checklist_rewards": _ALL_REWARD_CATEGORIES,
-    "city_trial_progression_rng": Toggle.option_true,
+    "city_trial_progression": _CT_RNG_CATEGORIES,
     "city_trial_patch_cap_min": 14,
     "city_trial_patch_cap_max": 18,
 }

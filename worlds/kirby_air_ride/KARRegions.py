@@ -5,7 +5,7 @@ from enum import StrEnum
 from BaseClasses import CollectionState, LocationProgressType, Region
 from rule_builder.rules import And, CanReachLocation, Has, HasAll, Rule
 
-from .KARData import AP_PATCH_GROUP_MAX, GameMode, GoalKind, location_code_to_mode_clear
+from .KARData import AP_PATCH_GROUP_MAX, GameMode, GoalKind
 from .KARItems import (
     AP_PATCH_GROUP_EVENT_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
@@ -301,11 +301,15 @@ def _add_region_tree(world: "KARWorld", name: str, parent: Region) -> None:
         _add_region_tree(world, child, region)
 
 
+REMOVED_CHECKBOX_SUFFIX = " (Removed)"
+
+
 def assign_locations_to_regions(
     world: "KARWorld",
     location_table: dict,
     default_locations: Iterable[str],
     excluded_locations: Iterable[str],
+    removed_locations: Iterable[str] = (),
 ) -> None:
     """Assign locations to their regions with the appropriate progress type, skipping goal-replaced ones."""
     from .KARLocations import KARLocation
@@ -322,6 +326,12 @@ def assign_locations_to_regions(
             location = KARLocation(world.player, location_name, data.code, region)
             location.progress_type = progress_type
             region.locations.append(location)
+
+    for location_name in removed_locations:
+        event_name = f"{location_name}{REMOVED_CHECKBOX_SUFFIX}"
+        region = world.get_region(location_table[location_name].region)
+        region.add_event(event_name, location_type=KARLocation, item_type=KARItem, show_in_spoiler=False)
+        world.removed_checkbox_events[location_name] = event_name
 
 
 def create_regions(world: "KARWorld"):
@@ -342,34 +352,38 @@ def create_regions(world: "KARWorld"):
         if mode in world.logic_modes:
             _add_region_tree(world, root, menu_region)
 
-    for enabled, location_table, default_locations, excluded_locations in (
+    for enabled, location_table, default_locations, excluded_locations, removed_locations in (
         (
             world.city_trial_enabled,
             CITY_TRIAL_LOCATION_TABLE,
             world.city_trial_default_locations,
             world.city_trial_excluded_locations,
+            world.city_trial_removed_locations,
         ),
         (
             world.air_ride_enabled,
             AIR_RIDE_LOCATION_TABLE,
             world.air_ride_default_locations,
             world.air_ride_excluded_locations,
+            world.air_ride_removed_locations,
         ),
         (
             world.top_ride_enabled,
             TOP_RIDE_LOCATION_TABLE,
             world.top_ride_default_locations,
             world.top_ride_excluded_locations,
+            world.top_ride_removed_locations,
         ),
         (
             world.archipelago_enabled,
             AP_CHECKLIST_LOCATION_TABLE,
             world.archipelago_default_locations,
             world.archipelago_excluded_locations,
+            world.archipelago_removed_locations,
         ),
     ):
         if enabled:
-            assign_locations_to_regions(world, location_table, default_locations, excluded_locations)
+            assign_locations_to_regions(world, location_table, default_locations, excluded_locations, removed_locations)
 
     if world.ap_patch_locations:
         connect_ap_patch_regions(world)
@@ -396,21 +410,20 @@ def connect_ap_patch_regions(world: "KARWorld") -> None:
 def create_n_blocks_rule(
     world: "KARWorld", mode: GameMode, required_blocks: int, exclude_location_name: str | None = None
 ) -> Callable[[CollectionState], bool]:
-    """A rule that passes once `required_blocks` of `mode`'s locations are reachable."""
-    player = world.player
+    """A rule that passes once `required_blocks` of `mode`'s checkboxes are reachable."""
+    from .KARLocations import MODE_LOCATION_TABLES
+
+    blocks = [
+        world.get_location(world.checkbox_location_name(name))
+        for name in MODE_LOCATION_TABLES[mode]
+        # The cell this seed's goal replaced is an event, not a checkbox the player can fill for credit,
+        # and a cell gated on this rule must not be asked to reach itself and recurse.
+        if name not in world.goal_locations_to_exclude and name != exclude_location_name
+    ]
 
     def can_access_n_blocks(state: CollectionState) -> bool:
         count = 0
-        for loc in state.multiworld.get_locations(player):
-            # Skip event locations (address is None) - the victory event's rule is this function.
-            if loc.address is None:
-                continue
-            # So a cell gated on this rule is not asked to reach itself and recurse.
-            if exclude_location_name is not None and loc.name == exclude_location_name:
-                continue
-            decoded = location_code_to_mode_clear(loc.address)
-            if decoded is None or decoded[0] != mode:
-                continue
+        for loc in blocks:
             if loc.can_reach(state):
                 count += 1
                 if count >= required_blocks:
