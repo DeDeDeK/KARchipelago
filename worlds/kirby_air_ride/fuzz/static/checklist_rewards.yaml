@@ -16,16 +16,17 @@ Kirby Air Ride:
   top_ride_goal: n_checklist_blocks
   top_ride_checklist_amount: 60
   top_ride_checkbox_fillers: 0
-  # Progression flags deliberately split: high-effort/free-run boxes stay EXCLUDED in City Trial and
-  # Top Ride but become DEFAULT in Air Ride, so one seed carries filler rewards on excluded boxes
-  # (which offset the generic filler minted there) and useful rewards on default boxes (which compete
-  # with progression for the needs-default budget).
-  city_trial_progression_high_effort: false
-  city_trial_progression_free_run: false
-  air_ride_progression_high_effort: true
-  air_ride_progression_free_run: true
-  air_ride_progression_time_attack: true
-  top_ride_progression_high_effort: false
+  # The progression categories are deliberately split: City Trial and Top Ride select nothing, so
+  # their categorised boxes stay EXCLUDED, while Air Ride selects its three, so one seed carries
+  # filler rewards on excluded boxes (which offset the generic filler minted there) and useful
+  # rewards on default boxes (which compete with progression for the needs-default budget). Both
+  # empty lists are written out, since City Trial's default is not empty.
+  city_trial_progression: []
+  top_ride_progression: []
+  air_ride_progression:
+    - High Effort
+    - Free Run
+    - Time Attack
   # Gates that own an overlapping reward, one on and one off, so both reconciliation paths run while
   # the rest of the rewards are in the pool.
   machines_gated: true

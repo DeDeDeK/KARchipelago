@@ -16,10 +16,16 @@ Kirby Air Ride:
   top_ride_goal: checklist_list
   top_ride_goal_locations:
     - "Top Ride: Take 1st place while holding the Hammer!"
-  city_trial_progression_high_effort: true
-  city_trial_progression_free_run: true
-  air_ride_progression_high_effort: true
-  air_ride_progression_time_attack: true
+  city_trial_progression:
+    - High Effort
+    - Free Run
+  air_ride_progression:
+    - High Effort
+    - Time Attack
+  # The only fixture that removes unselected boxes. Everything the two options above leave out stops
+  # being a location, so the goal locations named above are the protected exception: they must stay
+  # real to hold one of the player's own items, and Top Ride's untouched goal box with them.
+  non_progression_checkboxes: removed
   city_trial_events_gated: true
   abilities_gated: true
   city_trial_patches_gated: true

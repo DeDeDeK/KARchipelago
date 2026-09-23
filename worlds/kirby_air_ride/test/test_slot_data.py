@@ -34,6 +34,12 @@ EXPECTED_KEYS: frozenset[str] = frozenset(
         "air_ride_reveal_checklist",
         "top_ride_reveal_checklist",
         "archipelago_reveal_checklist",
+        # Progression categories; trackers read these, the mod does not
+        "city_trial_progression",
+        "air_ride_progression",
+        "top_ride_progression",
+        "archipelago_progression",
+        "non_progression_checkboxes",
         # City Trial specifics
         "city_trial_patch_cap_min",
         "city_trial_patch_cap_max",

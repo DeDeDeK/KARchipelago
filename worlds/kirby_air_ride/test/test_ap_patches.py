@@ -5,7 +5,6 @@ late sphere rather than one flat sphere fill can hide a key in."""
 import unittest
 
 from BaseClasses import Entrance, Location
-from Options import Toggle
 
 from ..KARData import (
     AP_PATCH_CODE_BASE,
@@ -25,6 +24,7 @@ from ..KARLocations import (
     AP_PATCH_LOCATION_TABLE,
     LOCATION_TABLE,
     KARLocationGroup,
+    ProgressionCategory,
     ap_patch_location_name,
     location_name_groups,
 )
@@ -32,9 +32,14 @@ from ..KAROptions import APPatches, APPatchPlacement, ArchipelagoGoal, CityTrial
 from ..KARRegions import AP_PATCH_GROUP_REGIONS, KARRegion
 from . import CT_ONLY, TR_ONLY, KARTestBase
 
-# RNG boxes count as progression wherever a seed has few or no AP patch locations: without them City
-# Trial's remaining default boxes fall short of its guaranteed pool.
-_RNG_AS_PROGRESSION = {"city_trial_progression_rng": Toggle.option_true}
+# The RNG categories count as progression wherever a seed has few or no AP patch locations: without
+# them City Trial's remaining default boxes fall short of its guaranteed pool.
+_CT_RNG_CATEGORIES = [
+    ProgressionCategory.RNG_EVENTS,
+    ProgressionCategory.RNG_FOOD,
+    ProgressionCategory.RNG_COPY_CHANCE_WHEEL,
+]
+_RNG_AS_PROGRESSION = {"city_trial_progression": _CT_RNG_CATEGORIES}
 
 
 def region_name(holder: Location | Entrance) -> str | None:
