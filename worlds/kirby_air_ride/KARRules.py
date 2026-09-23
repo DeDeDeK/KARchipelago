@@ -649,6 +649,7 @@ def set_rules(world: "KARWorld"):
     location_rules: dict[str, Rule] = {}
 
     def add_location_rule(location_name: str, rule: Rule) -> None:
+        location_name = world.checkbox_location_name(location_name)
         try:
             world.get_location(location_name)
         except KeyError:
@@ -980,7 +981,7 @@ def set_rules(world: "KARWorld"):
         if not enabled:
             continue
         try:
-            fill_100 = world.get_location(fill_100_location)
+            fill_100 = world.get_location(world.checkbox_location_name(fill_100_location))
         except KeyError:
             continue  # excluded as this mode's goal, or otherwise absent
         world.set_rule(

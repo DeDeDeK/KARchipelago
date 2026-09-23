@@ -3,9 +3,8 @@ from typing import NamedTuple
 
 from BaseClasses import Location
 
-from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_BASE, AP_PATCH_CODE_MAX
+from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_BASE, AP_PATCH_CODE_MAX, GameMode, GoalKind
 from .KARItems import KARItemName
-from .KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from .KARRegions import KARRegion
 
 
@@ -1139,6 +1138,8 @@ class KARLocationGroup(StrEnum):
     CT_PATCHES = "City Trial: Patches"
     CT_AP_PATCHES = "City Trial: AP Patches"
     CT_HIGH_EFFORT = "City Trial: High Effort"
+    CT_FOOD = "City Trial: Food"
+    CT_COPY_CHANCE_WHEEL = "City Trial: Copy Chance Wheel"
     CT_RNG = "City Trial: RNG"
     CT_PVP = "City Trial: PVP"
     AR_RACES = "Air Ride: Races"
@@ -1153,6 +1154,7 @@ class KARLocationGroup(StrEnum):
     AR_BEANSTALK_PARK = "Air Ride: BEANSTALK PARK"
     AR_CHECKER_KNIGHTS = "Air Ride: CHECKER KNIGHTS"
     AR_HIGH_EFFORT = "Air Ride: High Effort"
+    AR_RIVALS = "Air Ride: Rivals"
     AR_RNG = "Air Ride: RNG"
     TR_TIME_ATTACK = "Top Ride: Time Attack"
     TR_FREE_RUN = "Top Ride: Free Run"
@@ -1170,7 +1172,10 @@ class KARLocationGroup(StrEnum):
     AP_AIR_RIDE = "Archipelago: Air Ride"
     AP_EXPLORATION = "Archipelago: Exploration"
     AP_PATCHES = "Archipelago: Patches"
-    AP_FOODS = "Archipelago: Foods"
+    AP_FOOD = "Archipelago: Food"
+    AP_COPY_CHANCE_WHEEL = "Archipelago: Copy Chance Wheel"
+    AP_RIVALS = "Archipelago: Rivals"
+    AP_RNG = "Archipelago: RNG"
     AP_BOX_COLORS = "Archipelago: Box Colors"
     AP_SINGLE_RACES = "Archipelago: Single Races"
     AP_NEBULA_BELT = "Archipelago: NEBULA BELT"
@@ -1299,15 +1304,18 @@ location_name_groups: dict[str, set[str]] = {
         CTLocation.STADIUM_KM_ALL_KO_500_ENEMIES,
         CTLocation.STADIUM_KM_ALL_KO_1500_ENEMIES,
     },
-    KARLocationGroup.CT_RNG: {
+    KARLocationGroup.CT_FOOD: {
         CTLocation.EAT_3_PLATES_OF_SUSHI,
         CTLocation.EAT_3_HOT_DOGS,
         CTLocation.EAT_2_MAXIM_TOMATOES,
         CTLocation.DRINK_3_ENERGY_DRINKS,
+    },
+    KARLocationGroup.CT_COPY_CHANCE_WHEEL: {
         CTLocation.COPY_CHANCE_WHEEL_BOMB,
         CTLocation.COPY_CHANCE_WHEEL_SLEEP,
-        # CT_EVENTS is unioned in after this table - events are considered RNG
     },
+    # Filled in after this table from the three City Trial RNG sub-groups
+    KARLocationGroup.CT_RNG: set(),
     KARLocationGroup.CT_PVP: {
         CTLocation.USE_FIREWORKS_TO_KO_RIVALS_10X,
         CTLocation.USE_SENSOR_BOMBS_TO_KO_RIVALS_3X,
@@ -1517,7 +1525,7 @@ location_name_groups: dict[str, set[str]] = {
         ARLocation.DEFEAT_300_OF_YOUR_ENEMIES,
         ARLocation.RACE_100_LAPS,
     },
-    KARLocationGroup.AR_RNG: {
+    KARLocationGroup.AR_RIVALS: {
         ARLocation.FIRST_WHILE_TAKING_DAMAGE,
         ARLocation.MP_CANNON_SHOOT_3,
     },
@@ -1738,7 +1746,7 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.GET_10_OFFENSE_PATCHES,
         APLocation.COLLECT_5_ALL_UPS,
     },
-    KARLocationGroup.AP_FOODS: {
+    KARLocationGroup.AP_FOOD: {
         APLocation.EAT_3_ICE_CREAMS,
         APLocation.EAT_3_RICE_BALLS,
         APLocation.EAT_3_CHICKENS,
@@ -1748,6 +1756,15 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.EAT_3_HAMBURGERS,
         APLocation.EAT_3_APPLES,
     },
+    KARLocationGroup.AP_COPY_CHANCE_WHEEL: {
+        APLocation.GET_MIC_FROM_COPY_CHANCE,
+    },
+    KARLocationGroup.AP_RIVALS: {
+        APLocation.DR_PHOTO_FINISH,
+        APLocation.AIR_RIDE_PHOTO_FINISH,
+    },
+    # Filled in after this table from the three Archipelago RNG sub-groups
+    KARLocationGroup.AP_RNG: set(),
     KARLocationGroup.AP_BOX_COLORS: {
         APLocation.BREAK_20_BLUE_BOXES,
         APLocation.BREAK_10_GREEN_BOXES,
@@ -1793,23 +1810,81 @@ location_name_groups: dict[str, set[str]] = {
     },
 }
 
-# events are RNG
-location_name_groups[KARLocationGroup.CT_RNG] |= location_name_groups[KARLocationGroup.CT_EVENTS]
+location_name_groups[KARLocationGroup.CT_RNG] = (
+    location_name_groups[KARLocationGroup.CT_EVENTS]
+    | location_name_groups[KARLocationGroup.CT_FOOD]
+    | location_name_groups[KARLocationGroup.CT_COPY_CHANCE_WHEEL]
+)
+location_name_groups[KARLocationGroup.AP_RNG] = (
+    location_name_groups[KARLocationGroup.AP_FOOD]
+    | location_name_groups[KARLocationGroup.AP_COPY_CHANCE_WHEEL]
+    | location_name_groups[KARLocationGroup.AP_RIVALS]
+)
+location_name_groups[KARLocationGroup.AR_RNG] = set(location_name_groups[KARLocationGroup.AR_RIVALS])
 
-# Maps a goal option value to the location representing that goal - used both to exclude that location
-# from generation and to attach the victory event to its region.
+
+class ProgressionCategory(StrEnum):
+    """The keys of the per-mode progression options."""
+
+    HIGH_EFFORT = "High Effort"
+    MULTIPLAYER = "Multiplayer"
+    FREE_RUN = "Free Run"
+    TIME_ATTACK = "Time Attack"
+    BUST_VEHICLE_ON_VEHICLE = "Bust Vehicle on Vehicle"
+    RNG_EVENTS = "RNG: Events"
+    RNG_FOOD = "RNG: Food"
+    RNG_COPY_CHANCE_WHEEL = "RNG: Copy Chance Wheel"
+    RNG_RIVALS = "RNG: Rivals"
+
+
+# Each mode's progression categories, mapped to the location group each one covers
+CITY_TRIAL_PROGRESSION_GROUPS: dict[str, str] = {
+    ProgressionCategory.HIGH_EFFORT: KARLocationGroup.CT_HIGH_EFFORT,
+    ProgressionCategory.MULTIPLAYER: KARLocationGroup.CT_MULTIPLAYER,
+    ProgressionCategory.FREE_RUN: KARLocationGroup.CT_FREE_RUN,
+    ProgressionCategory.BUST_VEHICLE_ON_VEHICLE: KARLocationGroup.CT_BUST_VEHICLE_ON_VEHICLE,
+    ProgressionCategory.RNG_EVENTS: KARLocationGroup.CT_EVENTS,
+    ProgressionCategory.RNG_FOOD: KARLocationGroup.CT_FOOD,
+    ProgressionCategory.RNG_COPY_CHANCE_WHEEL: KARLocationGroup.CT_COPY_CHANCE_WHEEL,
+}
+AIR_RIDE_PROGRESSION_GROUPS: dict[str, str] = {
+    ProgressionCategory.HIGH_EFFORT: KARLocationGroup.AR_HIGH_EFFORT,
+    ProgressionCategory.FREE_RUN: KARLocationGroup.AR_FREE_RUN,
+    ProgressionCategory.TIME_ATTACK: KARLocationGroup.AR_TIME_ATTACK,
+    ProgressionCategory.RNG_RIVALS: KARLocationGroup.AR_RIVALS,
+}
+TOP_RIDE_PROGRESSION_GROUPS: dict[str, str] = {
+    ProgressionCategory.HIGH_EFFORT: KARLocationGroup.TR_HIGH_EFFORT,
+    ProgressionCategory.FREE_RUN: KARLocationGroup.TR_FREE_RUN,
+    ProgressionCategory.TIME_ATTACK: KARLocationGroup.TR_TIME_ATTACK,
+    ProgressionCategory.MULTIPLAYER: KARLocationGroup.TR_MULTIPLAYER,
+}
+ARCHIPELAGO_PROGRESSION_GROUPS: dict[str, str] = {
+    ProgressionCategory.HIGH_EFFORT: KARLocationGroup.AP_HIGH_EFFORT,
+    ProgressionCategory.RNG_FOOD: KARLocationGroup.AP_FOOD,
+    ProgressionCategory.RNG_COPY_CHANCE_WHEEL: KARLocationGroup.AP_COPY_CHANCE_WHEEL,
+    ProgressionCategory.RNG_RIVALS: KARLocationGroup.AP_RIVALS,
+}
+
 CITY_TRIAL_GOAL_TO_LOCATION: dict[int, str] = {
-    CityTrialGoal.option_100_checklist_blocks: CTLocation.FILL_IN_100_CHECKLIST_BLOCKS,
-    CityTrialGoal.option_hydra_and_dragoon: CTLocation.COMPLETE_DRAGOON_AND_HYDRA,
-    CityTrialGoal.option_beat_king_dedede: CTLocation.STADIUM_VSKD_KO_DEDEDE_1MIN,
+    GoalKind.CHECKLIST_100: CTLocation.FILL_IN_100_CHECKLIST_BLOCKS,
+    GoalKind.HYDRA_AND_DRAGOON: CTLocation.COMPLETE_DRAGOON_AND_HYDRA,
+    GoalKind.BEAT_KING_DEDEDE: CTLocation.STADIUM_VSKD_KO_DEDEDE_1MIN,
 }
 AIR_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
-    AirRideGoal.option_100_checklist_blocks: ARLocation.FILL_IN_100_CHECKLIST_BLOCKS,
+    GoalKind.CHECKLIST_100: ARLocation.FILL_IN_100_CHECKLIST_BLOCKS,
 }
 TOP_RIDE_GOAL_TO_LOCATION: dict[int, str] = {
-    TopRideGoal.option_100_checklist_blocks: TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
+    GoalKind.CHECKLIST_100: TRLocation.FILL_IN_100_CHECKLIST_BLOCKS,
 }
 ARCHIPELAGO_GOAL_TO_LOCATION: dict[int, str] = {
-    ArchipelagoGoal.option_assemble_archipelago_star: APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
-    ArchipelagoGoal.option_all_three_legendaries_in_one_run: APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+    GoalKind.ASSEMBLE_AP_STAR: APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
+    GoalKind.ALL_LEGENDARIES_CT: APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+}
+
+MODE_LOCATION_TABLES: dict[GameMode, dict[str, KARLocationData]] = {
+    GameMode.CITYTRIAL: CITY_TRIAL_LOCATION_TABLE,
+    GameMode.AIRRIDE: AIR_RIDE_LOCATION_TABLE,
+    GameMode.TOPRIDE: TOP_RIDE_LOCATION_TABLE,
+    GameMode.ARCHIPELAGO: AP_CHECKLIST_LOCATION_TABLE,
 }

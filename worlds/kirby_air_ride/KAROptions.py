@@ -15,6 +15,13 @@ from Options import (
 
 from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_MAX
 from .KARItems import ALLOWED_ITEM_CATEGORIES, CHECKLIST_REWARD_CATEGORIES, TRAP_CATEGORIES, KARItemGroup
+from .KARLocations import (
+    AIR_RIDE_PROGRESSION_GROUPS,
+    ARCHIPELAGO_PROGRESSION_GROUPS,
+    CITY_TRIAL_PROGRESSION_GROUPS,
+    TOP_RIDE_PROGRESSION_GROUPS,
+    ProgressionCategory,
+)
 
 
 class TrapChance(Range):
@@ -42,7 +49,7 @@ class Traps(OptionSet):
 class AllowedItems(OptionSet):
     """
     Which categories of optional (non-progression) give items may appear in your item pool. Removing a
-    category keeps all of its optional items out of your pool. Trap items are unaffected.
+    category keeps all of its items out of your pool.
 
     Defaults to "Permanent Patches" only; add the others to put their gives in your pool.
 
@@ -127,6 +134,99 @@ class ChecklistRewards(OptionSet):
     default = frozenset()
 
 
+class NonProgressionCheckboxes(Choice):
+    """
+    What happens to a checkbox whose category is not selected in its mode's "Progression" option.
+
+    - Excluded: it stays a location but only ever holds filler. You can still fill it in-game and it
+      still sends its check.
+    - Removed: it is not a location at all. Nothing is placed there and filling it in-game sends
+      nothing. It still counts toward "fill in N checklist blocks" goals.
+
+    Boxes named in a "checklist_list" goal are always kept, even when their category is unselected.
+    """
+
+    display_name = "Non-Progression Checkboxes"
+    option_excluded = 0
+    option_removed = 1
+    default = 0
+
+
+class CityTrialProgression(OptionSet):
+    """
+    Which extra categories of City Trial checkboxes may hold progression items.
+
+    - "High Effort": long grinds or high difficulty, such as breaking 1000 boxes
+    - "Multiplayer": boxes that need a second player
+    - "Free Run": Free Run boxes
+    - "Bust Vehicle on Vehicle": busting one machine with another
+    - "RNG: Events": City Trial events
+    - "RNG: Food": getting X food items in one run
+    - "RNG: Copy Chance Wheel": copy abilities from the wheel
+
+    Categories you leave out are excluded from progression, or removed from your world completely,
+    decided by the "Non-Progression Checkboxes".
+    """
+
+    display_name = "City Trial Progression Categories"
+    valid_keys = frozenset(str(category) for category in CITY_TRIAL_PROGRESSION_GROUPS)
+    default = frozenset({str(ProgressionCategory.RNG_COPY_CHANCE_WHEEL)})
+
+
+class AirRideProgression(OptionSet):
+    """
+    Which extra categories of Air Ride checkboxes may hold progression items.
+
+    - "High Effort": long grinds or high difficulty, such as gliding for an hour or racing 300 laps
+    - "Free Run": Free Run boxes
+    - "Time Attack": Time Attack boxes
+    - "RNG: Rivals": boxes that depend on what your rivals happen to do
+
+    Categories you leave out are excluded from progression, or removed from your world completely,
+    decided by the "Non-Progression Checkboxes".
+    """
+
+    display_name = "Air Ride Progression Categories"
+    valid_keys = frozenset(str(category) for category in AIR_RIDE_PROGRESSION_GROUPS)
+    default = frozenset()
+
+
+class TopRideProgression(OptionSet):
+    """
+    Which extra categories of Top Ride checkboxes may hold progression items.
+
+    - "High Effort": long grinds or high difficulty, such as racing 300 laps
+    - "Free Run": Free Run boxes
+    - "Time Attack": Time Attack boxes
+    - "Multiplayer": boxes that need multiple players
+
+    Categories you leave out are excluded from progression, or removed from your world completely,
+    decided by the "Non-Progression Checkboxes".
+    """
+
+    display_name = "Top Ride Progression Categories"
+    valid_keys = frozenset(str(category) for category in TOP_RIDE_PROGRESSION_GROUPS)
+    default = frozenset()
+
+
+class ArchipelagoProgression(OptionSet):
+    """
+    Which extra categories of Archipelago checklist checkboxes may hold progression items.
+
+    - "High Effort": long grinds or high difficulty, such as assembling all three legendary machines
+    - "RNG: Food": get x food items in one run boxes
+    - "RNG: Copy Chance Wheel": copy abilities from the wheel
+    - "RNG: Rivals": boxes that depend on what your rivals happen to do
+
+    Categories you leave out are excluded from progression, or removed from your world completely,
+    decided by the "Non-Progression Checkboxes".
+    """
+
+    display_name = "Archipelago Progression Categories"
+    valid_keys = frozenset(str(category) for category in ARCHIPELAGO_PROGRESSION_GROUPS)
+    default = frozenset({str(ProgressionCategory.RNG_COPY_CHANCE_WHEEL)})
+
+
 class CityTrialGoal(Choice):
     """
     Sets the goal for City Trial.
@@ -171,55 +271,6 @@ class CityTrialGoalLocations(LocationSet):
 
     display_name = "City Trial Goal Locations"
     verify_location_name = True
-
-
-class CityTrialProgressionHighEffort(Toggle):
-    """
-    This controls whether difficult or extremely high effort checkboxes are counted in progression.
-    This applies to City Trial only.
-    """
-
-    default = 0
-    display_name = "City Trial Long/High effort checkboxes are progression"
-
-
-class CityTrialProgressionMultiplayer(Toggle):
-    """
-    This controls whether checkboxes that require multiple players are a part of progression.
-    This applies to City Trial only.
-    """
-
-    default = 0
-    display_name = "City Trial Multiplayer checkboxes are progression"
-
-
-class CityTrialProgressionFreeRun(Toggle):
-    """
-    This controls whether Free Run checkboxes are a part of progression. This applies to City Trial only.
-    """
-
-    default = 0
-    display_name = "City Trial Free Run checkboxes are progression"
-
-
-class CityTrialProgressionRNG(Toggle):
-    """
-    This controls whether checkboxes that require RNG elements of the game are a part of progression.
-    This applies to City Trial only.
-    """
-
-    default = 0
-    display_name = "City Trial RNG checkboxes are progression"
-
-
-class CityTrialProgressionBustVehicles(Toggle):
-    """
-    This controls whether checkboxes that require busting a vehicle on another vehicle are a part of progression.
-    This applies to City Trial only.
-    """
-
-    default = 0
-    display_name = "City Trial bust vehicle checkboxes are progression"
 
 
 class CityTrialCheckboxFillers(NamedRange):
@@ -395,44 +446,6 @@ class AirRideGoalLocations(LocationSet):
     verify_location_name = True
 
 
-class AirRideProgressionFreeRun(Toggle):
-    """
-    This controls whether Free Run checkboxes are a part of progression. This applies to Air Ride only.
-    """
-
-    default = 0
-    display_name = "Air Ride Free Run checkboxes are progression"
-
-
-class AirRideProgressionTimeAttack(Toggle):
-    """
-    This controls whether Time Attack checkboxes are a part of progression. This applies to Air Ride only.
-    """
-
-    default = 0
-    display_name = "Air Ride Time Attack checkboxes are progression"
-
-
-class AirRideProgressionHighEffort(Toggle):
-    """
-    This controls whether difficult or extremely high effort checkboxes are counted in progression.
-    This applies to Air Ride only.
-    """
-
-    default = 0
-    display_name = "Air Ride Long/High effort checkboxes are progression"
-
-
-class AirRideProgressionRNG(Toggle):
-    """
-    This controls whether checkboxes that require RNG elements of the game are a part of progression.
-    This applies to Air Ride only.
-    """
-
-    default = 0
-    display_name = "Air Ride RNG checkboxes are progression"
-
-
 class AirRideCheckboxFillers(NamedRange):
     """
     Number of "checkbox filler" items added to the pool for the Air Ride Checklist.
@@ -494,44 +507,6 @@ class TopRideGoalLocations(LocationSet):
 
     display_name = "Top Ride Goal Locations"
     verify_location_name = True
-
-
-class TopRideProgressionFreeRun(Toggle):
-    """
-    This controls whether Free Run checkboxes are a part of progression. This applies to Top Ride only.
-    """
-
-    default = 0
-    display_name = "Top Ride Free Run checkboxes are progression"
-
-
-class TopRideProgressionTimeAttack(Toggle):
-    """
-    This controls whether Time Attack checkboxes are a part of progression. This applies to Top Ride only.
-    """
-
-    default = 0
-    display_name = "Top Ride Time Attack checkboxes are progression"
-
-
-class TopRideProgressionHighEffort(Toggle):
-    """
-    This controls whether difficult or extremely high effort checkboxes are counted in progression.
-    This applies to Top Ride only.
-    """
-
-    default = 0
-    display_name = "Top Ride Long/High effort checkboxes are progression"
-
-
-class TopRideProgressionMultiplayer(Toggle):
-    """
-    This controls whether checkboxes that require multiple players are a part of progression.
-    This applies to Top Ride only.
-    """
-
-    default = 0
-    display_name = "Top Ride Multiplayer checkboxes are progression"
 
 
 class TopRideCheckboxFillers(NamedRange):
@@ -603,16 +578,6 @@ class ArchipelagoGoalLocations(LocationSet):
 
     display_name = "Archipelago Goal Locations"
     verify_location_name = True
-
-
-class ArchipelagoProgressionHighEffort(Toggle):
-    """
-    This controls whether difficult or extremely high effort checkboxes are counted in progression.
-    This applies to the Archipelago checklist only.
-    """
-
-    default = 0
-    display_name = "Archipelago Long/High effort checkboxes are progression"
 
 
 class ArchipelagoCheckboxFillers(NamedRange):
@@ -894,16 +859,13 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     spawn_rate_max: SpawnRateMax
     energy_link: EnergyLink
     checklist_rewards: ChecklistRewards
+    non_progression_checkboxes: NonProgressionCheckboxes
 
     # City Trial
     city_trial_goal: CityTrialGoal
     city_trial_checklist_amount: CityTrialChecklistAmount
     city_trial_goal_locations: CityTrialGoalLocations
-    city_trial_progression_high_effort: CityTrialProgressionHighEffort
-    city_trial_progression_free_run: CityTrialProgressionFreeRun
-    city_trial_progression_multiplayer: CityTrialProgressionMultiplayer
-    city_trial_progression_rng: CityTrialProgressionRNG
-    city_trial_progression_bust_vehicles: CityTrialProgressionBustVehicles
+    city_trial_progression: CityTrialProgression
     city_trial_checkbox_fillers: CityTrialCheckboxFillers
     city_trial_reveal_checklist: CityTrialRevealChecklist
     city_trial_patch_cap_min: CityTrialPatchCapMin
@@ -917,10 +879,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     air_ride_goal: AirRideGoal
     air_ride_checklist_amount: AirRideChecklistAmount
     air_ride_goal_locations: AirRideGoalLocations
-    air_ride_progression_high_effort: AirRideProgressionHighEffort
-    air_ride_progression_free_run: AirRideProgressionFreeRun
-    air_ride_progression_time_attack: AirRideProgressionTimeAttack
-    air_ride_progression_rng: AirRideProgressionRNG
+    air_ride_progression: AirRideProgression
     air_ride_checkbox_fillers: AirRideCheckboxFillers
     air_ride_reveal_checklist: AirRideRevealChecklist
 
@@ -928,10 +887,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     top_ride_goal: TopRideGoal
     top_ride_checklist_amount: TopRideChecklistAmount
     top_ride_goal_locations: TopRideGoalLocations
-    top_ride_progression_high_effort: TopRideProgressionHighEffort
-    top_ride_progression_free_run: TopRideProgressionFreeRun
-    top_ride_progression_time_attack: TopRideProgressionTimeAttack
-    top_ride_progression_multiplayer: TopRideProgressionMultiplayer
+    top_ride_progression: TopRideProgression
     top_ride_checkbox_fillers: TopRideCheckboxFillers
     top_ride_reveal_checklist: TopRideRevealChecklist
 
@@ -939,7 +895,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
     archipelago_goal: ArchipelagoGoal
     archipelago_checklist_amount: ArchipelagoChecklistAmount
     archipelago_goal_locations: ArchipelagoGoalLocations
-    archipelago_progression_high_effort: ArchipelagoProgressionHighEffort
+    archipelago_progression: ArchipelagoProgression
     archipelago_checkbox_fillers: ArchipelagoCheckboxFillers
     archipelago_reveal_checklist: ArchipelagoRevealChecklist
 
@@ -965,7 +921,7 @@ class KAROptions(PerGameCommonOptions, DeathLinkMixin):
 kar_option_groups = [
     OptionGroup(
         "General Options",
-        [EnergyLink, TrapLink, ChecklistRewards],
+        [EnergyLink, TrapLink, ChecklistRewards, NonProgressionCheckboxes],
     ),
     OptionGroup(
         "Item Options",
@@ -983,11 +939,7 @@ kar_option_groups = [
             CityTrialGoal,
             CityTrialChecklistAmount,
             CityTrialGoalLocations,
-            CityTrialProgressionHighEffort,
-            CityTrialProgressionFreeRun,
-            CityTrialProgressionMultiplayer,
-            CityTrialProgressionRNG,
-            CityTrialProgressionBustVehicles,
+            CityTrialProgression,
             CityTrialCheckboxFillers,
             CityTrialRevealChecklist,
             CityTrialPatchCapMin,
@@ -1008,10 +960,7 @@ kar_option_groups = [
             AirRideGoal,
             AirRideChecklistAmount,
             AirRideGoalLocations,
-            AirRideProgressionFreeRun,
-            AirRideProgressionTimeAttack,
-            AirRideProgressionHighEffort,
-            AirRideProgressionRNG,
+            AirRideProgression,
             AirRideCheckboxFillers,
             AirRideRevealChecklist,
             AirRideCoursesGated,
@@ -1024,10 +973,7 @@ kar_option_groups = [
             TopRideGoal,
             TopRideChecklistAmount,
             TopRideGoalLocations,
-            TopRideProgressionFreeRun,
-            TopRideProgressionTimeAttack,
-            TopRideProgressionHighEffort,
-            TopRideProgressionMultiplayer,
+            TopRideProgression,
             TopRideCheckboxFillers,
             TopRideRevealChecklist,
             TopRideCoursesGated,
@@ -1041,7 +987,7 @@ kar_option_groups = [
             ArchipelagoGoal,
             ArchipelagoChecklistAmount,
             ArchipelagoGoalLocations,
-            ArchipelagoProgressionHighEffort,
+            ArchipelagoProgression,
             ArchipelagoCheckboxFillers,
             ArchipelagoRevealChecklist,
         ],
