@@ -21,9 +21,16 @@ from ..KARItems import (
     KARItemName,
     KARItemType,
 )
-from ..KARLocations import CITY_TRIAL_PROGRESSION_GROUPS, APLocation, ARLocation, CTLocation, TRLocation
+from ..KARLocations import (
+    CITY_TRIAL_PROGRESSION_GROUPS,
+    TOP_RIDE_LOCATION_TABLE,
+    APLocation,
+    ARLocation,
+    CTLocation,
+    TRLocation,
+)
 from ..KAROptions import ArchipelagoGoal, CityTrialGoal, TopRideGoal
-from ..KARRegions import KARRegion
+from ..KARRegions import TR_FR_COURSE_REGIONS, TR_TA_COURSE_REGIONS, KARRegion
 from ..KARRules import (
     _AP_ITEM_LOCATION_RULES,
     _AR_COURSE_SUBSET_RULES,
@@ -46,7 +53,9 @@ from ..KARRules import (
     _TAC_LOOT_ITEM_UNLOCKS,
     _TR_ABILITY_ITEM_KEYS,
     _TR_COURSE_SUBSET_RULES,
+    _TR_FR_HARD_TIME_LOCATIONS,
     _TR_ITEM_LOCATION_RULES,
+    _TR_TA_HARD_TIME_LOCATIONS,
 )
 from . import (
     ALL_MODES,
@@ -229,6 +238,14 @@ class TestAbilitiesGatingNotApplied(KARTestBase):
             self.assertNotIn(unlock, item_names)
 
 
+# Every Top Ride Time Attack and Free Run course cell
+_TR_COURSE_TIME_CELLS: list[str] = [
+    name
+    for name, data in TOP_RIDE_LOCATION_TABLE.items()
+    if data.region in (*TR_TA_COURSE_REGIONS, *TR_FR_COURSE_REGIONS)
+]
+
+
 class TestBaseAbilitiesGatingApplied(KARTestBase):
     """base_abilities_gated ON: swallow cells need Inhale, quick-spin cells need Quick Spin. Copy-ability
     and AR/TR course gates are OFF so those requirements don't stack, isolating the base-ability rule."""
@@ -316,6 +333,29 @@ class TestBaseAbilitiesGatingApplied(KARTestBase):
             only_check_listed=True,
         )
 
+    def test_tr_hard_free_run_times_need_charge(self):
+        self.assertAccessDependency(
+            list(_TR_FR_HARD_TIME_LOCATIONS),
+            [[KARItemName.UNLOCK_BASE_ABILITY_CHARGE]],
+            only_check_listed=True,
+        )
+
+    def test_tr_hard_time_attack_times_need_charge_or_speed_up(self):
+        # top_ride_items_gated defaults on, so Speed Up is a key of its own.
+        self.assertAccessDependency(
+            list(_TR_TA_HARD_TIME_LOCATIONS),
+            [[KARItemName.UNLOCK_BASE_ABILITY_CHARGE], [KARItemName.UNLOCK_TR_ITEM_SPEED_UP]],
+            only_check_listed=True,
+        )
+
+    def test_tr_easy_times_need_nothing(self):
+        hard = {*_TR_FR_HARD_TIME_LOCATIONS, *_TR_TA_HARD_TIME_LOCATIONS}
+        for location in _TR_COURSE_TIME_CELLS:
+            if location in hard:
+                continue
+            with self.subTest(location=location):
+                self.assertTrue(self.can_reach_location(location))
+
 
 class TestBaseAbilitiesGatingNotApplied(KARTestBase):
     """base_abilities_gated OFF: no base-ability unlocks in the pool and no base-ability rule on the
@@ -336,6 +376,8 @@ class TestBaseAbilitiesGatingNotApplied(KARTestBase):
             ARLocation.HIT_20_RIVALS_WITH_YOUR_QUICK_SPIN,
             TRLocation.QUICK_SPIN_20_AND_FIRST,
             TRLocation.GRASS_FIRST_WITH_CPUS_SET_TO_LEVEL_5,
+            TRLocation.FR_GRASS_LAP_00_04_50,
+            TRLocation.TA_GRASS_FINISH_00_28_00,
             ARLocation.FR_CV_LAP_01_02_00_ON_SLICK_STAR,
         ):
             with self.subTest(location=location):
@@ -392,6 +434,47 @@ class TestBaseAbilitiesGatingArchipelagoBulkStar(KARTestBase):
             [[KARItemName.UNLOCK_BASE_ABILITY_CHARGE]],
             only_check_listed=True,
         )
+
+
+class TestTRHardTimesTopRideItemsUngated(KARTestBase):
+    """base_abilities_gated ON, top_ride_items_gated OFF: Speed Up always spawns in Time Attack, so the hard
+    Time Attack times carry no rule, while the hard Free Run laps still need Charge."""
+
+    options = {
+        **TR_ONLY,
+        "base_abilities_gated": Toggle.option_true,
+        "top_ride_items_gated": Toggle.option_false,
+        "top_ride_courses_gated": Toggle.option_false,
+    }
+
+    def test_hard_time_attack_times_reachable_empty(self):
+        for location in _TR_TA_HARD_TIME_LOCATIONS:
+            with self.subTest(location=location):
+                self.assertTrue(self.can_reach_location(location))
+
+    def test_hard_free_run_times_still_need_charge(self):
+        self.assertAccessDependency(
+            list(_TR_FR_HARD_TIME_LOCATIONS),
+            [[KARItemName.UNLOCK_BASE_ABILITY_CHARGE]],
+            only_check_listed=True,
+        )
+
+
+class TestTRHardTimeTables(unittest.TestCase):
+    """Non-vacuity for the hard-time cases above: each table must hold the faster of every course's two times."""
+
+    def test_tables_hold_the_faster_time_of_each_course(self):
+        for table, regions in (
+            (_TR_FR_HARD_TIME_LOCATIONS, TR_FR_COURSE_REGIONS),
+            (_TR_TA_HARD_TIME_LOCATIONS, TR_TA_COURSE_REGIONS),
+        ):
+            faster = set()
+            for region in regions:
+                cells = [name for name in _TR_COURSE_TIME_CELLS if TOP_RIDE_LOCATION_TABLE[name].region == region]
+                self.assertEqual(len(cells), 2, region)
+                # Times are zero-padded "MM:SS:CC!", so string order is time order.
+                faster.add(min(cells, key=lambda name: name.rsplit("under ", 1)[1]))
+            self.assertEqual(sorted(table), sorted(faster))
 
 
 class TestCombatStadiumDamageRules(KARTestBase):
