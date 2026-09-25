@@ -176,6 +176,28 @@ _BASE_ABILITY_LOCATION_RULES: dict[str, str] = {
     TRLocation.METAL_FIRST_WITH_CPUS_SET_TO_LEVEL_5: KARItemName.UNLOCK_BASE_ABILITY_CHARGE,
 }
 
+# The faster of each Top Ride course's two Free Run lap times, which needs Charge
+_TR_FR_HARD_TIME_LOCATIONS: tuple[str, ...] = (
+    TRLocation.FR_GRASS_LAP_00_04_50,
+    TRLocation.FR_SAND_LAP_00_05_00,
+    TRLocation.FR_SKY_LAP_00_09_00,
+    TRLocation.FR_FIRE_LAP_00_06_50,
+    TRLocation.FR_WATER_LAP_00_10_50,
+    TRLocation.FR_LIGHT_LAP_00_06_00,
+    TRLocation.FR_METAL_LAP_00_09_50,
+)
+
+# The faster of each Top Ride course's two Time Attack times, which needs Charge or the Speed Up item
+_TR_TA_HARD_TIME_LOCATIONS: tuple[str, ...] = (
+    TRLocation.TA_GRASS_FINISH_00_28_00,
+    TRLocation.TA_SAND_FINISH_00_29_00,
+    TRLocation.TA_SKY_FINISH_00_47_00,
+    TRLocation.TA_FIRE_FINISH_00_39_00,
+    TRLocation.TA_WATER_FINISH_00_56_00,
+    TRLocation.TA_LIGHT_FINISH_00_33_00,
+    TRLocation.TA_METAL_FINISH_00_51_00,
+)
+
 # Machine-dependent locations needing one specific machine
 _MACHINE_SINGLE_RULES: dict[str, str] = {
     # City Trial
@@ -761,6 +783,14 @@ def set_rules(world: "KARWorld"):
     if "base_abilities_gated" in world.effective_gates:
         for loc, item in _BASE_ABILITY_LOCATION_RULES.items():
             add_location_rule(loc, Has(item))
+
+        charge = Has(KARItemName.UNLOCK_BASE_ABILITY_CHARGE)
+        for loc in _TR_FR_HARD_TIME_LOCATIONS:
+            add_location_rule(loc, charge)
+        if "top_ride_items_gated" in world.effective_gates:
+            charge_or_speed_up = charge | Has(KARItemName.UNLOCK_TR_ITEM_SPEED_UP)
+            for loc in _TR_TA_HARD_TIME_LOCATIONS:
+                add_location_rule(loc, charge_or_speed_up)
 
         # Air Ride ability cells need Inhale unless a copy panel course is unlocked.
         if "air_ride_courses_gated" in world.effective_gates:
