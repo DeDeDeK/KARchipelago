@@ -327,7 +327,8 @@ _CT_FLIGHT_MACHINES: tuple[str, ...] = (
     KARItemName.UNLOCK_MACHINE_WINGED_STAR,
 )
 
-# Machines that glide too poorly to stay airborne 15 seconds in TF or carry an AIR GLIDER launch
+# Machines that glide too poorly to stay airborne 15 seconds in TF, even on Glide Patches, or to carry an
+# AIR GLIDER launch without them
 _POOR_GLIDE_MACHINES: frozenset[str] = frozenset(
     {
         KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE,
@@ -343,6 +344,20 @@ _POOR_GLIDE_MACHINES: frozenset[str] = frozenset(
 )
 
 _GOOD_GLIDE_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in _POOR_GLIDE_MACHINES]
+
+# Stadium glide checks that need a long glide
+_HARD_GLIDE_LOCATIONS: tuple[str, ...] = (
+    CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS,
+    CTLocation.STADIUM_AG_FLY_1300_FEET,
+    CTLocation.STADIUM_AG_AIRBORNE_30_SECONDS,
+    APLocation.AG_FLY_2000_FEET,
+)
+
+# The good gliders that make those glides without Glide Patches
+_UNPATCHED_GLIDE_MACHINES: tuple[str, ...] = (
+    KARItemName.UNLOCK_MACHINE_DRAGOON,
+    KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR,
+)
 
 # Machines that can't hold 20 mph for a whole Fantasy Meadows lap
 _FM_20MPH_EXCLUDED_MACHINES: frozenset[str] = frozenset(
@@ -756,6 +771,13 @@ def set_rules(world: "KARWorld"):
             HasAny(*_GOOD_GLIDE_MACHINES) | Has(KARItemName.UNLOCK_PATCH_GLIDE),
         )
 
+    # Celestial Valley's tree-top Copy Chance Wheel takes a good glider or Wing
+    if {"machines_gated", "abilities_gated"} <= world.effective_gates:
+        add_location_rule(
+            ARLocation.CV_COPY_CHANCE_WHEEL_TREE,
+            HasAny(*_GOOD_GLIDE_MACHINES) | Has(KARItemName.UNLOCK_ABILITY_WING),
+        )
+
     # Free run needs any machine
     if "machines_gated" in world.effective_gates:
         add_region_entrance_rule(KARRegion.CITY_TRIAL_FREE_RUN, HasAny(*_CT_MACHINE_UNLOCKS))
@@ -811,7 +833,11 @@ def set_rules(world: "KARWorld"):
         for loc, (item_a, item_b) in _MACHINE_PAIR_RULES.items():
             add_location_rule(loc, HasAll(item_a, item_b))
         add_location_rule(ARLocation.FM_LAP_ABOVE_20_MPH, HasAny(*_FM_20MPH_MACHINES))
-        add_location_rule(CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS, HasAny(*_GOOD_GLIDE_MACHINES))
+        hard_glider = HasAny(*_GOOD_GLIDE_MACHINES)
+        if "city_trial_patches_gated" in world.effective_gates:
+            hard_glider = HasAny(*_UNPATCHED_GLIDE_MACHINES) | (hard_glider & Has(KARItemName.UNLOCK_PATCH_GLIDE))
+        for loc in _HARD_GLIDE_LOCATIONS:
+            add_location_rule(loc, hard_glider)
 
     if "city_trial_items_gated" in world.effective_gates:
         for loc, item in _ITEM_LOCATION_RULES.items():

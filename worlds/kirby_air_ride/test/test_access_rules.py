@@ -45,6 +45,7 @@ from ..KARRules import (
     _FM_SHORTCUT_MACHINES,
     _GOOD_GLIDE_MACHINES,
     _GREEN_BOX_ITEMS,
+    _HARD_GLIDE_LOCATIONS,
     _PATCH_LOCATION_RULES,
     _POOR_GLIDE_MACHINES,
     _STEERABLE_CT_MACHINES,
@@ -56,6 +57,7 @@ from ..KARRules import (
     _TR_FR_HARD_TIME_LOCATIONS,
     _TR_ITEM_LOCATION_RULES,
     _TR_TA_HARD_TIME_LOCATIONS,
+    _UNPATCHED_GLIDE_MACHINES,
 )
 from . import (
     ALL_MODES,
@@ -1589,23 +1591,32 @@ class TestFantasyMeadows20MphNeedsCapableMachine(KARTestBase):
         self.assertFalse(set(_FM_20MPH_MACHINES) & _FM_20MPH_EXCLUDED_MACHINES)
 
 
-class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
-    """TARGET FLIGHT's airtime cell names no machine, but the flight is scored off a launch ramp, so a
-    seed handing out only the wheelie/bike class or one of the four poor gliders would leave it
-    unwinnable. The Wheelie Bike pin is itself excluded, so it suppresses the draw without satisfying."""
+# The AP checklist is on so the AIR GLIDER 2,000-foot cell is covered too.
+_GLIDE_TEST_OPTIONS: dict = {
+    **CT_ONLY,
+    "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
+    "archipelago_checklist_amount": 3,
+    "city_trial_stadiums_gated": Toggle.option_false,
+}
+
+
+class TestHardGlideChecksNeedAPatchedGlider(KARTestBase):
+    """TARGET FLIGHT's 15 seconds and AIR GLIDER's long flights are scored off one launch on the machine
+    built in the city. Only Dragoon and the Flight Warp Star make them on their own; any other good glider
+    needs Glide Patches, and the wheelie/bike class and the other poor gliders never get there. The
+    Wheelie Bike pin is itself a poor glider, so it suppresses the machine starter draw without
+    satisfying the rule."""
 
     options = {
-        **CT_ONLY,
+        **_GLIDE_TEST_OPTIONS,
         "machines_gated": Toggle.option_true,
-        "city_trial_stadiums_gated": Toggle.option_false,
+        "city_trial_patches_gated": Toggle.option_true,
         "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
     }
 
-    _LOCATION = CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS
-
-    def test_unreachable_on_the_excluded_machines_alone(self):
-        # Every excluded machine at once still is not enough - this is not just "some machine".
-        state = self.state_with()
+    def test_unreachable_on_the_poor_gliders_even_with_patches(self):
+        # Every poor glider at once still is not enough - this is not just "some machine".
+        state = self.state_with(KARItemName.UNLOCK_PATCH_GLIDE)
         for name in sorted(_POOR_GLIDE_MACHINES):
             if not state.has(name, self.player):  # the pinned starter is already in
                 state.collect(self.get_item_by_name(name), prevent_sweep=True)
@@ -1614,42 +1625,89 @@ class TestTargetFlightAirborneNeedsAGlidingMachine(KARTestBase):
                 state.has(name, self.player),
                 f"{name} leaked into the state, making this test vacuous",
             )
-        self.assertFalse(
-            self.reaches(state, self._LOCATION),
-            "the airtime cell should not be reachable on the excluded machines",
-        )
-
-    def test_reachable_on_each_gliding_machine(self):
-        for machine in _GOOD_GLIDE_MACHINES:
-            with self.subTest(machine=machine):
-                state = self.state_with()
-                state.collect(self.get_item_by_name(machine), prevent_sweep=True)
-                self.assertTrue(
-                    self.reaches(state, self._LOCATION),
-                    f"the airtime cell should be reachable on {machine} alone",
+        for location in _HARD_GLIDE_LOCATIONS:
+            with self.subTest(location=location):
+                self.assertFalse(
+                    self.reaches(state, location),
+                    "a hard glide cell should not be reachable on the poor gliders, Glide Patches or not",
                 )
 
-    def test_excluded_machines_are_city_trial_machines(self):
+    def test_needs_an_unpatched_glider_or_a_patched_one(self):
+        patched = [name for name in _GOOD_GLIDE_MACHINES if name not in _UNPATCHED_GLIDE_MACHINES]
+        self.assertAccessDependency(
+            list(_HARD_GLIDE_LOCATIONS),
+            [
+                *([name] for name in _UNPATCHED_GLIDE_MACHINES),
+                *([name, KARItemName.UNLOCK_PATCH_GLIDE] for name in patched),
+            ],
+            only_check_listed=True,
+        )
+
+    def test_other_good_gliders_fall_short_without_patches(self):
+        for machine in _GOOD_GLIDE_MACHINES:
+            if machine in _UNPATCHED_GLIDE_MACHINES:
+                continue
+            state = self.state_with(machine)
+            for location in _HARD_GLIDE_LOCATIONS:
+                with self.subTest(machine=machine, location=location):
+                    self.assertFalse(
+                        self.reaches(state, location),
+                        f"{machine} should need Glide Patches for {location}",
+                    )
+
+    def test_glide_machine_tables(self):
         # Guards against a typo'd or non-City-Trial name silently excluding nothing.
         for name in _POOR_GLIDE_MACHINES:
             self.assertIn(name, _CT_MACHINE_UNLOCKS)
         self.assertEqual(len(_POOR_GLIDE_MACHINES), 9)
         self.assertFalse(set(_GOOD_GLIDE_MACHINES) & _POOR_GLIDE_MACHINES)
+        self.assertTrue(set(_UNPATCHED_GLIDE_MACHINES) <= set(_GOOD_GLIDE_MACHINES))
+
+
+class TestHardGlideChecksPatchesUngated(KARTestBase):
+    """Ungated Glide Patches spawn in every City Trial, so any good glider is enough."""
+
+    options = {
+        **_GLIDE_TEST_OPTIONS,
+        "machines_gated": Toggle.option_true,
+        "city_trial_patches_gated": Toggle.option_false,
+        "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
+    }
+
+    def test_reachable_on_each_gliding_machine(self):
+        for machine in _GOOD_GLIDE_MACHINES:
+            state = self.state_with(machine)
+            for location in _HARD_GLIDE_LOCATIONS:
+                with self.subTest(machine=machine, location=location):
+                    self.assertTrue(self.reaches(state, location), f"{location} should be reachable on {machine}")
+
+
+class TestHardGlideChecksMachinesUngated(KARTestBase):
+    """Ungated machines leave Dragoon and the Flight Warp Star selectable, so gated Glide Patches add no rule."""
+
+    options = {
+        **_GLIDE_TEST_OPTIONS,
+        "machines_gated": Toggle.option_false,
+        "city_trial_patches_gated": Toggle.option_true,
+    }
+
+    def test_reachable_without_glide_patches(self):
+        state = self.state_without([KARItemName.UNLOCK_PATCH_GLIDE])
+        for location in _HARD_GLIDE_LOCATIONS:
+            with self.subTest(location=location):
+                self.assertTrue(self.reaches(state, location))
 
 
 class TestAirGliderNeedsGlideOrPatches(KARTestBase):
     """Every AIR GLIDER cell scores one launch off the ramp on the machine built in the city, so a seed
     handing out only poor gliders and no Glide Patches would leave the whole stadium unwinnable. The
     Wheelie Bike pin is itself a poor glider, so it suppresses the machine starter draw without
-    satisfying the rule. The AP checklist is on so the 2,000-foot cell is covered too."""
+    satisfying the rule. The long-flight cells ask more; TestHardGlideChecksNeedAPatchedGlider covers them."""
 
     options = {
-        **CT_ONLY,
-        "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
-        "archipelago_checklist_amount": 3,
+        **_GLIDE_TEST_OPTIONS,
         "machines_gated": Toggle.option_true,
         "city_trial_patches_gated": Toggle.option_true,
-        "city_trial_stadiums_gated": Toggle.option_false,
         "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
     }
 
@@ -1661,10 +1719,12 @@ class TestAirGliderNeedsGlideOrPatches(KARTestBase):
         CTLocation.STADIUM_AG_AIRBORNE_30_SECONDS,
         APLocation.AG_FLY_2000_FEET,
     )
+    _EASY_CELLS = tuple(cell for cell in _CELLS if cell not in _HARD_GLIDE_LOCATIONS)
 
     def test_the_cell_list_is_the_whole_region(self):
         region = self.world.get_region(KARRegion.CITY_TRIAL_STADIUM_AG)
         self.assertEqual({loc.name for loc in region.locations}, set(self._CELLS))
+        self.assertEqual(len(self._EASY_CELLS), 2)
 
     def _poor_glider_state(self):
         """Every poor glider held at once and nothing that glides - not just "some machine"."""
@@ -1685,14 +1745,14 @@ class TestAirGliderNeedsGlideOrPatches(KARTestBase):
     def test_reachable_on_each_gliding_machine(self):
         for machine in _GOOD_GLIDE_MACHINES:
             state = self.state_with(machine)
-            for cell in self._CELLS:
+            for cell in self._EASY_CELLS:
                 with self.subTest(machine=machine, location=cell):
                     self.assertTrue(self.reaches(state, cell), f"{cell} should be reachable on {machine} alone")
 
     def test_the_glide_patch_carries_a_poor_glider(self):
         state = self._poor_glider_state()
         state.collect(self.world.create_item(KARItemName.UNLOCK_PATCH_GLIDE), prevent_sweep=True)
-        for cell in self._CELLS:
+        for cell in self._EASY_CELLS:
             with self.subTest(location=cell):
                 self.assertTrue(self.reaches(state, cell), f"{cell} should be reachable on Glide Patches alone")
 
@@ -2564,6 +2624,48 @@ class TestAPFantasyMeadowsShortcutNeedsAGlidingMachine(KARTestBase):
             self.assertIn(name, _AR_MACHINE_UNLOCKS)
         self.assertEqual(len(_FM_SHORTCUT_EXCLUDED_MACHINES), 4)
         self.assertFalse(set(_FM_SHORTCUT_MACHINES) & _FM_SHORTCUT_EXCLUDED_MACHINES)
+
+
+_CV_TREE_OPTIONS: dict = {
+    **AR_ONLY,
+    "air_ride_courses_gated": Toggle.option_false,
+    "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
+}
+
+
+class TestCVCopyChanceWheelTreeNeedsGliderOrWing(KARTestBase):
+    """The Copy Chance Wheel sits on top of Celestial Valley's tree, so reaching it means a good glider
+    or Wing. Air Ride has no patches, so the poor gliders never get there. The Wheelie Bike pin is itself
+    a poor glider, so it suppresses the machine starter draw without satisfying the rule."""
+
+    options = {**_CV_TREE_OPTIONS, "machines_gated": Toggle.option_true, "abilities_gated": Toggle.option_true}
+
+    def test_needs_a_good_glider_or_wing(self):
+        self.assertAccessDependency(
+            [ARLocation.CV_COPY_CHANCE_WHEEL_TREE],
+            [*([name] for name in _GOOD_GLIDE_MACHINES), [KARItemName.UNLOCK_ABILITY_WING]],
+            only_check_listed=True,
+        )
+
+
+class TestCVCopyChanceWheelTreeMachinesUngated(KARTestBase):
+    """Ungated machines leave every good glider selectable, so Wing is not needed."""
+
+    options = {**_CV_TREE_OPTIONS, "machines_gated": Toggle.option_false, "abilities_gated": Toggle.option_true}
+
+    def test_reachable_without_wing(self):
+        state = self.state_without([KARItemName.UNLOCK_ABILITY_WING])
+        self.assertTrue(self.reaches(state, ARLocation.CV_COPY_CHANCE_WHEEL_TREE))
+
+
+class TestCVCopyChanceWheelTreeAbilitiesUngated(KARTestBase):
+    """Ungated abilities leave Wing on the course's copy panel, so no glider is needed."""
+
+    options = {**_CV_TREE_OPTIONS, "machines_gated": Toggle.option_true, "abilities_gated": Toggle.option_false}
+
+    def test_reachable_without_a_good_glider(self):
+        state = self.state_without(_GOOD_GLIDE_MACHINES)
+        self.assertTrue(self.reaches(state, ARLocation.CV_COPY_CHANCE_WHEEL_TREE))
 
 
 class TestCityAnyMachineCells(KARTestBase):
