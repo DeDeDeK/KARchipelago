@@ -2403,10 +2403,11 @@ class TestAPMicKirbyMeleeBoxNeedsBothKeys(KARTestBase):
         self.assertTrue(reachable(*keys), "not reachable with both keys")
 
 
-class TestAPKirbyMelee1HundredKOBox(KARTestBase):
-    """The KIRBY MELEE 1 100-KO box needs one of Sword, Needle, Tornado or Plasma, and Inhale to swallow its
-    enemy, as KM1 spawns no copy panels. machines_gated is OFF so the combat-damage entrance rule on KIRBY
-    MELEE drops out and the box's own rule is isolated."""
+class TestKirbyMeleeSoloKOBoxes(KARTestBase):
+    """The KIRBY MELEE solo-KO boxes - City Trial's KM1 75 and the Archipelago checklist's KM1 100 and KM2 60 -
+    need one of Sword, Needle, Tornado or Plasma, and Inhale to swallow its enemy, as neither stage spawns
+    copy panels. machines_gated is OFF so the combat-damage entrance rule on KIRBY MELEE drops out and the
+    boxes' own rule is isolated."""
 
     options = {
         **CT_ONLY,
@@ -2417,6 +2418,12 @@ class TestAPKirbyMelee1HundredKOBox(KARTestBase):
         "city_trial_stadiums_gated": Toggle.option_false,
     }
 
+    locations = (
+        CTLocation.STADIUM_KM1_KO_75_ENEMIES_BY_YOURSELF,
+        APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF,
+        APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF,
+    )
+
     abilities = (
         KARItemName.UNLOCK_ABILITY_SWORD,
         KARItemName.UNLOCK_ABILITY_NEEDLE,
@@ -2426,27 +2433,28 @@ class TestAPKirbyMelee1HundredKOBox(KARTestBase):
 
     def test_needs_any_of_the_four_abilities(self):
         self.assertAccessDependency(
-            [APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF],
+            list(self.locations),
             [[ability] for ability in self.abilities],
             only_check_listed=True,
         )
 
     def test_needs_inhale_alongside_the_ability(self):
-        location = APLocation.KM1_KO_100_ENEMIES_BY_YOURSELF
         inhale = KARItemName.UNLOCK_BASE_ABILITY_INHALE
         base = self.state_without([*self.abilities, inhale])
 
-        def reachable(*items: str) -> bool:
+        def reachable(location: str, *items: str) -> bool:
             state = base.copy()
             for name in items:
                 state.collect(self.world.create_item(name))
             return self.reaches(state, location)
 
-        self.assertFalse(reachable(inhale), "reachable with Inhale but no ability")
-        for ability in self.abilities:
-            with self.subTest(ability=ability):
-                self.assertFalse(reachable(ability), "reachable with the ability but no Inhale")
-                self.assertTrue(reachable(ability, inhale), "not reachable with the ability and Inhale")
+        for location in self.locations:
+            with self.subTest(location=location):
+                self.assertFalse(reachable(location, inhale), "reachable with Inhale but no ability")
+            for ability in self.abilities:
+                with self.subTest(location=location, ability=ability):
+                    self.assertFalse(reachable(location, ability), "reachable with the ability but no Inhale")
+                    self.assertTrue(reachable(location, ability, inhale), "not reachable with the ability and Inhale")
 
 
 class TestAPPurpleKirbyBox(KARTestBase):
