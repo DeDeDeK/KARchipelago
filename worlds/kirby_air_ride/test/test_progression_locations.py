@@ -250,7 +250,8 @@ class TestArchipelagoExcludedIsBudgeted(KARTestBase):
     have to stay placeable: _compute_capacity counts them toward the excluded budget, never the default
     one. Anything that grows the AP categories shrinks that default budget."""
 
-    options = AP_ONLY
+    # Pinned empty: the option's default selects the Copy Chance Wheel, which would leave that group default.
+    options = {**AP_ONLY, "archipelago_progression": []}
     run_default_tests = False
 
     def test_excluded_locations_still_exist(self):
