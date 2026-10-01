@@ -161,6 +161,7 @@ class TestAPPatchesWithoutACityTrialGoal(KARTestBase):
         "city_trial_goal": CityTrialGoal.option_none,
         "archipelago_goal": ArchipelagoGoal.option_n_checklist_blocks,
         "archipelago_checklist_amount": 3,
+        "archipelago_checkbox_fillers": 0,
         "ap_patches": 10,
     }
 

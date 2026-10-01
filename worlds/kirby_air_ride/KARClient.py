@@ -595,7 +595,7 @@ class KARContext(CommonContext):
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))
         d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd.get("city_trial_checklist_amount", 60)))
         d.write_u32(
-            a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 25))
+            a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 60))
         )
 
         d.write_u32(a(MemoryAddress.OPTION_AP_PATCHES), int(sd.get("ap_patches", 0)))

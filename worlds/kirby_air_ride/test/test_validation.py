@@ -151,7 +151,7 @@ _make_raises_test(
 )
 
 
-# Tuned to fit by one: 65 progression + 19 counted-useful + 6 useful checklist rewards = 90 items needing
+# Tuned to fit by one: 75 progression + 9 counted-useful + 6 useful checklist rewards = 90 items needing
 # a default location, against the 91 City Trial has once RNG boxes count as progression. Filler rewards
 # are not counted - they may sit on excluded boxes. AP Patches are held out, or their locations would
 # absorb the excludes the paired test relies on.
@@ -179,8 +179,8 @@ class TestTightPoolFitsWithoutExcludeLocations(KARTestBase):
     options = _TIGHT_POOL
 
     def test_pool_sizes_are_unchanged(self):
-        self.assertEqual(len(self.world.progression_pool), 65)
-        self.assertEqual(len(self.world.counted_useful_pool), 19)
+        self.assertEqual(len(self.world.progression_pool), 75)
+        self.assertEqual(len(self.world.counted_useful_pool), 9)
 
 
 _make_raises_test(

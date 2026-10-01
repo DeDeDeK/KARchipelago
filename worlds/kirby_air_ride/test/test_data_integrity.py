@@ -9,8 +9,9 @@ from itertools import pairwise
 from BaseClasses import ItemClassification
 
 from ..KARData import (
+    CHECKLIST_CELLS,
     CLIENT_BACKFILL_PER_MODE,
-    CODE_BAND_PER_MODE,
+    CODE_BASE_PER_MODE,
     REWARD_CODE_BASE,
     REWARD_CODE_STRIDE,
     REWARDS_PER_MODE,
@@ -47,8 +48,11 @@ from ..KARLocations import (
     TOP_RIDE_LOCATION_TABLE,
 )
 from ..KAROptions import (
+    AirRideChecklistAmount,
     AirRideGoal,
+    ArchipelagoChecklistAmount,
     ArchipelagoGoal,
+    CityTrialChecklistAmount,
     CityTrialGoal,
     StartingAirRideCourse,
     StartingKirbyColor,
@@ -56,15 +60,17 @@ from ..KAROptions import (
     StartingStadium,
     StartingTopRideCourse,
     StartingTopRideMachine,
+    TopRideChecklistAmount,
     TopRideGoal,
 )
 from ..KARRegions import REGION_TO_MODE, KARRegion
 
-# (table, mode, first code, last code) for the three modes that fill a whole 120-wide band.
+# (table, mode, first code, last code) for every mode's 120-wide band.
 _MODE_BANDS = [
     (CITY_TRIAL_LOCATION_TABLE, GameMode.CITYTRIAL, 1, 120),
     (AIR_RIDE_LOCATION_TABLE, GameMode.AIRRIDE, 121, 240),
     (TOP_RIDE_LOCATION_TABLE, GameMode.TOPRIDE, 241, 360),
+    (AP_CHECKLIST_LOCATION_TABLE, GameMode.ARCHIPELAGO, 361, 480),
 ]
 
 
@@ -90,21 +96,20 @@ class TestCodesAreUnique(unittest.TestCase):
 
     def test_location_codes_unique_across_every_table(self):
         self.assertEqual(
-            _duplicate_codes(
-                [*(band[0] for band in _MODE_BANDS), AP_CHECKLIST_LOCATION_TABLE, AP_PATCH_LOCATION_TABLE]
-            ),
+            _duplicate_codes([*(band[0] for band in _MODE_BANDS), AP_PATCH_LOCATION_TABLE]),
             [],
         )
 
 
 class TestLocationCodeBands(unittest.TestCase):
-    """Each real mode fills its 120-wide band exactly: a gap would mean a removed location left a dead
-    code, and every code has to decode back to its own mode."""
+    """Each mode fills its 120-wide band exactly: a gap would mean a removed location left a dead code,
+    and every code has to decode back to its own mode. For the Archipelago band that pairing is also the
+    wire contract with the mod's ap_checks[] array."""
 
     def test_each_mode_fills_its_band(self):
         for table, mode, lo, hi in _MODE_BANDS:
             with self.subTest(mode=mode.name):
-                self.assertEqual(len(table), 120)
+                self.assertEqual(len(table), CHECKLIST_CELLS)
                 codes = sorted(d.code for d in table.values() if d.code is not None)
                 self.assertEqual(codes, list(range(lo, hi + 1)))
 
@@ -115,29 +120,45 @@ class TestLocationCodeBands(unittest.TestCase):
                     self.assertEqual(location_code_to_mode_clear(data.code), (mode, data.code - lo))
 
 
+class TestChecklistAmountRanges(unittest.TestCase):
+    """Every mode's N-blocks goal ranges over its whole checklist, and defaults inside that range."""
+
+    def test_range_covers_the_table(self):
+        for option, table in (
+            (CityTrialChecklistAmount, CITY_TRIAL_LOCATION_TABLE),
+            (AirRideChecklistAmount, AIR_RIDE_LOCATION_TABLE),
+            (TopRideChecklistAmount, TOP_RIDE_LOCATION_TABLE),
+            (ArchipelagoChecklistAmount, AP_CHECKLIST_LOCATION_TABLE),
+        ):
+            with self.subTest(option=option.__name__):
+                self.assertEqual(option.range_end, len(table))
+                self.assertGreaterEqual(option.default, option.range_start)
+                self.assertLessEqual(option.default, option.range_end)
+
+
 class TestCheckboxCodecBands(unittest.TestCase):
     """The two checkbox codecs must be exact inverses over every band. _check_locations feeds
-    mode_clear_to_location_code bits 0-127 of a two-word mask while no band is wider than 120, so an
+    mode_clear_to_location_code bits 0-127 of a two-word mask while every band is 120 wide, so an
     unbounded encode would report a neighbouring mode's location for a bit the game never sets."""
 
     def test_every_mode_has_a_band(self):
-        self.assertEqual(set(CODE_BAND_PER_MODE), set(GameMode))
+        self.assertEqual(set(CODE_BASE_PER_MODE), set(GameMode))
 
     def test_bands_do_not_overlap(self):
-        codes = [c for base, width in CODE_BAND_PER_MODE.values() for c in range(base, base + width)]
+        codes = [c for base in CODE_BASE_PER_MODE.values() for c in range(base, base + CHECKLIST_CELLS)]
         self.assertEqual(len(codes), len(set(codes)), "Two modes claim the same location code")
 
     def test_in_band_clear_kinds_round_trip(self):
-        for mode, (base, width) in CODE_BAND_PER_MODE.items():
-            for clear_kind in range(width):
+        for mode, base in CODE_BASE_PER_MODE.items():
+            for clear_kind in range(CHECKLIST_CELLS):
                 with self.subTest(mode=mode.name, clear_kind=clear_kind):
                     code = mode_clear_to_location_code(mode, clear_kind)
                     self.assertEqual(code, base + clear_kind)
                     self.assertEqual(location_code_to_mode_clear(code), (mode, clear_kind))
 
     def test_out_of_band_clear_kinds_encode_to_zero(self):
-        for mode, (_, width) in CODE_BAND_PER_MODE.items():
-            for clear_kind in (-1, width, width + 1, 127):
+        for mode in CODE_BASE_PER_MODE:
+            for clear_kind in (-1, CHECKLIST_CELLS, CHECKLIST_CELLS + 1, 127):
                 with self.subTest(mode=mode.name, clear_kind=clear_kind):
                     self.assertEqual(mode_clear_to_location_code(mode, clear_kind), 0)
 
