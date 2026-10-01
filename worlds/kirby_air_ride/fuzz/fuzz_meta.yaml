@@ -26,10 +26,6 @@ Kirby Air Ride:
       if_value: "n_checklist_blocks"
       then:
         top_ride_checkbox_fillers: 0
-    # The AP checklist needs nothing beyond the same filler pin: ArchipelagoChecklistAmount's range
-    # ends at AP_CHECKLIST_CODE_NUM, so the amount can never exceed the boxes that exist and the
-    # filler comparison is the only way that goal rejects. Leaving the amount free keeps the whole
-    # 1..52 range in play, the upper end of which is where the capacity validator gets interesting.
     - option: archipelago_goal
       if_value: "n_checklist_blocks"
       then:

@@ -137,7 +137,7 @@ def _make_checklist_list_goal_test(mode: _Mode) -> type:
 
 
 for _mode in _MODES:
-    # The Archipelago checklist is well under 100 boxes wide, so it offers no 100-blocks goal.
+    # The Archipelago checklist has no "Fill in over 100 Checklist blocks!" cell, so it offers no 100-blocks goal.
     if hasattr(_mode.goal_option, "option_100_checklist_blocks"):
         _register(
             _make_box_replacing_goal_test(_mode, _mode.goal_option.option_100_checklist_blocks),

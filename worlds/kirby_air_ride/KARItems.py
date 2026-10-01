@@ -1181,9 +1181,7 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.CT_REWARD_WHITE_KIRBY: KARItemData(
         KARItemType.CT_CHECKLIST_REWARD, ItemClassification.filler, 643, _CT
     ),
-    # Event Unlocks (700-715). Only the six events a checklist cell names are progression - see
-    # KARRules._EVENT_LOCATION_RULES, and the test that pins this split to it. The other ten gate no
-    # location, so they are useful; _build_item_pools still ships exactly one copy of each.
+    # Event Unlocks (700-715)
     KARItemName.UNLOCK_EVENT_DYNA_BLADE: KARItemData(
         KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 700, _CT
     ),
@@ -1196,25 +1194,41 @@ ITEM_TABLE: dict[str, KARItemData] = {
     KARItemName.UNLOCK_EVENT_PILLAR: KARItemData(
         KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 703, _CT
     ),
-    KARItemName.UNLOCK_EVENT_RUN_AMOK: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 704, _CT),
+    KARItemName.UNLOCK_EVENT_RUN_AMOK: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 704, _CT
+    ),
     KARItemName.UNLOCK_EVENT_RESTORATION_AREA: KARItemData(
         KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 705, _CT
     ),
-    KARItemName.UNLOCK_EVENT_RAIL_FIRE: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 706, _CT),
-    KARItemName.UNLOCK_EVENT_SAME_ITEM: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 707, _CT),
-    KARItemName.UNLOCK_EVENT_LIGHTHOUSE: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 708, _CT),
+    KARItemName.UNLOCK_EVENT_RAIL_FIRE: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 706, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_SAME_ITEM: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 707, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_LIGHTHOUSE: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 708, _CT
+    ),
     KARItemName.UNLOCK_EVENT_SECRET_CHAMBER: KARItemData(
         KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 709, _CT
     ),
-    KARItemName.UNLOCK_EVENT_PREDICTION: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 710, _CT),
-    KARItemName.UNLOCK_EVENT_MACHINE_FORMATION: KARItemData(
-        KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 711, _CT
+    KARItemName.UNLOCK_EVENT_PREDICTION: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 710, _CT
     ),
-    KARItemName.UNLOCK_EVENT_UFO: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 712, _CT),
-    KARItemName.UNLOCK_EVENT_BOUNCE: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 713, _CT),
-    KARItemName.UNLOCK_EVENT_FOG: KARItemData(KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 714, _CT),
+    KARItemName.UNLOCK_EVENT_MACHINE_FORMATION: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 711, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_UFO: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 712, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_BOUNCE: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 713, _CT
+    ),
+    KARItemName.UNLOCK_EVENT_FOG: KARItemData(
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 714, _CT
+    ),
     KARItemName.UNLOCK_EVENT_FAKE_POWERUPS: KARItemData(
-        KARItemType.CT_EVENT_UNLOCK, ItemClassification.useful, 715, _CT
+        KARItemType.CT_EVENT_UNLOCK, ItemClassification.progression_deprioritized_skip_balancing, 715, _CT
     ),
     # Copy Ability Unlocks (760-770)
     KARItemName.UNLOCK_ABILITY_FIRE: KARItemData(
