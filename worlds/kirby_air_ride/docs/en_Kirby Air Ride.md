@@ -105,9 +105,6 @@ When more than one mode has a goal, you only complete your game by completing ev
 
 ### Archipelago checklist
 
-**EXPERIMENTAL:** this checklist is incomplete and under active development. It does not yet have all 120 checkboxes. Logic or checks for this may
-not work properly. 
-
 - **Fill in N Checklist Boxes**
 - **Complete a specific list of checklist boxes** (via "Archipelago Goal Locations").
 - **Assemble the Archipelago Star.** Collect all six Archipelago spheres in one City Trial round.
@@ -130,10 +127,10 @@ The categories are:
 
 - **High Effort** - long grinds, such as breaking 1000 boxes or driving for two hours (all four checklists)
 - **Multiplayer** - boxes that need a second player (City Trial, Top Ride)
-- **Free Run** - boxes you can only fill in Free Run (City Trial, Air Ride, Top Ride)
-- **Time Attack** - boxes you can only fill in Time Attack (Air Ride, Top Ride)
+- **Free Run** - boxes you can only fill in Free Run (City Trial, Air Ride, Top Ride, Archipelago)
+- **Time Attack** - boxes you can only fill in Time Attack (Air Ride, Top Ride, Archipelago)
 - **Bust Vehicle on Vehicle** - busting one machine with another (City Trial)
-- **RNG: Events** - City Trial events (City Trial)
+- **RNG: Events** - City Trial events (City Trial, Archipelago)
 - **RNG: Food** - eating X food items in one CT run (City Trial, Archipelago)
 - **RNG: Copy Chance Wheel** - abilities the wheel has to land on (City Trial, Archipelago)
 - **RNG: Rivals** - boxes that depend on what your rivals happen to do (Air Ride, Archipelago)

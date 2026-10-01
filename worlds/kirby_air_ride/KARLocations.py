@@ -3,7 +3,7 @@ from typing import NamedTuple
 
 from BaseClasses import Location
 
-from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_BASE, AP_PATCH_CODE_MAX, GameMode, GoalKind
+from .KARData import AP_PATCH_CODE_BASE, AP_PATCH_CODE_MAX, GameMode, GoalKind
 from .KARItems import KARItemName
 from .KARRegions import KARRegion
 
@@ -472,6 +472,104 @@ class APLocation(StrEnum):
         "Archipelago: City Trial: In one game, assemble Dragoon, Hydra and Archipelago Star!"
     )
     GET_10_OFFENSE_PATCHES = "Archipelago: City Trial: In one game, get 10 or more Offense Patches!"
+    NEBULA_BELT_2_LAPS_UNDER_206 = "Archipelago: Air Ride: NEBULA BELT Finish 2 laps in under 02:06:00!"
+    TA_NB_FINISH_03_35_00 = "Archipelago: Time Attack: NEBULA BELT Finish in under 03:35:00!"
+    TA_NB_FINISH_03_10_00 = "Archipelago: Time Attack: NEBULA BELT Finish in under 03:10:00!"
+    TA_NB_FINISH_03_15_00_ON_HYDRA = "Archipelago: Time Attack: NEBULA BELT Finish in under 03:15:00 on Hydra!"
+    FR_NB_LAP_01_15_00 = "Archipelago: Free Run: NEBULA BELT Finish 1 lap in under 01:15:00!"
+    FR_NB_LAP_01_03_00 = "Archipelago: Free Run: NEBULA BELT Finish 1 lap in under 01:03:00!"
+    FR_NB_LAP_01_10_00_ON_WARPSTAR = "Archipelago: Free Run: NEBULA BELT Do 1 lap under 01:10:00 on Warpstar!"
+    FR_CV_LAP_01_00_00_ON_ARCHIPELAGO_STAR = (
+        "Archipelago: Free Run: CELESTIAL VALLEY Do 1 lap under 01:00:00 on Archipelago Star!"
+    )
+    TA_CK_FINISH_04_00_00_ON_FLIGHT_WARP_STAR = (
+        "Archipelago: Time Attack: CHECKER KNIGHTS Finish in under 04:00:00 on Flight Warp Star!"
+    )
+    FR_MP_LAP_01_05_00_ON_COMPACT_STAR = (
+        "Archipelago: Free Run: MACHINE PASSAGE Do 1 lap under 01:05:00 on Compact Star!"
+    )
+    TA_FH_FINISH_03_00_00_ON_WHEELIE_BIKE = (
+        "Archipelago: Time Attack: FROZEN HILLSIDE Finish in under 03:00:00 on Wheelie Bike!"
+    )
+    TA_SS_FINISH_02_50_00_ON_FLIGHT_WARP_STAR = (
+        "Archipelago: Time Attack: SKY SANDS Finish in under 02:50:00 on Flight Warp Star!"
+    )
+    EVENT_RUN_AMOK_1000_FEET = "Archipelago: City Trial: While energy tanks run amok, travel over 1,000 feet!"
+    EVENT_RAIL_FIRE_ALL_STATIONS = "Archipelago: City Trial: Catch fire at all 5 rail stations while they burn!"
+    EVENT_SAME_ITEM_GET_20 = "Archipelago: City Trial: When the boxes all hold the same item, get 20 of it!"
+    EVENT_LIGHTHOUSE_BOTH_LIGHTS = "Archipelago: City Trial: Go under both lights of the city lighthouse!"
+    EVENT_PREDICTION_WRONG = "Archipelago: City Trial: Get a Stadium Prediction that turns out wrong!"
+    EVENT_UFO_ALL_UP = "Archipelago: City Trial: Get the All Up on top of the UFO!"
+    EVENT_BUMP_MACHINE_FORMATION = "Archipelago: City Trial: Bump into the Air Ride machine formation!"
+    EVENT_BOUNCE_OVER_10_ITEMS = "Archipelago: City Trial: While the items bounce, get over 10 items!"
+    EVENT_FOG_KO_A_RIVAL = "Archipelago: City Trial: KO a rival while a dense fog covers the city!"
+    EVENT_FAKE_POWERUPS_5_NO_FAKES = "Archipelago: City Trial: Get 5 power-ups while some are fake, and touch no fakes!"
+    SAME_COPY_ABILITY_3_IN_A_ROW = "Archipelago: City Trial: In one game, get the same copy ability 3 times in a row!"
+    BUST_REX_WHEELIE_ON_WHEELIE_SCOOTER = (
+        "Archipelago: City Trial: In the city, bust Rex Wheelie while riding Wheelie Scooter!"
+    )
+    BUST_WINGED_STAR_ON_FLIGHT_WARP_STAR = (
+        "Archipelago: City Trial: In the city, bust Winged Star while riding Flight Warp Star!"
+    )
+    BUST_SHADOW_STAR_ON_ARCHIPELAGO_STAR = (
+        "Archipelago: City Trial: In the city, bust Shadow Star while riding Archipelago Star!"
+    )
+    TA_MF_FINISH_03_15_00_AS_META_KNIGHT = (
+        "Archipelago: Time Attack: MAGMA FLOWS Finish in under 03:15:00 as Meta Knight!"
+    )
+    AIR_RIDE_1ST_ON_ARCHIPELAGO_STAR = "Archipelago: Air Ride: Finish in 1st place on Archipelago Star!"
+    KM_KO_30_ENEMIES_AS_KING_DEDEDE = (
+        "Archipelago: Stadium: KIRBY MELEE (All) In one game, KO 30 enemies as King Dedede!"
+    )
+    VSKD_KO_KING_DEDEDE_AS_META_KNIGHT = "Archipelago: Stadium: VS. KING DEDEDE KO King Dedede as Meta Knight!"
+    TR_FREEZE_3_RIVALS_WITH_ONE_FREEZE_FAN = "Archipelago: Top Ride: Freeze 3 or more rivals using one Freeze Fan item!"
+    TR_FIRE_1ST_WITHOUT_GETTING_BURNED = "Archipelago: Top Ride: FIRE Take 1st place without getting burned!"
+    TR_SAND_1ST_WITHOUT_ANT_DOOM = "Archipelago: Top Ride: SAND Take 1st place without dropping into Ant Doom!"
+    TR_1ST_AGAINST_3_LEVEL_5_CPUS = "Archipelago: Top Ride: Finish 1st against 3 CPUs set to level 5!"
+    TR_PHOTO_FINISH = "Archipelago: Top Ride: On any course, have 2 players finish within 0.20 seconds!"
+    TR_RACE_AS_EVERY_COLOR = "Archipelago: Top Ride: Finish a race as every Kirby color!"
+    TA_GRASS_FINISH_00_33_00_ON_STEER_STAR = "Archipelago: Time Attack: GRASS Finish in under 00:33:00 on Steer Star!"
+    TA_METAL_FINISH_00_57_00_ON_STEER_STAR = "Archipelago: Time Attack: METAL Finish in under 00:57:00 on Steer Star!"
+    FR_SKY_LAP_00_11_00_ON_STEER_STAR = "Archipelago: Free Run: SKY Do 1 lap under 00:11:00 on Steer Star!"
+    TR_1ST_ON_ALL_COURSES_ON_STEER_STAR = "Archipelago: Top Ride: Take 1st place on all courses on Steer Star!"
+    TR_1ST_WITHOUT_GETTING_HIT = "Archipelago: Top Ride: Take 1st place without getting hit once!"
+    TR_1ST_AFTER_5_HITS = "Archipelago: Top Ride: Take 1st after getting knocked around 5 times in one race!"
+    TR_USE_ALL_ABILITY_ITEMS = "Archipelago: Top Ride: In one race, use Fire, Freeze Fan, Bomb and Walky!"
+    TR_3_SPEED_DOWNS_AND_1ST = "Archipelago: Top Ride: Get 3 Speed Down items in one race and still finish 1st!"
+    TR_TA_EVERY_LAP_WITHIN_1_SECOND = (
+        "Archipelago: Top Ride: In Time Attack, keep every lap within 1 second of each other!"
+    )
+    KO_CPU_WITH_AP_STAR_SPHERE_SHOT = "Archipelago: City Trial: KO a CPU with a sphere shot from the Archipelago Star!"
+    RIDE_5_DIFFERENT_MACHINES = "Archipelago: City Trial: In one game, ride 5 different machines!"
+    AIRBORNE_20_SECONDS_IN_CITY = "Archipelago: City Trial: In the city, stay airborne longer than 20 seconds!"
+    EVENT_DYNA_BLADE_5_ITEMS = "Archipelago: City Trial: In one game, grab 5 items dropped by Dyna Blade!"
+    KO_A_RIVAL_WITH_PANIC_SPIN = "Archipelago: City Trial: Use a Panic Spin to KO a rival!"
+    WHISPY_WOODS_ON_FOOT = "Archipelago: City Trial: Talk to Whispy Woods on foot!"
+    LIGHTHOUSE_TOP_ON_FOOT = "Archipelago: City Trial: Visit the top of the lighthouse on foot!"
+    UNDER_THE_WATERWHEEL = "Archipelago: City Trial: Go underneath the waterwheel!"
+    USE_ALL_GRIND_RAILS = "Archipelago: City Trial: In one game, use all the grind rails in the city!"
+    GET_6_DIFFERENT_COPY_ABILITIES = "Archipelago: City Trial: In one game, get 6 different copy abilities!"
+    EVENT_METEOR_NO_DAMAGE = "Archipelago: City Trial: Take no damage while the meteor attacks the city!"
+    MAX_OUT_A_STAT = "Archipelago: City Trial: In one game, max out a stat with patches!"
+    DD_KO_5_WITHOUT_GETTING_KNOCKED_OUT = (
+        "Archipelago: Stadium: DESTRUCTION DERBY (All) KO 5 rivals without getting knocked out!"
+    )
+    VSKD_KO_KING_DEDEDE_WITHOUT_DAMAGE = (
+        "Archipelago: Stadium: VS. KING DEDEDE KO King Dedede without taking any damage!"
+    )
+    DR_1ST_IN_EVERY_DRAG_RACE = "Archipelago: Stadium: Take 1st place in every DRAG RACE!"
+    AIR_RIDE_1ST_ON_EVERY_COURSE = "Archipelago: Air Ride: Take 1st place on every course!"
+    BEANSTALK_PARK_FERRIS_WHEEL_EVERY_LAP = (
+        "Archipelago: Air Ride: BEANSTALK PARK Ride the Ferris wheel every lap and take 1st!"
+    )
+    SKY_SANDS_1ST_WITHOUT_QUICKSAND = "Archipelago: Air Ride: SKY SANDS Take 1st place without entering the quicksand!"
+    CHECKER_KNIGHTS_1ST_WITHOUT_SPIN_PANELS = (
+        "Archipelago: Air Ride: CHECKER KNIGHTS Take 1st without using any spin panels!"
+    )
+    MAGMA_FLOWS_1ST_WITHOUT_BOOST_PANELS = "Archipelago: Air Ride: MAGMA FLOWS Take 1st without using any Boost Panels!"
+    TR_WATER_1ST_WITHOUT_FALLS = "Archipelago: Top Ride: WATER Take 1st place without entering the falls!"
+    TR_LIGHT_1ST_WITHOUT_GRIND_RAIL = "Archipelago: Top Ride: LIGHT Take 1st place without grinding the rail!"
+    TR_USE_EVERY_KIND_OF_ITEM = "Archipelago: Top Ride: Use every kind of item at least once!"
 
 
 CITY_TRIAL_LOCATION_TABLE: dict[str, KARLocationData] = {
@@ -1091,6 +1189,74 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.ASSEMBLE_ARCHIPELAGO_STAR: KARLocationData(410, KARRegion.CITY_TRIAL),
     APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES: KARLocationData(411, KARRegion.CITY_TRIAL),
     APLocation.GET_10_OFFENSE_PATCHES: KARLocationData(412, KARRegion.CITY_TRIAL),
+    APLocation.NEBULA_BELT_2_LAPS_UNDER_206: KARLocationData(413, KARRegion.AIR_RIDE_NEBULA_BELT),
+    APLocation.TA_NB_FINISH_03_35_00: KARLocationData(414, KARRegion.AIR_RIDE_TA_NEBULA_BELT),
+    APLocation.TA_NB_FINISH_03_10_00: KARLocationData(415, KARRegion.AIR_RIDE_TA_NEBULA_BELT),
+    APLocation.TA_NB_FINISH_03_15_00_ON_HYDRA: KARLocationData(416, KARRegion.AIR_RIDE_TA_NEBULA_BELT),
+    APLocation.FR_NB_LAP_01_15_00: KARLocationData(417, KARRegion.AIR_RIDE_FR_NEBULA_BELT),
+    APLocation.FR_NB_LAP_01_03_00: KARLocationData(418, KARRegion.AIR_RIDE_FR_NEBULA_BELT),
+    APLocation.FR_NB_LAP_01_10_00_ON_WARPSTAR: KARLocationData(419, KARRegion.AIR_RIDE_FR_NEBULA_BELT),
+    APLocation.FR_CV_LAP_01_00_00_ON_ARCHIPELAGO_STAR: KARLocationData(420, KARRegion.AIR_RIDE_FR_CELESTIAL_VALLEY),
+    APLocation.TA_CK_FINISH_04_00_00_ON_FLIGHT_WARP_STAR: KARLocationData(421, KARRegion.AIR_RIDE_TA_CHECKER_KNIGHTS),
+    APLocation.FR_MP_LAP_01_05_00_ON_COMPACT_STAR: KARLocationData(422, KARRegion.AIR_RIDE_FR_MACHINE_PASSAGE),
+    APLocation.TA_FH_FINISH_03_00_00_ON_WHEELIE_BIKE: KARLocationData(423, KARRegion.AIR_RIDE_TA_FROZEN_HILLSIDE),
+    APLocation.TA_SS_FINISH_02_50_00_ON_FLIGHT_WARP_STAR: KARLocationData(424, KARRegion.AIR_RIDE_TA_SKY_SANDS),
+    APLocation.EVENT_RUN_AMOK_1000_FEET: KARLocationData(425, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_RAIL_FIRE_ALL_STATIONS: KARLocationData(426, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_SAME_ITEM_GET_20: KARLocationData(427, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_LIGHTHOUSE_BOTH_LIGHTS: KARLocationData(428, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_PREDICTION_WRONG: KARLocationData(429, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_UFO_ALL_UP: KARLocationData(430, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_BUMP_MACHINE_FORMATION: KARLocationData(431, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_BOUNCE_OVER_10_ITEMS: KARLocationData(432, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_FOG_KO_A_RIVAL: KARLocationData(433, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_FAKE_POWERUPS_5_NO_FAKES: KARLocationData(434, KARRegion.CITY_TRIAL),
+    APLocation.SAME_COPY_ABILITY_3_IN_A_ROW: KARLocationData(435, KARRegion.CITY_TRIAL),
+    APLocation.BUST_REX_WHEELIE_ON_WHEELIE_SCOOTER: KARLocationData(436, KARRegion.CITY_TRIAL),
+    APLocation.BUST_WINGED_STAR_ON_FLIGHT_WARP_STAR: KARLocationData(437, KARRegion.CITY_TRIAL),
+    APLocation.BUST_SHADOW_STAR_ON_ARCHIPELAGO_STAR: KARLocationData(438, KARRegion.CITY_TRIAL),
+    APLocation.TA_MF_FINISH_03_15_00_AS_META_KNIGHT: KARLocationData(439, KARRegion.AIR_RIDE_TA_MAGMA_FLOWS),
+    APLocation.AIR_RIDE_1ST_ON_ARCHIPELAGO_STAR: KARLocationData(440, KARRegion.AIR_RIDE),
+    APLocation.KM_KO_30_ENEMIES_AS_KING_DEDEDE: KARLocationData(441, KARRegion.CITY_TRIAL_STADIUM_KM_ALL),
+    APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT: KARLocationData(442, KARRegion.CITY_TRIAL_STADIUM_VSKD),
+    APLocation.TR_FREEZE_3_RIVALS_WITH_ONE_FREEZE_FAN: KARLocationData(443, KARRegion.TOP_RIDE),
+    APLocation.TR_FIRE_1ST_WITHOUT_GETTING_BURNED: KARLocationData(444, KARRegion.TOP_RIDE_FIRE),
+    APLocation.TR_SAND_1ST_WITHOUT_ANT_DOOM: KARLocationData(445, KARRegion.TOP_RIDE_SAND),
+    APLocation.TR_1ST_AGAINST_3_LEVEL_5_CPUS: KARLocationData(446, KARRegion.TOP_RIDE),
+    APLocation.TR_PHOTO_FINISH: KARLocationData(447, KARRegion.TOP_RIDE),
+    APLocation.TR_RACE_AS_EVERY_COLOR: KARLocationData(448, KARRegion.TOP_RIDE),
+    APLocation.TA_GRASS_FINISH_00_33_00_ON_STEER_STAR: KARLocationData(449, KARRegion.TOP_RIDE_TA_GRASS),
+    APLocation.TA_METAL_FINISH_00_57_00_ON_STEER_STAR: KARLocationData(450, KARRegion.TOP_RIDE_TA_METAL),
+    APLocation.FR_SKY_LAP_00_11_00_ON_STEER_STAR: KARLocationData(451, KARRegion.TOP_RIDE_FR_SKY),
+    APLocation.TR_1ST_ON_ALL_COURSES_ON_STEER_STAR: KARLocationData(452, KARRegion.TOP_RIDE),
+    APLocation.TR_1ST_WITHOUT_GETTING_HIT: KARLocationData(453, KARRegion.TOP_RIDE),
+    APLocation.TR_1ST_AFTER_5_HITS: KARLocationData(454, KARRegion.TOP_RIDE),
+    APLocation.TR_USE_ALL_ABILITY_ITEMS: KARLocationData(455, KARRegion.TOP_RIDE),
+    APLocation.TR_3_SPEED_DOWNS_AND_1ST: KARLocationData(456, KARRegion.TOP_RIDE),
+    APLocation.TR_TA_EVERY_LAP_WITHIN_1_SECOND: KARLocationData(457, KARRegion.TOP_RIDE_TIME_ATTACK),
+    APLocation.KO_CPU_WITH_AP_STAR_SPHERE_SHOT: KARLocationData(458, KARRegion.CITY_TRIAL),
+    APLocation.RIDE_5_DIFFERENT_MACHINES: KARLocationData(459, KARRegion.CITY_TRIAL),
+    APLocation.AIRBORNE_20_SECONDS_IN_CITY: KARLocationData(460, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_DYNA_BLADE_5_ITEMS: KARLocationData(461, KARRegion.CITY_TRIAL),
+    APLocation.KO_A_RIVAL_WITH_PANIC_SPIN: KARLocationData(462, KARRegion.CITY_TRIAL),
+    APLocation.WHISPY_WOODS_ON_FOOT: KARLocationData(463, KARRegion.CITY_TRIAL),
+    APLocation.LIGHTHOUSE_TOP_ON_FOOT: KARLocationData(464, KARRegion.CITY_TRIAL),
+    APLocation.UNDER_THE_WATERWHEEL: KARLocationData(465, KARRegion.CITY_TRIAL),
+    APLocation.USE_ALL_GRIND_RAILS: KARLocationData(466, KARRegion.CITY_TRIAL),
+    APLocation.GET_6_DIFFERENT_COPY_ABILITIES: KARLocationData(467, KARRegion.CITY_TRIAL),
+    APLocation.EVENT_METEOR_NO_DAMAGE: KARLocationData(468, KARRegion.CITY_TRIAL),
+    APLocation.MAX_OUT_A_STAT: KARLocationData(469, KARRegion.CITY_TRIAL),
+    APLocation.DD_KO_5_WITHOUT_GETTING_KNOCKED_OUT: KARLocationData(470, KARRegion.CITY_TRIAL_STADIUM_DD_ALL),
+    APLocation.VSKD_KO_KING_DEDEDE_WITHOUT_DAMAGE: KARLocationData(471, KARRegion.CITY_TRIAL_STADIUM_VSKD),
+    APLocation.DR_1ST_IN_EVERY_DRAG_RACE: KARLocationData(472, KARRegion.CITY_TRIAL_STADIUM_DR_ALL),
+    APLocation.AIR_RIDE_1ST_ON_EVERY_COURSE: KARLocationData(473, KARRegion.AIR_RIDE),
+    APLocation.BEANSTALK_PARK_FERRIS_WHEEL_EVERY_LAP: KARLocationData(474, KARRegion.AIR_RIDE_BEANSTALK_PARK),
+    APLocation.SKY_SANDS_1ST_WITHOUT_QUICKSAND: KARLocationData(475, KARRegion.AIR_RIDE_SKY_SANDS),
+    APLocation.CHECKER_KNIGHTS_1ST_WITHOUT_SPIN_PANELS: KARLocationData(476, KARRegion.AIR_RIDE_CHECKER_KNIGHTS),
+    APLocation.MAGMA_FLOWS_1ST_WITHOUT_BOOST_PANELS: KARLocationData(477, KARRegion.AIR_RIDE_MAGMA_FLOWS),
+    APLocation.TR_WATER_1ST_WITHOUT_FALLS: KARLocationData(478, KARRegion.TOP_RIDE_WATER),
+    APLocation.TR_LIGHT_1ST_WITHOUT_GRIND_RAIL: KARLocationData(479, KARRegion.TOP_RIDE_LIGHT),
+    APLocation.TR_USE_EVERY_KIND_OF_ITEM: KARLocationData(480, KARRegion.TOP_RIDE),
 }
 
 
@@ -1105,10 +1271,6 @@ AP_PATCH_LOCATION_TABLE: dict[str, KARLocationData] = {
     ap_patch_location_name(n): KARLocationData(AP_PATCH_CODE_BASE + n - 1, KARRegion.CITY_TRIAL)
     for n in range(1, AP_PATCH_CODE_MAX + 1)
 }
-
-# The AP Patch block starts where the Archipelago checklist band ends, and the decode in KARData
-# splits them at exactly that point.
-assert len(AP_CHECKLIST_LOCATION_TABLE) == AP_CHECKLIST_CODE_NUM
 
 # Merged view across all modes for lookups by location name.
 LOCATION_TABLE: dict[str, KARLocationData] = (
@@ -1170,19 +1332,24 @@ class KARLocationGroup(StrEnum):
     AP_CITY_TRIAL = "Archipelago: City Trial"
     AP_STADIUMS = "Archipelago: Stadiums"
     AP_AIR_RIDE = "Archipelago: Air Ride"
+    AP_TOP_RIDE = "Archipelago: Top Ride"
     AP_EXPLORATION = "Archipelago: Exploration"
     AP_PATCHES = "Archipelago: Patches"
     AP_FOOD = "Archipelago: Food"
     AP_COPY_CHANCE_WHEEL = "Archipelago: Copy Chance Wheel"
     AP_RIVALS = "Archipelago: Rivals"
+    AP_EVENTS = "Archipelago: Events"
     AP_RNG = "Archipelago: RNG"
     AP_BOX_COLORS = "Archipelago: Box Colors"
     AP_SINGLE_RACES = "Archipelago: Single Races"
     AP_NEBULA_BELT = "Archipelago: NEBULA BELT"
+    AP_TIME_ATTACK = "Archipelago: Time Attack"
+    AP_FREE_RUN = "Archipelago: Free Run"
     AP_CHARACTERS = "Archipelago: Characters"
     AP_KIRBY_COLORS = "Archipelago: Kirby Colors"
     AP_LEGENDARY_MACHINES = "Archipelago: Legendary Machines"
     AP_HIGH_EFFORT = "Archipelago: High Effort"
+    AP_BUST_VEHICLE_ON_VEHICLE = "Archipelago: Bust Vehicle on Vehicle"
 
 
 location_name_groups: dict[str, set[str]] = {
@@ -1699,6 +1866,32 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.BREAK_10_RED_BOXES,
         APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
         APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+        APLocation.EVENT_RUN_AMOK_1000_FEET,
+        APLocation.EVENT_RAIL_FIRE_ALL_STATIONS,
+        APLocation.EVENT_SAME_ITEM_GET_20,
+        APLocation.EVENT_LIGHTHOUSE_BOTH_LIGHTS,
+        APLocation.EVENT_PREDICTION_WRONG,
+        APLocation.EVENT_UFO_ALL_UP,
+        APLocation.EVENT_BUMP_MACHINE_FORMATION,
+        APLocation.EVENT_BOUNCE_OVER_10_ITEMS,
+        APLocation.EVENT_FOG_KO_A_RIVAL,
+        APLocation.EVENT_FAKE_POWERUPS_5_NO_FAKES,
+        APLocation.SAME_COPY_ABILITY_3_IN_A_ROW,
+        APLocation.BUST_REX_WHEELIE_ON_WHEELIE_SCOOTER,
+        APLocation.BUST_WINGED_STAR_ON_FLIGHT_WARP_STAR,
+        APLocation.BUST_SHADOW_STAR_ON_ARCHIPELAGO_STAR,
+        APLocation.KO_CPU_WITH_AP_STAR_SPHERE_SHOT,
+        APLocation.RIDE_5_DIFFERENT_MACHINES,
+        APLocation.AIRBORNE_20_SECONDS_IN_CITY,
+        APLocation.EVENT_DYNA_BLADE_5_ITEMS,
+        APLocation.KO_A_RIVAL_WITH_PANIC_SPIN,
+        APLocation.WHISPY_WOODS_ON_FOOT,
+        APLocation.LIGHTHOUSE_TOP_ON_FOOT,
+        APLocation.UNDER_THE_WATERWHEEL,
+        APLocation.USE_ALL_GRIND_RAILS,
+        APLocation.GET_6_DIFFERENT_COPY_ABILITIES,
+        APLocation.EVENT_METEOR_NO_DAMAGE,
+        APLocation.MAX_OUT_A_STAT,
     },
     KARLocationGroup.AP_STADIUMS: {
         APLocation.SR1_FINISH_1ST,
@@ -1720,6 +1913,11 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.DD3_KO_A_RIVAL_10,
         APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE,
         APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY,
+        APLocation.KM_KO_30_ENEMIES_AS_KING_DEDEDE,
+        APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT,
+        APLocation.DD_KO_5_WITHOUT_GETTING_KNOCKED_OUT,
+        APLocation.VSKD_KO_KING_DEDEDE_WITHOUT_DAMAGE,
+        APLocation.DR_1ST_IN_EVERY_DRAG_RACE,
     },
     KARLocationGroup.AP_AIR_RIDE: {
         APLocation.AIR_RIDE_PHOTO_FINISH,
@@ -1732,6 +1930,45 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER,
         APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS,
         APLocation.FANTASY_MEADOWS_TAKE_SHORTCUT,
+        APLocation.NEBULA_BELT_2_LAPS_UNDER_206,
+        APLocation.TA_NB_FINISH_03_35_00,
+        APLocation.TA_NB_FINISH_03_10_00,
+        APLocation.TA_NB_FINISH_03_15_00_ON_HYDRA,
+        APLocation.FR_NB_LAP_01_15_00,
+        APLocation.FR_NB_LAP_01_03_00,
+        APLocation.FR_NB_LAP_01_10_00_ON_WARPSTAR,
+        APLocation.FR_CV_LAP_01_00_00_ON_ARCHIPELAGO_STAR,
+        APLocation.FR_MP_LAP_01_05_00_ON_COMPACT_STAR,
+        APLocation.TA_CK_FINISH_04_00_00_ON_FLIGHT_WARP_STAR,
+        APLocation.TA_FH_FINISH_03_00_00_ON_WHEELIE_BIKE,
+        APLocation.TA_SS_FINISH_02_50_00_ON_FLIGHT_WARP_STAR,
+        APLocation.TA_MF_FINISH_03_15_00_AS_META_KNIGHT,
+        APLocation.AIR_RIDE_1ST_ON_ARCHIPELAGO_STAR,
+        APLocation.AIR_RIDE_1ST_ON_EVERY_COURSE,
+        APLocation.BEANSTALK_PARK_FERRIS_WHEEL_EVERY_LAP,
+        APLocation.SKY_SANDS_1ST_WITHOUT_QUICKSAND,
+        APLocation.CHECKER_KNIGHTS_1ST_WITHOUT_SPIN_PANELS,
+        APLocation.MAGMA_FLOWS_1ST_WITHOUT_BOOST_PANELS,
+    },
+    KARLocationGroup.AP_TOP_RIDE: {
+        APLocation.TR_FREEZE_3_RIVALS_WITH_ONE_FREEZE_FAN,
+        APLocation.TR_FIRE_1ST_WITHOUT_GETTING_BURNED,
+        APLocation.TR_SAND_1ST_WITHOUT_ANT_DOOM,
+        APLocation.TR_1ST_AGAINST_3_LEVEL_5_CPUS,
+        APLocation.TR_PHOTO_FINISH,
+        APLocation.TR_RACE_AS_EVERY_COLOR,
+        APLocation.TA_GRASS_FINISH_00_33_00_ON_STEER_STAR,
+        APLocation.TA_METAL_FINISH_00_57_00_ON_STEER_STAR,
+        APLocation.FR_SKY_LAP_00_11_00_ON_STEER_STAR,
+        APLocation.TR_1ST_ON_ALL_COURSES_ON_STEER_STAR,
+        APLocation.TR_1ST_WITHOUT_GETTING_HIT,
+        APLocation.TR_1ST_AFTER_5_HITS,
+        APLocation.TR_USE_ALL_ABILITY_ITEMS,
+        APLocation.TR_3_SPEED_DOWNS_AND_1ST,
+        APLocation.TR_TA_EVERY_LAP_WITHIN_1_SECOND,
+        APLocation.TR_WATER_1ST_WITHOUT_FALLS,
+        APLocation.TR_LIGHT_1ST_WITHOUT_GRIND_RAIL,
+        APLocation.TR_USE_EVERY_KIND_OF_ITEM,
     },
     KARLocationGroup.AP_EXPLORATION: {
         APLocation.CASTLE_FLOWER_ON_FOOT,
@@ -1740,11 +1977,16 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.VOLCANO_FLOWER_ON_FOOT,
         APLocation.SKY_GARDEN_TOP_ON_FOOT,
         APLocation.FLY_TO_HIGHEST_POINT,
+        APLocation.WHISPY_WOODS_ON_FOOT,
+        APLocation.LIGHTHOUSE_TOP_ON_FOOT,
+        APLocation.UNDER_THE_WATERWHEEL,
+        APLocation.USE_ALL_GRIND_RAILS,
     },
     KARLocationGroup.AP_PATCHES: {
         APLocation.GET_10_HP_PATCHES,
         APLocation.GET_10_OFFENSE_PATCHES,
         APLocation.COLLECT_5_ALL_UPS,
+        APLocation.MAX_OUT_A_STAT,
     },
     KARLocationGroup.AP_FOOD: {
         APLocation.EAT_3_ICE_CREAMS,
@@ -1758,12 +2000,28 @@ location_name_groups: dict[str, set[str]] = {
     },
     KARLocationGroup.AP_COPY_CHANCE_WHEEL: {
         APLocation.GET_MIC_FROM_COPY_CHANCE,
+        APLocation.SAME_COPY_ABILITY_3_IN_A_ROW,
     },
     KARLocationGroup.AP_RIVALS: {
         APLocation.DR_PHOTO_FINISH,
         APLocation.AIR_RIDE_PHOTO_FINISH,
+        APLocation.TR_PHOTO_FINISH,
     },
-    # Filled in after this table from the three Archipelago RNG sub-groups
+    KARLocationGroup.AP_EVENTS: {
+        APLocation.EVENT_RUN_AMOK_1000_FEET,
+        APLocation.EVENT_RAIL_FIRE_ALL_STATIONS,
+        APLocation.EVENT_SAME_ITEM_GET_20,
+        APLocation.EVENT_LIGHTHOUSE_BOTH_LIGHTS,
+        APLocation.EVENT_PREDICTION_WRONG,
+        APLocation.EVENT_UFO_ALL_UP,
+        APLocation.EVENT_BUMP_MACHINE_FORMATION,
+        APLocation.EVENT_BOUNCE_OVER_10_ITEMS,
+        APLocation.EVENT_FOG_KO_A_RIVAL,
+        APLocation.EVENT_FAKE_POWERUPS_5_NO_FAKES,
+        APLocation.EVENT_DYNA_BLADE_5_ITEMS,
+        APLocation.EVENT_METEOR_NO_DAMAGE,
+    },
+    # Filled in after this table from the four Archipelago RNG sub-groups
     KARLocationGroup.AP_RNG: set(),
     KARLocationGroup.AP_BOX_COLORS: {
         APLocation.BREAK_20_BLUE_BOXES,
@@ -1789,15 +2047,46 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.NEBULA_BELT_2_LAPS_UNDER_230,
         APLocation.NEBULA_BELT_1ST_ON_WHEELIE_SCOOTER,
         APLocation.NEBULA_BELT_AIRBORNE_10_SECONDS,
+        APLocation.NEBULA_BELT_2_LAPS_UNDER_206,
+        APLocation.TA_NB_FINISH_03_35_00,
+        APLocation.TA_NB_FINISH_03_10_00,
+        APLocation.TA_NB_FINISH_03_15_00_ON_HYDRA,
+        APLocation.FR_NB_LAP_01_15_00,
+        APLocation.FR_NB_LAP_01_03_00,
+        APLocation.FR_NB_LAP_01_10_00_ON_WARPSTAR,
+    },
+    KARLocationGroup.AP_TIME_ATTACK: {
+        APLocation.TA_NB_FINISH_03_35_00,
+        APLocation.TA_NB_FINISH_03_10_00,
+        APLocation.TA_NB_FINISH_03_15_00_ON_HYDRA,
+        APLocation.TA_CK_FINISH_04_00_00_ON_FLIGHT_WARP_STAR,
+        APLocation.TA_FH_FINISH_03_00_00_ON_WHEELIE_BIKE,
+        APLocation.TA_SS_FINISH_02_50_00_ON_FLIGHT_WARP_STAR,
+        APLocation.TA_MF_FINISH_03_15_00_AS_META_KNIGHT,
+        APLocation.TA_GRASS_FINISH_00_33_00_ON_STEER_STAR,
+        APLocation.TA_METAL_FINISH_00_57_00_ON_STEER_STAR,
+        APLocation.TR_TA_EVERY_LAP_WITHIN_1_SECOND,
+    },
+    KARLocationGroup.AP_FREE_RUN: {
+        APLocation.FR_NB_LAP_01_15_00,
+        APLocation.FR_NB_LAP_01_03_00,
+        APLocation.FR_NB_LAP_01_10_00_ON_WARPSTAR,
+        APLocation.FR_CV_LAP_01_00_00_ON_ARCHIPELAGO_STAR,
+        APLocation.FR_MP_LAP_01_05_00_ON_COMPACT_STAR,
+        APLocation.FR_SKY_LAP_00_11_00_ON_STEER_STAR,
     },
     KARLocationGroup.AP_CHARACTERS: {
         APLocation.AIR_RIDE_1ST_AS_META_KNIGHT,
         APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE,
         APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE,
+        APLocation.TA_MF_FINISH_03_15_00_AS_META_KNIGHT,
+        APLocation.KM_KO_30_ENEMIES_AS_KING_DEDEDE,
+        APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT,
     },
     KARLocationGroup.AP_KIRBY_COLORS: {
         APLocation.AIR_RIDE_RACE_AS_EVERY_COLOR,
         APLocation.SR1_FINISH_1ST_3X_AS_PURPLE,
+        APLocation.TR_RACE_AS_EVERY_COLOR,
     },
     KARLocationGroup.AP_LEGENDARY_MACHINES: {
         APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
@@ -1807,6 +2096,17 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.KM2_KO_60_ENEMIES_BY_YOURSELF,
         APLocation.COLLECT_5_ALL_UPS,
         APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+        APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT,
+        APLocation.TR_1ST_AGAINST_3_LEVEL_5_CPUS,
+        APLocation.TR_1ST_ON_ALL_COURSES_ON_STEER_STAR,
+        APLocation.LIGHTHOUSE_TOP_ON_FOOT,
+        APLocation.VSKD_KO_KING_DEDEDE_WITHOUT_DAMAGE,
+        APLocation.TR_USE_EVERY_KIND_OF_ITEM,
+    },
+    KARLocationGroup.AP_BUST_VEHICLE_ON_VEHICLE: {
+        APLocation.BUST_REX_WHEELIE_ON_WHEELIE_SCOOTER,
+        APLocation.BUST_WINGED_STAR_ON_FLIGHT_WARP_STAR,
+        APLocation.BUST_SHADOW_STAR_ON_ARCHIPELAGO_STAR,
     },
 }
 
@@ -1816,7 +2116,8 @@ location_name_groups[KARLocationGroup.CT_RNG] = (
     | location_name_groups[KARLocationGroup.CT_COPY_CHANCE_WHEEL]
 )
 location_name_groups[KARLocationGroup.AP_RNG] = (
-    location_name_groups[KARLocationGroup.AP_FOOD]
+    location_name_groups[KARLocationGroup.AP_EVENTS]
+    | location_name_groups[KARLocationGroup.AP_FOOD]
     | location_name_groups[KARLocationGroup.AP_COPY_CHANCE_WHEEL]
     | location_name_groups[KARLocationGroup.AP_RIVALS]
 )
@@ -1861,6 +2162,10 @@ TOP_RIDE_PROGRESSION_GROUPS: dict[str, str] = {
 }
 ARCHIPELAGO_PROGRESSION_GROUPS: dict[str, str] = {
     ProgressionCategory.HIGH_EFFORT: KARLocationGroup.AP_HIGH_EFFORT,
+    ProgressionCategory.FREE_RUN: KARLocationGroup.AP_FREE_RUN,
+    ProgressionCategory.TIME_ATTACK: KARLocationGroup.AP_TIME_ATTACK,
+    ProgressionCategory.BUST_VEHICLE_ON_VEHICLE: KARLocationGroup.AP_BUST_VEHICLE_ON_VEHICLE,
+    ProgressionCategory.RNG_EVENTS: KARLocationGroup.AP_EVENTS,
     ProgressionCategory.RNG_FOOD: KARLocationGroup.AP_FOOD,
     ProgressionCategory.RNG_COPY_CHANCE_WHEEL: KARLocationGroup.AP_COPY_CHANCE_WHEEL,
     ProgressionCategory.RNG_RIVALS: KARLocationGroup.AP_RIVALS,

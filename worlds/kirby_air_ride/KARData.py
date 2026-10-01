@@ -267,19 +267,21 @@ OPTION_REVEAL_CHECKLIST_PER_MODE: dict[GameMode, tuple[MemoryAddress, str]] = {
     GameMode.ARCHIPELAGO: (MemoryAddress.OPTION_REVEAL_CHECKLIST_ARCHIPELAGO, "archipelago_reveal_checklist"),
 }
 
+# Cells in every mode's checklist grid, and so the width of every mode's checkbox code band
+CHECKLIST_CELLS = 120
+
 AP_CHECKLIST_CODE_BASE = 361
-AP_CHECKLIST_CODE_NUM = 52
 
 # The AP Patch block starts where the Archipelago band ends
-AP_PATCH_CODE_BASE = AP_CHECKLIST_CODE_BASE + AP_CHECKLIST_CODE_NUM
+AP_PATCH_CODE_BASE = AP_CHECKLIST_CODE_BASE + CHECKLIST_CELLS
 AP_PATCH_CODE_MAX = 200
 
-# Checkbox location codes per mode
-CODE_BAND_PER_MODE: dict[GameMode, tuple[int, int]] = {
-    GameMode.CITYTRIAL: (1, 120),
-    GameMode.AIRRIDE: (121, 120),
-    GameMode.TOPRIDE: (241, 120),
-    GameMode.ARCHIPELAGO: (AP_CHECKLIST_CODE_BASE, AP_CHECKLIST_CODE_NUM),
+# First checkbox location code per mode
+CODE_BASE_PER_MODE: dict[GameMode, int] = {
+    GameMode.CITYTRIAL: 1,
+    GameMode.AIRRIDE: 121,
+    GameMode.TOPRIDE: 241,
+    GameMode.ARCHIPELAGO: AP_CHECKLIST_CODE_BASE,
 }
 
 AP_PATCH_MOD_MAX = 512
@@ -306,8 +308,8 @@ def location_code_to_mode_clear(code: int | None) -> tuple[GameMode, int] | None
     """Decode a checkbox location code to (game_mode, clear_kind)."""
     if code is None:
         return None
-    for mode, (base, width) in CODE_BAND_PER_MODE.items():
-        if base <= code < base + width:
+    for mode, base in CODE_BASE_PER_MODE.items():
+        if base <= code < base + CHECKLIST_CELLS:
             return mode, code - base
     return None
 
@@ -327,8 +329,8 @@ def location_code_to_ap_patch_index(code: int | None) -> int | None:
 
 def mode_clear_to_location_code(mode: GameMode, clear_kind: int) -> int:
     """Encode (game_mode, clear_kind) to an AP location code, or 0 if the pair has none."""
-    base, width = CODE_BAND_PER_MODE[mode]
-    return base + clear_kind if 0 <= clear_kind < width else 0
+    base = CODE_BASE_PER_MODE[mode]
+    return base + clear_kind if 0 <= clear_kind < CHECKLIST_CELLS else 0
 
 
 def reward_code_to_mode_index(code: int | None) -> tuple[GameMode, int] | None:

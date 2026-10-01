@@ -13,7 +13,7 @@ from Options import (
     Toggle,
 )
 
-from .KARData import AP_CHECKLIST_CODE_NUM, AP_PATCH_CODE_MAX
+from .KARData import AP_PATCH_CODE_MAX, CHECKLIST_CELLS
 from .KARItems import ALLOWED_ITEM_CATEGORIES, CHECKLIST_REWARD_CATEGORIES, TRAP_CATEGORIES, KARItemGroup
 from .KARLocations import (
     AIR_RIDE_PROGRESSION_GROUPS,
@@ -93,8 +93,8 @@ class SpawnRateMax(Range):
 
 class EnergyLink(Toggle):
     """
-    Enables EnergyLink: collecting patches or destroying objects in City Trial sends energy to the
-    Multiworld's shared pool, which you can spend on patches or other items.
+    Enables EnergyLink: collecting patches, destroying objects in City Trial, or charging your machine
+    sends energy to the Multiworld's shared pool, which you can spend on patches or other items.
     """
 
     default = 0
@@ -104,7 +104,6 @@ class EnergyLink(Toggle):
 class TrapLink(Toggle):
     """
     When on, traps you receive in-game are broadcast to other TrapLink players and you receive theirs.
-    Independent of "Trap Chance".
     """
 
     default = 0
@@ -214,6 +213,10 @@ class ArchipelagoProgression(OptionSet):
     Which extra categories of Archipelago checklist checkboxes may hold progression items.
 
     - "High Effort": long grinds or high difficulty, such as assembling all three legendary machines
+    - "Free Run": Free Run boxes
+    - "Time Attack": Time Attack boxes
+    - "Bust Vehicle on Vehicle": busting one machine with another
+    - "RNG: Events": City Trial events
     - "RNG: Food": get x food items in one run boxes
     - "RNG: Copy Chance Wheel": copy abilities from the wheel
     - "RNG: Rivals": boxes that depend on what your rivals happen to do
@@ -260,7 +263,7 @@ class CityTrialChecklistAmount(Range):
     display_name = "Number of Checklist Boxes for City Trial"
     default = 60
     range_start = 1
-    range_end = 120
+    range_end = CHECKLIST_CELLS
 
 
 class CityTrialGoalLocations(LocationSet):
@@ -433,7 +436,7 @@ class AirRideChecklistAmount(Range):
     display_name = "Number of Checklist Boxes for Air Ride"
     default = 60
     range_start = 1
-    range_end = 120
+    range_end = CHECKLIST_CELLS
 
 
 class AirRideGoalLocations(LocationSet):
@@ -496,7 +499,7 @@ class TopRideChecklistAmount(Range):
     display_name = "Number of Checklist Boxes for Top Ride"
     default = 60
     range_start = 1
-    range_end = 120
+    range_end = CHECKLIST_CELLS
 
 
 class TopRideGoalLocations(LocationSet):
@@ -558,15 +561,12 @@ class ArchipelagoChecklistAmount(Range):
     """
     This sets the number of checklist boxes for the 'Fill in N Checklist blocks!' goal for the
     Archipelago checklist.
-
-    The Archipelago checklist holds fewer boxes than the other modes, so the range stops at what
-    the checklist actually has rather than the grid's 120 cells.
     """
 
     display_name = "Number of Checklist Boxes for Archipelago"
-    default = 25
+    default = 60
     range_start = 1
-    range_end = AP_CHECKLIST_CODE_NUM
+    range_end = CHECKLIST_CELLS
 
 
 class ArchipelagoGoalLocations(LocationSet):
@@ -587,7 +587,7 @@ class ArchipelagoCheckboxFillers(NamedRange):
     """
 
     display_name = "Archipelago Checkbox Fillers"
-    default = 0
+    default = 5
     range_start = 0
     range_end = 20
     special_range_names = {"disabled": 0}  # noqa: RUF012

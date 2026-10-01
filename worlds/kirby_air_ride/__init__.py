@@ -692,6 +692,11 @@ class KARWorld(World):
             if data.source_modes and not (data.source_modes & self.logic_modes):
                 excluded.add(name)
 
+        # Archipelago boxes pull Top Ride into logic_modes, but without a Top Ride goal the mod unlocks both of
+        # its control types itself.
+        if not self.top_ride_enabled:
+            excluded |= set(TR_MACHINE_UNLOCK_ITEMS)
+
         # A goal's own keys survive their category's gate being off.
         excluded -= self.goal_forced_unlocks
 
