@@ -19,6 +19,7 @@ from worlds.LauncherComponents import (
 from .KARData import GameMode, GoalKind, ap_patch_group_sizes, checklist_reward_placed_bit
 from .KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
+    AP_STAR_GIVE_ITEMS,
     AP_STAR_PIECE_UNLOCK_ITEMS,
     AR_COURSE_UNLOCK_ITEMS,
     AR_CT_MACHINE_UNLOCK_ITEMS,
@@ -30,6 +31,7 @@ from .KARItems import (
     COLOR_UNLOCK_ITEMS,
     GATING_CATEGORIES,
     ITEM_TABLE,
+    LEGENDARY_GIVE_ITEMS,
     LEGENDARY_PIECE_UNLOCK_ITEMS,
     MAX_STATS_GOAL_KEYS,
     STADIUM_UNLOCK_ITEMS,
@@ -699,6 +701,13 @@ class KARWorld(World):
 
         # A goal's own keys survive their category's gate being off.
         excluded -= self.goal_forced_unlocks
+
+        # A give would finish an assembly goal without the unlocks its logic waits on.
+        required = self._goal_required_unlocks()
+        if required & set(LEGENDARY_PIECE_UNLOCK_ITEMS):
+            excluded |= set(LEGENDARY_GIVE_ITEMS)
+        if required & set(AP_STAR_PIECE_UNLOCK_ITEMS):
+            excluded |= set(AP_STAR_GIVE_ITEMS)
 
         # start_inventory precollects without removing from the pool, so drop the pool copy of any
         # one-time item preset there. Stackables keep their extra copies.

@@ -10,8 +10,10 @@ from Options import Toggle
 from ..KARData import GameMode
 from ..KARItems import (
     ALLOWED_ITEM_CATEGORY_ITEMS,
+    AP_STAR_GIVE_ITEMS,
     CHECKLIST_REWARD_TYPES,
     ITEM_TABLE,
+    LEGENDARY_GIVE_ITEMS,
     STADIUM_CHECKLIST_REWARDS,
     TRAP_CATEGORIES,
     KARItemGroup,
@@ -189,6 +191,35 @@ class TestAllowedItemsTrapsOrthogonal(KARTestBase):
         ):
             with self.subTest(trap=trap_name):
                 self.assertIn(trap_name, self.world.trap_pool)
+
+
+# A give hands over a legendary or the Archipelago Star whatever its unlocks say, so an assembly goal keeps
+# the matching gives out of the pool even with City Trial Item Gives allowed. (label, goal options, gives)
+_ASSEMBLY_GIVE_CASES: list[tuple[str, dict, tuple]] = [
+    ("hydra_and_dragoon", {"city_trial_goal": CityTrialGoal.option_hydra_and_dragoon}, LEGENDARY_GIVE_ITEMS),
+    (
+        "assemble_archipelago_star",
+        {"archipelago_goal": ArchipelagoGoal.option_assemble_archipelago_star},
+        AP_STAR_GIVE_ITEMS,
+    ),
+]
+
+
+def _make_assembly_give_test(goal: dict, gives: tuple) -> type:
+    class _AssemblyGives(KARTestBase):
+        options = {**CT_ONLY, **goal, "allowed_items": [KARItemGroup.CT_ITEM_GIVES]}
+
+        def test_gives_stay_out_while_the_category_is_on(self):
+            eligible = self.world.useful_pool | self.world.filler_pool
+            self.assertIn(KARItemName.ALL_UP, eligible)
+            self.assertFalse(set(gives) & eligible, "an assembly goal's gives are eligible")
+            self.assertFalse(set(gives) & set(self.itempool_names()), "an assembly goal's gives are in the pool")
+
+    return _AssemblyGives
+
+
+for _label, _goal, _gives in _ASSEMBLY_GIVE_CASES:
+    _register(_make_assembly_give_test(_goal, _gives), f"TestAssemblyGoalGives_{_label}")
 
 
 _TR_TRAP_CATEGORY = next(

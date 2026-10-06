@@ -174,7 +174,7 @@ class MemoryAddress(IntEnum):
     OPTION_COLOR_GATING_ENABLED = 0x0DC  # u32, 0 or 1
     OPTION_STADIUM_GATING_ENABLED = 0x0E0  # u32, 0 or 1
     OPTION_BASE_ABILITY_GATING_ENABLED = 0x0E4  # u32, 0 or 1
-    OPTION_CHECKLIST_REWARD_PLACED_TYPES = 0x0E8  # u32 bitmask, 1 << RewardType
+    OPTION_CHECKLIST_REWARD_PLACED_TYPES = 0x0E8  # u32 bitmask, bit checklist_reward_placed_bit(mode, RewardType)
     OPTION_GOAL_FORCED_GATES = 0x0EC  # u32 bitmask, GOAL_FORCED_GATE_*
     OPTION_AP_PATCHES = 0x0F0  # u32, 0-AP_PATCH_MOD_MAX
     # APSlotOptions is 8-byte aligned, so 4 bytes of tail padding end the block at 0x0F8 (200 bytes).

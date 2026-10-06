@@ -63,11 +63,15 @@ have a completed save file and connect to a multiworld with it, you will complet
 
 Unfortunately, Kirby Air Ride only has one save slot in-game. But no worries if you want to keep your save - Dolphin can export save files that can be re-loaded later.
 
+**IMPORTANT:** There are TWO save files to delete or preserve! For both options below, if you've played before, you will have TWO. 
+
 To make sure you have a fresh save file:
 
 * In Dolphin, go to `Tools -> Memory Card Manager`
-* If you have Kirby Air Ride data in this menu, click on it and click `Export as` if you wish to keep the save file for later, or `Delete` if you wish to wipe the save.
-* **IMPORTANT:** You'll also see a `01-GKYE-hoshi` save here if you've played before. This must be deleted as well! This can be hard to see!
+  * If you have Kirby Air Ride data in this menu, click on it and click `Export as` if you wish to keep the save file for later, or `Delete` if you wish to wipe the save.
+    * If you chose to export, make sure to then delete the original files as well
+  * If you do not see save data in here but have played before, you likely have your saves as `.gci` instead of a memory card. 
+    * Go to `File->Open User Folder` in dolphin, and browse to the `GC` folder. Under one of `USA, JAP, or EUR`, you can find the `.gci` files to manually delete. There should be 2 files that contain `GKYE`.
 
 ## Universal Tracker (optional)
 

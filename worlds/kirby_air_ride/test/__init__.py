@@ -7,7 +7,7 @@ from BaseClasses import CollectionState
 from test.bases import WorldTestBase
 
 from ..KARItems import GATING_CATEGORIES, KARItemName, KARItemType, items_by_type
-from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
+from ..KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, NonProgressionCheckboxes, TopRideGoal
 
 if TYPE_CHECKING:
     from .. import KARWorld
@@ -27,9 +27,19 @@ def names(items: Iterable) -> set[str]:
 OVERLAP_REWARDS: dict[str, frozenset] = {cat.option: cat.overlapping_rewards for cat in GATING_CATEGORIES}
 
 
+# Merged under every test class's options. The shipped default removes non-progression boxes, and a
+# removed box is not a location: a test naming one would raise, and one looping over a group would
+# quietly skip it. Removal tests opt back in; test/general covers the shipped default.
+TEST_BASELINE_OPTIONS: dict = {"non_progression_checkboxes": NonProgressionCheckboxes.option_excluded}
+
+
 class KARTestBase(WorldTestBase):
     game = "Kirby Air Ride"
     world: "KARWorld"
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.options = {**TEST_BASELINE_OPTIONS, **cls.options}
 
     def setUp(self) -> None:
         super().setUp()
