@@ -236,7 +236,7 @@ class TestCTGoalMaxStats(KARTestBase):
 
 class TestCTGoalMaxStatsFlatCapNoRule(KARTestBase):
     """A flat cap (min == max) mints no Patch Cap Increase, and with both stat gates off every clause of
-    the rule drops out, so the event is attached with no access rule at all."""
+    the rule drops out, so the event's rule resolves to always true."""
 
     options = {
         **CT_ONLY,

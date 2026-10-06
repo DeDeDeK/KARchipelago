@@ -1032,12 +1032,11 @@ def set_rules(world: "KARWorld"):
 
     # Box-break cells need some color able to spawn
     box_requirements = _box_color_requirements(world.effective_gates)
-    if all(box_requirements.values()):
-        any_box = Or(*(And(*rules) for rules in box_requirements.values()))
-        for loc in _BOX_BREAK_LOCATIONS:
-            add_location_rule(loc, any_box)
-        # Only a box hands out the Same Item event's item.
-        add_location_rule(APLocation.EVENT_SAME_ITEM_GET_20, any_box)
+    any_box = Or(*(And(*rules) for rules in box_requirements.values()))
+    for loc in _BOX_BREAK_LOCATIONS:
+        add_location_rule(loc, any_box)
+    # Only a box hands out the Same Item event's item.
+    add_location_rule(APLocation.EVENT_SAME_ITEM_GET_20, any_box)
 
     if _CT_LOOT_GATES <= world.effective_gates:
         any_ct_counting_item = HasAny(
@@ -1189,8 +1188,7 @@ def set_rules(world: "KARWorld"):
             add_location_rule(loc, any_patch)
 
     for loc, box_item in _AP_BOX_COLOR_RULES.items():
-        if box_requirements[box_item]:
-            add_location_rule(loc, And(*box_requirements[box_item]))
+        add_location_rule(loc, And(*box_requirements[box_item]))
 
     if "machines_gated" in world.effective_gates:
         any_ct_machine = _any_rideable(_CT_MACHINE_UNLOCKS, charge_gated)

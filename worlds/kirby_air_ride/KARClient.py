@@ -1,5 +1,7 @@
+import argparse
 import asyncio
 import contextlib
+import sys
 import time
 import uuid
 from collections import deque
@@ -7,7 +9,7 @@ from typing import Any, ClassVar
 
 import Utils
 from CommonClient import CommonContext as APCommonContext
-from CommonClient import get_base_parser, server_loop
+from CommonClient import get_base_parser, handle_url_arg, server_loop
 from NetUtils import (
     ClientStatus,
     JSONMessagePart,
@@ -1064,8 +1066,9 @@ class KARContext(CommonContext):
         await super().shutdown()
 
 
-async def async_main(connect: str | None, password: str | None) -> None:
+async def async_main(connect: str | None, password: str | None, name: str | None) -> None:
     ctx = KARContext(connect, password)
+    ctx.auth = name
     if tracker_loaded:
         log_info("Tracker", f"Universal Tracker {tracker_version} found.")
     # No ctx.run_generator(): yaml-less, so UT rebuilds the slot from slot_data on connect
@@ -1088,18 +1091,26 @@ async def async_main(connect: str | None, password: str | None) -> None:
         await ctx.shutdown()
 
 
-def main(connect: str | None = None, password: str | None = None) -> None:
+def parse_args(*args: str) -> argparse.Namespace:
+    """Parse launch arguments."""
+    parser = get_base_parser(description="Kirby Air Ride Client.")
+    parser.add_argument("--name", default=None, help="Slot name to connect as.")
+    parser.add_argument("url", nargs="?", help="Archipelago connection url.")
+    return handle_url_arg(parser.parse_args(args), parser=parser)
+
+
+def main(*args: str) -> None:
+    """Run the client. The launcher passes its arguments here, WebHost room links arrive as `url`."""
+    parsed = parse_args(*args)
     Utils.init_logging("Kirby Air Ride Client")
     import colorama
 
     try:
         colorama.init()
-        asyncio.run(async_main(connect, password))
+        asyncio.run(async_main(parsed.connect, parsed.password, parsed.name))
     finally:
         colorama.deinit()
 
 
 if __name__ == "__main__":
-    parser = get_base_parser()
-    args = parser.parse_args()
-    main(args.connect, args.password)
+    main(*sys.argv[1:])
