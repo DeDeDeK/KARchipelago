@@ -135,7 +135,7 @@ The categories are:
 - **RNG: Copy Chance Wheel** - abilities the wheel has to land on (City Trial, Archipelago)
 - **RNG: Rivals** - boxes that depend on what your rivals happen to do (Air Ride, Archipelago)
 
-"Non-Progression Checkboxes" decides what happens to the rest. **Excluded** (the default) keeps them asclocations that only ever hold filler, so you can still fill them in-game for a check. **Removed** takes them out of your world entirely: nothing is placed there and filling them in-game sends nothing.
+"Non-Progression Checkboxes" decides what happens to the rest. **Removed** (the default) takes them out of your world entirely: nothing is placed there and filling them in-game sends nothing. **Excluded** keeps them as locations that only ever hold filler, so you can still fill them in-game for a check.
 
 ## Access gating
 

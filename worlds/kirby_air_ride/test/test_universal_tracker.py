@@ -47,7 +47,7 @@ DISTINCTIVE_OPTIONS: dict = {
     "city_trial_progression": [ProgressionCategory.HIGH_EFFORT, ProgressionCategory.RNG_EVENTS],
     "air_ride_progression": [ProgressionCategory.TIME_ATTACK],
     "top_ride_progression": [ProgressionCategory.MULTIPLAYER],
-    "non_progression_checkboxes": "removed",
+    "non_progression_checkboxes": "excluded",
 }
 
 
