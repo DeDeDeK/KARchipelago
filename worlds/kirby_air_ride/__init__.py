@@ -13,7 +13,7 @@ from worlds.LauncherComponents import (
     Type,
     components,
     icon_paths,
-    launch_subprocess,
+    launch,
 )
 
 from .KARData import GameMode, GoalKind, ap_patch_group_sizes, checklist_reward_placed_bit
@@ -77,10 +77,10 @@ from .KARRegions import AP_PATCH_GROUP_REGIONS, REGION_TO_MODE, create_regions
 from .KARRules import set_rules
 
 
-def run_client() -> None:
+def run_client(*args: str) -> None:
     from .KARClient import main
 
-    launch_subprocess(main, name="KirbyAirRideClient")
+    launch(main, name="KirbyAirRideClient", args=args)
 
 
 components.append(
@@ -89,6 +89,9 @@ components.append(
         func=run_client,
         component_type=Type.CLIENT,
         icon="Kirby Air Ride",
+        # Offered for this game's slot links on a WebHost room page, which pass the link as the url arg
+        game_name="Kirby Air Ride",
+        supports_uri=True,
     )
 )
 icon_paths["Kirby Air Ride"] = "ap:worlds.kirby_air_ride/assets/allpatch.png"

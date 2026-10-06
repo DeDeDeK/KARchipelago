@@ -99,6 +99,7 @@ See the Universal Tracker repo for further usage instructions.
    * If it is not connecting successfully, use `/dolphin` to get the current status.
 3. Connect to the room by entering the server name and port number in the client and pressing `Connect`. For rooms hosted on the website, this will be `archipelago.gg:<port>`. 
    * You will be prompted to enter your slot name, which is the name you selected when creating your yaml. Type that in and press enter.
+   * Shortcut for rooms hosted on the website, in place of steps 2 and 3: click your slot name on the room page. Your browser hands the link to the Archipelago Launcher, which asks which client to open. Choose `Kirby Air Ride Client`, and it opens already connected as that slot. Enter the password, if needed.
 4. Once you're connected to the room and have started a new save file in-game, the client finishes its handshake and prints `Handshake complete. Ready to play!`. You are now connected and ready to play!
 
 ## Troubleshooting

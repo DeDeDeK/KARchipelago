@@ -215,7 +215,7 @@ class TestRemovedStillReachesTheBlockGoal(KARTestBase):
 
     def test_goal_is_reachable_with_everything_collected(self):
         self.assertLess(len(self.world.city_trial_default_locations), 100, "removal no longer bites here")
-        self.assertTrue(self.multiworld.can_beat_game(self.multiworld.get_all_state(False)))
+        self.assertTrue(self.multiworld.can_beat_game(self.multiworld.get_all_state()))
 
 
 class TestChecklistListGoalBoxesSurviveRemoval(KARTestBase):
