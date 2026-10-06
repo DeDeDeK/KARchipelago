@@ -1,9 +1,10 @@
 import typing
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Mapping
+from collections.abc import Set as AbstractSet
 from enum import StrEnum
 
 from BaseClasses import CollectionState, LocationProgressType, Region
-from rule_builder.rules import And, CanReachLocation, Has, HasAll, Rule
+from rule_builder.rules import And, AtLeast, CanReachLocation, Has, HasAll, Rule
 
 from .KARData import AP_PATCH_GROUP_MAX, GameMode, GoalKind
 from .KARItems import (
@@ -307,9 +308,9 @@ REMOVED_CHECKBOX_SUFFIX = " (Removed)"
 def assign_locations_to_regions(
     world: "KARWorld",
     location_table: dict,
-    default_locations: Iterable[str],
-    excluded_locations: Iterable[str],
-    removed_locations: Iterable[str] = (),
+    default_locations: AbstractSet[str],
+    excluded_locations: AbstractSet[str],
+    removed_locations: AbstractSet[str] = frozenset(),
 ) -> None:
     """Assign locations to their regions with the appropriate progress type, skipping goal-replaced ones."""
     from .KARLocations import KARLocation
@@ -318,18 +319,19 @@ def assign_locations_to_regions(
         (default_locations, LocationProgressType.DEFAULT),
         (excluded_locations, LocationProgressType.EXCLUDED),
     ]:
-        for location_name in locations:
-            if location_name in world.goal_locations_to_exclude:
+        for location_name, data in location_table.items():
+            if location_name not in locations or location_name in world.goal_locations_to_exclude:
                 continue
-            data = location_table[location_name]
             region = world.get_region(data.region)
             location = KARLocation(world.player, location_name, data.code, region)
             location.progress_type = progress_type
             region.locations.append(location)
 
-    for location_name in removed_locations:
+    for location_name, data in location_table.items():
+        if location_name not in removed_locations:
+            continue
         event_name = f"{location_name}{REMOVED_CHECKBOX_SUFFIX}"
-        region = world.get_region(location_table[location_name].region)
+        region = world.get_region(data.region)
         region.add_event(event_name, location_type=KARLocation, item_type=KARItem, show_in_spoiler=False)
         world.removed_checkbox_events[location_name] = event_name
 
@@ -409,45 +411,35 @@ def connect_ap_patch_regions(world: "KARWorld") -> None:
 
 def create_n_blocks_rule(
     world: "KARWorld", mode: GameMode, required_blocks: int, exclude_location_name: str | None = None
-) -> Callable[[CollectionState], bool]:
+) -> Rule:
     """A rule that passes once `required_blocks` of `mode`'s checkboxes are reachable."""
     from .KARLocations import MODE_LOCATION_TABLES
 
-    blocks = [
-        world.get_location(world.checkbox_location_name(name))
-        for name in MODE_LOCATION_TABLES[mode]
-        # The cell this seed's goal replaced is an event, not a checkbox the player can fill for credit,
-        # and a cell gated on this rule must not be asked to reach itself and recurse.
-        if name not in world.goal_locations_to_exclude and name != exclude_location_name
-    ]
-
-    def can_access_n_blocks(state: CollectionState) -> bool:
-        count = 0
-        for loc in blocks:
-            if loc.can_reach(state):
-                count += 1
-                if count >= required_blocks:
-                    return True
-        return False
-
-    return can_access_n_blocks
+    return AtLeast(
+        required_blocks,
+        *(
+            CanReachLocation(world.checkbox_location_name(name))
+            for name in MODE_LOCATION_TABLES[mode]
+            # The cell this seed's goal replaced is an event, and must not be asked to reach itself and recurse.
+            if name not in world.goal_locations_to_exclude and name != exclude_location_name
+        ),
+    )
 
 
-def _build_max_stats_goal_rule(world: "KARWorld") -> Rule | None:
+def _build_max_stats_goal_rule(world: "KARWorld") -> Rule:
     """
     Build the access rule for the Max Stats CT goal event.
     """
     options = world.options
-    rule_parts: list[Rule] = []
-
-    count = max(0, options.city_trial_patch_cap_max.value - options.city_trial_patch_cap_min.value)
-    if count > 0:
-        rule_parts.append(Has(KARItemName.PATCH_CAP_INCREASE, count=count))
+    rule: Rule = Has(
+        KARItemName.PATCH_CAP_INCREASE,
+        count=options.city_trial_patch_cap_max.value - options.city_trial_patch_cap_min.value,
+    )
 
     if options.city_trial_patches_gated and options.city_trial_items_gated:
-        rule_parts.append(HasAll(*sorted(CT_PATCH_UNLOCK_ITEMS)) | Has(KARItemName.UNLOCK_ITEM_ALL_UP))
+        rule &= HasAll(*sorted(CT_PATCH_UNLOCK_ITEMS)) | Has(KARItemName.UNLOCK_ITEM_ALL_UP)
 
-    return And(*rule_parts) if rule_parts else None
+    return rule
 
 
 # Each assemble goal's piece unlocks.
