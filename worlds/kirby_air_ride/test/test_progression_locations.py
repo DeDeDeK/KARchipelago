@@ -1,7 +1,8 @@
 """The per-mode progression options decide which categories of checklist box count toward progression:
-a category left out is EXCLUDED by default, or removed from the world when `non_progression_checkboxes` says
-so. All three directions are pinned, so each key is shown wired to its own group. run_default_tests is
-off for the static ones: a fill would be wasted on state that generate_early already settled."""
+a category left out is removed from the world by default, or kept as EXCLUDED when
+`non_progression_checkboxes` says so. KARTestBase pins EXCLUDED, so the removal cases opt in with
+_REMOVED. All three directions are pinned, so each key is shown wired to its own group. run_default_tests
+is off for the static ones: a fill would be wasted on state that generate_early already settled."""
 
 from BaseClasses import Item, ItemClassification, LocationProgressType
 

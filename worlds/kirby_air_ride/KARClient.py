@@ -53,7 +53,6 @@ from .KARLogging import (
     log_toggle,
     log_warning,
 )
-from .KAROptions import AirRideGoal, ArchipelagoGoal, CityTrialGoal, TopRideGoal
 from .KARText import (
     RELAYED_PRINT_JSON,
     Segment,
@@ -323,14 +322,14 @@ class KARContext(CommonContext):
         self.slot_options = sd
         self.backfill_pending = True
 
-        Utils.async_start(self.update_death_link(bool(sd.get("death_link", 0))))
+        Utils.async_start(self.update_death_link(bool(sd["death_link"])))
 
-        self.energy_link_enabled = bool(sd.get("energy_link", 0))
+        self.energy_link_enabled = bool(sd["energy_link"])
         Utils.async_start(self._update_link_tag("EnergyLink", self.energy_link_enabled))
         if self.energy_link_enabled:
             self._enable_energy_link()
 
-        trap_enabled = bool(sd.get("trap_link", 0))
+        trap_enabled = bool(sd["trap_link"])
         Utils.async_start(self._update_link_tag("TrapLink", trap_enabled))
 
         # Scout all our locations to build the reward->checkbox mapping.
@@ -358,13 +357,13 @@ class KARContext(CommonContext):
             ("Top Ride", "top_ride_goal", "top_ride_checklist_amount", "top_ride_goal_locations"),
             ("Archipelago", "archipelago_goal", "archipelago_checklist_amount", "archipelago_goal_locations"),
         ]:
-            goal_val = GoalKind(int(sd.get(goal_key, GoalKind.NONE)))
+            goal_val = GoalKind(int(sd[goal_key]))
             if goal_val != GoalKind.NONE:
                 goal_str = GOAL_NAMES.get(goal_val, str(int(goal_val)))
                 if goal_val == GoalKind.N_CHECKLIST:
-                    goal_str += f" ({int(sd.get(amount_key, 60))})"
+                    goal_str += f" ({int(sd[amount_key])})"
                 elif goal_val == GoalKind.CHECKLIST_LIST:
-                    goal_str += f" ({len(sd.get(goal_loc_key, []))} locations)"
+                    goal_str += f" ({len(sd[goal_loc_key])} locations)"
                 goals.append(f"{mode_name}: {goal_str}")
         if goals:
             log_color(self, f"Goal(s): {', '.join(goals)}", "yellow")
@@ -547,6 +546,10 @@ class KARContext(CommonContext):
         if not self.options_written:
             if not self.slot_options:
                 return  # Waiting for AP server Connected packet.
+            # An item still in the mailbox is not counted in ITEM_RECEIVED_INDEX yet, so reading the
+            # index now would deliver it a second time.
+            if self.dolphin.read_u32(self._addr(MemoryAddress.INCOMING_ITEM_ID)) != 0:
+                return
             self._write_options()
             self.options_written = True
             self.item_send_index = self.dolphin.read_u32(self._addr(MemoryAddress.ITEM_RECEIVED_INDEX))
@@ -574,34 +577,32 @@ class KARContext(CommonContext):
         d = self.dolphin
         a = self._addr
 
-        d.write_u32(a(MemoryAddress.OPTION_DEATH_LINK_ENABLED), int(bool(sd.get("death_link", 0))))
-        d.write_u32(a(MemoryAddress.OPTION_ENERGY_LINK_ENABLED), int(bool(sd.get("energy_link", 0))))
-        d.write_u32(a(MemoryAddress.OPTION_TRAP_LINK_ENABLED), int(bool(sd.get("trap_link", 0))))
+        d.write_u32(a(MemoryAddress.OPTION_DEATH_LINK_ENABLED), int(bool(sd["death_link"])))
+        d.write_u32(a(MemoryAddress.OPTION_ENERGY_LINK_ENABLED), int(bool(sd["energy_link"])))
+        d.write_u32(a(MemoryAddress.OPTION_TRAP_LINK_ENABLED), int(bool(sd["trap_link"])))
         # Start-revealed checklists, per mode.
         for addr, key in OPTION_REVEAL_CHECKLIST_PER_MODE.values():
-            d.write_u32(a(addr), int(bool(sd.get(key, 0))))
+            d.write_u32(a(addr), int(bool(sd[key])))
 
         # Goals per mode: option values map directly to the GoalKind enum.
         goal_writes = (
-            (MemoryAddress.OPTION_GOAL_AIRRIDE, "air_ride_goal", AirRideGoal.default),
-            (MemoryAddress.OPTION_GOAL_TOPRIDE, "top_ride_goal", TopRideGoal.default),
-            (MemoryAddress.OPTION_GOAL_CITYTRIAL, "city_trial_goal", CityTrialGoal.default),
-            (MemoryAddress.OPTION_GOAL_ARCHIPELAGO, "archipelago_goal", ArchipelagoGoal.default),
+            (MemoryAddress.OPTION_GOAL_AIRRIDE, "air_ride_goal"),
+            (MemoryAddress.OPTION_GOAL_TOPRIDE, "top_ride_goal"),
+            (MemoryAddress.OPTION_GOAL_CITYTRIAL, "city_trial_goal"),
+            (MemoryAddress.OPTION_GOAL_ARCHIPELAGO, "archipelago_goal"),
         )
-        for addr, key, fallback in goal_writes:
-            d.write_u32(a(addr), int(sd.get(key, fallback)))
+        for addr, key in goal_writes:
+            d.write_u32(a(addr), int(sd[key]))
 
-        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_AIRRIDE), int(sd.get("air_ride_checklist_amount", 60)))
-        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd.get("top_ride_checklist_amount", 60)))
-        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd.get("city_trial_checklist_amount", 60)))
-        d.write_u32(
-            a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd.get("archipelago_checklist_amount", 60))
-        )
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_AIRRIDE), int(sd["air_ride_checklist_amount"]))
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_TOPRIDE), int(sd["top_ride_checklist_amount"]))
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_CITYTRIAL), int(sd["city_trial_checklist_amount"]))
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_AMOUNT_ARCHIPELAGO), int(sd["archipelago_checklist_amount"]))
 
-        d.write_u32(a(MemoryAddress.OPTION_AP_PATCHES), int(sd.get("ap_patches", 0)))
-        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MIN), int(sd.get("city_trial_patch_cap_min", 18)))
-        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MAX), int(sd.get("city_trial_patch_cap_max", 18)))
-        d.write_u32(a(MemoryAddress.OPTION_SPAWN_RATE_MIN), int(sd.get("spawn_rate_min", 100)))
+        d.write_u32(a(MemoryAddress.OPTION_AP_PATCHES), int(sd["ap_patches"]))
+        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MIN), int(sd["city_trial_patch_cap_min"]))
+        d.write_u32(a(MemoryAddress.OPTION_CT_PATCH_CAP_MAX), int(sd["city_trial_patch_cap_max"]))
+        d.write_u32(a(MemoryAddress.OPTION_SPAWN_RATE_MIN), int(sd["spawn_rate_min"]))
 
         # Goal checks bitmasks for GOAL_CHECKLIST_LIST.
         goal_loc_keys = {
@@ -611,34 +612,30 @@ class KARContext(CommonContext):
             GameMode.ARCHIPELAGO: "archipelago_goal_locations",
         }
         for mode, addr in OPTION_GOAL_CHECKS_PER_MODE.items():
-            self._write_goal_checks_bitmask(mode, sd.get(goal_loc_keys[mode], []), a(addr))
+            self._write_goal_checks_bitmask(mode, sd[goal_loc_keys[mode]], a(addr))
 
         # Per-category access gating.
-        d.write_u32(a(MemoryAddress.OPTION_MACHINE_GATING_ENABLED), int(bool(sd.get("machines_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_ABILITY_GATING_ENABLED), int(bool(sd.get("abilities_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_EVENT_GATING_ENABLED), int(bool(sd.get("city_trial_events_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_PATCH_GATING_ENABLED), int(bool(sd.get("city_trial_patches_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_ITEM_GATING_ENABLED), int(bool(sd.get("city_trial_items_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_BOX_GATING_ENABLED), int(bool(sd.get("city_trial_boxes_gated", 1))))
-        d.write_u32(
-            a(MemoryAddress.OPTION_AIRRIDE_STAGE_GATING_ENABLED), int(bool(sd.get("air_ride_courses_gated", 1)))
-        )
-        d.write_u32(
-            a(MemoryAddress.OPTION_TOPRIDE_STAGE_GATING_ENABLED), int(bool(sd.get("top_ride_courses_gated", 1)))
-        )
-        d.write_u32(a(MemoryAddress.OPTION_TOPRIDE_ITEM_GATING_ENABLED), int(bool(sd.get("top_ride_items_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_COLOR_GATING_ENABLED), int(bool(sd.get("colors_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_STADIUM_GATING_ENABLED), int(bool(sd.get("city_trial_stadiums_gated", 1))))
-        d.write_u32(a(MemoryAddress.OPTION_BASE_ABILITY_GATING_ENABLED), int(bool(sd.get("base_abilities_gated", 0))))
-        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_REWARD_PLACED_TYPES), int(sd.get("checklist_rewards", 0)))
+        d.write_u32(a(MemoryAddress.OPTION_MACHINE_GATING_ENABLED), int(bool(sd["machines_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_ABILITY_GATING_ENABLED), int(bool(sd["abilities_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_EVENT_GATING_ENABLED), int(bool(sd["city_trial_events_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_PATCH_GATING_ENABLED), int(bool(sd["city_trial_patches_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_ITEM_GATING_ENABLED), int(bool(sd["city_trial_items_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_BOX_GATING_ENABLED), int(bool(sd["city_trial_boxes_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_AIRRIDE_STAGE_GATING_ENABLED), int(bool(sd["air_ride_courses_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_TOPRIDE_STAGE_GATING_ENABLED), int(bool(sd["top_ride_courses_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_TOPRIDE_ITEM_GATING_ENABLED), int(bool(sd["top_ride_items_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_COLOR_GATING_ENABLED), int(bool(sd["colors_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_STADIUM_GATING_ENABLED), int(bool(sd["city_trial_stadiums_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_BASE_ABILITY_GATING_ENABLED), int(bool(sd["base_abilities_gated"])))
+        d.write_u32(a(MemoryAddress.OPTION_CHECKLIST_REWARD_PLACED_TYPES), int(sd["checklist_rewards"]))
 
         # Goal keys
         forced_gates = 0
-        if sd.get("legendary_pieces_goal_gated", 0):
+        if sd["legendary_pieces_goal_gated"]:
             forced_gates |= GoalForcedGate.LEGENDARY_PIECES
-        if sd.get("vs_king_dedede_goal_gated", 0):
+        if sd["vs_king_dedede_goal_gated"]:
             forced_gates |= GoalForcedGate.VS_KING_DEDEDE
-        if sd.get("ap_star_pieces_goal_gated", 0):
+        if sd["ap_star_pieces_goal_gated"]:
             forced_gates |= GoalForcedGate.AP_STAR_PIECES
         d.write_u32(a(MemoryAddress.OPTION_GOAL_FORCED_GATES), forced_gates)
 

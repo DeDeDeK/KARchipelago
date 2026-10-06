@@ -148,7 +148,7 @@ class NonProgressionCheckboxes(Choice):
     display_name = "Non-Progression Checkboxes"
     option_excluded = 0
     option_removed = 1
-    default = 0
+    default = 1
 
 
 class CityTrialProgression(OptionSet):
