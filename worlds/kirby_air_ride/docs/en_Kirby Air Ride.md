@@ -243,7 +243,7 @@ You can enable or disable this in the in-game settings menu, or in your yaml. It
 
 EnergyLink applies to every mode. While it is on, charging your machine, collecting patches and other items, and destroying objects (rocks, trees, coral, houses, etc.) in the City contributes energy to the multiworld's shared pool, and you can spend that pool from within the game to receive items.
 
-You can enable or disable this in the in-game settings menu, or in your yaml.
+You can enable or disable this in the in-game settings menu, or in your yaml. Under Settings -> Energy Link -> Sources you can also turn off each way of earning energy (Objects, Patches, Charge) on its own.
 
 ### Energylink spend menu
 
@@ -251,9 +251,9 @@ There is an in-game menu where you can spend your pooled energy to purchase in-g
 
 ### Auto-Charge
 
-Auto-Charge (Settings -> Energy Link -> Auto-Charge in the in-game menu) spends pooled energy to keep your machine's charge meter topped up. It adds a steady amount over time, so it gently assists your own charging - holding A, or coasting and gliding - and your energy drains gradually rather than all at once.
+Auto-Charge (Settings -> Energy Link -> Machine Charge in the in-game menu) spends pooled energy to keep your machine's charge meter topped up. It adds a steady amount of charge over time.
 
-The **Auto-Charge Rate** setting (Slow / Medium / Fast) controls how quickly the meter fills.
+Machine Charge is Off by default; Slow / Med / Fast controls how quickly the meter fills. It only runs while EnergyLink is on.
 
 ## DeathLink
 
