@@ -381,17 +381,107 @@ def _any_rideable(machines: list[str], charge_gated: bool) -> Rule:
     return HasAny(*steerable) | (Has(KARItemName.UNLOCK_BASE_ABILITY_CHARGE) & HasAny(*charge_dependent))
 
 
+def steerable_ct_machine(world: "KARWorld") -> Rule:
+    """Any City Trial machine the player can drive, for checks that take driving around the city."""
+    return _any_rideable(_CT_MACHINE_UNLOCKS, "base_abilities_gated" in world.effective_gates)
+
+
 # Locations needing any rideable City Trial machine
 _CT_ANY_MACHINE_LOCATIONS: tuple[str, ...] = (
     APLocation.BREAK_ALL_CORAL,
     APLocation.CASTLE_FLOWER_ON_FOOT,
     APLocation.SKY_GARDEN_TOP_ON_FOOT,
+    APLocation.WHISPY_WOODS_ON_FOOT,
+    APLocation.UNDER_THE_WATERWHEEL,
     CTLocation.RACE_60_MILES,
     CTLocation.RACE_200_MILES,
+    # Drive time only counts while moving
+    CTLocation.FR_DRIVE_FOR_10_MINUTES,
+    CTLocation.FR_DRIVE_FOR_30_MINUTES,
+    CTLocation.FR_DRIVE_FOR_2_HOURS,
+    CTLocation.MAKE_YOUR_WAY_TO_GARDEN_IN_SKY,
+    CTLocation.FLY_THROUGH_RINGS_IN_SKY_5X,
+    CTLocation.LET_WATERWHEEL_CARRY_YOU_10X,
+    CTLocation.HIGH_PLAINS_HOLE_3X,
+    CTLocation.SUPER_JUMP_RAMP_10X,
+    CTLocation.USE_GRIND_RAIL_TO_BREAK_INTO_CRATER,
+    CTLocation.BUST_STAR_POLE,
+    CTLocation.BUST_STAR_POLE_10X,
+    CTLocation.OPEN_ALL_VOLCANO_HOLES,
+    CTLocation.OPEN_UP_PITFALL_IN_FOREST,
+    CTLocation.BREAK_ALL_ROCKS,
+    CTLocation.KNOCK_DOWN_ALL_OF_TREES_IN_FOREST,
+    CTLocation.USE_FIREWORKS_TO_KO_RIVALS_10X,
+    CTLocation.USE_SENSOR_BOMBS_TO_KO_RIVALS_3X,
+    CTLocation.USE_GOLD_SPIKES_TO_KO_RIVALS_3X,
+    APLocation.KO_A_RIVAL_WITH_PANIC_SPIN,
+    CTLocation.DAMAGE_RIVAL_WITHIN_10S,
+    CTLocation.DAMAGE_ALL_3_CPUS,
     APLocation.EVENT_RUN_AMOK_1000_FEET,
     APLocation.EVENT_RAIL_FIRE_ALL_STATIONS,
     APLocation.EVENT_BUMP_MACHINE_FORMATION,
     APLocation.USE_ALL_GRIND_RAILS,
+    CTLocation.TIMEOUT_ALL_ON_RAILS,
+    # Collecting patches means driving around for them
+    CTLocation.GET_10_BOOST_PATCHES,
+    CTLocation.GET_10_TOP_SPEED_PATCHES,
+    CTLocation.GET_10_TURN_PATCHES,
+    CTLocation.GET_10_CHARGE_PATCHES,
+    CTLocation.GET_10_WEIGHT_PATCHES,
+    CTLocation.GET_10_DEFENSE_PATCHES,
+    CTLocation.GET_10_GLIDE_PATCHES,
+    CTLocation.GET_30_GLIDE_PATCHES,
+    APLocation.GET_10_HP_PATCHES,
+    APLocation.GET_10_OFFENSE_PATCHES,
+    APLocation.MAX_OUT_A_STAT,
+    # Food the same
+    CTLocation.EAT_2_MAXIM_TOMATOES,
+    CTLocation.DRINK_3_ENERGY_DRINKS,
+    CTLocation.EAT_3_PLATES_OF_SUSHI,
+    CTLocation.EAT_3_HOT_DOGS,
+    APLocation.EAT_3_ICE_CREAMS,
+    APLocation.EAT_3_RICE_BALLS,
+    APLocation.EAT_3_CHICKENS,
+    APLocation.EAT_3_CURRIES,
+    APLocation.EAT_3_RAMENS,
+    APLocation.EAT_3_OMELETS,
+    APLocation.EAT_3_HAMBURGERS,
+    APLocation.EAT_3_APPLES,
+    # Items and boxes the same
+    CTLocation.GET_10_ITEMS_IN_20S,
+    CTLocation.GET_50_ITEMS,
+    CTLocation.PICKUP_100_ITEMS,
+    CTLocation.PICKUP_500_ITEMS,
+    CTLocation.PICKUP_1000_ITEMS,
+    CTLocation.PICKUP_3000_ITEMS,
+    APLocation.EVENT_BOUNCE_OVER_10_ITEMS,
+    APLocation.COLLECT_5_ALL_UPS,
+    CTLocation.BREAK_500_BOXES,
+    CTLocation.BREAK_1000_BOXES,
+    APLocation.BREAK_20_BLUE_BOXES,
+    APLocation.BREAK_10_GREEN_BOXES,
+    APLocation.BREAK_10_RED_BOXES,
+    # Copy abilities the same
+    CTLocation.COPY_CHANCE_WHEEL_BOMB,
+    CTLocation.COPY_CHANCE_WHEEL_SLEEP,
+    APLocation.GET_MIC_FROM_COPY_CHANCE,
+    APLocation.SAME_COPY_ABILITY_3_IN_A_ROW,
+    APLocation.GET_6_DIFFERENT_COPY_ABILITIES,
+    # Legendary pieces the same. A goal event that replaces one of these cells gets the rule in _create_goal_event.
+    CTLocation.COMPLETE_DRAGOON_AND_HYDRA,
+    APLocation.ASSEMBLE_ARCHIPELAGO_STAR,
+    APLocation.ASSEMBLE_ALL_THREE_LEGENDARIES,
+    # Stadium races. The Bulk Star box's own rule already names a machine that moves: Bulk Star with Charge.
+    APLocation.SR1_FINISH_1ST,
+    APLocation.SR2_FINISH_1ST,
+    APLocation.SR3_FINISH_1ST,
+    APLocation.SR4_FINISH_1ST,
+    APLocation.SR5_FINISH_1ST,
+    APLocation.SR6_FINISH_1ST,
+    APLocation.SR7_FINISH_1ST,
+    APLocation.SR8_FINISH_1ST,
+    APLocation.SR9_FINISH_1ST,
+    APLocation.SR1_FINISH_1ST_3X_AS_PURPLE,
 )
 
 # Machines that can turn up in the city. King Dedede and Meta Knight only ever ride their own.
@@ -424,12 +514,13 @@ _POOR_GLIDE_MACHINES: frozenset[str] = frozenset(
 
 _GOOD_GLIDE_MACHINES: list[str] = [name for name in _CT_MACHINE_UNLOCKS if name not in _POOR_GLIDE_MACHINES]
 
-# Stadium glide checks that need a long glide
+# Glide checks that need a long glide: the stadium flights, and climbing to the city's highest point
 _HARD_GLIDE_LOCATIONS: tuple[str, ...] = (
     CTLocation.STADIUM_TF_AIRBORNE_15_SECONDS,
     CTLocation.STADIUM_AG_FLY_1300_FEET,
     CTLocation.STADIUM_AG_AIRBORNE_30_SECONDS,
     APLocation.AG_FLY_2000_FEET,
+    APLocation.FLY_TO_HIGHEST_POINT,
 )
 
 # The good gliders that make those glides without Glide Patches
@@ -919,13 +1010,16 @@ def set_rules(world: "KARWorld"):
             *DAMAGING_ABILITY_UNLOCKS,
             *_DAMAGING_CT_ITEM_UNLOCKS,
         )
-        # A bust cell names the machine you ride, so King Dedede and Meta Knight can't land its hits.
-        for loc in _MACHINE_PAIR_RULES:
-            add_location_rule(loc, HasAny(*city_damage_keys))
+        # A bust cell names the machine you ride, so King Dedede and Meta Knight can't land its hits. The
+        # Archipelago Star needs none of these: its sphere shot, the full-charge release, KOs on its own.
+        for loc, (_, riding) in _MACHINE_PAIR_RULES.items():
+            if riding != KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR:
+                add_location_rule(loc, HasAny(*city_damage_keys))
         if "machines_gated" in world.effective_gates:
             # A KO in the city is a rival's machine destroyed, the same as a machine break.
+            sphere_shot = HasAll(KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR, KARItemName.UNLOCK_BASE_ABILITY_CHARGE)
             for loc in (CTLocation.BREAK_A_CPUS_MACHINE_5_X, APLocation.EVENT_FOG_KO_A_RIVAL):
-                add_location_rule(loc, HasAny(*city_damage_keys, *CHARACTER_MACHINE_UNLOCKS))
+                add_location_rule(loc, HasAny(*city_damage_keys, *CHARACTER_MACHINE_UNLOCKS) | sphere_shot)
 
     # Air Glider requires glide machines or glide patches unlocked
     if {"machines_gated", "city_trial_patches_gated"} <= world.effective_gates:
@@ -1191,16 +1285,17 @@ def set_rules(world: "KARWorld"):
         add_location_rule(loc, And(*box_requirements[box_item]))
 
     if "machines_gated" in world.effective_gates:
-        any_ct_machine = _any_rideable(_CT_MACHINE_UNLOCKS, charge_gated)
+        any_ct_machine = steerable_ct_machine(world)
         for loc in _CT_ANY_MACHINE_LOCATIONS:
             add_location_rule(loc, any_ct_machine)
-        add_location_rule(APLocation.FLY_TO_HIGHEST_POINT, HasAny(*_CT_FLIGHT_MACHINES))
         add_location_rule(APLocation.AIRBORNE_20_SECONDS_IN_CITY, HasAny(*_CT_FLIGHT_MACHINES))
         add_location_rule(APLocation.LIGHTHOUSE_TOP_ON_FOOT, HasAny(*_CT_FLIGHT_MACHINES))
         add_location_rule(APLocation.RIDE_5_DIFFERENT_MACHINES, HasFromListUnique(*_CT_FIELD_MACHINE_UNLOCKS, count=5))
+        # King Dedede and Meta Knight only ride their own machines, which never turn up in the city, so a swap
+        # takes two machines that do.
         add_location_rule(
             CTLocation.FR_CHANGE_AIR_RIDE_MACHINES_10X,
-            HasFromListUnique(*_CT_MACHINE_UNLOCKS, count=2),
+            HasFromListUnique(*_CT_FIELD_MACHINE_UNLOCKS, count=2),
         )
         add_location_rule(APLocation.SR1_FINISH_1ST_ON_BULK_STAR, Has(KARItemName.UNLOCK_MACHINE_BULK_STAR))
         add_location_rule(APLocation.AIR_RIDE_1ST_AS_META_KNIGHT, Has(KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT))

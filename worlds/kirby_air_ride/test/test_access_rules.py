@@ -5,7 +5,7 @@ start_inventory."""
 import unittest
 from typing import TYPE_CHECKING
 
-from BaseClasses import ItemClassification
+from BaseClasses import CollectionState, ItemClassification
 from Options import Toggle
 
 from ..KARData import GameMode
@@ -842,6 +842,17 @@ class TestMachinesGatingApplied(KARTestBase):
         state.collect(self.world.create_item(KARItemName.UNLOCK_MACHINE_WARP_STAR))
         self.assertTrue(self.reaches(state, loc))
 
+    def test_free_run_swap_cell_ignores_character_machines(self):
+        # King Dedede and Meta Knight only ride their own, and neither machine turns up in the city to swap to.
+        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
+        for machine in (
+            KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR,
+            KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE,
+            KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT,
+        ):
+            state.collect(self.world.create_item(machine))
+        self.assertFalse(self.reaches(state, CTLocation.FR_CHANGE_AIR_RIDE_MACHINES_10X))
+
 
 class TestMachinesGatingNotApplied(KARTestBase):
     """machines_gated OFF: the mod unlocks every machine at connect whatever the enabled modes, so the
@@ -1623,10 +1634,10 @@ _GLIDE_TEST_OPTIONS: dict = {
 
 class TestHardGlideChecksNeedAPatchedGlider(KARTestBase):
     """TARGET FLIGHT's 15 seconds and AIR GLIDER's long flights are scored off one launch on the machine
-    built in the city. Only Dragoon and the Flight Warp Star make them on their own; any other good glider
-    needs Glide Patches, and the wheelie/bike class and the other poor gliders never get there. The
-    Wheelie Bike pin is itself a poor glider, so it suppresses the machine starter draw without
-    satisfying the rule."""
+    built in the city, and the city's highest point takes as long a climb. Only Dragoon and the Flight Warp
+    Star make them on their own; any other good glider needs Glide Patches, and the wheelie/bike class and
+    the other poor gliders never get there. The Wheelie Bike pin is itself a poor glider, so it suppresses
+    the machine starter draw without satisfying the rule."""
 
     options = {
         **_GLIDE_TEST_OPTIONS,
@@ -2563,6 +2574,71 @@ class TestAPPatchAndAbilityBoxes(KARTestBase):
         )
 
 
+class TestPatchAndFoodCellsNeedOnlyTheirItem(KARTestBase):
+    """Every City Trial gate on: each patch or food cell needs its patch type or food and a steerable machine,
+    which the Flight Warp Star starter pin supplies without Charge. Charge Patches count with base Charge
+    locked, and maxing a stat reads only the patch stats, so a Speed Max item is no substitute."""
+
+    options = {
+        **ALL_MODES,
+        **_AP_ON,
+        "city_trial_stadiums_gated": Toggle.option_true,
+        "city_trial_events_gated": Toggle.option_true,
+        "city_trial_patches_gated": Toggle.option_true,
+        "city_trial_items_gated": Toggle.option_true,
+        "city_trial_boxes_gated": Toggle.option_true,
+        "abilities_gated": Toggle.option_true,
+        "base_abilities_gated": Toggle.option_true,
+        "machines_gated": Toggle.option_true,
+        **_PIN_MACHINE_STARTER,
+    }
+
+    _PATCH_COUNTS: dict[str, str] = {
+        **_PATCH_LOCATION_RULES,
+        APLocation.GET_10_HP_PATCHES: KARItemName.UNLOCK_PATCH_HP,
+        APLocation.GET_10_OFFENSE_PATCHES: KARItemName.UNLOCK_PATCH_OFFENSE,
+    }
+
+    _FOOD_COUNTS: dict[str, str] = {
+        CTLocation.EAT_2_MAXIM_TOMATOES: KARItemName.UNLOCK_ITEM_MAXIM_TOMATO,
+        CTLocation.DRINK_3_ENERGY_DRINKS: KARItemName.UNLOCK_ITEM_ENERGY_DRINK,
+        CTLocation.EAT_3_PLATES_OF_SUSHI: KARItemName.UNLOCK_ITEM_SUSHI,
+        CTLocation.EAT_3_HOT_DOGS: KARItemName.UNLOCK_ITEM_HOT_DOG,
+        APLocation.EAT_3_ICE_CREAMS: KARItemName.UNLOCK_ITEM_ICE_CREAM,
+        APLocation.EAT_3_RICE_BALLS: KARItemName.UNLOCK_ITEM_RICE_BALL,
+        APLocation.EAT_3_CHICKENS: KARItemName.UNLOCK_ITEM_CHICKEN,
+        APLocation.EAT_3_CURRIES: KARItemName.UNLOCK_ITEM_CURRY,
+        APLocation.EAT_3_RAMENS: KARItemName.UNLOCK_ITEM_RAMEN,
+        APLocation.EAT_3_OMELETS: KARItemName.UNLOCK_ITEM_OMELET,
+        APLocation.EAT_3_HAMBURGERS: KARItemName.UNLOCK_ITEM_HAMBURGER,
+        APLocation.EAT_3_APPLES: KARItemName.UNLOCK_ITEM_APPLE,
+    }
+
+    def _starters_and(self, name: str) -> CollectionState:
+        state = CollectionState(self.multiworld)
+        state.collect(self.world.create_item(name))
+        return state
+
+    def _assert_needs_only(self, counts: dict[str, str]) -> None:
+        for location, item in counts.items():
+            with self.subTest(location=location):
+                self.assertFalse(self.reaches(self.state_without([item]), location))
+                self.assertTrue(self.reaches(self._starters_and(item), location))
+
+    def test_each_patch_count_needs_only_its_patch(self):
+        self._assert_needs_only(self._PATCH_COUNTS)
+
+    def test_each_food_count_needs_only_its_food(self):
+        self._assert_needs_only(self._FOOD_COUNTS)
+
+    def test_maxing_a_stat_needs_only_a_patch(self):
+        patches = sorted(items_of_type(KARItemType.CT_PATCH_UNLOCK))
+        self.assertFalse(self.reaches(self.state_without(patches), APLocation.MAX_OUT_A_STAT))
+        for patch in patches:
+            with self.subTest(patch=patch):
+                self.assertTrue(self.reaches(self._starters_and(patch), APLocation.MAX_OUT_A_STAT))
+
+
 class TestAPMicKirbyMeleeBoxNeedsBothKeys(KARTestBase):
     """The melee Mic box composes the two halves: the ability itself AND Inhale, since neither melee
     stage spawns a copy panel and the only Mic in there is a swallowed Walky. machines_gated is OFF so
@@ -2844,8 +2920,8 @@ class TestCVCopyChanceWheelTreeAbilitiesUngated(KARTestBase):
 
 class TestCityAnyMachineCells(KARTestBase):
     """base_abilities_gated OFF: the "you need something to ride" City Trial cells - breaking the coral,
-    reaching the sky garden or Castle Hall's roof, and the two mileage counters - take any City Trial
-    machine, so every one of them opens all five on its own."""
+    the mileage counters, the sky rings, the waterwheel, the grind rails, the stadium races and the like -
+    take any City Trial machine, so every one of them opens them all on its own."""
 
     options = {
         **CT_ONLY,
@@ -2960,12 +3036,21 @@ class TestAPSphereShotKONeedsStarAndCharge(KARTestBase):
         self.assertTrue(self._reachable(star, charge))
 
 
-# Every damage source a city cell can use apart from King Dedede and Meta Knight
+# Every damage source a city cell can use apart from King Dedede, Meta Knight and the sphere shot
 _CITY_DAMAGE_KEYS = [
     [KARItemName.UNLOCK_BASE_ABILITY_QUICK_SPIN],
     *([ability] for ability in DAMAGING_ABILITY_UNLOCKS),
     *([item] for item in _DAMAGING_CT_ITEM_UNLOCKS),
 ]
+
+# Those sources and both characters, everything a city KO can come from but the sphere shot
+_CITY_DAMAGE_AND_CHARACTER_NAMES = [
+    *(name for group in _CITY_DAMAGE_KEYS for name in group),
+    *CHARACTER_MACHINE_UNLOCKS,
+]
+
+# The Archipelago Star's sphere shot is its full-charge release
+_SPHERE_SHOT_KEYS = [KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR, KARItemName.UNLOCK_BASE_ABILITY_CHARGE]
 
 # Every mode on, so the City Trial item and ability unlocks have room in the pool, and the Archipelago
 # checklist too, for its bust cells
@@ -2982,16 +3067,16 @@ _CITY_DAMAGE_OPTIONS: dict = {
 
 class TestCityDamageCellsNeedADamageSource(KARTestBase):
     """Destroying a machine takes several rams, so the city cells that bust or break one take Quick Spin, a
-    damaging copy ability, a damaging item, or King Dedede's or Meta Knight's auto-attack. The Flight Warp
-    Star pin keeps both characters out of the starter draw."""
+    damaging copy ability, a damaging item, King Dedede's or Meta Knight's auto-attack, or the Archipelago
+    Star's sphere shot. The Flight Warp Star pin keeps both characters out of the starter draw."""
 
     options = _CITY_DAMAGE_OPTIONS
 
+    _MACHINE_BREAKS = (CTLocation.BREAK_A_CPUS_MACHINE_5_X, APLocation.EVENT_FOG_KO_A_RIVAL)
+
     def test_one_hit_cells_need_no_damage_source(self):
         # A ram at speed lands the one hit each of these needs.
-        state = self.state_without(
-            [*(name for group in _CITY_DAMAGE_KEYS for name in group), *CHARACTER_MACHINE_UNLOCKS]
-        )
+        state = self.state_without(_CITY_DAMAGE_AND_CHARACTER_NAMES)
         for location in (
             CTLocation.DO_SOME_DAMAGE_TO_DYNA_BLADE,
             CTLocation.DAMAGE_RIVAL_WITHIN_10S,
@@ -3002,15 +3087,28 @@ class TestCityDamageCellsNeedADamageSource(KARTestBase):
 
     def test_cpu_machine_breaks_need_a_damage_source(self):
         self.assertAccessDependency(
-            [CTLocation.BREAK_A_CPUS_MACHINE_5_X],
-            [*_CITY_DAMAGE_KEYS, *([machine] for machine in CHARACTER_MACHINE_UNLOCKS)],
+            list(self._MACHINE_BREAKS),
+            [*_CITY_DAMAGE_KEYS, *([machine] for machine in CHARACTER_MACHINE_UNLOCKS), _SPHERE_SHOT_KEYS],
             only_check_listed=True,
         )
 
+    def test_the_sphere_shot_needs_charge(self):
+        # The star alone stays collected here, so it doesn't count without Charge.
+        state = self.state_without([*_CITY_DAMAGE_AND_CHARACTER_NAMES, KARItemName.UNLOCK_BASE_ABILITY_CHARGE])
+        for location in self._MACHINE_BREAKS:
+            with self.subTest(location=location):
+                self.assertFalse(self.reaches(state, location))
+
     def test_bust_cells_need_a_damage_source_but_not_a_character(self):
-        # A bust names the machine you ride. King Dedede and Meta Knight stay collected here, so the
-        # unreachable half also shows they don't count.
-        self.assertAccessDependency(list(_MACHINE_PAIR_RULES), _CITY_DAMAGE_KEYS, only_check_listed=True)
+        # A bust names the machine you ride. King Dedede, Meta Knight and the sphere shot stay collected here,
+        # so the unreachable half also shows they don't count.
+        busts = [loc for loc in _MACHINE_PAIR_RULES if loc != APLocation.BUST_SHADOW_STAR_ON_ARCHIPELAGO_STAR]
+        self.assertAccessDependency(busts, _CITY_DAMAGE_KEYS, only_check_listed=True)
+
+    def test_busting_from_the_archipelago_star_needs_no_other_damage_source(self):
+        # Its sphere shot is the damage source.
+        state = self.state_without(_CITY_DAMAGE_AND_CHARACTER_NAMES)
+        self.assertTrue(self.reaches(state, APLocation.BUST_SHADOW_STAR_ON_ARCHIPELAGO_STAR))
 
 
 class TestCityDamageCellsItemsUngated(KARTestBase):
@@ -3054,47 +3152,6 @@ class TestAirRideDefeatCountsNeedADamageSource(KARTestBase):
             ],
             only_check_listed=True,
         )
-
-
-class TestAPFlyToHighestPointNeedsFlight(KARTestBase):
-    """Touching the city's ceiling is not just "have a ride": the box needs the Dragoon, the Flight Warp
-    Star or the Winged Star, the only City Trial machines that climb that high."""
-
-    options = {
-        **CT_ONLY,
-        **_AP_ON,
-        "machines_gated": Toggle.option_true,
-        "base_abilities_gated": Toggle.option_false,
-        "city_trial_stadiums_gated": Toggle.option_false,
-    }
-
-    _LOCATION = APLocation.FLY_TO_HIGHEST_POINT
-
-    def _reachable_with(self, machine: str) -> bool:
-        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
-        state.collect(self.world.create_item(machine))
-        return self.reaches(state, self._LOCATION)
-
-    def test_the_flight_set_is_a_strict_subset(self):
-        # Non-vacuity: a typo'd name or the whole machine list would make the loops below prove nothing.
-        self.assertEqual(len(_CT_FLIGHT_MACHINES), 3)
-        self.assertTrue(set(_CT_FLIGHT_MACHINES) < set(_CT_MACHINE_UNLOCKS))
-
-    def test_unreachable_with_no_machine(self):
-        state = self.state_without(items_of_type(KARItemType.MACHINE_UNLOCK))
-        self.assertFalse(self.reaches(state, self._LOCATION))
-
-    def test_each_flight_machine_suffices_alone(self):
-        for machine in _CT_FLIGHT_MACHINES:
-            with self.subTest(machine=machine):
-                self.assertTrue(self._reachable_with(machine), f"{machine} should reach the ceiling on its own")
-
-    def test_grounded_machines_do_not_suffice(self):
-        for machine in _CT_MACHINE_UNLOCKS:
-            if machine in _CT_FLIGHT_MACHINES:
-                continue
-            with self.subTest(machine=machine):
-                self.assertFalse(self._reachable_with(machine), f"{machine} should not reach the ceiling")
 
 
 class TestAssembleBoxesFreeWhenPiecesUngatedWithoutCityTrial(KARTestBase):

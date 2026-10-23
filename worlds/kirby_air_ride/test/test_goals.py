@@ -203,6 +203,58 @@ class TestAllThreeLegendariesGoalNeedsTwelvePieces(KARTestBase):
         )
 
 
+class TestCityCollectionGoalsNeedASteerableMachine(KARTestBase):
+    """The goals won by collecting things in the city - the three assemble goals and max stats - need a
+    machine that moves, the same as the cells the assemble goals replace. Bulk Star can't move with Charge
+    locked, so it doesn't count alone."""
+
+    auto_construct = False
+
+    # A flat patch cap mints no Patch Cap Increase, keeping the pool small.
+    _MAX_STATS: dict = {
+        "city_trial_goal": CityTrialGoal.option_max_stats_in_one_run,
+        "city_trial_patch_cap_min": 18,
+        "city_trial_patch_cap_max": 18,
+    }
+
+    _GOALS = (
+        (
+            {"city_trial_goal": CityTrialGoal.option_hydra_and_dragoon},
+            f"{CITY_TRIAL_GOAL_TO_LOCATION[CityTrialGoal.option_hydra_and_dragoon]} (Victory)",
+        ),
+        (
+            {"archipelago_goal": ArchipelagoGoal.option_assemble_archipelago_star},
+            f"{ARCHIPELAGO_GOAL_TO_LOCATION[ArchipelagoGoal.option_assemble_archipelago_star]} (Victory)",
+        ),
+        (
+            {"archipelago_goal": ArchipelagoGoal.option_all_three_legendaries_in_one_run},
+            f"{ARCHIPELAGO_GOAL_TO_LOCATION[ArchipelagoGoal.option_all_three_legendaries_in_one_run]} (Victory)",
+        ),
+        (_MAX_STATS, _MAX_STATS_EVENT),
+    )
+
+    def test_victory_needs_a_steerable_machine(self):
+        for goal, victory in self._GOALS:
+            with self.subTest(victory=victory):
+                self.options = {
+                    **CT_ONLY,
+                    **goal,
+                    "machines_gated": Toggle.option_true,
+                    "base_abilities_gated": Toggle.option_true,
+                    # Room in the pool; the stadiums have no bearing on the goal.
+                    "city_trial_stadiums_gated": Toggle.option_false,
+                }
+                self.world_setup()
+                state = self.state_without(
+                    [*items_of_type(KARItemType.MACHINE_UNLOCK), KARItemName.UNLOCK_BASE_ABILITY_CHARGE]
+                )
+                self.assertFalse(self.reaches(state, victory), "reachable with no machine")
+                state.collect(self.world.create_item(KARItemName.UNLOCK_MACHINE_BULK_STAR))
+                self.assertFalse(self.reaches(state, victory), "reachable on Bulk Star without Charge")
+                state.collect(self.world.create_item(KARItemName.UNLOCK_MACHINE_WARP_STAR))
+                self.assertTrue(self.reaches(state, victory), "not reachable on Warp Star")
+
+
 class TestCTGoalMaxStats(KARTestBase):
     """max_stats_in_one_run binds to no checklist box, so its victory event is synthesized in the City
     Trial region. With patches and items both ungated the only clause left is "hold every Patch Cap
