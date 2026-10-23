@@ -116,14 +116,12 @@ GOAL_NAMES: dict[GoalKind, str] = {
 }
 
 
-# Friendly text for DolphinInterface.status_name()'s raw DME status values
-_DOLPHIN_STATUS_TEXT = {
-    "hooked": "hooked",
-    "notRunning": "Dolphin not running",
-    "noEmu": "Dolphin running, but no game/emulation detected",
-    "unHooked": "not hooked yet",
-    "unknown": "status unavailable",
-}
+# Region letters (the fourth character of a disc's game id) of the Kirby Air Ride releases the mod doesn't support
+_REGION_NAMES = {b"P": "PAL", b"J": "NTSC-J"}
+
+# Printed when the client enters the state, and shown by /dolphin while it lasts
+_WAITING_FOR_MOD = "Kirby Air Ride is running. Waiting for the KARchipelago mod to be detected."
+_READY_TO_PLAY = "Handshake complete. Ready to play!"
 
 
 class KARCommandProcessor(ClientCommandProcessor):
@@ -137,30 +135,19 @@ class KARCommandProcessor(ClientCommandProcessor):
 
     @staticmethod
     def _status(ctx: "KARContext") -> tuple[str, str]:
-        """The connection state as (text, color)."""
-        color = "yellow"
-        if not ctx.dolphin.is_hooked():
-            color = "red"
-            if ctx.last_attach_detail:
-                status = f"Not connected - {ctx.last_attach_detail}"
-            else:
-                name = ctx.dolphin.status_name()
-                status = f"Not connected ({_DOLPHIN_STATUS_TEXT.get(name, name)})"
-        elif not ctx.dolphin.check_game_running():
-            status = "Hooked, game not running"
-            color = "red"
-        elif ctx.ap_data_base is None:
-            status = "Waiting for APData struct"
-        elif not ctx.game_ready:
-            status = "Waiting for game ready"
-        elif not ctx.options_written:
-            status = "Waiting for slot options"
-        elif not ctx.locations_written:
-            status = "Waiting for location data"
-        else:
-            status = "Connected"
-            color = "green"
-        return status, color
+        """The connection state as (text, color), worded like the line the client printed on entering it."""
+        if not (ctx.dolphin.is_hooked() and ctx.dolphin.check_game_running()):
+            return ctx.attach_status
+        if ctx.ap_data_base is None:
+            return _WAITING_FOR_MOD, "yellow"
+        if not ctx.game_ready:
+            return "KARchipelago mod detected. Waiting for the game to load its save.", "yellow"
+        # Ahead of the handshake flags, which outlive a disconnect from the room
+        if not ctx.slot_options:
+            return "Save loaded. Waiting for connection to the Archipelago server.", "yellow"
+        if not ctx.locations_written:
+            return "Connected to the Archipelago server. Finishing the handshake.", "yellow"
+        return _READY_TO_PLAY, "green"
 
 
 class KARContext(CommonContext):
@@ -178,11 +165,14 @@ class KARContext(CommonContext):
         self.dolphin = DolphinInterface()
         self.dolphin_sync_task: asyncio.Task[None] | None = None
         self._dolphin_was_connected: bool | None = None
-        self.last_attach_detail: str | None = None
+        # The latest failed attach's (summary, color), which /dolphin shows until the client attaches
+        self.attach_status = ("Connecting to Dolphin.", "yellow")
         self._logged_attach_detail: str | None = None
 
         # APData struct base address (resolved from static pointer).
         self.ap_data_base: int | None = None
+        # Whether the player has been told the client is waiting for that pointer.
+        self.mod_wait_logged = False
 
         # Handshake
         self.game_ready = False
@@ -235,6 +225,7 @@ class KARContext(CommonContext):
         """Reset state tied to the Dolphin connection / mod memory. Safe to call whenever the hook drops
         or the APData pointer changes; this state is rebuilt from memory on the next handshake."""
         self.ap_data_base = None
+        self.mod_wait_logged = False
         self.game_ready = False
         self._rearm_handshake()
         self.item_send_index = 0
@@ -442,6 +433,10 @@ class KARContext(CommonContext):
             try:
                 backoff = False
                 connected = self.dolphin.is_hooked() and self.dolphin.check_game_running()
+                if not connected and self._dolphin_was_connected:
+                    # Ahead of the reconnect attempt, so the loss prints before whatever that attempt finds
+                    log_color(self, "Lost connection to Dolphin.", "red")
+                    self._dolphin_was_connected = False
                 try:
                     if connected:
                         await self._dolphin_tick()
@@ -457,8 +452,7 @@ class KARContext(CommonContext):
                     connected = False
 
                 if connected and not self._dolphin_was_connected:
-                    log_color(self, "Dolphin connected.", "green")
-                    self.last_attach_detail = None
+                    # The tick announces what it finds; this only re-arms the attach messages for the next drop
                     self._logged_attach_detail = None
                 elif not connected and self._dolphin_was_connected:
                     log_color(self, "Lost connection to Dolphin.", "red")
@@ -482,28 +476,41 @@ class KARContext(CommonContext):
         if self.dolphin.is_hooked():
             addr = int(MemoryAddress.MEM1_START)
             raw = self.dolphin.read_bytes(addr, 6)
-            self._note_attach_failure(
-                "Dolphin is not running Kirby Air Ride (NTSC-U).",
-                f"hooked Dolphin, but {addr:#010x} reads {raw!r}, not {self.dolphin.kar_game_id!r}",
-            )
             self.dolphin.unhook()
+            if any(raw):
+                game_id = raw.decode("ascii", errors="replace")
+                detail = f"hooked Dolphin, but {addr:#010x} reads {raw!r}, not {self.dolphin.kar_game_id!r}"
+                if raw[:3] == self.dolphin.kar_game_id[:3]:
+                    region = _REGION_NAMES.get(raw[3:4])
+                    version = (
+                        f"the {region} version of Kirby Air Ride ({game_id})" if region else f"Kirby Air Ride {game_id}"
+                    )
+                    summary = f"Dolphin is running {version}, not NTSC-U (GKYE01)."
+                else:
+                    summary = f"Dolphin is running a different game ({game_id}), not Kirby Air Ride (NTSC-U)."
+                self._note_attach_failure(summary, detail)
+                return False
+            # Dolphin maps the game's memory before it copies the disc header in, so a blank header is a game
+            # still booting
+            status = "noEmu"
         else:
             status = self.dolphin.status_name()
-            if status == "notRunning":
-                self._note_attach_failure("Waiting for Dolphin to start.", "no Dolphin process found", "yellow")
-            elif status == "noEmu":
-                self._note_attach_failure(
-                    "Waiting for Kirby Air Ride to start in Dolphin.",
-                    "Dolphin open, but no emulated game readable yet",
-                    "yellow",
-                )
-            else:
-                self._note_attach_failure("Could not attach to Dolphin.", f"hook attempt failed (status: {status})")
+
+        if status == "notRunning":
+            self._note_attach_failure("Waiting for Dolphin to start.", "no Dolphin process found", "yellow")
+        elif status == "noEmu":
+            self._note_attach_failure(
+                "Waiting for Kirby Air Ride to start in Dolphin.",
+                "Dolphin open, but no emulated game readable yet",
+                "yellow",
+            )
+        else:
+            self._note_attach_failure("Could not attach to Dolphin.", f"hook attempt failed (status: {status})")
         return False
 
     def _note_attach_failure(self, summary: str, detail: str, color: str = "red") -> None:
         """Record why the latest connect attempt didn't fully connect."""
-        self.last_attach_detail = detail
+        self.attach_status = (summary, color)
         if detail != self._logged_attach_detail:
             self._logged_attach_detail = detail
             log_detailed(self, "Dolphin", summary, f"Not fully connected: {detail}", color)
@@ -516,6 +523,15 @@ class KARContext(CommonContext):
                     self, "Handshake", "Lost contact with the mod. The game may have restarted.", "APData pointer lost."
                 )
                 self._reset_dolphin_state()
+            elif not self.mod_wait_logged:
+                # Vanilla Kirby Air Ride has the same game id, so only the missing pointer tells them apart
+                self.mod_wait_logged = True
+                log_detailed(
+                    self,
+                    "Handshake",
+                    _WAITING_FOR_MOD,
+                    f"No APData pointer at {MemoryAddress.AP_DATA_POINTER:#010x} yet.",
+                )
             return
         if ptr != self.ap_data_base:
             if self.ap_data_base is not None:
@@ -534,7 +550,7 @@ class KARContext(CommonContext):
             if game_ready_mem != 1:
                 return
             self.game_ready = True
-            log_color(self, "Game initialized and save loaded.", "yellow")
+            log_color(self, "Save loaded.", "yellow")
         elif game_ready_mem != 1:
             log_detailed(
                 self,
@@ -567,7 +583,7 @@ class KARContext(CommonContext):
                 return  # Waiting for LocationInfo scout response.
             self._write_location_data()
             self.locations_written = True
-            log_detailed(self, "Handshake", "Handshake complete. Ready to play!", "Location data written.", "green")
+            log_detailed(self, "Handshake", _READY_TO_PLAY, "Location data written.", "green")
             self._push_text(APTextKind.STATUS, self._client_status_segments(True))
             self.backfill_pending = True
 

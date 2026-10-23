@@ -430,6 +430,9 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule:
     """
     Build the access rule for the Max Stats CT goal event.
     """
+    # Deferred to break the import cycle.
+    from .KARRules import steerable_ct_machine
+
     options = world.options
     rule: Rule = Has(
         KARItemName.PATCH_CAP_INCREASE,
@@ -438,6 +441,10 @@ def _build_max_stats_goal_rule(world: "KARWorld") -> Rule:
 
     if options.city_trial_patches_gated and options.city_trial_items_gated:
         rule &= HasAll(*sorted(CT_PATCH_UNLOCK_ITEMS)) | Has(KARItemName.UNLOCK_ITEM_ALL_UP)
+
+    # Collecting the patches takes driving around the city.
+    if "machines_gated" in world.effective_gates:
+        rule &= steerable_ct_machine(world)
 
     return rule
 
@@ -463,6 +470,7 @@ def _create_goal_event(
     """
     # Deferred to break the import cycle.
     from .KARLocations import LOCATION_TABLE, KARLocation
+    from .KARRules import steerable_ct_machine
 
     region = world.get_region(MODE_ROOT_REGION[mode])
 
@@ -486,6 +494,9 @@ def _create_goal_event(
             rule = HasAll(*_ASSEMBLE_GOAL_UNLOCKS[goal_option.value])
             if "city_trial_boxes_gated" in world.effective_gates:
                 rule &= Has(KARItemName.UNLOCK_BOX_RED)
+            # Collecting them takes driving around the city, the same as on the cell this event replaces.
+            if "machines_gated" in world.effective_gates:
+                rule &= steerable_ct_machine(world)
     elif goal_option.value == GoalKind.MAX_STATS_CT:
         # No checklist cell backs this goal; the mod sets max_stats_ct_achieved once every stat hits the patch cap.
         name = f"{region.name}: Max Stats"

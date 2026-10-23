@@ -95,7 +95,7 @@ See the Universal Tracker repo for further usage instructions.
    * set KARchipelago to `Enabled`
    * press `Start`
 2. Start the Archipelago Launcher and choose `Kirby Air Ride Client`, which will open the text client. It will begin attempting to connect to Dolphin.
-   * Once the ISO is running in Dolphin, and everything is operational, the client will print `Dolphin connected.`
+   * Once the modded game is running in Dolphin, the client will print `KARchipelago mod detected.`
    * If it is not connecting successfully, use `/dolphin` to get the current status.
 3. Connect to the room by entering the server name and port number in the client and pressing `Connect`. For rooms hosted on the website, this will be `archipelago.gg:<port>`. 
    * You will be prompted to enter your slot name, which is the name you selected when creating your yaml. Type that in and press enter.
@@ -104,7 +104,7 @@ See the Universal Tracker repo for further usage instructions.
 
 ## Troubleshooting
 
-* Use the `/dolphin` command in the client to check the connection status. If it isn't connected, the status includes the reason (no Dolphin process, no emulated game, wrong-region disc, etc.).
+* Use the `/dolphin` command in the client to check the connection status. It shows what the client is waiting for (Dolphin, the game, the mod, the save, or the Archipelago server), or why it can't connect (a different game or a wrong-region disc).
 * Ensure you are running the latest version of the apworld.
 * Ensure you are running the latest version of the mod.
 * Ensure `kirby_air_ride.apworld` is in your Archipelago installation's `custom_worlds` folder.
