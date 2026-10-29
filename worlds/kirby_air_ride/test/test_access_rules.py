@@ -42,6 +42,7 @@ from ..KARRules import (
     _CT_FLIGHT_MACHINES,
     _CT_MACHINE_UNLOCKS,
     _DAMAGING_CT_ITEM_UNLOCKS,
+    _FLOWER_GLIDE_LOCATIONS,
     _FM_20MPH_EXCLUDED_MACHINES,
     _FM_20MPH_MACHINES,
     _FM_SHORTCUT_EXCLUDED_MACHINES,
@@ -1696,6 +1697,137 @@ class TestHardGlideChecksNeedAPatchedGlider(KARTestBase):
         self.assertTrue(set(_UNPATCHED_GLIDE_MACHINES) <= set(_GOOD_GLIDE_MACHINES))
 
 
+class TestFlowerChecksNeedAFlyerOrPatchedGlider(KARTestBase):
+    """The flowers on Castle Hall and the volcanic cliffs take a glide up. Dragoon, the Flight Warp Star and
+    the Winged Star make it on their own; any other good glider needs Glide Patches, and the poor gliders
+    never get there. The Wheelie Bike pin is itself a poor glider, so it suppresses the machine starter draw
+    without satisfying the rule."""
+
+    options = {
+        **_GLIDE_TEST_OPTIONS,
+        "machines_gated": Toggle.option_true,
+        "city_trial_patches_gated": Toggle.option_true,
+        "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
+    }
+
+    def test_unreachable_on_the_poor_gliders_even_with_patches(self):
+        state = self.state_with(KARItemName.UNLOCK_PATCH_GLIDE)
+        for name in sorted(_POOR_GLIDE_MACHINES):
+            if not state.has(name, self.player):  # the pinned starter is already in
+                state.collect(self.get_item_by_name(name), prevent_sweep=True)
+        for name in _GOOD_GLIDE_MACHINES:
+            self.assertFalse(
+                state.has(name, self.player),
+                f"{name} leaked into the state, making this test vacuous",
+            )
+        for location in _FLOWER_GLIDE_LOCATIONS:
+            with self.subTest(location=location):
+                self.assertFalse(
+                    self.reaches(state, location),
+                    "a flower cell should not be reachable on the poor gliders, Glide Patches or not",
+                )
+
+    def test_needs_a_flyer_or_a_patched_glider(self):
+        patched = [name for name in _GOOD_GLIDE_MACHINES if name not in _CT_FLIGHT_MACHINES]
+        self.assertAccessDependency(
+            list(_FLOWER_GLIDE_LOCATIONS),
+            [
+                *([name] for name in _CT_FLIGHT_MACHINES),
+                *([name, KARItemName.UNLOCK_PATCH_GLIDE] for name in patched),
+            ],
+            only_check_listed=True,
+        )
+
+    def test_other_good_gliders_fall_short_without_patches(self):
+        for machine in _GOOD_GLIDE_MACHINES:
+            if machine in _CT_FLIGHT_MACHINES:
+                continue
+            state = self.state_with(machine)
+            for location in _FLOWER_GLIDE_LOCATIONS:
+                with self.subTest(machine=machine, location=location):
+                    self.assertFalse(
+                        self.reaches(state, location),
+                        f"{machine} should need Glide Patches for {location}",
+                    )
+
+    def test_flyers_are_good_gliders(self):
+        self.assertTrue(set(_CT_FLIGHT_MACHINES) <= set(_GOOD_GLIDE_MACHINES))
+
+
+class TestCityAirborneNeedsAFlyerAndPatches(KARTestBase):
+    """Staying airborne 20 seconds in the city takes Dragoon, the Flight Warp Star or the Winged Star, on
+    Glide Patches. Unlike the flowers, the flyers get no exemption from the patches. The Wheelie Bike pin
+    is not a flyer, so it suppresses the machine starter draw without satisfying the rule."""
+
+    options = {
+        **_GLIDE_TEST_OPTIONS,
+        "machines_gated": Toggle.option_true,
+        "city_trial_patches_gated": Toggle.option_true,
+        "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
+    }
+
+    location = APLocation.AIRBORNE_20_SECONDS_IN_CITY
+
+    def test_needs_a_flyer_and_glide_patches(self):
+        self.assertAccessDependency(
+            [self.location],
+            [[name, KARItemName.UNLOCK_PATCH_GLIDE] for name in _CT_FLIGHT_MACHINES],
+            only_check_listed=True,
+        )
+
+    def test_no_flyer_makes_it_without_patches(self):
+        for machine in _CT_FLIGHT_MACHINES:
+            with self.subTest(machine=machine):
+                self.assertFalse(self.reaches(self.state_with(machine), self.location))
+
+    def test_unreachable_on_every_other_machine_even_with_patches(self):
+        state = self.state_with(KARItemName.UNLOCK_PATCH_GLIDE)
+        for name in _CT_MACHINE_UNLOCKS:
+            if name not in _CT_FLIGHT_MACHINES and not state.has(name, self.player):
+                state.collect(self.get_item_by_name(name), prevent_sweep=True)
+        for name in _CT_FLIGHT_MACHINES:
+            self.assertFalse(
+                state.has(name, self.player),
+                f"{name} leaked into the state, making this test vacuous",
+            )
+        self.assertFalse(self.reaches(state, self.location))
+
+
+class TestCityAirbornePatchesUngated(KARTestBase):
+    """Ungated Glide Patches spawn in every City Trial, so any flyer is enough."""
+
+    options = {
+        **_GLIDE_TEST_OPTIONS,
+        "machines_gated": Toggle.option_true,
+        "city_trial_patches_gated": Toggle.option_false,
+        "start_inventory": {KARItemName.UNLOCK_MACHINE_WHEELIE_BIKE: 1},
+    }
+
+    def test_needs_only_a_flyer(self):
+        self.assertAccessDependency(
+            [APLocation.AIRBORNE_20_SECONDS_IN_CITY],
+            [[name] for name in _CT_FLIGHT_MACHINES],
+            only_check_listed=True,
+        )
+
+
+class TestCityAirborneMachinesUngated(KARTestBase):
+    """Ungated machines leave every flyer selectable, so only gated Glide Patches add a rule."""
+
+    options = {
+        **_GLIDE_TEST_OPTIONS,
+        "machines_gated": Toggle.option_false,
+        "city_trial_patches_gated": Toggle.option_true,
+    }
+
+    def test_needs_only_glide_patches(self):
+        self.assertAccessDependency(
+            [APLocation.AIRBORNE_20_SECONDS_IN_CITY],
+            [[KARItemName.UNLOCK_PATCH_GLIDE]],
+            only_check_listed=True,
+        )
+
+
 class TestHardGlideChecksPatchesUngated(KARTestBase):
     """Ungated Glide Patches spawn in every City Trial, so any good glider is enough."""
 
@@ -1709,7 +1841,7 @@ class TestHardGlideChecksPatchesUngated(KARTestBase):
     def test_reachable_on_each_gliding_machine(self):
         for machine in _GOOD_GLIDE_MACHINES:
             state = self.state_with(machine)
-            for location in _HARD_GLIDE_LOCATIONS:
+            for location in (*_HARD_GLIDE_LOCATIONS, *_FLOWER_GLIDE_LOCATIONS):
                 with self.subTest(machine=machine, location=location):
                     self.assertTrue(self.reaches(state, location), f"{location} should be reachable on {machine}")
 
@@ -1725,7 +1857,7 @@ class TestHardGlideChecksMachinesUngated(KARTestBase):
 
     def test_reachable_without_glide_patches(self):
         state = self.state_without([KARItemName.UNLOCK_PATCH_GLIDE])
-        for location in _HARD_GLIDE_LOCATIONS:
+        for location in (*_HARD_GLIDE_LOCATIONS, *_FLOWER_GLIDE_LOCATIONS):
             with self.subTest(location=location):
                 self.assertTrue(self.reaches(state, location))
 
