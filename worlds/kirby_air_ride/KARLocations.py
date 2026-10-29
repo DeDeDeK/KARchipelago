@@ -518,8 +518,8 @@ class APLocation(StrEnum):
         "Archipelago: Time Attack: MAGMA FLOWS Finish in under 03:15:00 as Meta Knight!"
     )
     AIR_RIDE_1ST_ON_ARCHIPELAGO_STAR = "Archipelago: Air Ride: Finish in 1st place on Archipelago Star!"
-    KM_KO_30_ENEMIES_AS_KING_DEDEDE = (
-        "Archipelago: Stadium: KIRBY MELEE (All) In one game, KO 30 enemies as King Dedede!"
+    KM_KO_20_ENEMIES_AS_KING_DEDEDE = (
+        "Archipelago: Stadium: KIRBY MELEE (All) In one game, KO 20 enemies as King Dedede!"
     )
     VSKD_KO_KING_DEDEDE_AS_META_KNIGHT = "Archipelago: Stadium: VS. KING DEDEDE KO King Dedede as Meta Knight!"
     TR_FREEZE_3_RIVALS_WITH_ONE_FREEZE_FAN = "Archipelago: Top Ride: Freeze 3 or more rivals using one Freeze Fan item!"
@@ -1217,7 +1217,7 @@ AP_CHECKLIST_LOCATION_TABLE: dict[str, KARLocationData] = {
     APLocation.BUST_SHADOW_STAR_ON_ARCHIPELAGO_STAR: KARLocationData(438, KARRegion.CITY_TRIAL),
     APLocation.TA_MF_FINISH_03_15_00_AS_META_KNIGHT: KARLocationData(439, KARRegion.AIR_RIDE_TA_MAGMA_FLOWS),
     APLocation.AIR_RIDE_1ST_ON_ARCHIPELAGO_STAR: KARLocationData(440, KARRegion.AIR_RIDE),
-    APLocation.KM_KO_30_ENEMIES_AS_KING_DEDEDE: KARLocationData(441, KARRegion.CITY_TRIAL_STADIUM_KM_ALL),
+    APLocation.KM_KO_20_ENEMIES_AS_KING_DEDEDE: KARLocationData(441, KARRegion.CITY_TRIAL_STADIUM_KM_ALL),
     APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT: KARLocationData(442, KARRegion.CITY_TRIAL_STADIUM_VSKD),
     APLocation.TR_FREEZE_3_RIVALS_WITH_ONE_FREEZE_FAN: KARLocationData(443, KARRegion.TOP_RIDE),
     APLocation.TR_FIRE_1ST_WITHOUT_GETTING_BURNED: KARLocationData(444, KARRegion.TOP_RIDE_FIRE),
@@ -1913,7 +1913,7 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.DD3_KO_A_RIVAL_10,
         APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE,
         APLocation.KM_KO_10_ENEMIES_AS_MIC_KIRBY,
-        APLocation.KM_KO_30_ENEMIES_AS_KING_DEDEDE,
+        APLocation.KM_KO_20_ENEMIES_AS_KING_DEDEDE,
         APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT,
         APLocation.DD_KO_5_WITHOUT_GETTING_KNOCKED_OUT,
         APLocation.VSKD_KO_KING_DEDEDE_WITHOUT_DAMAGE,
@@ -2080,7 +2080,7 @@ location_name_groups: dict[str, set[str]] = {
         APLocation.AIR_RIDE_1ST_AS_KING_DEDEDE,
         APLocation.DD_KO_10_KIRBYS_AS_KING_DEDEDE,
         APLocation.TA_MF_FINISH_03_15_00_AS_META_KNIGHT,
-        APLocation.KM_KO_30_ENEMIES_AS_KING_DEDEDE,
+        APLocation.KM_KO_20_ENEMIES_AS_KING_DEDEDE,
         APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT,
     },
     KARLocationGroup.AP_KIRBY_COLORS: {

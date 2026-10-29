@@ -634,6 +634,8 @@ class BaseAbilitiesGated(Toggle):
 
     When disabled, all three moves are available from the start and no base ability unlock items are
     added to the pool.
+
+    NOTE: logic for this is still WIP! Enabling this could lead to some impossible or very hard to do checks!
     """
 
     display_name = "Base Abilities Gated"

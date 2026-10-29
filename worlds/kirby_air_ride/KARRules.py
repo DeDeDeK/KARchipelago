@@ -260,7 +260,7 @@ _MACHINE_SINGLE_RULES: dict[str, str] = {
     APLocation.TA_MF_FINISH_03_15_00_AS_META_KNIGHT: KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT,
     APLocation.AIR_RIDE_1ST_ON_ARCHIPELAGO_STAR: KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR,
     APLocation.KO_CPU_WITH_AP_STAR_SPHERE_SHOT: KARItemName.UNLOCK_MACHINE_ARCHIPELAGO_STAR,
-    APLocation.KM_KO_30_ENEMIES_AS_KING_DEDEDE: KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE,
+    APLocation.KM_KO_20_ENEMIES_AS_KING_DEDEDE: KARItemName.UNLOCK_MACHINE_WHEELIE_DEDEDE,
     APLocation.VSKD_KO_KING_DEDEDE_AS_META_KNIGHT: KARItemName.UNLOCK_MACHINE_WING_META_KNIGHT,
 }
 
@@ -389,7 +389,6 @@ def steerable_ct_machine(world: "KARWorld") -> Rule:
 # Locations needing any rideable City Trial machine
 _CT_ANY_MACHINE_LOCATIONS: tuple[str, ...] = (
     APLocation.BREAK_ALL_CORAL,
-    APLocation.CASTLE_FLOWER_ON_FOOT,
     APLocation.SKY_GARDEN_TOP_ON_FOOT,
     APLocation.WHISPY_WOODS_ON_FOOT,
     APLocation.UNDER_THE_WATERWHEEL,
@@ -528,6 +527,22 @@ _UNPATCHED_GLIDE_MACHINES: tuple[str, ...] = (
     KARItemName.UNLOCK_MACHINE_DRAGOON,
     KARItemName.UNLOCK_MACHINE_FLIGHT_WARP_STAR,
 )
+
+# The flowers on Castle Hall and the volcanic cliffs take a glide up. The flyers make it as they are; every other
+# good glider needs Glide Patches.
+_FLOWER_GLIDE_LOCATIONS: tuple[str, ...] = (
+    APLocation.CASTLE_FLOWER_ON_FOOT,
+    APLocation.VOLCANO_FLOWER_ON_FOOT,
+)
+
+
+def _patched_glider(unpatched: tuple[str, ...], patches_gated: bool) -> Rule:
+    """A good glider, which needs Glide Patches while they're gated unless it's one of `unpatched`."""
+    good_glider = HasAny(*_GOOD_GLIDE_MACHINES)
+    if not patches_gated:
+        return good_glider
+    return HasAny(*unpatched) | (good_glider & Has(KARItemName.UNLOCK_PATCH_GLIDE))
+
 
 _HJ_MACHINE_RULES: dict[str, tuple[str, ...]] = {
     CTLocation.STADIUM_HJ_JUMP_HIGHER_THAN_500_FEET: (
@@ -1093,11 +1108,13 @@ def set_rules(world: "KARWorld"):
         for loc, (item_a, item_b) in _MACHINE_PAIR_RULES.items():
             add_location_rule(loc, HasAll(item_a, item_b))
         add_location_rule(ARLocation.FM_LAP_ABOVE_20_MPH, _any_rideable(_FM_20MPH_MACHINES, charge_gated))
-        hard_glider = HasAny(*_GOOD_GLIDE_MACHINES)
-        if "city_trial_patches_gated" in world.effective_gates:
-            hard_glider = HasAny(*_UNPATCHED_GLIDE_MACHINES) | (hard_glider & Has(KARItemName.UNLOCK_PATCH_GLIDE))
+        patches_gated = "city_trial_patches_gated" in world.effective_gates
+        hard_glider = _patched_glider(_UNPATCHED_GLIDE_MACHINES, patches_gated)
         for loc in _HARD_GLIDE_LOCATIONS:
             add_location_rule(loc, hard_glider)
+        flower_glider = _patched_glider(_CT_FLIGHT_MACHINES, patches_gated)
+        for loc in _FLOWER_GLIDE_LOCATIONS:
+            add_location_rule(loc, flower_glider)
         for loc, machines in _HJ_MACHINE_RULES.items():
             add_location_rule(loc, HasAny(*machines))
 
@@ -1277,6 +1294,8 @@ def set_rules(world: "KARWorld"):
     if "city_trial_patches_gated" in world.effective_gates:
         add_location_rule(APLocation.GET_10_HP_PATCHES, Has(KARItemName.UNLOCK_PATCH_HP))
         add_location_rule(APLocation.GET_10_OFFENSE_PATCHES, Has(KARItemName.UNLOCK_PATCH_OFFENSE))
+        # Even the flyers need Glide Patches to stay up 20 seconds in the city
+        add_location_rule(APLocation.AIRBORNE_20_SECONDS_IN_CITY, Has(KARItemName.UNLOCK_PATCH_GLIDE))
         any_patch = HasAny(*sorted(items_by_type[KARItemType.CT_PATCH_UNLOCK]))
         for loc in _PATCH_EVENT_LOCATIONS:
             add_location_rule(loc, any_patch)
@@ -1288,6 +1307,7 @@ def set_rules(world: "KARWorld"):
         any_ct_machine = steerable_ct_machine(world)
         for loc in _CT_ANY_MACHINE_LOCATIONS:
             add_location_rule(loc, any_ct_machine)
+        # Twenty seconds in the air takes a flyer, and Glide Patches while they're gated
         add_location_rule(APLocation.AIRBORNE_20_SECONDS_IN_CITY, HasAny(*_CT_FLIGHT_MACHINES))
         add_location_rule(APLocation.LIGHTHOUSE_TOP_ON_FOOT, HasAny(*_CT_FLIGHT_MACHINES))
         add_location_rule(APLocation.RIDE_5_DIFFERENT_MACHINES, HasFromListUnique(*_CT_FIELD_MACHINE_UNLOCKS, count=5))
